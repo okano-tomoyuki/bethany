@@ -14,6 +14,25 @@ uses
   Controls,
   StdCtrls;
 
+type
+  TNoVclCallback = procedure(Sender: Pointer); NO_VCL_CALL;
+
+  { Cのプレーンな関数ポインタ(no_vcl_callback_t)を
+    LCLのTNotifyEvent(オブジェクトメソッド)へ橋渡しする }
+  TCallbackBridge = class(TComponent)
+  private
+    FCallback: TNoVclCallback;
+  public
+    procedure DoClick(Sender: TObject);
+    property Callback: TNoVclCallback read FCallback write FCallback;
+  end;
+
+procedure TCallbackBridge.DoClick(Sender: TObject);
+begin
+  if Assigned(FCallback) then
+    FCallback(Pointer(Sender));
+end;
+
 function TForm_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
   Result := Pointer(TForm.Create(TComponent(Owner)));
@@ -149,6 +168,15 @@ begin
   TButton(Obj).Height := Value;
 end;
 
+procedure TButton_SetOnClick(Obj: Pointer; Cb: TNoVclCallback); NO_VCL_CALL;
+var
+  Bridge: TCallbackBridge;
+begin
+  Bridge := TCallbackBridge.Create(TButton(Obj));
+  Bridge.Callback := Cb;
+  TButton(Obj).OnClick := @Bridge.DoClick;
+end;
+
 exports
   TForm_Create,
   TForm_Destroy,
@@ -176,7 +204,8 @@ exports
   TButton_GetWidth,
   TButton_SetWidth,
   TButton_GetHeight,
-  TButton_SetHeight;
+  TButton_SetHeight,
+  TButton_SetOnClick;
 
 begin
   RequireDerivedFormResource := False;

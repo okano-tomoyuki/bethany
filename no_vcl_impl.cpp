@@ -52,6 +52,8 @@ typedef void         (NO_VCL_CALL *TButton_SetWidth)(no_vcl_obj_t Obj, no_vcl_in
 typedef no_vcl_int_t (NO_VCL_CALL *TButton_GetHeight)(no_vcl_obj_t Obj);
 typedef void         (NO_VCL_CALL *TButton_SetHeight)(no_vcl_obj_t Obj, no_vcl_int_t Height);
 
+typedef void         (NO_VCL_CALL *TButton_SetOnClick)(no_vcl_obj_t Obj, no_vcl_callback_t Cb);
+
 /* thread_local 関数ポインタ */
 thread_local TForm_Create       TForm_Create_           = nullptr;
 thread_local TForm_Destroy      TForm_Destroy_          = nullptr;
@@ -83,6 +85,7 @@ thread_local TButton_GetWidth   TButton_GetWidth_       = nullptr;
 thread_local TButton_SetWidth   TButton_SetWidth_       = nullptr;
 thread_local TButton_GetHeight  TButton_GetHeight_      = nullptr;
 thread_local TButton_SetHeight  TButton_SetHeight_      = nullptr;
+thread_local TButton_SetOnClick TButton_SetOnClick_     = nullptr;
 
 /* 関数ポインタマッピング */
 template<typename Func>
@@ -136,6 +139,7 @@ void no_vcl_init(void)
     NO_VCL_MAP(m, TButton_SetWidth);
     NO_VCL_MAP(m, TButton_GetHeight);
     NO_VCL_MAP(m, TButton_SetHeight);
+    NO_VCL_MAP(m, TButton_SetOnClick);
 }
 
 #define NO_VCL_INIT_CHECK(f) \
@@ -311,6 +315,12 @@ void NO_VCL_CALL no_vcl_TButton_SetHeight(no_vcl_obj_t obj, no_vcl_int_t height)
 {
     NO_VCL_INIT_CHECK(TButton_SetHeight_);
     TButton_SetHeight_(obj, height);
+}
+
+void NO_VCL_CALL no_vcl_TButton_SetOnClick(no_vcl_obj_t obj, no_vcl_callback_t cb)
+{
+    NO_VCL_INIT_CHECK(TButton_SetOnClick_);
+    TButton_SetOnClick_(obj, cb);
 }
 
 } // extern "C"

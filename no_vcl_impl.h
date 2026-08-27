@@ -14,6 +14,8 @@ extern "C" {
 typedef void*       no_vcl_obj_t;
 typedef const char* no_vcl_str_t;
 typedef int         no_vcl_int_t;
+typedef void (NO_VCL_CALL *no_vcl_callback_t)(no_vcl_obj_t sender);
+
 
 /* TForm */
 no_vcl_obj_t NO_VCL_CALL no_vcl_TForm_Create(no_vcl_obj_t Owner);
@@ -57,6 +59,8 @@ void         NO_VCL_CALL no_vcl_TButton_SetWidth(no_vcl_obj_t Obj, no_vcl_int_t 
 
 no_vcl_int_t NO_VCL_CALL no_vcl_TButton_GetHeight(no_vcl_obj_t Obj);
 void         NO_VCL_CALL no_vcl_TButton_SetHeight(no_vcl_obj_t Obj, no_vcl_int_t Height);
+
+void         NO_VCL_CALL no_vcl_TButton_SetOnClick(no_vcl_obj_t obj, no_vcl_callback_t cb);
 
 #ifdef __cplusplus
 }
