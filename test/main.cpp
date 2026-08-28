@@ -1,7 +1,7 @@
 #include <cstdio>
 #include <string>
 
-#include "../no_vcl.hpp"
+#include "no_vcl.hpp"
 
 int main()
 {

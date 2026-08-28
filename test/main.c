@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include "../no_vcl_c.h"
+#include "no_vcl_c.h"
 
 static int g_clickCount = 0;
 
