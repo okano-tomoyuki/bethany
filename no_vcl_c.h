@@ -375,6 +375,68 @@ void          NO_VCL_CALL no_vcl_TTimer_SetEnabled(no_vcl_obj_t Obj, no_vcl_bool
 
 void         NO_VCL_CALL no_vcl_TTimer_SetOnTimer(no_vcl_obj_t Obj, no_vcl_callback_t Cb);
 
+/* TPaintBox */
+no_vcl_obj_t NO_VCL_CALL no_vcl_TPaintBox_Create(no_vcl_obj_t Owner);
+void         NO_VCL_CALL no_vcl_TPaintBox_Destroy(no_vcl_obj_t Obj);
+
+void         NO_VCL_CALL no_vcl_TPaintBox_SetParent(no_vcl_obj_t Obj, no_vcl_obj_t ParentObj);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TPaintBox_GetLeft(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TPaintBox_SetLeft(no_vcl_obj_t Obj, no_vcl_int_t Left);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TPaintBox_GetTop(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TPaintBox_SetTop(no_vcl_obj_t Obj, no_vcl_int_t Top);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TPaintBox_GetWidth(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TPaintBox_SetWidth(no_vcl_obj_t Obj, no_vcl_int_t Width);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TPaintBox_GetHeight(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TPaintBox_SetHeight(no_vcl_obj_t Obj, no_vcl_int_t Height);
+
+no_vcl_bool_t NO_VCL_CALL no_vcl_TPaintBox_GetVisible(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TPaintBox_SetVisible(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+
+no_vcl_bool_t NO_VCL_CALL no_vcl_TPaintBox_GetEnabled(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TPaintBox_SetEnabled(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+
+/* Canvasはコントロールが内部で保持するオブジェクトの参照を返すだけで、
+   独自のCreate/Destroyは持たない(コントロール破棄時に一緒に破棄される) */
+no_vcl_obj_t NO_VCL_CALL no_vcl_TPaintBox_GetCanvas(no_vcl_obj_t Obj);
+
+void         NO_VCL_CALL no_vcl_TPaintBox_SetOnPaint(no_vcl_obj_t Obj, no_vcl_callback_t Cb);
+
+/* TCanvas (非所有: Create/Destroyなし) */
+void         NO_VCL_CALL no_vcl_TCanvas_MoveTo(no_vcl_obj_t Obj, no_vcl_int_t X, no_vcl_int_t Y);
+void         NO_VCL_CALL no_vcl_TCanvas_LineTo(no_vcl_obj_t Obj, no_vcl_int_t X, no_vcl_int_t Y);
+void         NO_VCL_CALL no_vcl_TCanvas_Rectangle(no_vcl_obj_t Obj, no_vcl_int_t X1, no_vcl_int_t Y1, no_vcl_int_t X2, no_vcl_int_t Y2);
+void         NO_VCL_CALL no_vcl_TCanvas_Ellipse(no_vcl_obj_t Obj, no_vcl_int_t X1, no_vcl_int_t Y1, no_vcl_int_t X2, no_vcl_int_t Y2);
+void         NO_VCL_CALL no_vcl_TCanvas_TextOut(no_vcl_obj_t Obj, no_vcl_int_t X, no_vcl_int_t Y, no_vcl_str_t Text);
+
+no_vcl_obj_t NO_VCL_CALL no_vcl_TCanvas_GetPen(no_vcl_obj_t Obj);
+no_vcl_obj_t NO_VCL_CALL no_vcl_TCanvas_GetBrush(no_vcl_obj_t Obj);
+no_vcl_obj_t NO_VCL_CALL no_vcl_TCanvas_GetFont(no_vcl_obj_t Obj);
+
+/* TPen (非所有: Create/Destroyなし) */
+no_vcl_int_t NO_VCL_CALL no_vcl_TPen_GetColor(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TPen_SetColor(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TPen_GetWidth(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TPen_SetWidth(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+/* TBrush (非所有: Create/Destroyなし) */
+no_vcl_int_t NO_VCL_CALL no_vcl_TBrush_GetColor(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TBrush_SetColor(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+/* TFont (非所有: Create/Destroyなし) */
+no_vcl_str_t NO_VCL_CALL no_vcl_TFont_GetName(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TFont_SetName(no_vcl_obj_t Obj, no_vcl_str_t Value);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TFont_GetSize(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TFont_SetSize(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TFont_GetColor(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TFont_SetColor(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
 #ifdef __cplusplus
 }
 #endif

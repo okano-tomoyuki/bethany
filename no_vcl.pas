@@ -13,7 +13,8 @@ uses
   Forms,
   Controls,
   StdCtrls,
-  ExtCtrls;
+  ExtCtrls,
+  Graphics;
 
 type
   TNoVclCallback = procedure(Sender: Pointer); NO_VCL_CALL;
@@ -1216,6 +1217,209 @@ begin
   TTimer(Obj).OnTimer := @Bridge.DoClick;
 end;
 
+{ TPaintBox }
+
+function TPaintBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TPaintBox.Create(TComponent(Owner)));
+end;
+
+procedure TPaintBox_Destroy(Obj: Pointer); NO_VCL_CALL;
+begin
+  TPaintBox(Obj).Free;
+end;
+
+procedure TPaintBox_SetParent(Obj: Pointer; ParentObj: Pointer); NO_VCL_CALL;
+begin
+  TPaintBox(Obj).Parent := TWinControl(ParentObj);
+end;
+
+function TPaintBox_GetLeft(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TPaintBox(Obj).Left;
+end;
+
+procedure TPaintBox_SetLeft(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TPaintBox(Obj).Left := Value;
+end;
+
+function TPaintBox_GetTop(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TPaintBox(Obj).Top;
+end;
+
+procedure TPaintBox_SetTop(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TPaintBox(Obj).Top := Value;
+end;
+
+function TPaintBox_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TPaintBox(Obj).Width;
+end;
+
+procedure TPaintBox_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TPaintBox(Obj).Width := Value;
+end;
+
+function TPaintBox_GetHeight(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TPaintBox(Obj).Height;
+end;
+
+procedure TPaintBox_SetHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TPaintBox(Obj).Height := Value;
+end;
+
+function TPaintBox_GetVisible(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TPaintBox(Obj).Visible;
+end;
+
+procedure TPaintBox_SetVisible(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TPaintBox(Obj).Visible := Value;
+end;
+
+function TPaintBox_GetEnabled(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TPaintBox(Obj).Enabled;
+end;
+
+procedure TPaintBox_SetEnabled(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TPaintBox(Obj).Enabled := Value;
+end;
+
+function TPaintBox_GetCanvas(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TPaintBox(Obj).Canvas);
+end;
+
+procedure TPaintBox_SetOnPaint(Obj: Pointer; Cb: TNoVclCallback); NO_VCL_CALL;
+var
+  Bridge: TCallbackBridge;
+begin
+  Bridge := TCallbackBridge.Create(TPaintBox(Obj));
+  Bridge.Callback := Cb;
+  TPaintBox(Obj).OnPaint := @Bridge.DoClick;
+end;
+
+{ TCanvas }
+{ Canvasはコントロール(TPaintBox等)が内部で保持するオブジェクトであり、
+  独自のCreate/Destroyは持たない。取得元のコントロールが破棄されれば
+  一緒に破棄される。 }
+
+procedure TCanvas_MoveTo(Obj: Pointer; X, Y: Integer); NO_VCL_CALL;
+begin
+  TCanvas(Obj).MoveTo(X, Y);
+end;
+
+procedure TCanvas_LineTo(Obj: Pointer; X, Y: Integer); NO_VCL_CALL;
+begin
+  TCanvas(Obj).LineTo(X, Y);
+end;
+
+procedure TCanvas_Rectangle(Obj: Pointer; X1, Y1, X2, Y2: Integer); NO_VCL_CALL;
+begin
+  TCanvas(Obj).Rectangle(X1, Y1, X2, Y2);
+end;
+
+procedure TCanvas_Ellipse(Obj: Pointer; X1, Y1, X2, Y2: Integer); NO_VCL_CALL;
+begin
+  TCanvas(Obj).Ellipse(X1, Y1, X2, Y2);
+end;
+
+procedure TCanvas_TextOut(Obj: Pointer; X, Y: Integer; Text: PChar); NO_VCL_CALL;
+begin
+  TCanvas(Obj).TextOut(X, Y, Text);
+end;
+
+function TCanvas_GetPen(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCanvas(Obj).Pen);
+end;
+
+function TCanvas_GetBrush(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCanvas(Obj).Brush);
+end;
+
+function TCanvas_GetFont(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCanvas(Obj).Font);
+end;
+
+{ TPen }
+{ CanvasのPen/Brush/Fontと同様、独自のCreate/Destroyは持たない。 }
+
+function TPen_GetColor(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Integer(TPen(Obj).Color);
+end;
+
+procedure TPen_SetColor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TPen(Obj).Color := TColor(Value);
+end;
+
+function TPen_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TPen(Obj).Width;
+end;
+
+procedure TPen_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TPen(Obj).Width := Value;
+end;
+
+{ TBrush }
+
+function TBrush_GetColor(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Integer(TBrush(Obj).Color);
+end;
+
+procedure TBrush_SetColor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TBrush(Obj).Color := TColor(Value);
+end;
+
+{ TFont }
+
+function TFont_GetName(Obj: Pointer): PChar; NO_VCL_CALL;
+begin
+  Result := PChar(TFont(Obj).Name);
+end;
+
+procedure TFont_SetName(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+begin
+  TFont(Obj).Name := Value;
+end;
+
+function TFont_GetSize(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TFont(Obj).Size;
+end;
+
+procedure TFont_SetSize(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TFont(Obj).Size := Value;
+end;
+
+function TFont_GetColor(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Integer(TFont(Obj).Color);
+end;
+
+procedure TFont_SetColor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TFont(Obj).Color := TColor(Value);
+end;
+
 exports
   TForm_Create,
   TForm_Destroy,
@@ -1442,7 +1646,44 @@ exports
   TTimer_SetInterval,
   TTimer_GetEnabled,
   TTimer_SetEnabled,
-  TTimer_SetOnTimer;
+  TTimer_SetOnTimer,
+  TPaintBox_Create,
+  TPaintBox_Destroy,
+  TPaintBox_SetParent,
+  TPaintBox_GetLeft,
+  TPaintBox_SetLeft,
+  TPaintBox_GetTop,
+  TPaintBox_SetTop,
+  TPaintBox_GetWidth,
+  TPaintBox_SetWidth,
+  TPaintBox_GetHeight,
+  TPaintBox_SetHeight,
+  TPaintBox_GetVisible,
+  TPaintBox_SetVisible,
+  TPaintBox_GetEnabled,
+  TPaintBox_SetEnabled,
+  TPaintBox_GetCanvas,
+  TPaintBox_SetOnPaint,
+  TCanvas_MoveTo,
+  TCanvas_LineTo,
+  TCanvas_Rectangle,
+  TCanvas_Ellipse,
+  TCanvas_TextOut,
+  TCanvas_GetPen,
+  TCanvas_GetBrush,
+  TCanvas_GetFont,
+  TPen_GetColor,
+  TPen_SetColor,
+  TPen_GetWidth,
+  TPen_SetWidth,
+  TBrush_GetColor,
+  TBrush_SetColor,
+  TFont_GetName,
+  TFont_SetName,
+  TFont_GetSize,
+  TFont_SetSize,
+  TFont_GetColor,
+  TFont_SetColor;
 
 begin
   RequireDerivedFormResource := False;

@@ -1,6 +1,7 @@
 #ifndef NO_VCL_HPP
 #define NO_VCL_HPP
 
+#include <cstdint>
 #include <functional>
 #include <string>
 #include <unordered_map>
@@ -9,6 +10,16 @@
 
 namespace no_vcl
 {
+
+// DelphiのTColorに合わせ $00BBGGRR 順のパック整数として表す。
+using TColor = std::int32_t;
+
+const TColor clBlack  = 0x000000;
+const TColor clWhite  = 0xFFFFFF;
+const TColor clRed    = 0x0000FF;
+const TColor clGreen  = 0x008000;
+const TColor clBlue   = 0xFF0000;
+const TColor clYellow = 0x00FFFF;
 
 // 所有者への生ポインタ + 固定のGetter/Setter関数ポインタを持つ軽量プロキシ。
 // std::functionを使わないためヒープ確保がなく、各コントロールのコピー/ムーブは
@@ -61,6 +72,11 @@ public:
 
 protected:
     no_vcl_obj_t handle_ = nullptr;
+
+    // 派生クラスがCreate直後のハンドルを基底クラス初期化の時点で持ちたい場合に使う
+    // (例: TPaintBoxはCanvasメンバをメンバ初期化子リストで組み立てる必要があり、
+    //  そのためにはbase classの構築が終わった時点でhandle_が有効である必要がある)。
+    explicit TObject(no_vcl_obj_t handle) : handle_(handle) {}
 };
 
 class TForm : public TObject
@@ -495,6 +511,122 @@ private:
 
     static int  GetIntervalImpl(void* owner);
     static void SetIntervalImpl(void* owner, const int& value);
+    static bool GetEnabledImpl(void* owner);
+    static void SetEnabledImpl(void* owner, const bool& value);
+};
+
+// TPen/TBrush/TFont/TCanvas は Canvas を持つコントロールが内部で保持するオブジェクトへの
+// 非所有(non-owning)ラッパー。TObjectとは異なり自前でCreate/Destroyは行わない
+// (取得元のコントロールが破棄されれば一緒に破棄される)。
+
+class TPen
+{
+public:
+    Property<TColor> Color;
+    Property<int>    Width;
+
+    explicit TPen(no_vcl_obj_t handle);
+
+private:
+    no_vcl_obj_t handle_;
+
+    static TColor GetColorImpl(void* owner);
+    static void   SetColorImpl(void* owner, const TColor& value);
+    static int    GetWidthImpl(void* owner);
+    static void   SetWidthImpl(void* owner, const int& value);
+};
+
+class TBrush
+{
+public:
+    Property<TColor> Color;
+
+    explicit TBrush(no_vcl_obj_t handle);
+
+private:
+    no_vcl_obj_t handle_;
+
+    static TColor GetColorImpl(void* owner);
+    static void   SetColorImpl(void* owner, const TColor& value);
+};
+
+class TFont
+{
+public:
+    Property<std::string> Name;
+    Property<int>         Size;
+    Property<TColor>      Color;
+
+    explicit TFont(no_vcl_obj_t handle);
+
+private:
+    no_vcl_obj_t handle_;
+
+    static std::string GetNameImpl(void* owner);
+    static void        SetNameImpl(void* owner, const std::string& value);
+    static int         GetSizeImpl(void* owner);
+    static void        SetSizeImpl(void* owner, const int& value);
+    static TColor       GetColorImpl(void* owner);
+    static void         SetColorImpl(void* owner, const TColor& value);
+};
+
+class TCanvas
+{
+private:
+    no_vcl_obj_t handle_;
+
+public:
+    TPen   Pen;
+    TBrush Brush;
+    TFont  Font;
+
+    explicit TCanvas(no_vcl_obj_t handle);
+    TCanvas(const TCanvas&) = delete;
+    TCanvas& operator=(const TCanvas&) = delete;
+
+    void MoveTo(int x, int y);
+    void LineTo(int x, int y);
+    void Rectangle(int x1, int y1, int x2, int y2);
+    void Ellipse(int x1, int y1, int x2, int y2);
+    void TextOut(int x, int y, const std::string& text);
+
+    no_vcl_obj_t Handle() const { return handle_; }
+};
+
+class TPaintBox : public TObject
+{
+public:
+    Property<int>  Left;
+    Property<int>  Top;
+    Property<int>  Width;
+    Property<int>  Height;
+    Property<bool> Visible;
+    Property<bool> Enabled;
+    TCanvas        Canvas;
+
+    explicit TPaintBox(TObject& parent);
+    ~TPaintBox() override;
+
+    void SetOnPaint(std::function<void()> handler);
+
+private:
+    static no_vcl_obj_t MakeHandle(TObject& parent);
+
+    static void NO_VCL_CALL PaintTrampoline(no_vcl_obj_t sender);
+    static std::unordered_map<no_vcl_obj_t, TPaintBox*> s_registry;
+
+    std::function<void()> onPaint_;
+
+    static int  GetLeftImpl(void* owner);
+    static void SetLeftImpl(void* owner, const int& value);
+    static int  GetTopImpl(void* owner);
+    static void SetTopImpl(void* owner, const int& value);
+    static int  GetWidthImpl(void* owner);
+    static void SetWidthImpl(void* owner, const int& value);
+    static int  GetHeightImpl(void* owner);
+    static void SetHeightImpl(void* owner, const int& value);
+    static bool GetVisibleImpl(void* owner);
+    static void SetVisibleImpl(void* owner, const bool& value);
     static bool GetEnabledImpl(void* owner);
     static void SetEnabledImpl(void* owner, const bool& value);
 };

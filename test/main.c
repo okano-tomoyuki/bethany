@@ -49,6 +49,39 @@ static void NO_VCL_CALL OnMemoChange(no_vcl_obj_t sender)
     fflush(stdout);
 }
 
+/* TColorはDelphi/LCLの$00BBGGRR順パック整数 */
+#define CL_BLACK  0x000000
+#define CL_WHITE  0xFFFFFF
+#define CL_RED    0x0000FF
+#define CL_GREEN  0x008000
+#define CL_BLUE   0xFF0000
+#define CL_YELLOW 0x00FFFF
+
+static void NO_VCL_CALL OnPaintBoxPaint(no_vcl_obj_t sender)
+{
+    no_vcl_obj_t canvas = no_vcl_TPaintBox_GetCanvas(sender);
+    no_vcl_obj_t pen = no_vcl_TCanvas_GetPen(canvas);
+    no_vcl_obj_t brush = no_vcl_TCanvas_GetBrush(canvas);
+    no_vcl_obj_t font = no_vcl_TCanvas_GetFont(canvas);
+
+    no_vcl_TPen_SetColor(pen, CL_RED);
+    no_vcl_TPen_SetWidth(pen, 2);
+    no_vcl_TBrush_SetColor(brush, CL_YELLOW);
+    no_vcl_TCanvas_Rectangle(canvas, 10, 10, 110, 70);
+
+    no_vcl_TPen_SetColor(pen, CL_BLUE);
+    no_vcl_TBrush_SetColor(brush, CL_WHITE);
+    no_vcl_TCanvas_Ellipse(canvas, 120, 10, 200, 70);
+
+    no_vcl_TPen_SetColor(pen, CL_BLACK);
+    no_vcl_TCanvas_MoveTo(canvas, 10, 90);
+    no_vcl_TCanvas_LineTo(canvas, 200, 90);
+
+    no_vcl_TFont_SetColor(font, CL_GREEN);
+    no_vcl_TFont_SetSize(font, 14);
+    no_vcl_TCanvas_TextOut(canvas, 10, 100, "Canvas drawing test");
+}
+
 static no_vcl_obj_t g_tickLabel = NULL;
 static int g_tickCount = 0;
 
@@ -78,6 +111,7 @@ int main(void)
     no_vcl_obj_t listBox;
     no_vcl_obj_t memo;
     no_vcl_obj_t timer;
+    no_vcl_obj_t paintBox;
 
     if (!form)
     {
@@ -194,6 +228,14 @@ int main(void)
     no_vcl_TTimer_SetInterval(timer, 500);
     no_vcl_TTimer_SetOnTimer(timer, OnTimerTick);
     no_vcl_TTimer_SetEnabled(timer, 1);
+
+    paintBox = no_vcl_TPaintBox_Create(form);
+    no_vcl_TPaintBox_SetParent(paintBox, form);
+    no_vcl_TPaintBox_SetLeft(paintBox, 400);
+    no_vcl_TPaintBox_SetTop(paintBox, 20);
+    no_vcl_TPaintBox_SetWidth(paintBox, 220);
+    no_vcl_TPaintBox_SetHeight(paintBox, 130);
+    no_vcl_TPaintBox_SetOnPaint(paintBox, OnPaintBoxPaint);
 
     printf("Showing form (click the button, then close the window to continue)...\n");
     no_vcl_TForm_ShowModal(form);

@@ -366,6 +366,65 @@ typedef void          (NO_VCL_CALL *TTimer_SetEnabled)(no_vcl_obj_t Obj, no_vcl_
 
 typedef void         (NO_VCL_CALL *TTimer_SetOnTimer)(no_vcl_obj_t Obj, no_vcl_callback_t Cb);
 
+/* TPaintBox */
+typedef no_vcl_obj_t (NO_VCL_CALL *TPaintBox_Create)(no_vcl_obj_t Owner);
+typedef void         (NO_VCL_CALL *TPaintBox_Destroy)(no_vcl_obj_t Obj);
+
+typedef void         (NO_VCL_CALL *TPaintBox_SetParent)(no_vcl_obj_t Obj, no_vcl_obj_t ParentObj);
+
+typedef no_vcl_int_t (NO_VCL_CALL *TPaintBox_GetLeft)(no_vcl_obj_t Obj);
+typedef void         (NO_VCL_CALL *TPaintBox_SetLeft)(no_vcl_obj_t Obj, no_vcl_int_t Left);
+
+typedef no_vcl_int_t (NO_VCL_CALL *TPaintBox_GetTop)(no_vcl_obj_t Obj);
+typedef void         (NO_VCL_CALL *TPaintBox_SetTop)(no_vcl_obj_t Obj, no_vcl_int_t Top);
+
+typedef no_vcl_int_t (NO_VCL_CALL *TPaintBox_GetWidth)(no_vcl_obj_t Obj);
+typedef void         (NO_VCL_CALL *TPaintBox_SetWidth)(no_vcl_obj_t Obj, no_vcl_int_t Width);
+
+typedef no_vcl_int_t (NO_VCL_CALL *TPaintBox_GetHeight)(no_vcl_obj_t Obj);
+typedef void         (NO_VCL_CALL *TPaintBox_SetHeight)(no_vcl_obj_t Obj, no_vcl_int_t Height);
+
+typedef no_vcl_bool_t (NO_VCL_CALL *TPaintBox_GetVisible)(no_vcl_obj_t Obj);
+typedef void          (NO_VCL_CALL *TPaintBox_SetVisible)(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+
+typedef no_vcl_bool_t (NO_VCL_CALL *TPaintBox_GetEnabled)(no_vcl_obj_t Obj);
+typedef void          (NO_VCL_CALL *TPaintBox_SetEnabled)(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+
+typedef no_vcl_obj_t (NO_VCL_CALL *TPaintBox_GetCanvas)(no_vcl_obj_t Obj);
+typedef void         (NO_VCL_CALL *TPaintBox_SetOnPaint)(no_vcl_obj_t Obj, no_vcl_callback_t Cb);
+
+/* TCanvas */
+typedef void         (NO_VCL_CALL *TCanvas_MoveTo)(no_vcl_obj_t Obj, no_vcl_int_t X, no_vcl_int_t Y);
+typedef void         (NO_VCL_CALL *TCanvas_LineTo)(no_vcl_obj_t Obj, no_vcl_int_t X, no_vcl_int_t Y);
+typedef void         (NO_VCL_CALL *TCanvas_Rectangle)(no_vcl_obj_t Obj, no_vcl_int_t X1, no_vcl_int_t Y1, no_vcl_int_t X2, no_vcl_int_t Y2);
+typedef void         (NO_VCL_CALL *TCanvas_Ellipse)(no_vcl_obj_t Obj, no_vcl_int_t X1, no_vcl_int_t Y1, no_vcl_int_t X2, no_vcl_int_t Y2);
+typedef void         (NO_VCL_CALL *TCanvas_TextOut)(no_vcl_obj_t Obj, no_vcl_int_t X, no_vcl_int_t Y, no_vcl_str_t Text);
+
+typedef no_vcl_obj_t (NO_VCL_CALL *TCanvas_GetPen)(no_vcl_obj_t Obj);
+typedef no_vcl_obj_t (NO_VCL_CALL *TCanvas_GetBrush)(no_vcl_obj_t Obj);
+typedef no_vcl_obj_t (NO_VCL_CALL *TCanvas_GetFont)(no_vcl_obj_t Obj);
+
+/* TPen */
+typedef no_vcl_int_t (NO_VCL_CALL *TPen_GetColor)(no_vcl_obj_t Obj);
+typedef void         (NO_VCL_CALL *TPen_SetColor)(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+typedef no_vcl_int_t (NO_VCL_CALL *TPen_GetWidth)(no_vcl_obj_t Obj);
+typedef void         (NO_VCL_CALL *TPen_SetWidth)(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+/* TBrush */
+typedef no_vcl_int_t (NO_VCL_CALL *TBrush_GetColor)(no_vcl_obj_t Obj);
+typedef void         (NO_VCL_CALL *TBrush_SetColor)(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+/* TFont */
+typedef no_vcl_str_t (NO_VCL_CALL *TFont_GetName)(no_vcl_obj_t Obj);
+typedef void         (NO_VCL_CALL *TFont_SetName)(no_vcl_obj_t Obj, no_vcl_str_t Value);
+
+typedef no_vcl_int_t (NO_VCL_CALL *TFont_GetSize)(no_vcl_obj_t Obj);
+typedef void         (NO_VCL_CALL *TFont_SetSize)(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+typedef no_vcl_int_t (NO_VCL_CALL *TFont_GetColor)(no_vcl_obj_t Obj);
+typedef void         (NO_VCL_CALL *TFont_SetColor)(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
 /* thread_local 関数ポインタ */
 thread_local TForm_Create       TForm_Create_           = nullptr;
 thread_local TForm_Destroy      TForm_Destroy_          = nullptr;
@@ -606,6 +665,48 @@ thread_local TTimer_SetInterval TTimer_SetInterval_ = nullptr;
 thread_local TTimer_GetEnabled  TTimer_GetEnabled_  = nullptr;
 thread_local TTimer_SetEnabled  TTimer_SetEnabled_  = nullptr;
 thread_local TTimer_SetOnTimer  TTimer_SetOnTimer_  = nullptr;
+
+thread_local TPaintBox_Create      TPaintBox_Create_      = nullptr;
+thread_local TPaintBox_Destroy     TPaintBox_Destroy_     = nullptr;
+thread_local TPaintBox_SetParent   TPaintBox_SetParent_   = nullptr;
+thread_local TPaintBox_GetLeft     TPaintBox_GetLeft_     = nullptr;
+thread_local TPaintBox_SetLeft     TPaintBox_SetLeft_     = nullptr;
+thread_local TPaintBox_GetTop      TPaintBox_GetTop_      = nullptr;
+thread_local TPaintBox_SetTop      TPaintBox_SetTop_      = nullptr;
+thread_local TPaintBox_GetWidth    TPaintBox_GetWidth_    = nullptr;
+thread_local TPaintBox_SetWidth    TPaintBox_SetWidth_    = nullptr;
+thread_local TPaintBox_GetHeight   TPaintBox_GetHeight_   = nullptr;
+thread_local TPaintBox_SetHeight   TPaintBox_SetHeight_   = nullptr;
+thread_local TPaintBox_GetVisible  TPaintBox_GetVisible_  = nullptr;
+thread_local TPaintBox_SetVisible  TPaintBox_SetVisible_  = nullptr;
+thread_local TPaintBox_GetEnabled  TPaintBox_GetEnabled_  = nullptr;
+thread_local TPaintBox_SetEnabled  TPaintBox_SetEnabled_  = nullptr;
+thread_local TPaintBox_GetCanvas   TPaintBox_GetCanvas_   = nullptr;
+thread_local TPaintBox_SetOnPaint  TPaintBox_SetOnPaint_  = nullptr;
+
+thread_local TCanvas_MoveTo    TCanvas_MoveTo_    = nullptr;
+thread_local TCanvas_LineTo    TCanvas_LineTo_    = nullptr;
+thread_local TCanvas_Rectangle TCanvas_Rectangle_ = nullptr;
+thread_local TCanvas_Ellipse   TCanvas_Ellipse_   = nullptr;
+thread_local TCanvas_TextOut   TCanvas_TextOut_   = nullptr;
+thread_local TCanvas_GetPen    TCanvas_GetPen_    = nullptr;
+thread_local TCanvas_GetBrush  TCanvas_GetBrush_  = nullptr;
+thread_local TCanvas_GetFont   TCanvas_GetFont_   = nullptr;
+
+thread_local TPen_GetColor TPen_GetColor_ = nullptr;
+thread_local TPen_SetColor TPen_SetColor_ = nullptr;
+thread_local TPen_GetWidth TPen_GetWidth_ = nullptr;
+thread_local TPen_SetWidth TPen_SetWidth_ = nullptr;
+
+thread_local TBrush_GetColor TBrush_GetColor_ = nullptr;
+thread_local TBrush_SetColor TBrush_SetColor_ = nullptr;
+
+thread_local TFont_GetName  TFont_GetName_  = nullptr;
+thread_local TFont_SetName  TFont_SetName_  = nullptr;
+thread_local TFont_GetSize  TFont_GetSize_  = nullptr;
+thread_local TFont_SetSize  TFont_SetSize_  = nullptr;
+thread_local TFont_GetColor TFont_GetColor_ = nullptr;
+thread_local TFont_SetColor TFont_SetColor_ = nullptr;
 
 /* 関数ポインタマッピング */
 template<typename Func>
@@ -869,6 +970,48 @@ void no_vcl_init(void)
     NO_VCL_MAP(m, TTimer_GetEnabled);
     NO_VCL_MAP(m, TTimer_SetEnabled);
     NO_VCL_MAP(m, TTimer_SetOnTimer);
+
+    NO_VCL_MAP(m, TPaintBox_Create);
+    NO_VCL_MAP(m, TPaintBox_Destroy);
+    NO_VCL_MAP(m, TPaintBox_SetParent);
+    NO_VCL_MAP(m, TPaintBox_GetLeft);
+    NO_VCL_MAP(m, TPaintBox_SetLeft);
+    NO_VCL_MAP(m, TPaintBox_GetTop);
+    NO_VCL_MAP(m, TPaintBox_SetTop);
+    NO_VCL_MAP(m, TPaintBox_GetWidth);
+    NO_VCL_MAP(m, TPaintBox_SetWidth);
+    NO_VCL_MAP(m, TPaintBox_GetHeight);
+    NO_VCL_MAP(m, TPaintBox_SetHeight);
+    NO_VCL_MAP(m, TPaintBox_GetVisible);
+    NO_VCL_MAP(m, TPaintBox_SetVisible);
+    NO_VCL_MAP(m, TPaintBox_GetEnabled);
+    NO_VCL_MAP(m, TPaintBox_SetEnabled);
+    NO_VCL_MAP(m, TPaintBox_GetCanvas);
+    NO_VCL_MAP(m, TPaintBox_SetOnPaint);
+
+    NO_VCL_MAP(m, TCanvas_MoveTo);
+    NO_VCL_MAP(m, TCanvas_LineTo);
+    NO_VCL_MAP(m, TCanvas_Rectangle);
+    NO_VCL_MAP(m, TCanvas_Ellipse);
+    NO_VCL_MAP(m, TCanvas_TextOut);
+    NO_VCL_MAP(m, TCanvas_GetPen);
+    NO_VCL_MAP(m, TCanvas_GetBrush);
+    NO_VCL_MAP(m, TCanvas_GetFont);
+
+    NO_VCL_MAP(m, TPen_GetColor);
+    NO_VCL_MAP(m, TPen_SetColor);
+    NO_VCL_MAP(m, TPen_GetWidth);
+    NO_VCL_MAP(m, TPen_SetWidth);
+
+    NO_VCL_MAP(m, TBrush_GetColor);
+    NO_VCL_MAP(m, TBrush_SetColor);
+
+    NO_VCL_MAP(m, TFont_GetName);
+    NO_VCL_MAP(m, TFont_SetName);
+    NO_VCL_MAP(m, TFont_GetSize);
+    NO_VCL_MAP(m, TFont_SetSize);
+    NO_VCL_MAP(m, TFont_GetColor);
+    NO_VCL_MAP(m, TFont_SetColor);
 }
 
 #define NO_VCL_INIT_CHECK(f) \
@@ -2238,6 +2381,228 @@ void NO_VCL_CALL no_vcl_TTimer_SetOnTimer(no_vcl_obj_t obj, no_vcl_callback_t cb
 {
     NO_VCL_INIT_CHECK(TTimer_SetOnTimer_);
     TTimer_SetOnTimer_(obj, cb);
+}
+
+no_vcl_obj_t NO_VCL_CALL no_vcl_TPaintBox_Create(no_vcl_obj_t owner)
+{
+    NO_VCL_INIT_CHECK(TPaintBox_Create_);
+    return TPaintBox_Create_(owner);
+}
+
+void NO_VCL_CALL no_vcl_TPaintBox_Destroy(no_vcl_obj_t obj)
+{
+    NO_VCL_INIT_CHECK(TPaintBox_Destroy_);
+    TPaintBox_Destroy_(obj);
+}
+
+void NO_VCL_CALL no_vcl_TPaintBox_SetParent(no_vcl_obj_t obj, no_vcl_obj_t parentObj)
+{
+    NO_VCL_INIT_CHECK(TPaintBox_SetParent_);
+    TPaintBox_SetParent_(obj, parentObj);
+}
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TPaintBox_GetLeft(no_vcl_obj_t obj)
+{
+    NO_VCL_INIT_CHECK(TPaintBox_GetLeft_);
+    return TPaintBox_GetLeft_(obj);
+}
+
+void NO_VCL_CALL no_vcl_TPaintBox_SetLeft(no_vcl_obj_t obj, no_vcl_int_t left)
+{
+    NO_VCL_INIT_CHECK(TPaintBox_SetLeft_);
+    TPaintBox_SetLeft_(obj, left);
+}
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TPaintBox_GetTop(no_vcl_obj_t obj)
+{
+    NO_VCL_INIT_CHECK(TPaintBox_GetTop_);
+    return TPaintBox_GetTop_(obj);
+}
+
+void NO_VCL_CALL no_vcl_TPaintBox_SetTop(no_vcl_obj_t obj, no_vcl_int_t top)
+{
+    NO_VCL_INIT_CHECK(TPaintBox_SetTop_);
+    TPaintBox_SetTop_(obj, top);
+}
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TPaintBox_GetWidth(no_vcl_obj_t obj)
+{
+    NO_VCL_INIT_CHECK(TPaintBox_GetWidth_);
+    return TPaintBox_GetWidth_(obj);
+}
+
+void NO_VCL_CALL no_vcl_TPaintBox_SetWidth(no_vcl_obj_t obj, no_vcl_int_t width)
+{
+    NO_VCL_INIT_CHECK(TPaintBox_SetWidth_);
+    TPaintBox_SetWidth_(obj, width);
+}
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TPaintBox_GetHeight(no_vcl_obj_t obj)
+{
+    NO_VCL_INIT_CHECK(TPaintBox_GetHeight_);
+    return TPaintBox_GetHeight_(obj);
+}
+
+void NO_VCL_CALL no_vcl_TPaintBox_SetHeight(no_vcl_obj_t obj, no_vcl_int_t height)
+{
+    NO_VCL_INIT_CHECK(TPaintBox_SetHeight_);
+    TPaintBox_SetHeight_(obj, height);
+}
+
+no_vcl_bool_t NO_VCL_CALL no_vcl_TPaintBox_GetVisible(no_vcl_obj_t obj)
+{
+    NO_VCL_INIT_CHECK(TPaintBox_GetVisible_);
+    return TPaintBox_GetVisible_(obj);
+}
+
+void NO_VCL_CALL no_vcl_TPaintBox_SetVisible(no_vcl_obj_t obj, no_vcl_bool_t value)
+{
+    NO_VCL_INIT_CHECK(TPaintBox_SetVisible_);
+    TPaintBox_SetVisible_(obj, value);
+}
+
+no_vcl_bool_t NO_VCL_CALL no_vcl_TPaintBox_GetEnabled(no_vcl_obj_t obj)
+{
+    NO_VCL_INIT_CHECK(TPaintBox_GetEnabled_);
+    return TPaintBox_GetEnabled_(obj);
+}
+
+void NO_VCL_CALL no_vcl_TPaintBox_SetEnabled(no_vcl_obj_t obj, no_vcl_bool_t value)
+{
+    NO_VCL_INIT_CHECK(TPaintBox_SetEnabled_);
+    TPaintBox_SetEnabled_(obj, value);
+}
+
+no_vcl_obj_t NO_VCL_CALL no_vcl_TPaintBox_GetCanvas(no_vcl_obj_t obj)
+{
+    NO_VCL_INIT_CHECK(TPaintBox_GetCanvas_);
+    return TPaintBox_GetCanvas_(obj);
+}
+
+void NO_VCL_CALL no_vcl_TPaintBox_SetOnPaint(no_vcl_obj_t obj, no_vcl_callback_t cb)
+{
+    NO_VCL_INIT_CHECK(TPaintBox_SetOnPaint_);
+    TPaintBox_SetOnPaint_(obj, cb);
+}
+
+void NO_VCL_CALL no_vcl_TCanvas_MoveTo(no_vcl_obj_t obj, no_vcl_int_t x, no_vcl_int_t y)
+{
+    NO_VCL_INIT_CHECK(TCanvas_MoveTo_);
+    TCanvas_MoveTo_(obj, x, y);
+}
+
+void NO_VCL_CALL no_vcl_TCanvas_LineTo(no_vcl_obj_t obj, no_vcl_int_t x, no_vcl_int_t y)
+{
+    NO_VCL_INIT_CHECK(TCanvas_LineTo_);
+    TCanvas_LineTo_(obj, x, y);
+}
+
+void NO_VCL_CALL no_vcl_TCanvas_Rectangle(no_vcl_obj_t obj, no_vcl_int_t x1, no_vcl_int_t y1, no_vcl_int_t x2, no_vcl_int_t y2)
+{
+    NO_VCL_INIT_CHECK(TCanvas_Rectangle_);
+    TCanvas_Rectangle_(obj, x1, y1, x2, y2);
+}
+
+void NO_VCL_CALL no_vcl_TCanvas_Ellipse(no_vcl_obj_t obj, no_vcl_int_t x1, no_vcl_int_t y1, no_vcl_int_t x2, no_vcl_int_t y2)
+{
+    NO_VCL_INIT_CHECK(TCanvas_Ellipse_);
+    TCanvas_Ellipse_(obj, x1, y1, x2, y2);
+}
+
+void NO_VCL_CALL no_vcl_TCanvas_TextOut(no_vcl_obj_t obj, no_vcl_int_t x, no_vcl_int_t y, no_vcl_str_t text)
+{
+    NO_VCL_INIT_CHECK(TCanvas_TextOut_);
+    TCanvas_TextOut_(obj, x, y, text);
+}
+
+no_vcl_obj_t NO_VCL_CALL no_vcl_TCanvas_GetPen(no_vcl_obj_t obj)
+{
+    NO_VCL_INIT_CHECK(TCanvas_GetPen_);
+    return TCanvas_GetPen_(obj);
+}
+
+no_vcl_obj_t NO_VCL_CALL no_vcl_TCanvas_GetBrush(no_vcl_obj_t obj)
+{
+    NO_VCL_INIT_CHECK(TCanvas_GetBrush_);
+    return TCanvas_GetBrush_(obj);
+}
+
+no_vcl_obj_t NO_VCL_CALL no_vcl_TCanvas_GetFont(no_vcl_obj_t obj)
+{
+    NO_VCL_INIT_CHECK(TCanvas_GetFont_);
+    return TCanvas_GetFont_(obj);
+}
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TPen_GetColor(no_vcl_obj_t obj)
+{
+    NO_VCL_INIT_CHECK(TPen_GetColor_);
+    return TPen_GetColor_(obj);
+}
+
+void NO_VCL_CALL no_vcl_TPen_SetColor(no_vcl_obj_t obj, no_vcl_int_t value)
+{
+    NO_VCL_INIT_CHECK(TPen_SetColor_);
+    TPen_SetColor_(obj, value);
+}
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TPen_GetWidth(no_vcl_obj_t obj)
+{
+    NO_VCL_INIT_CHECK(TPen_GetWidth_);
+    return TPen_GetWidth_(obj);
+}
+
+void NO_VCL_CALL no_vcl_TPen_SetWidth(no_vcl_obj_t obj, no_vcl_int_t value)
+{
+    NO_VCL_INIT_CHECK(TPen_SetWidth_);
+    TPen_SetWidth_(obj, value);
+}
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TBrush_GetColor(no_vcl_obj_t obj)
+{
+    NO_VCL_INIT_CHECK(TBrush_GetColor_);
+    return TBrush_GetColor_(obj);
+}
+
+void NO_VCL_CALL no_vcl_TBrush_SetColor(no_vcl_obj_t obj, no_vcl_int_t value)
+{
+    NO_VCL_INIT_CHECK(TBrush_SetColor_);
+    TBrush_SetColor_(obj, value);
+}
+
+no_vcl_str_t NO_VCL_CALL no_vcl_TFont_GetName(no_vcl_obj_t obj)
+{
+    NO_VCL_INIT_CHECK(TFont_GetName_);
+    return TFont_GetName_(obj);
+}
+
+void NO_VCL_CALL no_vcl_TFont_SetName(no_vcl_obj_t obj, no_vcl_str_t value)
+{
+    NO_VCL_INIT_CHECK(TFont_SetName_);
+    TFont_SetName_(obj, value);
+}
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TFont_GetSize(no_vcl_obj_t obj)
+{
+    NO_VCL_INIT_CHECK(TFont_GetSize_);
+    return TFont_GetSize_(obj);
+}
+
+void NO_VCL_CALL no_vcl_TFont_SetSize(no_vcl_obj_t obj, no_vcl_int_t value)
+{
+    NO_VCL_INIT_CHECK(TFont_SetSize_);
+    TFont_SetSize_(obj, value);
+}
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TFont_GetColor(no_vcl_obj_t obj)
+{
+    NO_VCL_INIT_CHECK(TFont_GetColor_);
+    return TFont_GetColor_(obj);
+}
+
+void NO_VCL_CALL no_vcl_TFont_SetColor(no_vcl_obj_t obj, no_vcl_int_t value)
+{
+    NO_VCL_INIT_CHECK(TFont_SetColor_);
+    TFont_SetColor_(obj, value);
 }
 
 } // extern "C"

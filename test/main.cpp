@@ -137,6 +137,30 @@ int main()
     });
     timer.Enabled = true;
 
+    no_vcl::TPaintBox paintBox(form);
+    paintBox.Left = 400;
+    paintBox.Top = 20;
+    paintBox.Width = 220;
+    paintBox.Height = 130;
+    paintBox.SetOnPaint([&paintBox]() {
+        paintBox.Canvas.Pen.Color = no_vcl::clRed;
+        paintBox.Canvas.Pen.Width = 2;
+        paintBox.Canvas.Brush.Color = no_vcl::clYellow;
+        paintBox.Canvas.Rectangle(10, 10, 110, 70);
+
+        paintBox.Canvas.Pen.Color = no_vcl::clBlue;
+        paintBox.Canvas.Brush.Color = no_vcl::clWhite;
+        paintBox.Canvas.Ellipse(120, 10, 200, 70);
+
+        paintBox.Canvas.Pen.Color = no_vcl::clBlack;
+        paintBox.Canvas.MoveTo(10, 90);
+        paintBox.Canvas.LineTo(200, 90);
+
+        paintBox.Canvas.Font.Color = no_vcl::clGreen;
+        paintBox.Canvas.Font.Size = 14;
+        paintBox.Canvas.TextOut(10, 100, "Canvas drawing test");
+    });
+
     std::printf("Showing form (click the button, then close the window to continue)...\n");
     std::fflush(stdout);
     form.ShowModal();

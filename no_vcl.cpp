@@ -1235,4 +1235,225 @@ void TTimer::SetEnabledImpl(void* owner, const bool& value)
     no_vcl_TTimer_SetEnabled(static_cast<TTimer*>(owner)->handle_, value ? 1 : 0);
 }
 
+/* ---------------- TPen ---------------- */
+
+TPen::TPen(no_vcl_obj_t handle)
+    : Color(this, &TPen::GetColorImpl, &TPen::SetColorImpl)
+    , Width(this, &TPen::GetWidthImpl, &TPen::SetWidthImpl)
+    , handle_(handle)
+{}
+
+TColor TPen::GetColorImpl(void* owner)
+{
+    return static_cast<TColor>(no_vcl_TPen_GetColor(static_cast<TPen*>(owner)->handle_));
+}
+
+void TPen::SetColorImpl(void* owner, const TColor& value)
+{
+    no_vcl_TPen_SetColor(static_cast<TPen*>(owner)->handle_, value);
+}
+
+int TPen::GetWidthImpl(void* owner)
+{
+    return no_vcl_TPen_GetWidth(static_cast<TPen*>(owner)->handle_);
+}
+
+void TPen::SetWidthImpl(void* owner, const int& value)
+{
+    no_vcl_TPen_SetWidth(static_cast<TPen*>(owner)->handle_, value);
+}
+
+/* ---------------- TBrush ---------------- */
+
+TBrush::TBrush(no_vcl_obj_t handle)
+    : Color(this, &TBrush::GetColorImpl, &TBrush::SetColorImpl)
+    , handle_(handle)
+{}
+
+TColor TBrush::GetColorImpl(void* owner)
+{
+    return static_cast<TColor>(no_vcl_TBrush_GetColor(static_cast<TBrush*>(owner)->handle_));
+}
+
+void TBrush::SetColorImpl(void* owner, const TColor& value)
+{
+    no_vcl_TBrush_SetColor(static_cast<TBrush*>(owner)->handle_, value);
+}
+
+/* ---------------- TFont ---------------- */
+
+TFont::TFont(no_vcl_obj_t handle)
+    : Name(this, &TFont::GetNameImpl, &TFont::SetNameImpl)
+    , Size(this, &TFont::GetSizeImpl, &TFont::SetSizeImpl)
+    , Color(this, &TFont::GetColorImpl, &TFont::SetColorImpl)
+    , handle_(handle)
+{}
+
+std::string TFont::GetNameImpl(void* owner)
+{
+    return std::string(no_vcl_TFont_GetName(static_cast<TFont*>(owner)->handle_));
+}
+
+void TFont::SetNameImpl(void* owner, const std::string& value)
+{
+    no_vcl_TFont_SetName(static_cast<TFont*>(owner)->handle_, value.c_str());
+}
+
+int TFont::GetSizeImpl(void* owner)
+{
+    return no_vcl_TFont_GetSize(static_cast<TFont*>(owner)->handle_);
+}
+
+void TFont::SetSizeImpl(void* owner, const int& value)
+{
+    no_vcl_TFont_SetSize(static_cast<TFont*>(owner)->handle_, value);
+}
+
+TColor TFont::GetColorImpl(void* owner)
+{
+    return static_cast<TColor>(no_vcl_TFont_GetColor(static_cast<TFont*>(owner)->handle_));
+}
+
+void TFont::SetColorImpl(void* owner, const TColor& value)
+{
+    no_vcl_TFont_SetColor(static_cast<TFont*>(owner)->handle_, value);
+}
+
+/* ---------------- TCanvas ---------------- */
+
+TCanvas::TCanvas(no_vcl_obj_t handle)
+    : handle_(handle)
+    , Pen(no_vcl_TCanvas_GetPen(handle))
+    , Brush(no_vcl_TCanvas_GetBrush(handle))
+    , Font(no_vcl_TCanvas_GetFont(handle))
+{}
+
+void TCanvas::MoveTo(int x, int y)
+{
+    no_vcl_TCanvas_MoveTo(handle_, x, y);
+}
+
+void TCanvas::LineTo(int x, int y)
+{
+    no_vcl_TCanvas_LineTo(handle_, x, y);
+}
+
+void TCanvas::Rectangle(int x1, int y1, int x2, int y2)
+{
+    no_vcl_TCanvas_Rectangle(handle_, x1, y1, x2, y2);
+}
+
+void TCanvas::Ellipse(int x1, int y1, int x2, int y2)
+{
+    no_vcl_TCanvas_Ellipse(handle_, x1, y1, x2, y2);
+}
+
+void TCanvas::TextOut(int x, int y, const std::string& text)
+{
+    no_vcl_TCanvas_TextOut(handle_, x, y, text.c_str());
+}
+
+/* ---------------- TPaintBox ---------------- */
+
+std::unordered_map<no_vcl_obj_t, TPaintBox*> TPaintBox::s_registry;
+
+no_vcl_obj_t TPaintBox::MakeHandle(TObject& parent)
+{
+    no_vcl_obj_t h = no_vcl_TPaintBox_Create(parent.Handle());
+    no_vcl_TPaintBox_SetParent(h, parent.Handle());
+    return h;
+}
+
+TPaintBox::TPaintBox(TObject& parent)
+    : TObject(MakeHandle(parent))
+    , Left(this, &TPaintBox::GetLeftImpl, &TPaintBox::SetLeftImpl)
+    , Top(this, &TPaintBox::GetTopImpl, &TPaintBox::SetTopImpl)
+    , Width(this, &TPaintBox::GetWidthImpl, &TPaintBox::SetWidthImpl)
+    , Height(this, &TPaintBox::GetHeightImpl, &TPaintBox::SetHeightImpl)
+    , Visible(this, &TPaintBox::GetVisibleImpl, &TPaintBox::SetVisibleImpl)
+    , Enabled(this, &TPaintBox::GetEnabledImpl, &TPaintBox::SetEnabledImpl)
+    , Canvas(no_vcl_TPaintBox_GetCanvas(handle_))
+{
+    s_registry[handle_] = this;
+    no_vcl_TPaintBox_SetOnPaint(handle_, &TPaintBox::PaintTrampoline);
+}
+
+TPaintBox::~TPaintBox()
+{
+    s_registry.erase(handle_);
+    no_vcl_TPaintBox_Destroy(handle_);
+}
+
+void TPaintBox::SetOnPaint(std::function<void()> handler)
+{
+    onPaint_ = std::move(handler);
+}
+
+void NO_VCL_CALL TPaintBox::PaintTrampoline(no_vcl_obj_t sender)
+{
+    auto it = s_registry.find(sender);
+    if (it != s_registry.end() && it->second->onPaint_)
+        it->second->onPaint_();
+}
+
+int TPaintBox::GetLeftImpl(void* owner)
+{
+    return no_vcl_TPaintBox_GetLeft(static_cast<TPaintBox*>(owner)->handle_);
+}
+
+void TPaintBox::SetLeftImpl(void* owner, const int& value)
+{
+    no_vcl_TPaintBox_SetLeft(static_cast<TPaintBox*>(owner)->handle_, value);
+}
+
+int TPaintBox::GetTopImpl(void* owner)
+{
+    return no_vcl_TPaintBox_GetTop(static_cast<TPaintBox*>(owner)->handle_);
+}
+
+void TPaintBox::SetTopImpl(void* owner, const int& value)
+{
+    no_vcl_TPaintBox_SetTop(static_cast<TPaintBox*>(owner)->handle_, value);
+}
+
+int TPaintBox::GetWidthImpl(void* owner)
+{
+    return no_vcl_TPaintBox_GetWidth(static_cast<TPaintBox*>(owner)->handle_);
+}
+
+void TPaintBox::SetWidthImpl(void* owner, const int& value)
+{
+    no_vcl_TPaintBox_SetWidth(static_cast<TPaintBox*>(owner)->handle_, value);
+}
+
+int TPaintBox::GetHeightImpl(void* owner)
+{
+    return no_vcl_TPaintBox_GetHeight(static_cast<TPaintBox*>(owner)->handle_);
+}
+
+void TPaintBox::SetHeightImpl(void* owner, const int& value)
+{
+    no_vcl_TPaintBox_SetHeight(static_cast<TPaintBox*>(owner)->handle_, value);
+}
+
+bool TPaintBox::GetVisibleImpl(void* owner)
+{
+    return no_vcl_TPaintBox_GetVisible(static_cast<TPaintBox*>(owner)->handle_) != 0;
+}
+
+void TPaintBox::SetVisibleImpl(void* owner, const bool& value)
+{
+    no_vcl_TPaintBox_SetVisible(static_cast<TPaintBox*>(owner)->handle_, value ? 1 : 0);
+}
+
+bool TPaintBox::GetEnabledImpl(void* owner)
+{
+    return no_vcl_TPaintBox_GetEnabled(static_cast<TPaintBox*>(owner)->handle_) != 0;
+}
+
+void TPaintBox::SetEnabledImpl(void* owner, const bool& value)
+{
+    no_vcl_TPaintBox_SetEnabled(static_cast<TPaintBox*>(owner)->handle_, value ? 1 : 0);
+}
+
 } // namespace no_vcl
