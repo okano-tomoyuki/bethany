@@ -6,18 +6,26 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 FPC_HOME="C:\tool\lazarus\fpc\3.2.2"
 LAZARUS_HOME="C:\tool\lazarus"
 
-export PATH="/c/tool/lazarus/fpc/3.2.2/bin/x86_64-win64:$PATH"
-
-fpc no_vcl.pas -Px86_64 -Twin64 -Mobjfpc -dLCL -dLCLwin32 \
+# FPCのbinディレクトリには古いgcc(2.95)が同梱されており、PATHの先頭に置くと
+# MinGW64本来のgccを覆い隠してしまう。fpc呼び出しにだけ限定してPATHへ追加する。
+PATH="/c/tool/lazarus/fpc/3.2.2/bin/x86_64-win64:$PATH" \
+  fpc no_vcl.pas -Px86_64 -Twin64 -Mobjfpc -dLCL -dLCLwin32 \
   -Fu"$LAZARUS_HOME\lcl\units\x86_64-win64" \
   -Fu"$LAZARUS_HOME\lcl\units\x86_64-win64\win32" \
   -Fu"$LAZARUS_HOME\components\lazutils\lib\x86_64-win64" \
   -Fu"$LAZARUS_HOME\packager\units\x86_64-win64"
 
-g++ -std=c++17 -Wall -Wextra \
-    no_vcl_impl.cpp test/main.cpp \
-    -o test/test.exe
+# C API (no_vcl_c.h) の疎通テスト。main.c は gcc、no_vcl_c.cpp は g++ でコンパイルし、
+# リンクはC++ランタイムを引き込むため g++ で行う。
+gcc -std=c11 -Wall -Wextra -c test/main.c -o test/main_c.o
+g++ -std=c++17 -Wall -Wextra -c no_vcl_c.cpp -o no_vcl_c.o
+g++ no_vcl_c.o test/main_c.o -o test/test_c.exe
+
+# C++ラッパー(no_vcl.hpp)の疎通テスト。
+g++ -std=c++11 -Wall -Wextra \
+    no_vcl_c.cpp no_vcl.cpp test/main.cpp \
+    -o test/test_cpp.exe
 
 cp no_vcl.dll test/no_vcl.dll
 
-echo "Build OK: no_vcl.dll, test/test.exe"
+echo "Build OK: no_vcl.dll, test/test_c.exe, test/test_cpp.exe"

@@ -1,5 +1,5 @@
-#ifndef NO_VCL_IMPL_H
-#define NO_VCL_IMPL_H
+#ifndef NO_VCL_C_H
+#define NO_VCL_C_H
 
 #if defined(_WIN32) || defined(_WIN64)
     #define NO_VCL_CALL __stdcall

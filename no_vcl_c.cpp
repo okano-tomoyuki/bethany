@@ -4,7 +4,7 @@
 #include <stdexcept>
 
 #include <windows.h>
-#include "no_vcl_impl.h"
+#include "no_vcl_c.h"
 
 namespace
 {
