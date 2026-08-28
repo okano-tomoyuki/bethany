@@ -354,6 +354,18 @@ typedef void          (NO_VCL_CALL *TMemo_SetEnabled)(no_vcl_obj_t Obj, no_vcl_b
 
 typedef void         (NO_VCL_CALL *TMemo_SetOnChange)(no_vcl_obj_t Obj, no_vcl_callback_t Cb);
 
+/* TTimer */
+typedef no_vcl_obj_t (NO_VCL_CALL *TTimer_Create)(no_vcl_obj_t Owner);
+typedef void         (NO_VCL_CALL *TTimer_Destroy)(no_vcl_obj_t Obj);
+
+typedef no_vcl_int_t (NO_VCL_CALL *TTimer_GetInterval)(no_vcl_obj_t Obj);
+typedef void         (NO_VCL_CALL *TTimer_SetInterval)(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+typedef no_vcl_bool_t (NO_VCL_CALL *TTimer_GetEnabled)(no_vcl_obj_t Obj);
+typedef void          (NO_VCL_CALL *TTimer_SetEnabled)(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+
+typedef void         (NO_VCL_CALL *TTimer_SetOnTimer)(no_vcl_obj_t Obj, no_vcl_callback_t Cb);
+
 /* thread_local 関数ポインタ */
 thread_local TForm_Create       TForm_Create_           = nullptr;
 thread_local TForm_Destroy      TForm_Destroy_          = nullptr;
@@ -586,6 +598,14 @@ thread_local TMemo_SetVisible    TMemo_SetVisible_    = nullptr;
 thread_local TMemo_GetEnabled    TMemo_GetEnabled_    = nullptr;
 thread_local TMemo_SetEnabled    TMemo_SetEnabled_    = nullptr;
 thread_local TMemo_SetOnChange   TMemo_SetOnChange_   = nullptr;
+
+thread_local TTimer_Create      TTimer_Create_      = nullptr;
+thread_local TTimer_Destroy     TTimer_Destroy_     = nullptr;
+thread_local TTimer_GetInterval TTimer_GetInterval_ = nullptr;
+thread_local TTimer_SetInterval TTimer_SetInterval_ = nullptr;
+thread_local TTimer_GetEnabled  TTimer_GetEnabled_  = nullptr;
+thread_local TTimer_SetEnabled  TTimer_SetEnabled_  = nullptr;
+thread_local TTimer_SetOnTimer  TTimer_SetOnTimer_  = nullptr;
 
 /* 関数ポインタマッピング */
 template<typename Func>
@@ -841,6 +861,14 @@ void no_vcl_init(void)
     NO_VCL_MAP(m, TMemo_GetEnabled);
     NO_VCL_MAP(m, TMemo_SetEnabled);
     NO_VCL_MAP(m, TMemo_SetOnChange);
+
+    NO_VCL_MAP(m, TTimer_Create);
+    NO_VCL_MAP(m, TTimer_Destroy);
+    NO_VCL_MAP(m, TTimer_GetInterval);
+    NO_VCL_MAP(m, TTimer_SetInterval);
+    NO_VCL_MAP(m, TTimer_GetEnabled);
+    NO_VCL_MAP(m, TTimer_SetEnabled);
+    NO_VCL_MAP(m, TTimer_SetOnTimer);
 }
 
 #define NO_VCL_INIT_CHECK(f) \
@@ -2168,6 +2196,48 @@ void NO_VCL_CALL no_vcl_TMemo_SetOnChange(no_vcl_obj_t obj, no_vcl_callback_t cb
 {
     NO_VCL_INIT_CHECK(TMemo_SetOnChange_);
     TMemo_SetOnChange_(obj, cb);
+}
+
+no_vcl_obj_t NO_VCL_CALL no_vcl_TTimer_Create(no_vcl_obj_t owner)
+{
+    NO_VCL_INIT_CHECK(TTimer_Create_);
+    return TTimer_Create_(owner);
+}
+
+void NO_VCL_CALL no_vcl_TTimer_Destroy(no_vcl_obj_t obj)
+{
+    NO_VCL_INIT_CHECK(TTimer_Destroy_);
+    TTimer_Destroy_(obj);
+}
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TTimer_GetInterval(no_vcl_obj_t obj)
+{
+    NO_VCL_INIT_CHECK(TTimer_GetInterval_);
+    return TTimer_GetInterval_(obj);
+}
+
+void NO_VCL_CALL no_vcl_TTimer_SetInterval(no_vcl_obj_t obj, no_vcl_int_t value)
+{
+    NO_VCL_INIT_CHECK(TTimer_SetInterval_);
+    TTimer_SetInterval_(obj, value);
+}
+
+no_vcl_bool_t NO_VCL_CALL no_vcl_TTimer_GetEnabled(no_vcl_obj_t obj)
+{
+    NO_VCL_INIT_CHECK(TTimer_GetEnabled_);
+    return TTimer_GetEnabled_(obj);
+}
+
+void NO_VCL_CALL no_vcl_TTimer_SetEnabled(no_vcl_obj_t obj, no_vcl_bool_t value)
+{
+    NO_VCL_INIT_CHECK(TTimer_SetEnabled_);
+    TTimer_SetEnabled_(obj, value);
+}
+
+void NO_VCL_CALL no_vcl_TTimer_SetOnTimer(no_vcl_obj_t obj, no_vcl_callback_t cb)
+{
+    NO_VCL_INIT_CHECK(TTimer_SetOnTimer_);
+    TTimer_SetOnTimer_(obj, cb);
 }
 
 } // extern "C"

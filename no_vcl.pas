@@ -1175,6 +1175,47 @@ begin
   TMemo(Obj).OnChange := @Bridge.DoClick;
 end;
 
+{ TTimer }
+
+function TTimer_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TTimer.Create(TComponent(Owner)));
+end;
+
+procedure TTimer_Destroy(Obj: Pointer); NO_VCL_CALL;
+begin
+  TTimer(Obj).Free;
+end;
+
+function TTimer_GetInterval(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TTimer(Obj).Interval;
+end;
+
+procedure TTimer_SetInterval(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TTimer(Obj).Interval := Value;
+end;
+
+function TTimer_GetEnabled(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TTimer(Obj).Enabled;
+end;
+
+procedure TTimer_SetEnabled(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TTimer(Obj).Enabled := Value;
+end;
+
+procedure TTimer_SetOnTimer(Obj: Pointer; Cb: TNoVclCallback); NO_VCL_CALL;
+var
+  Bridge: TCallbackBridge;
+begin
+  Bridge := TCallbackBridge.Create(TTimer(Obj));
+  Bridge.Callback := Cb;
+  TTimer(Obj).OnTimer := @Bridge.DoClick;
+end;
+
 exports
   TForm_Create,
   TForm_Destroy,
@@ -1394,7 +1435,14 @@ exports
   TMemo_SetVisible,
   TMemo_GetEnabled,
   TMemo_SetEnabled,
-  TMemo_SetOnChange;
+  TMemo_SetOnChange,
+  TTimer_Create,
+  TTimer_Destroy,
+  TTimer_GetInterval,
+  TTimer_SetInterval,
+  TTimer_GetEnabled,
+  TTimer_SetEnabled,
+  TTimer_SetOnTimer;
 
 begin
   RequireDerivedFormResource := False;

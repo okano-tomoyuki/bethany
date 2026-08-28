@@ -363,6 +363,18 @@ void          NO_VCL_CALL no_vcl_TMemo_SetEnabled(no_vcl_obj_t Obj, no_vcl_bool_
 
 void         NO_VCL_CALL no_vcl_TMemo_SetOnChange(no_vcl_obj_t Obj, no_vcl_callback_t Cb);
 
+/* TTimer */
+no_vcl_obj_t NO_VCL_CALL no_vcl_TTimer_Create(no_vcl_obj_t Owner);
+void         NO_VCL_CALL no_vcl_TTimer_Destroy(no_vcl_obj_t Obj);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TTimer_GetInterval(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TTimer_SetInterval(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+no_vcl_bool_t NO_VCL_CALL no_vcl_TTimer_GetEnabled(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TTimer_SetEnabled(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+
+void         NO_VCL_CALL no_vcl_TTimer_SetOnTimer(no_vcl_obj_t Obj, no_vcl_callback_t Cb);
+
 #ifdef __cplusplus
 }
 #endif

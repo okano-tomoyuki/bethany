@@ -51,6 +51,19 @@ void NO_VCL_CALL OnMemoChange(no_vcl_obj_t sender)
     std::fflush(stdout);
 }
 
+no_vcl_obj_t g_tickLabel = nullptr;
+int g_tickCount = 0;
+
+void NO_VCL_CALL OnTimerTick(no_vcl_obj_t /*sender*/)
+{
+    ++g_tickCount;
+    char buf[64];
+    std::snprintf(buf, sizeof(buf), "Tick: %d", g_tickCount);
+    no_vcl_TLabel_SetCaption(g_tickLabel, buf);
+    std::printf("Timer tick! count=%d\n", g_tickCount);
+    std::fflush(stdout);
+}
+
 } // namespace
 
 int main()
@@ -160,6 +173,17 @@ int main()
     no_vcl_TMemo_SetWidth(memo, 150);
     no_vcl_TMemo_SetHeight(memo, 80);
     no_vcl_TMemo_SetOnChange(memo, OnMemoChange);
+
+    g_tickLabel = no_vcl_TLabel_Create(form);
+    no_vcl_TLabel_SetParent(g_tickLabel, form);
+    no_vcl_TLabel_SetCaption(g_tickLabel, "Tick: 0");
+    no_vcl_TLabel_SetLeft(g_tickLabel, 20);
+    no_vcl_TLabel_SetTop(g_tickLabel, 230);
+
+    no_vcl_obj_t timer = no_vcl_TTimer_Create(form);
+    no_vcl_TTimer_SetInterval(timer, 500);
+    no_vcl_TTimer_SetOnTimer(timer, OnTimerTick);
+    no_vcl_TTimer_SetEnabled(timer, 1);
 
     std::printf("Showing form (click the button, then close the window to continue)...\n");
     no_vcl_TForm_ShowModal(form);
