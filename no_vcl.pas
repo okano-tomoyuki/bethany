@@ -12,7 +12,8 @@ uses
   Interfaces,
   Forms,
   Controls,
-  StdCtrls;
+  StdCtrls,
+  ExtCtrls;
 
 type
   TNoVclCallback = procedure(Sender: Pointer); NO_VCL_CALL;
@@ -632,6 +633,548 @@ begin
   TRadioButton(Obj).OnClick := @Bridge.DoClick;
 end;
 
+{ TPanel }
+
+function TPanel_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TPanel.Create(TComponent(Owner)));
+end;
+
+procedure TPanel_Destroy(Obj: Pointer); NO_VCL_CALL;
+begin
+  TPanel(Obj).Free;
+end;
+
+procedure TPanel_SetParent(Obj: Pointer; ParentObj: Pointer); NO_VCL_CALL;
+begin
+  TPanel(Obj).Parent := TWinControl(ParentObj);
+end;
+
+function TPanel_GetCaption(Obj: Pointer): PChar; NO_VCL_CALL;
+begin
+  Result := PChar(TPanel(Obj).Caption);
+end;
+
+procedure TPanel_SetCaption(Obj: Pointer; Caption: PChar); NO_VCL_CALL;
+begin
+  TPanel(Obj).Caption := Caption;
+end;
+
+function TPanel_GetLeft(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TPanel(Obj).Left;
+end;
+
+procedure TPanel_SetLeft(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TPanel(Obj).Left := Value;
+end;
+
+function TPanel_GetTop(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TPanel(Obj).Top;
+end;
+
+procedure TPanel_SetTop(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TPanel(Obj).Top := Value;
+end;
+
+function TPanel_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TPanel(Obj).Width;
+end;
+
+procedure TPanel_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TPanel(Obj).Width := Value;
+end;
+
+function TPanel_GetHeight(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TPanel(Obj).Height;
+end;
+
+procedure TPanel_SetHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TPanel(Obj).Height := Value;
+end;
+
+function TPanel_GetVisible(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TPanel(Obj).Visible;
+end;
+
+procedure TPanel_SetVisible(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TPanel(Obj).Visible := Value;
+end;
+
+function TPanel_GetEnabled(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TPanel(Obj).Enabled;
+end;
+
+procedure TPanel_SetEnabled(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TPanel(Obj).Enabled := Value;
+end;
+
+{ TGroupBox }
+
+function TGroupBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TGroupBox.Create(TComponent(Owner)));
+end;
+
+procedure TGroupBox_Destroy(Obj: Pointer); NO_VCL_CALL;
+begin
+  TGroupBox(Obj).Free;
+end;
+
+procedure TGroupBox_SetParent(Obj: Pointer; ParentObj: Pointer); NO_VCL_CALL;
+begin
+  TGroupBox(Obj).Parent := TWinControl(ParentObj);
+end;
+
+function TGroupBox_GetCaption(Obj: Pointer): PChar; NO_VCL_CALL;
+begin
+  Result := PChar(TGroupBox(Obj).Caption);
+end;
+
+procedure TGroupBox_SetCaption(Obj: Pointer; Caption: PChar); NO_VCL_CALL;
+begin
+  TGroupBox(Obj).Caption := Caption;
+end;
+
+function TGroupBox_GetLeft(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TGroupBox(Obj).Left;
+end;
+
+procedure TGroupBox_SetLeft(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TGroupBox(Obj).Left := Value;
+end;
+
+function TGroupBox_GetTop(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TGroupBox(Obj).Top;
+end;
+
+procedure TGroupBox_SetTop(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TGroupBox(Obj).Top := Value;
+end;
+
+function TGroupBox_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TGroupBox(Obj).Width;
+end;
+
+procedure TGroupBox_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TGroupBox(Obj).Width := Value;
+end;
+
+function TGroupBox_GetHeight(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TGroupBox(Obj).Height;
+end;
+
+procedure TGroupBox_SetHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TGroupBox(Obj).Height := Value;
+end;
+
+function TGroupBox_GetVisible(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TGroupBox(Obj).Visible;
+end;
+
+procedure TGroupBox_SetVisible(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TGroupBox(Obj).Visible := Value;
+end;
+
+function TGroupBox_GetEnabled(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TGroupBox(Obj).Enabled;
+end;
+
+procedure TGroupBox_SetEnabled(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TGroupBox(Obj).Enabled := Value;
+end;
+
+{ TComboBox }
+
+function TComboBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TComboBox.Create(TComponent(Owner)));
+end;
+
+procedure TComboBox_Destroy(Obj: Pointer); NO_VCL_CALL;
+begin
+  TComboBox(Obj).Free;
+end;
+
+procedure TComboBox_SetParent(Obj: Pointer; ParentObj: Pointer); NO_VCL_CALL;
+begin
+  TComboBox(Obj).Parent := TWinControl(ParentObj);
+end;
+
+function TComboBox_GetText(Obj: Pointer): PChar; NO_VCL_CALL;
+begin
+  Result := PChar(TComboBox(Obj).Text);
+end;
+
+procedure TComboBox_SetText(Obj: Pointer; Text: PChar); NO_VCL_CALL;
+begin
+  TComboBox(Obj).Text := Text;
+end;
+
+function TComboBox_GetItemIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TComboBox(Obj).ItemIndex;
+end;
+
+procedure TComboBox_SetItemIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TComboBox(Obj).ItemIndex := Value;
+end;
+
+procedure TComboBox_Items_Add(Obj: Pointer; Text: PChar); NO_VCL_CALL;
+begin
+  TComboBox(Obj).Items.Add(Text);
+end;
+
+procedure TComboBox_Items_Clear(Obj: Pointer); NO_VCL_CALL;
+begin
+  TComboBox(Obj).Items.Clear;
+end;
+
+function TComboBox_Items_Count(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TComboBox(Obj).Items.Count;
+end;
+
+function TComboBox_Items_GetText(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
+begin
+  Result := PChar(TComboBox(Obj).Items[Index]);
+end;
+
+function TComboBox_GetLeft(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TComboBox(Obj).Left;
+end;
+
+procedure TComboBox_SetLeft(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TComboBox(Obj).Left := Value;
+end;
+
+function TComboBox_GetTop(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TComboBox(Obj).Top;
+end;
+
+procedure TComboBox_SetTop(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TComboBox(Obj).Top := Value;
+end;
+
+function TComboBox_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TComboBox(Obj).Width;
+end;
+
+procedure TComboBox_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TComboBox(Obj).Width := Value;
+end;
+
+function TComboBox_GetHeight(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TComboBox(Obj).Height;
+end;
+
+procedure TComboBox_SetHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TComboBox(Obj).Height := Value;
+end;
+
+function TComboBox_GetVisible(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TComboBox(Obj).Visible;
+end;
+
+procedure TComboBox_SetVisible(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TComboBox(Obj).Visible := Value;
+end;
+
+function TComboBox_GetEnabled(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TComboBox(Obj).Enabled;
+end;
+
+procedure TComboBox_SetEnabled(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TComboBox(Obj).Enabled := Value;
+end;
+
+procedure TComboBox_SetOnChange(Obj: Pointer; Cb: TNoVclCallback); NO_VCL_CALL;
+var
+  Bridge: TCallbackBridge;
+begin
+  Bridge := TCallbackBridge.Create(TComboBox(Obj));
+  Bridge.Callback := Cb;
+  TComboBox(Obj).OnChange := @Bridge.DoClick;
+end;
+
+{ TListBox }
+
+function TListBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TListBox.Create(TComponent(Owner)));
+end;
+
+procedure TListBox_Destroy(Obj: Pointer); NO_VCL_CALL;
+begin
+  TListBox(Obj).Free;
+end;
+
+procedure TListBox_SetParent(Obj: Pointer; ParentObj: Pointer); NO_VCL_CALL;
+begin
+  TListBox(Obj).Parent := TWinControl(ParentObj);
+end;
+
+function TListBox_GetItemIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TListBox(Obj).ItemIndex;
+end;
+
+procedure TListBox_SetItemIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TListBox(Obj).ItemIndex := Value;
+end;
+
+procedure TListBox_Items_Add(Obj: Pointer; Text: PChar); NO_VCL_CALL;
+begin
+  TListBox(Obj).Items.Add(Text);
+end;
+
+procedure TListBox_Items_Clear(Obj: Pointer); NO_VCL_CALL;
+begin
+  TListBox(Obj).Items.Clear;
+end;
+
+function TListBox_Items_Count(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TListBox(Obj).Items.Count;
+end;
+
+function TListBox_Items_GetText(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
+begin
+  Result := PChar(TListBox(Obj).Items[Index]);
+end;
+
+function TListBox_GetLeft(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TListBox(Obj).Left;
+end;
+
+procedure TListBox_SetLeft(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TListBox(Obj).Left := Value;
+end;
+
+function TListBox_GetTop(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TListBox(Obj).Top;
+end;
+
+procedure TListBox_SetTop(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TListBox(Obj).Top := Value;
+end;
+
+function TListBox_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TListBox(Obj).Width;
+end;
+
+procedure TListBox_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TListBox(Obj).Width := Value;
+end;
+
+function TListBox_GetHeight(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TListBox(Obj).Height;
+end;
+
+procedure TListBox_SetHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TListBox(Obj).Height := Value;
+end;
+
+function TListBox_GetVisible(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TListBox(Obj).Visible;
+end;
+
+procedure TListBox_SetVisible(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TListBox(Obj).Visible := Value;
+end;
+
+function TListBox_GetEnabled(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TListBox(Obj).Enabled;
+end;
+
+procedure TListBox_SetEnabled(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TListBox(Obj).Enabled := Value;
+end;
+
+procedure TListBox_SetOnClick(Obj: Pointer; Cb: TNoVclCallback); NO_VCL_CALL;
+var
+  Bridge: TCallbackBridge;
+begin
+  Bridge := TCallbackBridge.Create(TListBox(Obj));
+  Bridge.Callback := Cb;
+  TListBox(Obj).OnClick := @Bridge.DoClick;
+end;
+
+{ TMemo }
+
+function TMemo_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TMemo.Create(TComponent(Owner)));
+end;
+
+procedure TMemo_Destroy(Obj: Pointer); NO_VCL_CALL;
+begin
+  TMemo(Obj).Free;
+end;
+
+procedure TMemo_SetParent(Obj: Pointer; ParentObj: Pointer); NO_VCL_CALL;
+begin
+  TMemo(Obj).Parent := TWinControl(ParentObj);
+end;
+
+function TMemo_GetReadOnly(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TMemo(Obj).ReadOnly;
+end;
+
+procedure TMemo_SetReadOnly(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TMemo(Obj).ReadOnly := Value;
+end;
+
+function TMemo_GetScrollBars(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TMemo(Obj).ScrollBars);
+end;
+
+procedure TMemo_SetScrollBars(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TMemo(Obj).ScrollBars := TScrollStyle(Value);
+end;
+
+procedure TMemo_Lines_Add(Obj: Pointer; Text: PChar); NO_VCL_CALL;
+begin
+  TMemo(Obj).Lines.Add(Text);
+end;
+
+procedure TMemo_Lines_Clear(Obj: Pointer); NO_VCL_CALL;
+begin
+  TMemo(Obj).Lines.Clear;
+end;
+
+function TMemo_Lines_Count(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TMemo(Obj).Lines.Count;
+end;
+
+function TMemo_Lines_GetText(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
+begin
+  Result := PChar(TMemo(Obj).Lines[Index]);
+end;
+
+function TMemo_GetLeft(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TMemo(Obj).Left;
+end;
+
+procedure TMemo_SetLeft(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TMemo(Obj).Left := Value;
+end;
+
+function TMemo_GetTop(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TMemo(Obj).Top;
+end;
+
+procedure TMemo_SetTop(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TMemo(Obj).Top := Value;
+end;
+
+function TMemo_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TMemo(Obj).Width;
+end;
+
+procedure TMemo_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TMemo(Obj).Width := Value;
+end;
+
+function TMemo_GetHeight(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TMemo(Obj).Height;
+end;
+
+procedure TMemo_SetHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TMemo(Obj).Height := Value;
+end;
+
+function TMemo_GetVisible(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TMemo(Obj).Visible;
+end;
+
+procedure TMemo_SetVisible(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TMemo(Obj).Visible := Value;
+end;
+
+function TMemo_GetEnabled(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TMemo(Obj).Enabled;
+end;
+
+procedure TMemo_SetEnabled(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TMemo(Obj).Enabled := Value;
+end;
+
+procedure TMemo_SetOnChange(Obj: Pointer; Cb: TNoVclCallback); NO_VCL_CALL;
+var
+  Bridge: TCallbackBridge;
+begin
+  Bridge := TCallbackBridge.Create(TMemo(Obj));
+  Bridge.Callback := Cb;
+  TMemo(Obj).OnChange := @Bridge.DoClick;
+end;
+
 exports
   TForm_Create,
   TForm_Destroy,
@@ -747,7 +1290,111 @@ exports
   TRadioButton_SetVisible,
   TRadioButton_GetEnabled,
   TRadioButton_SetEnabled,
-  TRadioButton_SetOnClick;
+  TRadioButton_SetOnClick,
+  TPanel_Create,
+  TPanel_Destroy,
+  TPanel_SetParent,
+  TPanel_GetCaption,
+  TPanel_SetCaption,
+  TPanel_GetLeft,
+  TPanel_SetLeft,
+  TPanel_GetTop,
+  TPanel_SetTop,
+  TPanel_GetWidth,
+  TPanel_SetWidth,
+  TPanel_GetHeight,
+  TPanel_SetHeight,
+  TPanel_GetVisible,
+  TPanel_SetVisible,
+  TPanel_GetEnabled,
+  TPanel_SetEnabled,
+  TGroupBox_Create,
+  TGroupBox_Destroy,
+  TGroupBox_SetParent,
+  TGroupBox_GetCaption,
+  TGroupBox_SetCaption,
+  TGroupBox_GetLeft,
+  TGroupBox_SetLeft,
+  TGroupBox_GetTop,
+  TGroupBox_SetTop,
+  TGroupBox_GetWidth,
+  TGroupBox_SetWidth,
+  TGroupBox_GetHeight,
+  TGroupBox_SetHeight,
+  TGroupBox_GetVisible,
+  TGroupBox_SetVisible,
+  TGroupBox_GetEnabled,
+  TGroupBox_SetEnabled,
+  TComboBox_Create,
+  TComboBox_Destroy,
+  TComboBox_SetParent,
+  TComboBox_GetText,
+  TComboBox_SetText,
+  TComboBox_GetItemIndex,
+  TComboBox_SetItemIndex,
+  TComboBox_Items_Add,
+  TComboBox_Items_Clear,
+  TComboBox_Items_Count,
+  TComboBox_Items_GetText,
+  TComboBox_GetLeft,
+  TComboBox_SetLeft,
+  TComboBox_GetTop,
+  TComboBox_SetTop,
+  TComboBox_GetWidth,
+  TComboBox_SetWidth,
+  TComboBox_GetHeight,
+  TComboBox_SetHeight,
+  TComboBox_GetVisible,
+  TComboBox_SetVisible,
+  TComboBox_GetEnabled,
+  TComboBox_SetEnabled,
+  TComboBox_SetOnChange,
+  TListBox_Create,
+  TListBox_Destroy,
+  TListBox_SetParent,
+  TListBox_GetItemIndex,
+  TListBox_SetItemIndex,
+  TListBox_Items_Add,
+  TListBox_Items_Clear,
+  TListBox_Items_Count,
+  TListBox_Items_GetText,
+  TListBox_GetLeft,
+  TListBox_SetLeft,
+  TListBox_GetTop,
+  TListBox_SetTop,
+  TListBox_GetWidth,
+  TListBox_SetWidth,
+  TListBox_GetHeight,
+  TListBox_SetHeight,
+  TListBox_GetVisible,
+  TListBox_SetVisible,
+  TListBox_GetEnabled,
+  TListBox_SetEnabled,
+  TListBox_SetOnClick,
+  TMemo_Create,
+  TMemo_Destroy,
+  TMemo_SetParent,
+  TMemo_GetReadOnly,
+  TMemo_SetReadOnly,
+  TMemo_GetScrollBars,
+  TMemo_SetScrollBars,
+  TMemo_Lines_Add,
+  TMemo_Lines_Clear,
+  TMemo_Lines_Count,
+  TMemo_Lines_GetText,
+  TMemo_GetLeft,
+  TMemo_SetLeft,
+  TMemo_GetTop,
+  TMemo_SetTop,
+  TMemo_GetWidth,
+  TMemo_SetWidth,
+  TMemo_GetHeight,
+  TMemo_SetHeight,
+  TMemo_GetVisible,
+  TMemo_SetVisible,
+  TMemo_GetEnabled,
+  TMemo_SetEnabled,
+  TMemo_SetOnChange;
 
 begin
   RequireDerivedFormResource := False;

@@ -201,6 +201,168 @@ void          NO_VCL_CALL no_vcl_TRadioButton_SetEnabled(no_vcl_obj_t Obj, no_vc
 
 void         NO_VCL_CALL no_vcl_TRadioButton_SetOnClick(no_vcl_obj_t Obj, no_vcl_callback_t Cb);
 
+/* TPanel */
+no_vcl_obj_t NO_VCL_CALL no_vcl_TPanel_Create(no_vcl_obj_t Owner);
+void         NO_VCL_CALL no_vcl_TPanel_Destroy(no_vcl_obj_t Obj);
+
+void         NO_VCL_CALL no_vcl_TPanel_SetParent(no_vcl_obj_t Obj, no_vcl_obj_t ParentObj);
+
+no_vcl_str_t NO_VCL_CALL no_vcl_TPanel_GetCaption(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TPanel_SetCaption(no_vcl_obj_t Obj, no_vcl_str_t Caption);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TPanel_GetLeft(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TPanel_SetLeft(no_vcl_obj_t Obj, no_vcl_int_t Left);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TPanel_GetTop(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TPanel_SetTop(no_vcl_obj_t Obj, no_vcl_int_t Top);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TPanel_GetWidth(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TPanel_SetWidth(no_vcl_obj_t Obj, no_vcl_int_t Width);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TPanel_GetHeight(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TPanel_SetHeight(no_vcl_obj_t Obj, no_vcl_int_t Height);
+
+no_vcl_bool_t NO_VCL_CALL no_vcl_TPanel_GetVisible(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TPanel_SetVisible(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+
+no_vcl_bool_t NO_VCL_CALL no_vcl_TPanel_GetEnabled(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TPanel_SetEnabled(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+
+/* TGroupBox */
+no_vcl_obj_t NO_VCL_CALL no_vcl_TGroupBox_Create(no_vcl_obj_t Owner);
+void         NO_VCL_CALL no_vcl_TGroupBox_Destroy(no_vcl_obj_t Obj);
+
+void         NO_VCL_CALL no_vcl_TGroupBox_SetParent(no_vcl_obj_t Obj, no_vcl_obj_t ParentObj);
+
+no_vcl_str_t NO_VCL_CALL no_vcl_TGroupBox_GetCaption(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TGroupBox_SetCaption(no_vcl_obj_t Obj, no_vcl_str_t Caption);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TGroupBox_GetLeft(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TGroupBox_SetLeft(no_vcl_obj_t Obj, no_vcl_int_t Left);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TGroupBox_GetTop(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TGroupBox_SetTop(no_vcl_obj_t Obj, no_vcl_int_t Top);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TGroupBox_GetWidth(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TGroupBox_SetWidth(no_vcl_obj_t Obj, no_vcl_int_t Width);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TGroupBox_GetHeight(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TGroupBox_SetHeight(no_vcl_obj_t Obj, no_vcl_int_t Height);
+
+no_vcl_bool_t NO_VCL_CALL no_vcl_TGroupBox_GetVisible(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TGroupBox_SetVisible(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+
+no_vcl_bool_t NO_VCL_CALL no_vcl_TGroupBox_GetEnabled(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TGroupBox_SetEnabled(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+
+/* TComboBox */
+no_vcl_obj_t NO_VCL_CALL no_vcl_TComboBox_Create(no_vcl_obj_t Owner);
+void         NO_VCL_CALL no_vcl_TComboBox_Destroy(no_vcl_obj_t Obj);
+
+void         NO_VCL_CALL no_vcl_TComboBox_SetParent(no_vcl_obj_t Obj, no_vcl_obj_t ParentObj);
+
+no_vcl_str_t NO_VCL_CALL no_vcl_TComboBox_GetText(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TComboBox_SetText(no_vcl_obj_t Obj, no_vcl_str_t Text);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TComboBox_GetItemIndex(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TComboBox_SetItemIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+void         NO_VCL_CALL no_vcl_TComboBox_Items_Add(no_vcl_obj_t Obj, no_vcl_str_t Text);
+void         NO_VCL_CALL no_vcl_TComboBox_Items_Clear(no_vcl_obj_t Obj);
+no_vcl_int_t NO_VCL_CALL no_vcl_TComboBox_Items_Count(no_vcl_obj_t Obj);
+no_vcl_str_t NO_VCL_CALL no_vcl_TComboBox_Items_GetText(no_vcl_obj_t Obj, no_vcl_int_t Index);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TComboBox_GetLeft(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TComboBox_SetLeft(no_vcl_obj_t Obj, no_vcl_int_t Left);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TComboBox_GetTop(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TComboBox_SetTop(no_vcl_obj_t Obj, no_vcl_int_t Top);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TComboBox_GetWidth(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TComboBox_SetWidth(no_vcl_obj_t Obj, no_vcl_int_t Width);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TComboBox_GetHeight(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TComboBox_SetHeight(no_vcl_obj_t Obj, no_vcl_int_t Height);
+
+no_vcl_bool_t NO_VCL_CALL no_vcl_TComboBox_GetVisible(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TComboBox_SetVisible(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+
+no_vcl_bool_t NO_VCL_CALL no_vcl_TComboBox_GetEnabled(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TComboBox_SetEnabled(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+
+void         NO_VCL_CALL no_vcl_TComboBox_SetOnChange(no_vcl_obj_t Obj, no_vcl_callback_t Cb);
+
+/* TListBox */
+no_vcl_obj_t NO_VCL_CALL no_vcl_TListBox_Create(no_vcl_obj_t Owner);
+void         NO_VCL_CALL no_vcl_TListBox_Destroy(no_vcl_obj_t Obj);
+
+void         NO_VCL_CALL no_vcl_TListBox_SetParent(no_vcl_obj_t Obj, no_vcl_obj_t ParentObj);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TListBox_GetItemIndex(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TListBox_SetItemIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+void         NO_VCL_CALL no_vcl_TListBox_Items_Add(no_vcl_obj_t Obj, no_vcl_str_t Text);
+void         NO_VCL_CALL no_vcl_TListBox_Items_Clear(no_vcl_obj_t Obj);
+no_vcl_int_t NO_VCL_CALL no_vcl_TListBox_Items_Count(no_vcl_obj_t Obj);
+no_vcl_str_t NO_VCL_CALL no_vcl_TListBox_Items_GetText(no_vcl_obj_t Obj, no_vcl_int_t Index);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TListBox_GetLeft(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TListBox_SetLeft(no_vcl_obj_t Obj, no_vcl_int_t Left);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TListBox_GetTop(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TListBox_SetTop(no_vcl_obj_t Obj, no_vcl_int_t Top);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TListBox_GetWidth(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TListBox_SetWidth(no_vcl_obj_t Obj, no_vcl_int_t Width);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TListBox_GetHeight(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TListBox_SetHeight(no_vcl_obj_t Obj, no_vcl_int_t Height);
+
+no_vcl_bool_t NO_VCL_CALL no_vcl_TListBox_GetVisible(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListBox_SetVisible(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+
+no_vcl_bool_t NO_VCL_CALL no_vcl_TListBox_GetEnabled(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListBox_SetEnabled(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+
+void         NO_VCL_CALL no_vcl_TListBox_SetOnClick(no_vcl_obj_t Obj, no_vcl_callback_t Cb);
+
+/* TMemo */
+no_vcl_obj_t NO_VCL_CALL no_vcl_TMemo_Create(no_vcl_obj_t Owner);
+void         NO_VCL_CALL no_vcl_TMemo_Destroy(no_vcl_obj_t Obj);
+
+void         NO_VCL_CALL no_vcl_TMemo_SetParent(no_vcl_obj_t Obj, no_vcl_obj_t ParentObj);
+
+no_vcl_bool_t NO_VCL_CALL no_vcl_TMemo_GetReadOnly(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TMemo_SetReadOnly(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TMemo_GetScrollBars(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TMemo_SetScrollBars(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+void         NO_VCL_CALL no_vcl_TMemo_Lines_Add(no_vcl_obj_t Obj, no_vcl_str_t Text);
+void         NO_VCL_CALL no_vcl_TMemo_Lines_Clear(no_vcl_obj_t Obj);
+no_vcl_int_t NO_VCL_CALL no_vcl_TMemo_Lines_Count(no_vcl_obj_t Obj);
+no_vcl_str_t NO_VCL_CALL no_vcl_TMemo_Lines_GetText(no_vcl_obj_t Obj, no_vcl_int_t Index);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TMemo_GetLeft(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TMemo_SetLeft(no_vcl_obj_t Obj, no_vcl_int_t Left);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TMemo_GetTop(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TMemo_SetTop(no_vcl_obj_t Obj, no_vcl_int_t Top);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TMemo_GetWidth(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TMemo_SetWidth(no_vcl_obj_t Obj, no_vcl_int_t Width);
+
+no_vcl_int_t NO_VCL_CALL no_vcl_TMemo_GetHeight(no_vcl_obj_t Obj);
+void         NO_VCL_CALL no_vcl_TMemo_SetHeight(no_vcl_obj_t Obj, no_vcl_int_t Height);
+
+no_vcl_bool_t NO_VCL_CALL no_vcl_TMemo_GetVisible(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TMemo_SetVisible(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+
+no_vcl_bool_t NO_VCL_CALL no_vcl_TMemo_GetEnabled(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TMemo_SetEnabled(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+
+void         NO_VCL_CALL no_vcl_TMemo_SetOnChange(no_vcl_obj_t Obj, no_vcl_callback_t Cb);
+
 #ifdef __cplusplus
 }
 #endif
