@@ -1,7 +1,11 @@
 # 0005. Owner/Parent 引数は参照ではなくポインタで受ける
 
-- 状態: 承認
+- 状態: 承認(一部置換 → [0007](0007-lcl-faithful-hierarchy.md))
 - 日付: 2026-09-26
+
+> ポインタで受ける方針は維持している。ただし [0007](0007-lcl-faithful-hierarchy.md) で Owner と Parent を分離し、
+> コンストラクタの引数は `TComponent* AOwner`(`nullptr` も可)、Parent は `Property<TWinControl*>` になった。
+> 本 ADR にある `TObject* parent` と `assert(parent != nullptr)` は現在のコードには無い。
 
 ## 背景
 

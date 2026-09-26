@@ -4,6 +4,9 @@
 - 日付: 2026-09-26
 - 置換: [0003](0003-two-phase-initialization.md)
 
+> [0007](0007-lcl-faithful-hierarchy.md) で Owner と Parent を分離したため、現在の書き方は
+> `button1.reset(new no_vcl::TButton(this)); button1->Parent = this;` のように Parent の設定が 1 行加わる。
+
 ## 背景
 
 [0003](0003-two-phase-initialization.md) で、DSL コード生成に向けて初期化子リストの順序制約

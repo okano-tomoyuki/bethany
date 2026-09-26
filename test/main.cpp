@@ -5,13 +5,15 @@
 
 int main()
 {
-    no_vcl::TForm form;
+    no_vcl::TForm form(nullptr);
     form.Caption = "no_vcl C++ wrapper";
     form.Width = 640;
     form.Height = 420;
     std::printf("Caption: %s\n", std::string(form.Caption).c_str());
 
+    // Owner(破棄の責任)はコンストラクタで、Parent(画面上の親)はプロパティで指定する。
     no_vcl::TButton button(&form);
+    button.Parent = &form;
     button.Caption = "Click me";
     button.Left = 20;
     button.Top = 20;
@@ -27,11 +29,13 @@ int main()
     });
 
     no_vcl::TLabel label(&form);
+    label.Parent = &form;
     label.Caption = "Label text";
     label.Left = 20;
     label.Top = 60;
 
     no_vcl::TEdit edit(&form);
+    edit.Parent = &form;
     edit.Text = "Edit me";
     edit.Left = 20;
     edit.Top = 90;
@@ -42,6 +46,7 @@ int main()
     });
 
     no_vcl::TCheckBox checkBox(&form);
+    checkBox.Parent = &form;
     checkBox.Caption = "Check me";
     checkBox.Left = 20;
     checkBox.Top = 130;
@@ -51,6 +56,7 @@ int main()
     });
 
     no_vcl::TRadioButton radio1(&form);
+    radio1.Parent = &form;
     radio1.Caption = "Option A";
     radio1.Left = 20;
     radio1.Top = 160;
@@ -61,6 +67,7 @@ int main()
     });
 
     no_vcl::TRadioButton radio2(&form);
+    radio2.Parent = &form;
     radio2.Caption = "Option B";
     radio2.Left = 20;
     radio2.Top = 190;
@@ -70,12 +77,26 @@ int main()
     });
 
     no_vcl::TPanel panel(&form);
+    panel.Parent = &form;
     panel.Left = 220;
     panel.Top = 20;
     panel.Width = 180;
     panel.Height = 60;
 
+    // Panel の中にボタンを置く(Parent が TWinControl* なので Panel も親にできる)。
+    no_vcl::TButton panelButton(&form);
+    panelButton.Parent = &panel;
+    panelButton.Caption = "In panel";
+    panelButton.Left = 10;
+    panelButton.Top = 15;
+    panelButton.SetOnClick([&panelButton, &panel]() {
+        no_vcl::TWinControl* parent = panelButton.Parent;
+        std::printf("Panel button clicked! Parent is panel: %s\n", parent == &panel ? "yes" : "no");
+        std::fflush(stdout);
+    });
+
     no_vcl::TGroupBox groupBox(&form);
+    groupBox.Parent = &form;
     groupBox.Caption = "Group";
     groupBox.Left = 220;
     groupBox.Top = 90;
@@ -83,6 +104,7 @@ int main()
     groupBox.Height = 60;
 
     no_vcl::TComboBox comboBox(&form);
+    comboBox.Parent = &form;
     comboBox.ItemsAdd("Combo A");
     comboBox.ItemsAdd("Combo B");
     comboBox.ItemsAdd("Combo C");
@@ -92,11 +114,12 @@ int main()
     comboBox.Width = 150;
     comboBox.SetOnChange([&comboBox]() {
         std::printf("ComboBox changed! ItemIndex=%d Text=%s\n",
-                     (int)comboBox.ItemIndex, std::string(comboBox.Text).c_str());
+                    (int)comboBox.ItemIndex, std::string(comboBox.Text).c_str());
         std::fflush(stdout);
     });
 
     no_vcl::TListBox listBox(&form);
+    listBox.Parent = &form;
     listBox.ItemsAdd("List 1");
     listBox.ItemsAdd("List 2");
     listBox.ItemsAdd("List 3");
@@ -109,7 +132,9 @@ int main()
         std::fflush(stdout);
     });
 
+    // TMemo は TCustomEdit の派生なので、Text/ReadOnly/OnChange も TEdit と共通。
     no_vcl::TMemo memo(&form);
+    memo.Parent = &form;
     memo.LinesAdd("Memo line 1");
     memo.LinesAdd("Memo line 2");
     memo.Left = 220;
@@ -122,6 +147,7 @@ int main()
     });
 
     no_vcl::TLabel tickLabel(&form);
+    tickLabel.Parent = &form;
     tickLabel.Caption = "Tick: 0";
     tickLabel.Left = 20;
     tickLabel.Top = 230;
@@ -138,6 +164,7 @@ int main()
     timer.Enabled = true;
 
     no_vcl::TPaintBox paintBox(&form);
+    paintBox.Parent = &form;
     paintBox.Left = 400;
     paintBox.Top = 20;
     paintBox.Width = 220;
@@ -160,6 +187,9 @@ int main()
         paintBox.Canvas.Font.Size = 14;
         paintBox.Canvas.TextOut(10, 100, "Canvas drawing test");
     });
+
+    no_vcl::TWinControl* buttonParent = button.Parent;
+    std::printf("button.Parent is form: %s\n", buttonParent == &form ? "yes" : "no");
 
     std::printf("Showing form (click the button, then close the window to continue)...\n");
     std::fflush(stdout);

@@ -14,38 +14,38 @@ static void NO_VCL_CALL OnButtonClick(no_vcl_obj_t sender)
 
 static void NO_VCL_CALL OnCheckBoxClick(no_vcl_obj_t sender)
 {
-    printf("CheckBox clicked! Checked=%d\n", no_vcl_TCheckBox_GetChecked(sender));
+    printf("CheckBox clicked! Checked=%d\n", no_vcl_TButtonControl_GetChecked(sender));
     fflush(stdout);
 }
 
 static void NO_VCL_CALL OnRadioButtonClick(no_vcl_obj_t sender)
 {
-    printf("RadioButton clicked! Checked=%d\n", no_vcl_TRadioButton_GetChecked(sender));
+    printf("RadioButton clicked! Checked=%d\n", no_vcl_TButtonControl_GetChecked(sender));
     fflush(stdout);
 }
 
 static void NO_VCL_CALL OnEditChange(no_vcl_obj_t sender)
 {
-    printf("Edit changed! Text=%s\n", no_vcl_TEdit_GetText(sender));
+    printf("Edit changed! Text=%s\n", no_vcl_TControl_GetText(sender));
     fflush(stdout);
 }
 
 static void NO_VCL_CALL OnComboBoxChange(no_vcl_obj_t sender)
 {
     printf("ComboBox changed! ItemIndex=%d Text=%s\n",
-           no_vcl_TComboBox_GetItemIndex(sender), no_vcl_TComboBox_GetText(sender));
+           no_vcl_TCustomComboBox_GetItemIndex(sender), no_vcl_TControl_GetText(sender));
     fflush(stdout);
 }
 
 static void NO_VCL_CALL OnListBoxClick(no_vcl_obj_t sender)
 {
-    printf("ListBox clicked! ItemIndex=%d\n", no_vcl_TListBox_GetItemIndex(sender));
+    printf("ListBox clicked! ItemIndex=%d\n", no_vcl_TCustomListBox_GetItemIndex(sender));
     fflush(stdout);
 }
 
 static void NO_VCL_CALL OnMemoChange(no_vcl_obj_t sender)
 {
-    printf("Memo changed! LineCount=%d\n", no_vcl_TMemo_Lines_Count(sender));
+    printf("Memo changed! LineCount=%d\n", no_vcl_TCustomMemo_Lines_Count(sender));
     fflush(stdout);
 }
 
@@ -91,9 +91,18 @@ static void NO_VCL_CALL OnTimerTick(no_vcl_obj_t sender)
     (void)sender;
     ++g_tickCount;
     snprintf(buf, sizeof(buf), "Tick: %d", g_tickCount);
-    no_vcl_TLabel_SetCaption(g_tickLabel, buf);
+    no_vcl_TControl_SetCaption(g_tickLabel, buf);
     printf("Timer tick! count=%d\n", g_tickCount);
     fflush(stdout);
+}
+
+/* コントロールを生成し、親と位置を設定する(Owner と Parent はどちらも form)。 */
+static no_vcl_obj_t Place(no_vcl_obj_t control, no_vcl_obj_t parent, int left, int top)
+{
+    no_vcl_TControl_SetParent(control, parent);
+    no_vcl_TControl_SetLeft(control, left);
+    no_vcl_TControl_SetTop(control, top);
+    return control;
 }
 
 int main(void)
@@ -119,128 +128,92 @@ int main(void)
         return 1;
     }
 
-    no_vcl_TForm_SetCaption(form, "Hello from FPC DLL");
-    no_vcl_TForm_SetWidth(form, 640);
-    no_vcl_TForm_SetHeight(form, 420);
-    printf("Caption: %s\n", no_vcl_TForm_GetCaption(form));
+    no_vcl_TControl_SetCaption(form, "Hello from FPC DLL");
+    no_vcl_TControl_SetWidth(form, 640);
+    no_vcl_TControl_SetHeight(form, 420);
+    printf("Caption: %s\n", no_vcl_TControl_GetCaption(form));
 
-    button = no_vcl_TButton_Create(form);
-    no_vcl_TButton_SetParent(button, form);
-    no_vcl_TButton_SetCaption(button, "Click me");
-    no_vcl_TButton_SetLeft(button, 20);
-    no_vcl_TButton_SetTop(button, 20);
-    no_vcl_TButton_SetWidth(button, 100);
-    no_vcl_TButton_SetHeight(button, 30);
-    no_vcl_TButton_SetOnClick(button, OnButtonClick);
-    printf("Button caption: %s\n", no_vcl_TButton_GetCaption(button));
+    button = Place(no_vcl_TButton_Create(form), form, 20, 20);
+    no_vcl_TControl_SetCaption(button, "Click me");
+    no_vcl_TControl_SetWidth(button, 100);
+    no_vcl_TControl_SetHeight(button, 30);
+    no_vcl_TControl_SetOnClick(button, OnButtonClick);
+    printf("Button caption: %s\n", no_vcl_TControl_GetCaption(button));
+    printf("Button parent is form: %s\n", no_vcl_TControl_GetParent(button) == form ? "yes" : "no");
 
-    label = no_vcl_TLabel_Create(form);
-    no_vcl_TLabel_SetParent(label, form);
-    no_vcl_TLabel_SetCaption(label, "Label text");
-    no_vcl_TLabel_SetLeft(label, 20);
-    no_vcl_TLabel_SetTop(label, 60);
+    label = Place(no_vcl_TLabel_Create(form), form, 20, 60);
+    no_vcl_TControl_SetCaption(label, "Label text");
 
-    edit = no_vcl_TEdit_Create(form);
-    no_vcl_TEdit_SetParent(edit, form);
-    no_vcl_TEdit_SetText(edit, "Edit me");
-    no_vcl_TEdit_SetLeft(edit, 20);
-    no_vcl_TEdit_SetTop(edit, 90);
-    no_vcl_TEdit_SetWidth(edit, 150);
-    no_vcl_TEdit_SetOnChange(edit, OnEditChange);
+    edit = Place(no_vcl_TEdit_Create(form), form, 20, 90);
+    no_vcl_TControl_SetText(edit, "Edit me");
+    no_vcl_TControl_SetWidth(edit, 150);
+    no_vcl_TCustomEdit_SetOnChange(edit, OnEditChange);
 
-    checkBox = no_vcl_TCheckBox_Create(form);
-    no_vcl_TCheckBox_SetParent(checkBox, form);
-    no_vcl_TCheckBox_SetCaption(checkBox, "Check me");
-    no_vcl_TCheckBox_SetLeft(checkBox, 20);
-    no_vcl_TCheckBox_SetTop(checkBox, 130);
-    no_vcl_TCheckBox_SetOnClick(checkBox, OnCheckBoxClick);
+    checkBox = Place(no_vcl_TCheckBox_Create(form), form, 20, 130);
+    no_vcl_TControl_SetCaption(checkBox, "Check me");
+    no_vcl_TControl_SetOnClick(checkBox, OnCheckBoxClick);
 
-    radio1 = no_vcl_TRadioButton_Create(form);
-    no_vcl_TRadioButton_SetParent(radio1, form);
-    no_vcl_TRadioButton_SetCaption(radio1, "Option A");
-    no_vcl_TRadioButton_SetLeft(radio1, 20);
-    no_vcl_TRadioButton_SetTop(radio1, 160);
-    no_vcl_TRadioButton_SetChecked(radio1, 1);
-    no_vcl_TRadioButton_SetOnClick(radio1, OnRadioButtonClick);
+    radio1 = Place(no_vcl_TRadioButton_Create(form), form, 20, 160);
+    no_vcl_TControl_SetCaption(radio1, "Option A");
+    no_vcl_TButtonControl_SetChecked(radio1, 1);
+    no_vcl_TControl_SetOnClick(radio1, OnRadioButtonClick);
 
-    radio2 = no_vcl_TRadioButton_Create(form);
-    no_vcl_TRadioButton_SetParent(radio2, form);
-    no_vcl_TRadioButton_SetCaption(radio2, "Option B");
-    no_vcl_TRadioButton_SetLeft(radio2, 20);
-    no_vcl_TRadioButton_SetTop(radio2, 190);
-    no_vcl_TRadioButton_SetOnClick(radio2, OnRadioButtonClick);
+    radio2 = Place(no_vcl_TRadioButton_Create(form), form, 20, 190);
+    no_vcl_TControl_SetCaption(radio2, "Option B");
+    no_vcl_TControl_SetOnClick(radio2, OnRadioButtonClick);
 
-    panel = no_vcl_TPanel_Create(form);
-    no_vcl_TPanel_SetParent(panel, form);
-    no_vcl_TPanel_SetCaption(panel, "");
-    no_vcl_TPanel_SetLeft(panel, 220);
-    no_vcl_TPanel_SetTop(panel, 20);
-    no_vcl_TPanel_SetWidth(panel, 180);
-    no_vcl_TPanel_SetHeight(panel, 60);
+    panel = Place(no_vcl_TPanel_Create(form), form, 220, 20);
+    no_vcl_TControl_SetCaption(panel, "");
+    no_vcl_TControl_SetWidth(panel, 180);
+    no_vcl_TControl_SetHeight(panel, 60);
 
-    groupBox = no_vcl_TGroupBox_Create(form);
-    no_vcl_TGroupBox_SetParent(groupBox, form);
-    no_vcl_TGroupBox_SetCaption(groupBox, "Group");
-    no_vcl_TGroupBox_SetLeft(groupBox, 220);
-    no_vcl_TGroupBox_SetTop(groupBox, 90);
-    no_vcl_TGroupBox_SetWidth(groupBox, 180);
-    no_vcl_TGroupBox_SetHeight(groupBox, 60);
+    groupBox = Place(no_vcl_TGroupBox_Create(form), form, 220, 90);
+    no_vcl_TControl_SetCaption(groupBox, "Group");
+    no_vcl_TControl_SetWidth(groupBox, 180);
+    no_vcl_TControl_SetHeight(groupBox, 60);
 
-    comboBox = no_vcl_TComboBox_Create(form);
-    no_vcl_TComboBox_SetParent(comboBox, form);
-    no_vcl_TComboBox_Items_Add(comboBox, "Combo A");
-    no_vcl_TComboBox_Items_Add(comboBox, "Combo B");
-    no_vcl_TComboBox_Items_Add(comboBox, "Combo C");
-    no_vcl_TComboBox_SetItemIndex(comboBox, 0);
-    no_vcl_TComboBox_SetLeft(comboBox, 220);
-    no_vcl_TComboBox_SetTop(comboBox, 160);
-    no_vcl_TComboBox_SetWidth(comboBox, 150);
+    comboBox = Place(no_vcl_TComboBox_Create(form), form, 220, 160);
+    no_vcl_TCustomComboBox_Items_Add(comboBox, "Combo A");
+    no_vcl_TCustomComboBox_Items_Add(comboBox, "Combo B");
+    no_vcl_TCustomComboBox_Items_Add(comboBox, "Combo C");
+    no_vcl_TCustomComboBox_SetItemIndex(comboBox, 0);
+    no_vcl_TControl_SetWidth(comboBox, 150);
     no_vcl_TComboBox_SetOnChange(comboBox, OnComboBoxChange);
 
-    listBox = no_vcl_TListBox_Create(form);
-    no_vcl_TListBox_SetParent(listBox, form);
-    no_vcl_TListBox_Items_Add(listBox, "List 1");
-    no_vcl_TListBox_Items_Add(listBox, "List 2");
-    no_vcl_TListBox_Items_Add(listBox, "List 3");
-    no_vcl_TListBox_SetLeft(listBox, 220);
-    no_vcl_TListBox_SetTop(listBox, 190);
-    no_vcl_TListBox_SetWidth(listBox, 150);
-    no_vcl_TListBox_SetHeight(listBox, 80);
-    no_vcl_TListBox_SetOnClick(listBox, OnListBoxClick);
+    listBox = Place(no_vcl_TListBox_Create(form), form, 220, 190);
+    no_vcl_TCustomListBox_Items_Add(listBox, "List 1");
+    no_vcl_TCustomListBox_Items_Add(listBox, "List 2");
+    no_vcl_TCustomListBox_Items_Add(listBox, "List 3");
+    no_vcl_TControl_SetWidth(listBox, 150);
+    no_vcl_TControl_SetHeight(listBox, 80);
+    no_vcl_TControl_SetOnClick(listBox, OnListBoxClick);
 
-    memo = no_vcl_TMemo_Create(form);
-    no_vcl_TMemo_SetParent(memo, form);
-    no_vcl_TMemo_Lines_Add(memo, "Memo line 1");
-    no_vcl_TMemo_Lines_Add(memo, "Memo line 2");
-    no_vcl_TMemo_SetLeft(memo, 220);
-    no_vcl_TMemo_SetTop(memo, 280);
-    no_vcl_TMemo_SetWidth(memo, 150);
-    no_vcl_TMemo_SetHeight(memo, 80);
-    no_vcl_TMemo_SetOnChange(memo, OnMemoChange);
+    memo = Place(no_vcl_TMemo_Create(form), form, 220, 280);
+    no_vcl_TCustomMemo_Lines_Add(memo, "Memo line 1");
+    no_vcl_TCustomMemo_Lines_Add(memo, "Memo line 2");
+    no_vcl_TControl_SetWidth(memo, 150);
+    no_vcl_TControl_SetHeight(memo, 80);
+    no_vcl_TCustomEdit_SetOnChange(memo, OnMemoChange);
 
-    g_tickLabel = no_vcl_TLabel_Create(form);
-    no_vcl_TLabel_SetParent(g_tickLabel, form);
-    no_vcl_TLabel_SetCaption(g_tickLabel, "Tick: 0");
-    no_vcl_TLabel_SetLeft(g_tickLabel, 20);
-    no_vcl_TLabel_SetTop(g_tickLabel, 230);
+    g_tickLabel = Place(no_vcl_TLabel_Create(form), form, 20, 230);
+    no_vcl_TControl_SetCaption(g_tickLabel, "Tick: 0");
 
     timer = no_vcl_TTimer_Create(form);
-    no_vcl_TTimer_SetInterval(timer, 500);
-    no_vcl_TTimer_SetOnTimer(timer, OnTimerTick);
-    no_vcl_TTimer_SetEnabled(timer, 1);
+    no_vcl_TCustomTimer_SetInterval(timer, 500);
+    no_vcl_TCustomTimer_SetOnTimer(timer, OnTimerTick);
+    no_vcl_TCustomTimer_SetEnabled(timer, 1);
 
-    paintBox = no_vcl_TPaintBox_Create(form);
-    no_vcl_TPaintBox_SetParent(paintBox, form);
-    no_vcl_TPaintBox_SetLeft(paintBox, 400);
-    no_vcl_TPaintBox_SetTop(paintBox, 20);
-    no_vcl_TPaintBox_SetWidth(paintBox, 220);
-    no_vcl_TPaintBox_SetHeight(paintBox, 130);
+    paintBox = Place(no_vcl_TPaintBox_Create(form), form, 400, 20);
+    no_vcl_TControl_SetWidth(paintBox, 220);
+    no_vcl_TControl_SetHeight(paintBox, 130);
     no_vcl_TPaintBox_SetOnPaint(paintBox, OnPaintBoxPaint);
 
     printf("Showing form (click the button, then close the window to continue)...\n");
-    no_vcl_TForm_ShowModal(form);
+    fflush(stdout);
+    no_vcl_TCustomForm_ShowModal(form);
 
-    no_vcl_TForm_Destroy(form);
+    /* Owner である form を破棄すると、form が所有するコントロールも LCL 側で破棄される。 */
+    no_vcl_TComponent_Destroy(form);
 
     printf("OK\n");
     return 0;

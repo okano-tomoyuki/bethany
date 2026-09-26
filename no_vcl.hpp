@@ -8,6 +8,12 @@
 
 #include "no_vcl_c.h"
 
+// クラス階層は LCL の継承関係の「部分列」になっている(途中の階層を省くことはあっても、
+// LCL に無い継承関係は作らない)。これにより、C++ 上で基底クラスとして扱えるオブジェクトは
+// Pascal 側でもその基底クラスとして扱えることが保証される。
+// メンバの公開範囲も LCL に合わせ、LCL で protected のメンバを派生クラスが公開している箇所は
+// using で公開している。詳細は docs/class-hierarchy.md を参照。
+
 namespace no_vcl
 {
 
@@ -24,7 +30,6 @@ const TColor clYellow = 0x00FFFF;
 class TObject
 {
 public:
-    TObject() = default;
     virtual ~TObject() = default;
 
     TObject(const TObject&) = delete;
@@ -35,22 +40,17 @@ public:
     no_vcl_obj_t Handle() const { return handle_; }
 
 protected:
-    no_vcl_obj_t handle_ = nullptr;
-
-    // 派生クラスがCreate直後のハンドルを基底クラス初期化の時点で持ちたい場合に使う
-    // (例: TPaintBoxはCanvasメンバをメンバ初期化子リストで組み立てる必要があり、
-    //  そのためにはbase classの構築が終わった時点でhandle_が有効である必要がある。
-    //  TPen/TBrush/TFont/TCanvasのような非所有ラッパーも同じ仕組みで、
-    //  コンストラクタ引数で渡された既存のハンドルをそのままhandle_に格納する)。
+    // 各クラスは、生成した(または取得した)ハンドルを基底クラスの初期化の時点で渡す。
+    // これにより、派生クラスのメンバ(Property や TPaintBox::Canvas)を構築する時点で
+    // handle_ が有効であることが保証される。
     explicit TObject(no_vcl_obj_t handle) : handle_(handle) {}
+
+    no_vcl_obj_t handle_;
 };
 
 // 所有者(TObject派生インスタンス)への生ポインタ + 固定のGetter/Setter関数ポインタを持つ
-// 軽量プロキシ。std::functionを使わないためヒープ確保がなく、各コントロールのコピー/ムーブは
+// 軽量プロキシ。std::functionを使わないためヒープ確保がなく、所有者のコピー/ムーブは
 // TObjectで禁止しているためownerが指す実体が入れ替わることもない。
-// Getter/SetterがTObject*を受け取るのは、Property自体は「どの具象クラスのメンバか」を
-// 知らなくても(TObjectさえ継承していれば)使い回せるようにするため。実際の型へは
-// 各クラスのImpl関数内でstatic_castする(例: static_cast<TButton*>(owner)->handle_)。
 template<typename T>
 class Property
 {
@@ -84,448 +84,333 @@ private:
     Setter   setter_;
 };
 
-class TForm : public TObject
+class TPersistent : public TObject
+{
+protected:
+    explicit TPersistent(no_vcl_obj_t handle) : TObject(handle) {}
+};
+
+// LCL のコンポーネント(Create/Destroy を持つオブジェクト)。
+// ハンドルと C++ ラッパーの対応を共通のレジストリで管理し、
+// コールバックのトランポリンや Parent の Getter から C++ ラッパーを引けるようにする。
+class TComponent : public TPersistent
 {
 public:
-    Property<int>         Width;
-    Property<int>         Height;
-    Property<std::string> Caption;
+    ~TComponent() override;
 
-    TForm();
-    ~TForm() override;
+protected:
+    explicit TComponent(no_vcl_obj_t handle);
+
+    static no_vcl_obj_t HandleOf(const TObject* obj) { return obj ? obj->Handle() : nullptr; }
+    static TComponent*  FromHandle(no_vcl_obj_t handle);
+
+private:
+    static std::unordered_map<no_vcl_obj_t, TComponent*>& Registry();
+};
+
+class TWinControl;
+
+class TControl : public TComponent
+{
+public:
+    Property<TWinControl*> Parent;
+    Property<int>          Left;
+    Property<int>          Top;
+    Property<int>          Width;
+    Property<int>          Height;
+    Property<bool>         Visible;
+    Property<bool>         Enabled;
+    Property<std::string>  Caption;
 
     void Show();
-    int  ShowModal();
     void Hide();
+
+    void SetOnClick(std::function<void()> handler);
+
+protected:
+    explicit TControl(no_vcl_obj_t handle);
+
+    // LCL では TControl の protected。TCustomEdit / TCustomComboBox が公開する。
+    Property<std::string>  Text;
+
+private:
+    std::function<void()> onClick_;
+    bool                  onClickHooked_ = false;
+    static void NO_VCL_CALL ClickTrampoline(no_vcl_obj_t sender);
+
+    static TWinControl* GetParentImpl(TObject* owner);
+    static void         SetParentImpl(TObject* owner, TWinControl* const& value);
+    static int          GetLeftImpl(TObject* owner);
+    static void         SetLeftImpl(TObject* owner, const int& value);
+    static int          GetTopImpl(TObject* owner);
+    static void         SetTopImpl(TObject* owner, const int& value);
+    static int          GetWidthImpl(TObject* owner);
+    static void         SetWidthImpl(TObject* owner, const int& value);
+    static int          GetHeightImpl(TObject* owner);
+    static void         SetHeightImpl(TObject* owner, const int& value);
+    static bool         GetVisibleImpl(TObject* owner);
+    static void         SetVisibleImpl(TObject* owner, const bool& value);
+    static bool         GetEnabledImpl(TObject* owner);
+    static void         SetEnabledImpl(TObject* owner, const bool& value);
+    static std::string  GetCaptionImpl(TObject* owner);
+    static void         SetCaptionImpl(TObject* owner, const std::string& value);
+    static std::string  GetTextImpl(TObject* owner);
+    static void         SetTextImpl(TObject* owner, const std::string& value);
+};
+
+class TWinControl : public TControl
+{
+protected:
+    explicit TWinControl(no_vcl_obj_t handle) : TControl(handle) {}
+};
+
+class TGraphicControl : public TControl
+{
+protected:
+    explicit TGraphicControl(no_vcl_obj_t handle) : TControl(handle) {}
+};
+
+class TCustomControl : public TWinControl
+{
+protected:
+    explicit TCustomControl(no_vcl_obj_t handle) : TWinControl(handle) {}
+};
+
+/* ---------------- Form ---------------- */
+
+class TScrollingWinControl : public TCustomControl
+{
+protected:
+    explicit TScrollingWinControl(no_vcl_obj_t handle) : TCustomControl(handle) {}
+};
+
+class TCustomForm : public TScrollingWinControl
+{
+public:
+    // LCL の TCustomForm は Show/Hide を独自に宣言している(TControl のものを隠す)。
+    void Show();
+    void Hide();
+    int  ShowModal();
     void Close();
 
-private:
-    static int         GetWidthImpl(TObject* owner);
-    static void        SetWidthImpl(TObject* owner, const int& value);
-    static int         GetHeightImpl(TObject* owner);
-    static void        SetHeightImpl(TObject* owner, const int& value);
-    static std::string GetCaptionImpl(TObject* owner);
-    static void        SetCaptionImpl(TObject* owner, const std::string& value);
+protected:
+    explicit TCustomForm(no_vcl_obj_t handle) : TScrollingWinControl(handle) {}
 };
 
-class TButton : public TObject
+class TForm : public TCustomForm
 {
 public:
-    Property<int>         Left;
-    Property<int>         Top;
-    Property<int>         Width;
-    Property<int>         Height;
-    Property<std::string> Caption;
-
-    // Owner(メモリ管理)とParent(表示上の親)は同じオブジェクトにまとめている。
-    // TForm/TPanel/TGroupBoxいずれの上にも配置できるよう、引数はTObject*で受ける。
-    // C++BuilderのOwner引数(TComponent* Owner)に合わせ、参照ではなくポインタにしている。
-    explicit TButton(TObject* parent);
-    ~TButton() override;
-
-    void SetOnClick(std::function<void()> handler);
-
-private:
-    static void NO_VCL_CALL ClickTrampoline(no_vcl_obj_t sender);
-    static std::unordered_map<no_vcl_obj_t, TButton*> s_registry;
-
-    std::function<void()> onClick_;
-
-    static int         GetLeftImpl(TObject* owner);
-    static void        SetLeftImpl(TObject* owner, const int& value);
-    static int         GetTopImpl(TObject* owner);
-    static void        SetTopImpl(TObject* owner, const int& value);
-    static int         GetWidthImpl(TObject* owner);
-    static void        SetWidthImpl(TObject* owner, const int& value);
-    static int         GetHeightImpl(TObject* owner);
-    static void        SetHeightImpl(TObject* owner, const int& value);
-    static std::string GetCaptionImpl(TObject* owner);
-    static void        SetCaptionImpl(TObject* owner, const std::string& value);
+    explicit TForm(TComponent* AOwner);
 };
 
-class TLabel : public TObject
+/* ---------------- Panel / GroupBox / Label ---------------- */
+
+class TCustomPanel : public TCustomControl
 {
-public:
-    Property<int>         Left;
-    Property<int>         Top;
-    Property<int>         Width;
-    Property<int>         Height;
-    Property<bool>         Visible;
-    Property<bool>         Enabled;
-    Property<std::string> Caption;
-
-    explicit TLabel(TObject* parent);
-    ~TLabel() override;
-
-private:
-    static int         GetLeftImpl(TObject* owner);
-    static void        SetLeftImpl(TObject* owner, const int& value);
-    static int         GetTopImpl(TObject* owner);
-    static void        SetTopImpl(TObject* owner, const int& value);
-    static int         GetWidthImpl(TObject* owner);
-    static void        SetWidthImpl(TObject* owner, const int& value);
-    static int         GetHeightImpl(TObject* owner);
-    static void        SetHeightImpl(TObject* owner, const int& value);
-    static bool        GetVisibleImpl(TObject* owner);
-    static void        SetVisibleImpl(TObject* owner, const bool& value);
-    static bool        GetEnabledImpl(TObject* owner);
-    static void        SetEnabledImpl(TObject* owner, const bool& value);
-    static std::string GetCaptionImpl(TObject* owner);
-    static void        SetCaptionImpl(TObject* owner, const std::string& value);
+protected:
+    explicit TCustomPanel(no_vcl_obj_t handle) : TCustomControl(handle) {}
 };
 
-class TEdit : public TObject
+class TPanel : public TCustomPanel
 {
 public:
-    Property<int>         Left;
-    Property<int>         Top;
-    Property<int>         Width;
-    Property<int>         Height;
-    Property<bool>         Visible;
-    Property<bool>         Enabled;
-    Property<std::string> Text;
-    Property<int>          MaxLength;
-    Property<bool>          ReadOnly;
-
-    explicit TEdit(TObject* parent);
-    ~TEdit() override;
-
-    void SetOnChange(std::function<void()> handler);
-
-private:
-    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender);
-    static std::unordered_map<no_vcl_obj_t, TEdit*> s_registry;
-
-    std::function<void()> onChange_;
-
-    static int         GetLeftImpl(TObject* owner);
-    static void        SetLeftImpl(TObject* owner, const int& value);
-    static int         GetTopImpl(TObject* owner);
-    static void        SetTopImpl(TObject* owner, const int& value);
-    static int         GetWidthImpl(TObject* owner);
-    static void        SetWidthImpl(TObject* owner, const int& value);
-    static int         GetHeightImpl(TObject* owner);
-    static void        SetHeightImpl(TObject* owner, const int& value);
-    static bool        GetVisibleImpl(TObject* owner);
-    static void        SetVisibleImpl(TObject* owner, const bool& value);
-    static bool        GetEnabledImpl(TObject* owner);
-    static void        SetEnabledImpl(TObject* owner, const bool& value);
-    static std::string GetTextImpl(TObject* owner);
-    static void        SetTextImpl(TObject* owner, const std::string& value);
-    static int         GetMaxLengthImpl(TObject* owner);
-    static void        SetMaxLengthImpl(TObject* owner, const int& value);
-    static bool        GetReadOnlyImpl(TObject* owner);
-    static void        SetReadOnlyImpl(TObject* owner, const bool& value);
+    explicit TPanel(TComponent* AOwner);
 };
 
-class TCheckBox : public TObject
+class TCustomGroupBox : public TWinControl
 {
-public:
-    Property<int>         Left;
-    Property<int>         Top;
-    Property<int>         Width;
-    Property<int>         Height;
-    Property<bool>         Visible;
-    Property<bool>         Enabled;
-    Property<std::string> Caption;
-    Property<bool>          Checked;
-
-    explicit TCheckBox(TObject* parent);
-    ~TCheckBox() override;
-
-    void SetOnClick(std::function<void()> handler);
-
-private:
-    static void NO_VCL_CALL ClickTrampoline(no_vcl_obj_t sender);
-    static std::unordered_map<no_vcl_obj_t, TCheckBox*> s_registry;
-
-    std::function<void()> onClick_;
-
-    static int         GetLeftImpl(TObject* owner);
-    static void        SetLeftImpl(TObject* owner, const int& value);
-    static int         GetTopImpl(TObject* owner);
-    static void        SetTopImpl(TObject* owner, const int& value);
-    static int         GetWidthImpl(TObject* owner);
-    static void        SetWidthImpl(TObject* owner, const int& value);
-    static int         GetHeightImpl(TObject* owner);
-    static void        SetHeightImpl(TObject* owner, const int& value);
-    static bool        GetVisibleImpl(TObject* owner);
-    static void        SetVisibleImpl(TObject* owner, const bool& value);
-    static bool        GetEnabledImpl(TObject* owner);
-    static void        SetEnabledImpl(TObject* owner, const bool& value);
-    static std::string GetCaptionImpl(TObject* owner);
-    static void        SetCaptionImpl(TObject* owner, const std::string& value);
-    static bool        GetCheckedImpl(TObject* owner);
-    static void        SetCheckedImpl(TObject* owner, const bool& value);
+protected:
+    explicit TCustomGroupBox(no_vcl_obj_t handle) : TWinControl(handle) {}
 };
 
-class TRadioButton : public TObject
+class TGroupBox : public TCustomGroupBox
 {
 public:
-    Property<int>         Left;
-    Property<int>         Top;
-    Property<int>         Width;
-    Property<int>         Height;
-    Property<bool>         Visible;
-    Property<bool>         Enabled;
-    Property<std::string> Caption;
-    Property<bool>          Checked;
-
-    explicit TRadioButton(TObject* parent);
-    ~TRadioButton() override;
-
-    void SetOnClick(std::function<void()> handler);
-
-private:
-    static void NO_VCL_CALL ClickTrampoline(no_vcl_obj_t sender);
-    static std::unordered_map<no_vcl_obj_t, TRadioButton*> s_registry;
-
-    std::function<void()> onClick_;
-
-    static int         GetLeftImpl(TObject* owner);
-    static void        SetLeftImpl(TObject* owner, const int& value);
-    static int         GetTopImpl(TObject* owner);
-    static void        SetTopImpl(TObject* owner, const int& value);
-    static int         GetWidthImpl(TObject* owner);
-    static void        SetWidthImpl(TObject* owner, const int& value);
-    static int         GetHeightImpl(TObject* owner);
-    static void        SetHeightImpl(TObject* owner, const int& value);
-    static bool        GetVisibleImpl(TObject* owner);
-    static void        SetVisibleImpl(TObject* owner, const bool& value);
-    static bool        GetEnabledImpl(TObject* owner);
-    static void        SetEnabledImpl(TObject* owner, const bool& value);
-    static std::string GetCaptionImpl(TObject* owner);
-    static void        SetCaptionImpl(TObject* owner, const std::string& value);
-    static bool        GetCheckedImpl(TObject* owner);
-    static void        SetCheckedImpl(TObject* owner, const bool& value);
+    explicit TGroupBox(TComponent* AOwner);
 };
 
-class TPanel : public TObject
+class TCustomLabel : public TGraphicControl
 {
-public:
-    Property<int>         Left;
-    Property<int>         Top;
-    Property<int>         Width;
-    Property<int>         Height;
-    Property<bool>         Visible;
-    Property<bool>         Enabled;
-    Property<std::string> Caption;
-
-    explicit TPanel(TObject* parent);
-    ~TPanel() override;
-
-private:
-    static int         GetLeftImpl(TObject* owner);
-    static void        SetLeftImpl(TObject* owner, const int& value);
-    static int         GetTopImpl(TObject* owner);
-    static void        SetTopImpl(TObject* owner, const int& value);
-    static int         GetWidthImpl(TObject* owner);
-    static void        SetWidthImpl(TObject* owner, const int& value);
-    static int         GetHeightImpl(TObject* owner);
-    static void        SetHeightImpl(TObject* owner, const int& value);
-    static bool        GetVisibleImpl(TObject* owner);
-    static void        SetVisibleImpl(TObject* owner, const bool& value);
-    static bool        GetEnabledImpl(TObject* owner);
-    static void        SetEnabledImpl(TObject* owner, const bool& value);
-    static std::string GetCaptionImpl(TObject* owner);
-    static void        SetCaptionImpl(TObject* owner, const std::string& value);
+protected:
+    explicit TCustomLabel(no_vcl_obj_t handle) : TGraphicControl(handle) {}
 };
 
-class TGroupBox : public TObject
+class TLabel : public TCustomLabel
 {
 public:
-    Property<int>         Left;
-    Property<int>         Top;
-    Property<int>         Width;
-    Property<int>         Height;
-    Property<bool>         Visible;
-    Property<bool>         Enabled;
-    Property<std::string> Caption;
-
-    explicit TGroupBox(TObject* parent);
-    ~TGroupBox() override;
-
-private:
-    static int         GetLeftImpl(TObject* owner);
-    static void        SetLeftImpl(TObject* owner, const int& value);
-    static int         GetTopImpl(TObject* owner);
-    static void        SetTopImpl(TObject* owner, const int& value);
-    static int         GetWidthImpl(TObject* owner);
-    static void        SetWidthImpl(TObject* owner, const int& value);
-    static int         GetHeightImpl(TObject* owner);
-    static void        SetHeightImpl(TObject* owner, const int& value);
-    static bool        GetVisibleImpl(TObject* owner);
-    static void        SetVisibleImpl(TObject* owner, const bool& value);
-    static bool        GetEnabledImpl(TObject* owner);
-    static void        SetEnabledImpl(TObject* owner, const bool& value);
-    static std::string GetCaptionImpl(TObject* owner);
-    static void        SetCaptionImpl(TObject* owner, const std::string& value);
+    explicit TLabel(TComponent* AOwner);
 };
 
-class TComboBox : public TObject
+/* ---------------- Button / CheckBox / RadioButton ---------------- */
+
+class TButtonControl : public TWinControl
 {
-public:
-    Property<int>         Left;
-    Property<int>         Top;
-    Property<int>         Width;
-    Property<int>         Height;
-    Property<bool>         Visible;
-    Property<bool>         Enabled;
-    Property<std::string> Text;
-    Property<int>          ItemIndex;
+protected:
+    explicit TButtonControl(no_vcl_obj_t handle);
 
-    explicit TComboBox(TObject* parent);
-    ~TComboBox() override;
-
-    void        ItemsAdd(const std::string& text);
-    void        ItemsClear();
-    int         ItemsCount() const;
-    std::string ItemsGetText(int index) const;
-
-    void SetOnChange(std::function<void()> handler);
+    // LCL では TButtonControl の protected。TCheckBox / TRadioButton が公開する。
+    Property<bool> Checked;
 
 private:
-    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender);
-    static std::unordered_map<no_vcl_obj_t, TComboBox*> s_registry;
-
-    std::function<void()> onChange_;
-
-    static int         GetLeftImpl(TObject* owner);
-    static void        SetLeftImpl(TObject* owner, const int& value);
-    static int         GetTopImpl(TObject* owner);
-    static void        SetTopImpl(TObject* owner, const int& value);
-    static int         GetWidthImpl(TObject* owner);
-    static void        SetWidthImpl(TObject* owner, const int& value);
-    static int         GetHeightImpl(TObject* owner);
-    static void        SetHeightImpl(TObject* owner, const int& value);
-    static bool        GetVisibleImpl(TObject* owner);
-    static void        SetVisibleImpl(TObject* owner, const bool& value);
-    static bool        GetEnabledImpl(TObject* owner);
-    static void        SetEnabledImpl(TObject* owner, const bool& value);
-    static std::string GetTextImpl(TObject* owner);
-    static void        SetTextImpl(TObject* owner, const std::string& value);
-    static int         GetItemIndexImpl(TObject* owner);
-    static void        SetItemIndexImpl(TObject* owner, const int& value);
+    static bool GetCheckedImpl(TObject* owner);
+    static void SetCheckedImpl(TObject* owner, const bool& value);
 };
 
-class TListBox : public TObject
+class TCustomButton : public TButtonControl
 {
-public:
-    Property<int> Left;
-    Property<int> Top;
-    Property<int> Width;
-    Property<int> Height;
-    Property<bool> Visible;
-    Property<bool> Enabled;
-    Property<int> ItemIndex;
-
-    explicit TListBox(TObject* parent);
-    ~TListBox() override;
-
-    void        ItemsAdd(const std::string& text);
-    void        ItemsClear();
-    int         ItemsCount() const;
-    std::string ItemsGetText(int index) const;
-
-    void SetOnClick(std::function<void()> handler);
-
-private:
-    static void NO_VCL_CALL ClickTrampoline(no_vcl_obj_t sender);
-    static std::unordered_map<no_vcl_obj_t, TListBox*> s_registry;
-
-    std::function<void()> onClick_;
-
-    static int  GetLeftImpl(TObject* owner);
-    static void SetLeftImpl(TObject* owner, const int& value);
-    static int  GetTopImpl(TObject* owner);
-    static void SetTopImpl(TObject* owner, const int& value);
-    static int  GetWidthImpl(TObject* owner);
-    static void SetWidthImpl(TObject* owner, const int& value);
-    static int  GetHeightImpl(TObject* owner);
-    static void SetHeightImpl(TObject* owner, const int& value);
-    static bool GetVisibleImpl(TObject* owner);
-    static void SetVisibleImpl(TObject* owner, const bool& value);
-    static bool GetEnabledImpl(TObject* owner);
-    static void SetEnabledImpl(TObject* owner, const bool& value);
-    static int  GetItemIndexImpl(TObject* owner);
-    static void SetItemIndexImpl(TObject* owner, const int& value);
+protected:
+    explicit TCustomButton(no_vcl_obj_t handle) : TButtonControl(handle) {}
 };
 
-class TMemo : public TObject
+class TButton : public TCustomButton
 {
 public:
-    Property<int>  Left;
-    Property<int>  Top;
-    Property<int>  Width;
-    Property<int>  Height;
-    Property<bool> Visible;
-    Property<bool> Enabled;
+    explicit TButton(TComponent* AOwner);
+};
+
+class TCustomCheckBox : public TButtonControl
+{
+protected:
+    explicit TCustomCheckBox(no_vcl_obj_t handle) : TButtonControl(handle) {}
+};
+
+class TCheckBox : public TCustomCheckBox
+{
+public:
+    using TButtonControl::Checked;
+
+    explicit TCheckBox(TComponent* AOwner);
+};
+
+class TRadioButton : public TCustomCheckBox
+{
+public:
+    using TButtonControl::Checked;
+
+    explicit TRadioButton(TComponent* AOwner);
+};
+
+/* ---------------- Edit / Memo ---------------- */
+
+class TCustomEdit : public TWinControl
+{
+public:
+    using TControl::Text;
+    Property<int>  MaxLength;
     Property<bool> ReadOnly;
-    Property<int>  ScrollBars;
 
-    explicit TMemo(TObject* parent);
-    ~TMemo() override;
+    void SetOnChange(std::function<void()> handler);
+
+protected:
+    explicit TCustomEdit(no_vcl_obj_t handle);
+
+private:
+    std::function<void()> onChange_;
+    bool                  onChangeHooked_ = false;
+    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender);
+
+    static int  GetMaxLengthImpl(TObject* owner);
+    static void SetMaxLengthImpl(TObject* owner, const int& value);
+    static bool GetReadOnlyImpl(TObject* owner);
+    static void SetReadOnlyImpl(TObject* owner, const bool& value);
+};
+
+class TEdit : public TCustomEdit
+{
+public:
+    explicit TEdit(TComponent* AOwner);
+};
+
+class TCustomMemo : public TCustomEdit
+{
+public:
+    Property<int> ScrollBars;
 
     void        LinesAdd(const std::string& text);
     void        LinesClear();
     int         LinesCount() const;
     std::string LinesGetText(int index) const;
 
-    void SetOnChange(std::function<void()> handler);
+protected:
+    explicit TCustomMemo(no_vcl_obj_t handle);
 
 private:
-    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender);
-    static std::unordered_map<no_vcl_obj_t, TMemo*> s_registry;
-
-    std::function<void()> onChange_;
-
-    static int  GetLeftImpl(TObject* owner);
-    static void SetLeftImpl(TObject* owner, const int& value);
-    static int  GetTopImpl(TObject* owner);
-    static void SetTopImpl(TObject* owner, const int& value);
-    static int  GetWidthImpl(TObject* owner);
-    static void SetWidthImpl(TObject* owner, const int& value);
-    static int  GetHeightImpl(TObject* owner);
-    static void SetHeightImpl(TObject* owner, const int& value);
-    static bool GetVisibleImpl(TObject* owner);
-    static void SetVisibleImpl(TObject* owner, const bool& value);
-    static bool GetEnabledImpl(TObject* owner);
-    static void SetEnabledImpl(TObject* owner, const bool& value);
-    static bool GetReadOnlyImpl(TObject* owner);
-    static void SetReadOnlyImpl(TObject* owner, const bool& value);
     static int  GetScrollBarsImpl(TObject* owner);
     static void SetScrollBarsImpl(TObject* owner, const int& value);
 };
 
-class TTimer : public TObject
+class TMemo : public TCustomMemo
 {
 public:
-    Property<int>  Interval;
-    Property<bool> Enabled;
-
-    // TTimerは非ビジュアルコンポーネントなのでParentは無く、Ownerのみ受け取る。
-    explicit TTimer(TObject* owner);
-    ~TTimer() override;
-
-    void SetOnTimer(std::function<void()> handler);
-
-private:
-    static void NO_VCL_CALL TimerTrampoline(no_vcl_obj_t sender);
-    static std::unordered_map<no_vcl_obj_t, TTimer*> s_registry;
-
-    std::function<void()> onTimer_;
-
-    static int  GetIntervalImpl(TObject* owner);
-    static void SetIntervalImpl(TObject* owner, const int& value);
-    static bool GetEnabledImpl(TObject* owner);
-    static void SetEnabledImpl(TObject* owner, const bool& value);
+    explicit TMemo(TComponent* AOwner);
 };
 
-// TPen/TBrush/TFont/TCanvas は Canvas を持つコントロールが内部で保持するオブジェクトへの
-// 非所有(non-owning)ラッパー。TObjectは継承するが(handle_/Handle()を再利用するため)、
-// 自前でCreate/Destroyは行わない(取得元のコントロールが破棄されれば一緒に破棄される)。
+/* ---------------- ComboBox / ListBox ---------------- */
 
-class TPen : public TObject
+class TCustomComboBox : public TWinControl
+{
+public:
+    using TControl::Text;
+    Property<int> ItemIndex;
+
+    void        ItemsAdd(const std::string& text);
+    void        ItemsClear();
+    int         ItemsCount() const;
+    std::string ItemsGetText(int index) const;
+
+protected:
+    explicit TCustomComboBox(no_vcl_obj_t handle);
+
+private:
+    static int  GetItemIndexImpl(TObject* owner);
+    static void SetItemIndexImpl(TObject* owner, const int& value);
+};
+
+class TComboBox : public TCustomComboBox
+{
+public:
+    explicit TComboBox(TComponent* AOwner);
+
+    // LCL では TCustomComboBox の protected で、公開しているのは TComboBox だけ。
+    void SetOnChange(std::function<void()> handler);
+
+private:
+    std::function<void()> onChange_;
+    bool                  onChangeHooked_ = false;
+    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender);
+};
+
+class TCustomListBox : public TWinControl
+{
+public:
+    Property<int> ItemIndex;
+
+    void        ItemsAdd(const std::string& text);
+    void        ItemsClear();
+    int         ItemsCount() const;
+    std::string ItemsGetText(int index) const;
+
+protected:
+    explicit TCustomListBox(no_vcl_obj_t handle);
+
+private:
+    static int  GetItemIndexImpl(TObject* owner);
+    static void SetItemIndexImpl(TObject* owner, const int& value);
+};
+
+class TListBox : public TCustomListBox
+{
+public:
+    explicit TListBox(TComponent* AOwner);
+};
+
+/* ---------------- Canvas ---------------- */
+
+// TPen/TBrush/TFont/TCanvas は LCL でも TComponent ではなく TPersistent の派生であり、
+// Canvas を持つコントロールが内部で保持するオブジェクトへの非所有(non-owning)ラッパー。
+// 自前で Create/Destroy は行わない(取得元のコントロールが破棄されれば一緒に破棄される)。
+
+class TPen : public TPersistent
 {
 public:
     Property<TColor> Color;
@@ -540,7 +425,7 @@ private:
     static void   SetWidthImpl(TObject* owner, const int& value);
 };
 
-class TBrush : public TObject
+class TBrush : public TPersistent
 {
 public:
     Property<TColor> Color;
@@ -552,7 +437,7 @@ private:
     static void   SetColorImpl(TObject* owner, const TColor& value);
 };
 
-class TFont : public TObject
+class TFont : public TPersistent
 {
 public:
     Property<std::string> Name;
@@ -566,11 +451,11 @@ private:
     static void        SetNameImpl(TObject* owner, const std::string& value);
     static int         GetSizeImpl(TObject* owner);
     static void        SetSizeImpl(TObject* owner, const int& value);
-    static TColor       GetColorImpl(TObject* owner);
-    static void         SetColorImpl(TObject* owner, const TColor& value);
+    static TColor      GetColorImpl(TObject* owner);
+    static void        SetColorImpl(TObject* owner, const TColor& value);
 };
 
-class TCanvas : public TObject
+class TCanvas : public TPersistent
 {
 public:
     TPen   Pen;
@@ -586,42 +471,49 @@ public:
     void TextOut(int x, int y, const std::string& text);
 };
 
-class TPaintBox : public TObject
+class TPaintBox : public TGraphicControl
 {
 public:
-    Property<int>  Left;
-    Property<int>  Top;
-    Property<int>  Width;
-    Property<int>  Height;
-    Property<bool> Visible;
-    Property<bool> Enabled;
-    TCanvas        Canvas;
+    TCanvas Canvas;
 
-    explicit TPaintBox(TObject* parent);
-    ~TPaintBox() override;
+    explicit TPaintBox(TComponent* AOwner);
 
     void SetOnPaint(std::function<void()> handler);
 
 private:
-    static no_vcl_obj_t MakeHandle(TObject* parent);
-
-    static void NO_VCL_CALL PaintTrampoline(no_vcl_obj_t sender);
-    static std::unordered_map<no_vcl_obj_t, TPaintBox*> s_registry;
-
     std::function<void()> onPaint_;
+    bool                  onPaintHooked_ = false;
+    static void NO_VCL_CALL PaintTrampoline(no_vcl_obj_t sender);
+};
 
-    static int  GetLeftImpl(TObject* owner);
-    static void SetLeftImpl(TObject* owner, const int& value);
-    static int  GetTopImpl(TObject* owner);
-    static void SetTopImpl(TObject* owner, const int& value);
-    static int  GetWidthImpl(TObject* owner);
-    static void SetWidthImpl(TObject* owner, const int& value);
-    static int  GetHeightImpl(TObject* owner);
-    static void SetHeightImpl(TObject* owner, const int& value);
-    static bool GetVisibleImpl(TObject* owner);
-    static void SetVisibleImpl(TObject* owner, const bool& value);
+/* ---------------- Timer ---------------- */
+
+class TCustomTimer : public TComponent
+{
+public:
+    Property<int>  Interval;
+    Property<bool> Enabled;
+
+    void SetOnTimer(std::function<void()> handler);
+
+protected:
+    explicit TCustomTimer(no_vcl_obj_t handle);
+
+private:
+    std::function<void()> onTimer_;
+    bool                  onTimerHooked_ = false;
+    static void NO_VCL_CALL TimerTrampoline(no_vcl_obj_t sender);
+
+    static int  GetIntervalImpl(TObject* owner);
+    static void SetIntervalImpl(TObject* owner, const int& value);
     static bool GetEnabledImpl(TObject* owner);
     static void SetEnabledImpl(TObject* owner, const bool& value);
+};
+
+class TTimer : public TCustomTimer
+{
+public:
+    explicit TTimer(TComponent* AOwner);
 };
 
 } // namespace no_vcl

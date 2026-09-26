@@ -7,6 +7,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | ドキュメント | 内容 | 状態 |
 |---|---|---|
 | [vision.md](vision.md) | 目的・市場調査・想定ユーザー・スコープ | 初版 |
+| [class-hierarchy.md](class-hierarchy.md) | LCL の継承関係(ソースで確認済み)・no_vcl の階層・メンバの配置 | 初版 |
 | [adr/](adr/) | 設計判断の記録（1判断1ファイル） | 随時追加 |
 | [../todo.md](../todo.md) | 実装タスクの進捗・実装パターン・既知の課題(Phase 単位) | 継続更新 |
 
@@ -21,8 +22,9 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0002](adr/0002-object-model-fidelity.md) | オブジェクトモデルは C++Builder に極力揃える | 承認 |
 | [0003](adr/0003-two-phase-initialization.md) | コントロールの初期化を二段階(デフォルト構築 + 遅延 Create)に変更する | 置換(→0004) |
 | [0004](adr/0004-pointer-members-for-deferred-declaration.md) | コントロールはポインタ(スマートポインタ)メンバとして持ち、既存の単一コンストラクタのまま生成する | 承認 |
-| [0005](adr/0005-owner-as-pointer.md) | Owner/Parent 引数は参照ではなくポインタで受ける | 承認 |
+| [0005](adr/0005-owner-as-pointer.md) | Owner/Parent 引数は参照ではなくポインタで受ける | 承認(一部置換→0007) |
 | [0006](adr/0006-property-owner-typed-as-tobject.md) | Property<T> の所有者型を void* ではなく TObject* にする | 承認 |
+| [0007](adr/0007-lcl-faithful-hierarchy.md) | クラス階層を LCL の継承関係に忠実に揃え、Owner と Parent を分離する | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。
