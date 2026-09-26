@@ -21,17 +21,44 @@ const TColor clGreen  = 0x008000;
 const TColor clBlue   = 0xFF0000;
 const TColor clYellow = 0x00FFFF;
 
-// 所有者への生ポインタ + 固定のGetter/Setter関数ポインタを持つ軽量プロキシ。
-// std::functionを使わないためヒープ確保がなく、各コントロールのコピー/ムーブは
+class TObject
+{
+public:
+    TObject() = default;
+    virtual ~TObject() = default;
+
+    TObject(const TObject&) = delete;
+    TObject& operator=(const TObject&) = delete;
+    TObject(TObject&&) = delete;
+    TObject& operator=(TObject&&) = delete;
+
+    no_vcl_obj_t Handle() const { return handle_; }
+
+protected:
+    no_vcl_obj_t handle_ = nullptr;
+
+    // 派生クラスがCreate直後のハンドルを基底クラス初期化の時点で持ちたい場合に使う
+    // (例: TPaintBoxはCanvasメンバをメンバ初期化子リストで組み立てる必要があり、
+    //  そのためにはbase classの構築が終わった時点でhandle_が有効である必要がある。
+    //  TPen/TBrush/TFont/TCanvasのような非所有ラッパーも同じ仕組みで、
+    //  コンストラクタ引数で渡された既存のハンドルをそのままhandle_に格納する)。
+    explicit TObject(no_vcl_obj_t handle) : handle_(handle) {}
+};
+
+// 所有者(TObject派生インスタンス)への生ポインタ + 固定のGetter/Setter関数ポインタを持つ
+// 軽量プロキシ。std::functionを使わないためヒープ確保がなく、各コントロールのコピー/ムーブは
 // TObjectで禁止しているためownerが指す実体が入れ替わることもない。
+// Getter/SetterがTObject*を受け取るのは、Property自体は「どの具象クラスのメンバか」を
+// 知らなくても(TObjectさえ継承していれば)使い回せるようにするため。実際の型へは
+// 各クラスのImpl関数内でstatic_castする(例: static_cast<TButton*>(owner)->handle_)。
 template<typename T>
 class Property
 {
 public:
-    using Getter = T    (*)(void*);
-    using Setter = void (*)(void*, const T&);
+    using Getter = T    (*)(TObject*);
+    using Setter = void (*)(TObject*, const T&);
 
-    Property(void* owner, Getter getter, Setter setter)
+    Property(TObject* owner, Getter getter, Setter setter)
         : owner_(owner)
         , getter_(getter)
         , setter_(setter)
@@ -52,31 +79,9 @@ public:
     }
 
 private:
-    void*  owner_;
-    Getter getter_;
-    Setter setter_;
-};
-
-class TObject
-{
-public:
-    TObject() = default;
-    virtual ~TObject() = default;
-
-    TObject(const TObject&) = delete;
-    TObject& operator=(const TObject&) = delete;
-    TObject(TObject&&) = delete;
-    TObject& operator=(TObject&&) = delete;
-
-    no_vcl_obj_t Handle() const { return handle_; }
-
-protected:
-    no_vcl_obj_t handle_ = nullptr;
-
-    // 派生クラスがCreate直後のハンドルを基底クラス初期化の時点で持ちたい場合に使う
-    // (例: TPaintBoxはCanvasメンバをメンバ初期化子リストで組み立てる必要があり、
-    //  そのためにはbase classの構築が終わった時点でhandle_が有効である必要がある)。
-    explicit TObject(no_vcl_obj_t handle) : handle_(handle) {}
+    TObject* owner_;
+    Getter   getter_;
+    Setter   setter_;
 };
 
 class TForm : public TObject
@@ -95,12 +100,12 @@ public:
     void Close();
 
 private:
-    static int         GetWidthImpl(void* owner);
-    static void        SetWidthImpl(void* owner, const int& value);
-    static int         GetHeightImpl(void* owner);
-    static void        SetHeightImpl(void* owner, const int& value);
-    static std::string GetCaptionImpl(void* owner);
-    static void        SetCaptionImpl(void* owner, const std::string& value);
+    static int         GetWidthImpl(TObject* owner);
+    static void        SetWidthImpl(TObject* owner, const int& value);
+    static int         GetHeightImpl(TObject* owner);
+    static void        SetHeightImpl(TObject* owner, const int& value);
+    static std::string GetCaptionImpl(TObject* owner);
+    static void        SetCaptionImpl(TObject* owner, const std::string& value);
 };
 
 class TButton : public TObject
@@ -126,16 +131,16 @@ private:
 
     std::function<void()> onClick_;
 
-    static int         GetLeftImpl(void* owner);
-    static void        SetLeftImpl(void* owner, const int& value);
-    static int         GetTopImpl(void* owner);
-    static void        SetTopImpl(void* owner, const int& value);
-    static int         GetWidthImpl(void* owner);
-    static void        SetWidthImpl(void* owner, const int& value);
-    static int         GetHeightImpl(void* owner);
-    static void        SetHeightImpl(void* owner, const int& value);
-    static std::string GetCaptionImpl(void* owner);
-    static void        SetCaptionImpl(void* owner, const std::string& value);
+    static int         GetLeftImpl(TObject* owner);
+    static void        SetLeftImpl(TObject* owner, const int& value);
+    static int         GetTopImpl(TObject* owner);
+    static void        SetTopImpl(TObject* owner, const int& value);
+    static int         GetWidthImpl(TObject* owner);
+    static void        SetWidthImpl(TObject* owner, const int& value);
+    static int         GetHeightImpl(TObject* owner);
+    static void        SetHeightImpl(TObject* owner, const int& value);
+    static std::string GetCaptionImpl(TObject* owner);
+    static void        SetCaptionImpl(TObject* owner, const std::string& value);
 };
 
 class TLabel : public TObject
@@ -153,20 +158,20 @@ public:
     ~TLabel() override;
 
 private:
-    static int         GetLeftImpl(void* owner);
-    static void        SetLeftImpl(void* owner, const int& value);
-    static int         GetTopImpl(void* owner);
-    static void        SetTopImpl(void* owner, const int& value);
-    static int         GetWidthImpl(void* owner);
-    static void        SetWidthImpl(void* owner, const int& value);
-    static int         GetHeightImpl(void* owner);
-    static void        SetHeightImpl(void* owner, const int& value);
-    static bool        GetVisibleImpl(void* owner);
-    static void        SetVisibleImpl(void* owner, const bool& value);
-    static bool        GetEnabledImpl(void* owner);
-    static void        SetEnabledImpl(void* owner, const bool& value);
-    static std::string GetCaptionImpl(void* owner);
-    static void        SetCaptionImpl(void* owner, const std::string& value);
+    static int         GetLeftImpl(TObject* owner);
+    static void        SetLeftImpl(TObject* owner, const int& value);
+    static int         GetTopImpl(TObject* owner);
+    static void        SetTopImpl(TObject* owner, const int& value);
+    static int         GetWidthImpl(TObject* owner);
+    static void        SetWidthImpl(TObject* owner, const int& value);
+    static int         GetHeightImpl(TObject* owner);
+    static void        SetHeightImpl(TObject* owner, const int& value);
+    static bool        GetVisibleImpl(TObject* owner);
+    static void        SetVisibleImpl(TObject* owner, const bool& value);
+    static bool        GetEnabledImpl(TObject* owner);
+    static void        SetEnabledImpl(TObject* owner, const bool& value);
+    static std::string GetCaptionImpl(TObject* owner);
+    static void        SetCaptionImpl(TObject* owner, const std::string& value);
 };
 
 class TEdit : public TObject
@@ -193,24 +198,24 @@ private:
 
     std::function<void()> onChange_;
 
-    static int         GetLeftImpl(void* owner);
-    static void        SetLeftImpl(void* owner, const int& value);
-    static int         GetTopImpl(void* owner);
-    static void        SetTopImpl(void* owner, const int& value);
-    static int         GetWidthImpl(void* owner);
-    static void        SetWidthImpl(void* owner, const int& value);
-    static int         GetHeightImpl(void* owner);
-    static void        SetHeightImpl(void* owner, const int& value);
-    static bool        GetVisibleImpl(void* owner);
-    static void        SetVisibleImpl(void* owner, const bool& value);
-    static bool        GetEnabledImpl(void* owner);
-    static void        SetEnabledImpl(void* owner, const bool& value);
-    static std::string GetTextImpl(void* owner);
-    static void        SetTextImpl(void* owner, const std::string& value);
-    static int         GetMaxLengthImpl(void* owner);
-    static void        SetMaxLengthImpl(void* owner, const int& value);
-    static bool        GetReadOnlyImpl(void* owner);
-    static void        SetReadOnlyImpl(void* owner, const bool& value);
+    static int         GetLeftImpl(TObject* owner);
+    static void        SetLeftImpl(TObject* owner, const int& value);
+    static int         GetTopImpl(TObject* owner);
+    static void        SetTopImpl(TObject* owner, const int& value);
+    static int         GetWidthImpl(TObject* owner);
+    static void        SetWidthImpl(TObject* owner, const int& value);
+    static int         GetHeightImpl(TObject* owner);
+    static void        SetHeightImpl(TObject* owner, const int& value);
+    static bool        GetVisibleImpl(TObject* owner);
+    static void        SetVisibleImpl(TObject* owner, const bool& value);
+    static bool        GetEnabledImpl(TObject* owner);
+    static void        SetEnabledImpl(TObject* owner, const bool& value);
+    static std::string GetTextImpl(TObject* owner);
+    static void        SetTextImpl(TObject* owner, const std::string& value);
+    static int         GetMaxLengthImpl(TObject* owner);
+    static void        SetMaxLengthImpl(TObject* owner, const int& value);
+    static bool        GetReadOnlyImpl(TObject* owner);
+    static void        SetReadOnlyImpl(TObject* owner, const bool& value);
 };
 
 class TCheckBox : public TObject
@@ -236,22 +241,22 @@ private:
 
     std::function<void()> onClick_;
 
-    static int         GetLeftImpl(void* owner);
-    static void        SetLeftImpl(void* owner, const int& value);
-    static int         GetTopImpl(void* owner);
-    static void        SetTopImpl(void* owner, const int& value);
-    static int         GetWidthImpl(void* owner);
-    static void        SetWidthImpl(void* owner, const int& value);
-    static int         GetHeightImpl(void* owner);
-    static void        SetHeightImpl(void* owner, const int& value);
-    static bool        GetVisibleImpl(void* owner);
-    static void        SetVisibleImpl(void* owner, const bool& value);
-    static bool        GetEnabledImpl(void* owner);
-    static void        SetEnabledImpl(void* owner, const bool& value);
-    static std::string GetCaptionImpl(void* owner);
-    static void        SetCaptionImpl(void* owner, const std::string& value);
-    static bool        GetCheckedImpl(void* owner);
-    static void        SetCheckedImpl(void* owner, const bool& value);
+    static int         GetLeftImpl(TObject* owner);
+    static void        SetLeftImpl(TObject* owner, const int& value);
+    static int         GetTopImpl(TObject* owner);
+    static void        SetTopImpl(TObject* owner, const int& value);
+    static int         GetWidthImpl(TObject* owner);
+    static void        SetWidthImpl(TObject* owner, const int& value);
+    static int         GetHeightImpl(TObject* owner);
+    static void        SetHeightImpl(TObject* owner, const int& value);
+    static bool        GetVisibleImpl(TObject* owner);
+    static void        SetVisibleImpl(TObject* owner, const bool& value);
+    static bool        GetEnabledImpl(TObject* owner);
+    static void        SetEnabledImpl(TObject* owner, const bool& value);
+    static std::string GetCaptionImpl(TObject* owner);
+    static void        SetCaptionImpl(TObject* owner, const std::string& value);
+    static bool        GetCheckedImpl(TObject* owner);
+    static void        SetCheckedImpl(TObject* owner, const bool& value);
 };
 
 class TRadioButton : public TObject
@@ -277,22 +282,22 @@ private:
 
     std::function<void()> onClick_;
 
-    static int         GetLeftImpl(void* owner);
-    static void        SetLeftImpl(void* owner, const int& value);
-    static int         GetTopImpl(void* owner);
-    static void        SetTopImpl(void* owner, const int& value);
-    static int         GetWidthImpl(void* owner);
-    static void        SetWidthImpl(void* owner, const int& value);
-    static int         GetHeightImpl(void* owner);
-    static void        SetHeightImpl(void* owner, const int& value);
-    static bool        GetVisibleImpl(void* owner);
-    static void        SetVisibleImpl(void* owner, const bool& value);
-    static bool        GetEnabledImpl(void* owner);
-    static void        SetEnabledImpl(void* owner, const bool& value);
-    static std::string GetCaptionImpl(void* owner);
-    static void        SetCaptionImpl(void* owner, const std::string& value);
-    static bool        GetCheckedImpl(void* owner);
-    static void        SetCheckedImpl(void* owner, const bool& value);
+    static int         GetLeftImpl(TObject* owner);
+    static void        SetLeftImpl(TObject* owner, const int& value);
+    static int         GetTopImpl(TObject* owner);
+    static void        SetTopImpl(TObject* owner, const int& value);
+    static int         GetWidthImpl(TObject* owner);
+    static void        SetWidthImpl(TObject* owner, const int& value);
+    static int         GetHeightImpl(TObject* owner);
+    static void        SetHeightImpl(TObject* owner, const int& value);
+    static bool        GetVisibleImpl(TObject* owner);
+    static void        SetVisibleImpl(TObject* owner, const bool& value);
+    static bool        GetEnabledImpl(TObject* owner);
+    static void        SetEnabledImpl(TObject* owner, const bool& value);
+    static std::string GetCaptionImpl(TObject* owner);
+    static void        SetCaptionImpl(TObject* owner, const std::string& value);
+    static bool        GetCheckedImpl(TObject* owner);
+    static void        SetCheckedImpl(TObject* owner, const bool& value);
 };
 
 class TPanel : public TObject
@@ -310,20 +315,20 @@ public:
     ~TPanel() override;
 
 private:
-    static int         GetLeftImpl(void* owner);
-    static void        SetLeftImpl(void* owner, const int& value);
-    static int         GetTopImpl(void* owner);
-    static void        SetTopImpl(void* owner, const int& value);
-    static int         GetWidthImpl(void* owner);
-    static void        SetWidthImpl(void* owner, const int& value);
-    static int         GetHeightImpl(void* owner);
-    static void        SetHeightImpl(void* owner, const int& value);
-    static bool        GetVisibleImpl(void* owner);
-    static void        SetVisibleImpl(void* owner, const bool& value);
-    static bool        GetEnabledImpl(void* owner);
-    static void        SetEnabledImpl(void* owner, const bool& value);
-    static std::string GetCaptionImpl(void* owner);
-    static void        SetCaptionImpl(void* owner, const std::string& value);
+    static int         GetLeftImpl(TObject* owner);
+    static void        SetLeftImpl(TObject* owner, const int& value);
+    static int         GetTopImpl(TObject* owner);
+    static void        SetTopImpl(TObject* owner, const int& value);
+    static int         GetWidthImpl(TObject* owner);
+    static void        SetWidthImpl(TObject* owner, const int& value);
+    static int         GetHeightImpl(TObject* owner);
+    static void        SetHeightImpl(TObject* owner, const int& value);
+    static bool        GetVisibleImpl(TObject* owner);
+    static void        SetVisibleImpl(TObject* owner, const bool& value);
+    static bool        GetEnabledImpl(TObject* owner);
+    static void        SetEnabledImpl(TObject* owner, const bool& value);
+    static std::string GetCaptionImpl(TObject* owner);
+    static void        SetCaptionImpl(TObject* owner, const std::string& value);
 };
 
 class TGroupBox : public TObject
@@ -341,20 +346,20 @@ public:
     ~TGroupBox() override;
 
 private:
-    static int         GetLeftImpl(void* owner);
-    static void        SetLeftImpl(void* owner, const int& value);
-    static int         GetTopImpl(void* owner);
-    static void        SetTopImpl(void* owner, const int& value);
-    static int         GetWidthImpl(void* owner);
-    static void        SetWidthImpl(void* owner, const int& value);
-    static int         GetHeightImpl(void* owner);
-    static void        SetHeightImpl(void* owner, const int& value);
-    static bool        GetVisibleImpl(void* owner);
-    static void        SetVisibleImpl(void* owner, const bool& value);
-    static bool        GetEnabledImpl(void* owner);
-    static void        SetEnabledImpl(void* owner, const bool& value);
-    static std::string GetCaptionImpl(void* owner);
-    static void        SetCaptionImpl(void* owner, const std::string& value);
+    static int         GetLeftImpl(TObject* owner);
+    static void        SetLeftImpl(TObject* owner, const int& value);
+    static int         GetTopImpl(TObject* owner);
+    static void        SetTopImpl(TObject* owner, const int& value);
+    static int         GetWidthImpl(TObject* owner);
+    static void        SetWidthImpl(TObject* owner, const int& value);
+    static int         GetHeightImpl(TObject* owner);
+    static void        SetHeightImpl(TObject* owner, const int& value);
+    static bool        GetVisibleImpl(TObject* owner);
+    static void        SetVisibleImpl(TObject* owner, const bool& value);
+    static bool        GetEnabledImpl(TObject* owner);
+    static void        SetEnabledImpl(TObject* owner, const bool& value);
+    static std::string GetCaptionImpl(TObject* owner);
+    static void        SetCaptionImpl(TObject* owner, const std::string& value);
 };
 
 class TComboBox : public TObject
@@ -385,22 +390,22 @@ private:
 
     std::function<void()> onChange_;
 
-    static int         GetLeftImpl(void* owner);
-    static void        SetLeftImpl(void* owner, const int& value);
-    static int         GetTopImpl(void* owner);
-    static void        SetTopImpl(void* owner, const int& value);
-    static int         GetWidthImpl(void* owner);
-    static void        SetWidthImpl(void* owner, const int& value);
-    static int         GetHeightImpl(void* owner);
-    static void        SetHeightImpl(void* owner, const int& value);
-    static bool        GetVisibleImpl(void* owner);
-    static void        SetVisibleImpl(void* owner, const bool& value);
-    static bool        GetEnabledImpl(void* owner);
-    static void        SetEnabledImpl(void* owner, const bool& value);
-    static std::string GetTextImpl(void* owner);
-    static void        SetTextImpl(void* owner, const std::string& value);
-    static int         GetItemIndexImpl(void* owner);
-    static void        SetItemIndexImpl(void* owner, const int& value);
+    static int         GetLeftImpl(TObject* owner);
+    static void        SetLeftImpl(TObject* owner, const int& value);
+    static int         GetTopImpl(TObject* owner);
+    static void        SetTopImpl(TObject* owner, const int& value);
+    static int         GetWidthImpl(TObject* owner);
+    static void        SetWidthImpl(TObject* owner, const int& value);
+    static int         GetHeightImpl(TObject* owner);
+    static void        SetHeightImpl(TObject* owner, const int& value);
+    static bool        GetVisibleImpl(TObject* owner);
+    static void        SetVisibleImpl(TObject* owner, const bool& value);
+    static bool        GetEnabledImpl(TObject* owner);
+    static void        SetEnabledImpl(TObject* owner, const bool& value);
+    static std::string GetTextImpl(TObject* owner);
+    static void        SetTextImpl(TObject* owner, const std::string& value);
+    static int         GetItemIndexImpl(TObject* owner);
+    static void        SetItemIndexImpl(TObject* owner, const int& value);
 };
 
 class TListBox : public TObject
@@ -430,20 +435,20 @@ private:
 
     std::function<void()> onClick_;
 
-    static int  GetLeftImpl(void* owner);
-    static void SetLeftImpl(void* owner, const int& value);
-    static int  GetTopImpl(void* owner);
-    static void SetTopImpl(void* owner, const int& value);
-    static int  GetWidthImpl(void* owner);
-    static void SetWidthImpl(void* owner, const int& value);
-    static int  GetHeightImpl(void* owner);
-    static void SetHeightImpl(void* owner, const int& value);
-    static bool GetVisibleImpl(void* owner);
-    static void SetVisibleImpl(void* owner, const bool& value);
-    static bool GetEnabledImpl(void* owner);
-    static void SetEnabledImpl(void* owner, const bool& value);
-    static int  GetItemIndexImpl(void* owner);
-    static void SetItemIndexImpl(void* owner, const int& value);
+    static int  GetLeftImpl(TObject* owner);
+    static void SetLeftImpl(TObject* owner, const int& value);
+    static int  GetTopImpl(TObject* owner);
+    static void SetTopImpl(TObject* owner, const int& value);
+    static int  GetWidthImpl(TObject* owner);
+    static void SetWidthImpl(TObject* owner, const int& value);
+    static int  GetHeightImpl(TObject* owner);
+    static void SetHeightImpl(TObject* owner, const int& value);
+    static bool GetVisibleImpl(TObject* owner);
+    static void SetVisibleImpl(TObject* owner, const bool& value);
+    static bool GetEnabledImpl(TObject* owner);
+    static void SetEnabledImpl(TObject* owner, const bool& value);
+    static int  GetItemIndexImpl(TObject* owner);
+    static void SetItemIndexImpl(TObject* owner, const int& value);
 };
 
 class TMemo : public TObject
@@ -474,22 +479,22 @@ private:
 
     std::function<void()> onChange_;
 
-    static int  GetLeftImpl(void* owner);
-    static void SetLeftImpl(void* owner, const int& value);
-    static int  GetTopImpl(void* owner);
-    static void SetTopImpl(void* owner, const int& value);
-    static int  GetWidthImpl(void* owner);
-    static void SetWidthImpl(void* owner, const int& value);
-    static int  GetHeightImpl(void* owner);
-    static void SetHeightImpl(void* owner, const int& value);
-    static bool GetVisibleImpl(void* owner);
-    static void SetVisibleImpl(void* owner, const bool& value);
-    static bool GetEnabledImpl(void* owner);
-    static void SetEnabledImpl(void* owner, const bool& value);
-    static bool GetReadOnlyImpl(void* owner);
-    static void SetReadOnlyImpl(void* owner, const bool& value);
-    static int  GetScrollBarsImpl(void* owner);
-    static void SetScrollBarsImpl(void* owner, const int& value);
+    static int  GetLeftImpl(TObject* owner);
+    static void SetLeftImpl(TObject* owner, const int& value);
+    static int  GetTopImpl(TObject* owner);
+    static void SetTopImpl(TObject* owner, const int& value);
+    static int  GetWidthImpl(TObject* owner);
+    static void SetWidthImpl(TObject* owner, const int& value);
+    static int  GetHeightImpl(TObject* owner);
+    static void SetHeightImpl(TObject* owner, const int& value);
+    static bool GetVisibleImpl(TObject* owner);
+    static void SetVisibleImpl(TObject* owner, const bool& value);
+    static bool GetEnabledImpl(TObject* owner);
+    static void SetEnabledImpl(TObject* owner, const bool& value);
+    static bool GetReadOnlyImpl(TObject* owner);
+    static void SetReadOnlyImpl(TObject* owner, const bool& value);
+    static int  GetScrollBarsImpl(TObject* owner);
+    static void SetScrollBarsImpl(TObject* owner, const int& value);
 };
 
 class TTimer : public TObject
@@ -510,17 +515,17 @@ private:
 
     std::function<void()> onTimer_;
 
-    static int  GetIntervalImpl(void* owner);
-    static void SetIntervalImpl(void* owner, const int& value);
-    static bool GetEnabledImpl(void* owner);
-    static void SetEnabledImpl(void* owner, const bool& value);
+    static int  GetIntervalImpl(TObject* owner);
+    static void SetIntervalImpl(TObject* owner, const int& value);
+    static bool GetEnabledImpl(TObject* owner);
+    static void SetEnabledImpl(TObject* owner, const bool& value);
 };
 
 // TPen/TBrush/TFont/TCanvas は Canvas を持つコントロールが内部で保持するオブジェクトへの
-// 非所有(non-owning)ラッパー。TObjectとは異なり自前でCreate/Destroyは行わない
-// (取得元のコントロールが破棄されれば一緒に破棄される)。
+// 非所有(non-owning)ラッパー。TObjectは継承するが(handle_/Handle()を再利用するため)、
+// 自前でCreate/Destroyは行わない(取得元のコントロールが破棄されれば一緒に破棄される)。
 
-class TPen
+class TPen : public TObject
 {
 public:
     Property<TColor> Color;
@@ -529,15 +534,13 @@ public:
     explicit TPen(no_vcl_obj_t handle);
 
 private:
-    no_vcl_obj_t handle_;
-
-    static TColor GetColorImpl(void* owner);
-    static void   SetColorImpl(void* owner, const TColor& value);
-    static int    GetWidthImpl(void* owner);
-    static void   SetWidthImpl(void* owner, const int& value);
+    static TColor GetColorImpl(TObject* owner);
+    static void   SetColorImpl(TObject* owner, const TColor& value);
+    static int    GetWidthImpl(TObject* owner);
+    static void   SetWidthImpl(TObject* owner, const int& value);
 };
 
-class TBrush
+class TBrush : public TObject
 {
 public:
     Property<TColor> Color;
@@ -545,13 +548,11 @@ public:
     explicit TBrush(no_vcl_obj_t handle);
 
 private:
-    no_vcl_obj_t handle_;
-
-    static TColor GetColorImpl(void* owner);
-    static void   SetColorImpl(void* owner, const TColor& value);
+    static TColor GetColorImpl(TObject* owner);
+    static void   SetColorImpl(TObject* owner, const TColor& value);
 };
 
-class TFont
+class TFont : public TObject
 {
 public:
     Property<std::string> Name;
@@ -561,37 +562,28 @@ public:
     explicit TFont(no_vcl_obj_t handle);
 
 private:
-    no_vcl_obj_t handle_;
-
-    static std::string GetNameImpl(void* owner);
-    static void        SetNameImpl(void* owner, const std::string& value);
-    static int         GetSizeImpl(void* owner);
-    static void        SetSizeImpl(void* owner, const int& value);
-    static TColor       GetColorImpl(void* owner);
-    static void         SetColorImpl(void* owner, const TColor& value);
+    static std::string GetNameImpl(TObject* owner);
+    static void        SetNameImpl(TObject* owner, const std::string& value);
+    static int         GetSizeImpl(TObject* owner);
+    static void        SetSizeImpl(TObject* owner, const int& value);
+    static TColor       GetColorImpl(TObject* owner);
+    static void         SetColorImpl(TObject* owner, const TColor& value);
 };
 
-class TCanvas
+class TCanvas : public TObject
 {
-private:
-    no_vcl_obj_t handle_;
-
 public:
     TPen   Pen;
     TBrush Brush;
     TFont  Font;
 
     explicit TCanvas(no_vcl_obj_t handle);
-    TCanvas(const TCanvas&) = delete;
-    TCanvas& operator=(const TCanvas&) = delete;
 
     void MoveTo(int x, int y);
     void LineTo(int x, int y);
     void Rectangle(int x1, int y1, int x2, int y2);
     void Ellipse(int x1, int y1, int x2, int y2);
     void TextOut(int x, int y, const std::string& text);
-
-    no_vcl_obj_t Handle() const { return handle_; }
 };
 
 class TPaintBox : public TObject
@@ -618,18 +610,18 @@ private:
 
     std::function<void()> onPaint_;
 
-    static int  GetLeftImpl(void* owner);
-    static void SetLeftImpl(void* owner, const int& value);
-    static int  GetTopImpl(void* owner);
-    static void SetTopImpl(void* owner, const int& value);
-    static int  GetWidthImpl(void* owner);
-    static void SetWidthImpl(void* owner, const int& value);
-    static int  GetHeightImpl(void* owner);
-    static void SetHeightImpl(void* owner, const int& value);
-    static bool GetVisibleImpl(void* owner);
-    static void SetVisibleImpl(void* owner, const bool& value);
-    static bool GetEnabledImpl(void* owner);
-    static void SetEnabledImpl(void* owner, const bool& value);
+    static int  GetLeftImpl(TObject* owner);
+    static void SetLeftImpl(TObject* owner, const int& value);
+    static int  GetTopImpl(TObject* owner);
+    static void SetTopImpl(TObject* owner, const int& value);
+    static int  GetWidthImpl(TObject* owner);
+    static void SetWidthImpl(TObject* owner, const int& value);
+    static int  GetHeightImpl(TObject* owner);
+    static void SetHeightImpl(TObject* owner, const int& value);
+    static bool GetVisibleImpl(TObject* owner);
+    static void SetVisibleImpl(TObject* owner, const bool& value);
+    static bool GetEnabledImpl(TObject* owner);
+    static void SetEnabledImpl(TObject* owner, const bool& value);
 };
 
 } // namespace no_vcl

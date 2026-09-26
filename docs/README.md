@@ -22,6 +22,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0003](adr/0003-two-phase-initialization.md) | コントロールの初期化を二段階(デフォルト構築 + 遅延 Create)に変更する | 置換(→0004) |
 | [0004](adr/0004-pointer-members-for-deferred-declaration.md) | コントロールはポインタ(スマートポインタ)メンバとして持ち、既存の単一コンストラクタのまま生成する | 承認 |
 | [0005](adr/0005-owner-as-pointer.md) | Owner/Parent 引数は参照ではなくポインタで受ける | 承認 |
+| [0006](adr/0006-property-owner-typed-as-tobject.md) | Property<T> の所有者型を void* ではなく TObject* にする | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。

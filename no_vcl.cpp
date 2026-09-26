@@ -25,32 +25,32 @@ int  TForm::ShowModal() { return no_vcl_TForm_ShowModal(handle_); }
 void TForm::Hide()      { no_vcl_TForm_Hide(handle_); }
 void TForm::Close()     { no_vcl_TForm_Close(handle_); }
 
-int TForm::GetWidthImpl(void* owner)
+int TForm::GetWidthImpl(TObject* owner)
 {
     return no_vcl_TForm_GetWidth(static_cast<TForm*>(owner)->handle_);
 }
 
-void TForm::SetWidthImpl(void* owner, const int& value)
+void TForm::SetWidthImpl(TObject* owner, const int& value)
 {
     no_vcl_TForm_SetWidth(static_cast<TForm*>(owner)->handle_, value);
 }
 
-int TForm::GetHeightImpl(void* owner)
+int TForm::GetHeightImpl(TObject* owner)
 {
     return no_vcl_TForm_GetHeight(static_cast<TForm*>(owner)->handle_);
 }
 
-void TForm::SetHeightImpl(void* owner, const int& value)
+void TForm::SetHeightImpl(TObject* owner, const int& value)
 {
     no_vcl_TForm_SetHeight(static_cast<TForm*>(owner)->handle_, value);
 }
 
-std::string TForm::GetCaptionImpl(void* owner)
+std::string TForm::GetCaptionImpl(TObject* owner)
 {
     return std::string(no_vcl_TForm_GetCaption(static_cast<TForm*>(owner)->handle_));
 }
 
-void TForm::SetCaptionImpl(void* owner, const std::string& value)
+void TForm::SetCaptionImpl(TObject* owner, const std::string& value)
 {
     no_vcl_TForm_SetCaption(static_cast<TForm*>(owner)->handle_, value.c_str());
 }
@@ -92,52 +92,52 @@ void NO_VCL_CALL TButton::ClickTrampoline(no_vcl_obj_t sender)
         it->second->onClick_();
 }
 
-int TButton::GetLeftImpl(void* owner)
+int TButton::GetLeftImpl(TObject* owner)
 {
     return no_vcl_TButton_GetLeft(static_cast<TButton*>(owner)->handle_);
 }
 
-void TButton::SetLeftImpl(void* owner, const int& value)
+void TButton::SetLeftImpl(TObject* owner, const int& value)
 {
     no_vcl_TButton_SetLeft(static_cast<TButton*>(owner)->handle_, value);
 }
 
-int TButton::GetTopImpl(void* owner)
+int TButton::GetTopImpl(TObject* owner)
 {
     return no_vcl_TButton_GetTop(static_cast<TButton*>(owner)->handle_);
 }
 
-void TButton::SetTopImpl(void* owner, const int& value)
+void TButton::SetTopImpl(TObject* owner, const int& value)
 {
     no_vcl_TButton_SetTop(static_cast<TButton*>(owner)->handle_, value);
 }
 
-int TButton::GetWidthImpl(void* owner)
+int TButton::GetWidthImpl(TObject* owner)
 {
     return no_vcl_TButton_GetWidth(static_cast<TButton*>(owner)->handle_);
 }
 
-void TButton::SetWidthImpl(void* owner, const int& value)
+void TButton::SetWidthImpl(TObject* owner, const int& value)
 {
     no_vcl_TButton_SetWidth(static_cast<TButton*>(owner)->handle_, value);
 }
 
-int TButton::GetHeightImpl(void* owner)
+int TButton::GetHeightImpl(TObject* owner)
 {
     return no_vcl_TButton_GetHeight(static_cast<TButton*>(owner)->handle_);
 }
 
-void TButton::SetHeightImpl(void* owner, const int& value)
+void TButton::SetHeightImpl(TObject* owner, const int& value)
 {
     no_vcl_TButton_SetHeight(static_cast<TButton*>(owner)->handle_, value);
 }
 
-std::string TButton::GetCaptionImpl(void* owner)
+std::string TButton::GetCaptionImpl(TObject* owner)
 {
     return std::string(no_vcl_TButton_GetCaption(static_cast<TButton*>(owner)->handle_));
 }
 
-void TButton::SetCaptionImpl(void* owner, const std::string& value)
+void TButton::SetCaptionImpl(TObject* owner, const std::string& value)
 {
     no_vcl_TButton_SetCaption(static_cast<TButton*>(owner)->handle_, value.c_str());
 }
@@ -163,72 +163,72 @@ TLabel::~TLabel()
     no_vcl_TLabel_Destroy(handle_);
 }
 
-int TLabel::GetLeftImpl(void* owner)
+int TLabel::GetLeftImpl(TObject* owner)
 {
     return no_vcl_TLabel_GetLeft(static_cast<TLabel*>(owner)->handle_);
 }
 
-void TLabel::SetLeftImpl(void* owner, const int& value)
+void TLabel::SetLeftImpl(TObject* owner, const int& value)
 {
     no_vcl_TLabel_SetLeft(static_cast<TLabel*>(owner)->handle_, value);
 }
 
-int TLabel::GetTopImpl(void* owner)
+int TLabel::GetTopImpl(TObject* owner)
 {
     return no_vcl_TLabel_GetTop(static_cast<TLabel*>(owner)->handle_);
 }
 
-void TLabel::SetTopImpl(void* owner, const int& value)
+void TLabel::SetTopImpl(TObject* owner, const int& value)
 {
     no_vcl_TLabel_SetTop(static_cast<TLabel*>(owner)->handle_, value);
 }
 
-int TLabel::GetWidthImpl(void* owner)
+int TLabel::GetWidthImpl(TObject* owner)
 {
     return no_vcl_TLabel_GetWidth(static_cast<TLabel*>(owner)->handle_);
 }
 
-void TLabel::SetWidthImpl(void* owner, const int& value)
+void TLabel::SetWidthImpl(TObject* owner, const int& value)
 {
     no_vcl_TLabel_SetWidth(static_cast<TLabel*>(owner)->handle_, value);
 }
 
-int TLabel::GetHeightImpl(void* owner)
+int TLabel::GetHeightImpl(TObject* owner)
 {
     return no_vcl_TLabel_GetHeight(static_cast<TLabel*>(owner)->handle_);
 }
 
-void TLabel::SetHeightImpl(void* owner, const int& value)
+void TLabel::SetHeightImpl(TObject* owner, const int& value)
 {
     no_vcl_TLabel_SetHeight(static_cast<TLabel*>(owner)->handle_, value);
 }
 
-bool TLabel::GetVisibleImpl(void* owner)
+bool TLabel::GetVisibleImpl(TObject* owner)
 {
     return no_vcl_TLabel_GetVisible(static_cast<TLabel*>(owner)->handle_) != 0;
 }
 
-void TLabel::SetVisibleImpl(void* owner, const bool& value)
+void TLabel::SetVisibleImpl(TObject* owner, const bool& value)
 {
     no_vcl_TLabel_SetVisible(static_cast<TLabel*>(owner)->handle_, value ? 1 : 0);
 }
 
-bool TLabel::GetEnabledImpl(void* owner)
+bool TLabel::GetEnabledImpl(TObject* owner)
 {
     return no_vcl_TLabel_GetEnabled(static_cast<TLabel*>(owner)->handle_) != 0;
 }
 
-void TLabel::SetEnabledImpl(void* owner, const bool& value)
+void TLabel::SetEnabledImpl(TObject* owner, const bool& value)
 {
     no_vcl_TLabel_SetEnabled(static_cast<TLabel*>(owner)->handle_, value ? 1 : 0);
 }
 
-std::string TLabel::GetCaptionImpl(void* owner)
+std::string TLabel::GetCaptionImpl(TObject* owner)
 {
     return std::string(no_vcl_TLabel_GetCaption(static_cast<TLabel*>(owner)->handle_));
 }
 
-void TLabel::SetCaptionImpl(void* owner, const std::string& value)
+void TLabel::SetCaptionImpl(TObject* owner, const std::string& value)
 {
     no_vcl_TLabel_SetCaption(static_cast<TLabel*>(owner)->handle_, value.c_str());
 }
@@ -274,92 +274,92 @@ void NO_VCL_CALL TEdit::ChangeTrampoline(no_vcl_obj_t sender)
         it->second->onChange_();
 }
 
-int TEdit::GetLeftImpl(void* owner)
+int TEdit::GetLeftImpl(TObject* owner)
 {
     return no_vcl_TEdit_GetLeft(static_cast<TEdit*>(owner)->handle_);
 }
 
-void TEdit::SetLeftImpl(void* owner, const int& value)
+void TEdit::SetLeftImpl(TObject* owner, const int& value)
 {
     no_vcl_TEdit_SetLeft(static_cast<TEdit*>(owner)->handle_, value);
 }
 
-int TEdit::GetTopImpl(void* owner)
+int TEdit::GetTopImpl(TObject* owner)
 {
     return no_vcl_TEdit_GetTop(static_cast<TEdit*>(owner)->handle_);
 }
 
-void TEdit::SetTopImpl(void* owner, const int& value)
+void TEdit::SetTopImpl(TObject* owner, const int& value)
 {
     no_vcl_TEdit_SetTop(static_cast<TEdit*>(owner)->handle_, value);
 }
 
-int TEdit::GetWidthImpl(void* owner)
+int TEdit::GetWidthImpl(TObject* owner)
 {
     return no_vcl_TEdit_GetWidth(static_cast<TEdit*>(owner)->handle_);
 }
 
-void TEdit::SetWidthImpl(void* owner, const int& value)
+void TEdit::SetWidthImpl(TObject* owner, const int& value)
 {
     no_vcl_TEdit_SetWidth(static_cast<TEdit*>(owner)->handle_, value);
 }
 
-int TEdit::GetHeightImpl(void* owner)
+int TEdit::GetHeightImpl(TObject* owner)
 {
     return no_vcl_TEdit_GetHeight(static_cast<TEdit*>(owner)->handle_);
 }
 
-void TEdit::SetHeightImpl(void* owner, const int& value)
+void TEdit::SetHeightImpl(TObject* owner, const int& value)
 {
     no_vcl_TEdit_SetHeight(static_cast<TEdit*>(owner)->handle_, value);
 }
 
-bool TEdit::GetVisibleImpl(void* owner)
+bool TEdit::GetVisibleImpl(TObject* owner)
 {
     return no_vcl_TEdit_GetVisible(static_cast<TEdit*>(owner)->handle_) != 0;
 }
 
-void TEdit::SetVisibleImpl(void* owner, const bool& value)
+void TEdit::SetVisibleImpl(TObject* owner, const bool& value)
 {
     no_vcl_TEdit_SetVisible(static_cast<TEdit*>(owner)->handle_, value ? 1 : 0);
 }
 
-bool TEdit::GetEnabledImpl(void* owner)
+bool TEdit::GetEnabledImpl(TObject* owner)
 {
     return no_vcl_TEdit_GetEnabled(static_cast<TEdit*>(owner)->handle_) != 0;
 }
 
-void TEdit::SetEnabledImpl(void* owner, const bool& value)
+void TEdit::SetEnabledImpl(TObject* owner, const bool& value)
 {
     no_vcl_TEdit_SetEnabled(static_cast<TEdit*>(owner)->handle_, value ? 1 : 0);
 }
 
-std::string TEdit::GetTextImpl(void* owner)
+std::string TEdit::GetTextImpl(TObject* owner)
 {
     return std::string(no_vcl_TEdit_GetText(static_cast<TEdit*>(owner)->handle_));
 }
 
-void TEdit::SetTextImpl(void* owner, const std::string& value)
+void TEdit::SetTextImpl(TObject* owner, const std::string& value)
 {
     no_vcl_TEdit_SetText(static_cast<TEdit*>(owner)->handle_, value.c_str());
 }
 
-int TEdit::GetMaxLengthImpl(void* owner)
+int TEdit::GetMaxLengthImpl(TObject* owner)
 {
     return no_vcl_TEdit_GetMaxLength(static_cast<TEdit*>(owner)->handle_);
 }
 
-void TEdit::SetMaxLengthImpl(void* owner, const int& value)
+void TEdit::SetMaxLengthImpl(TObject* owner, const int& value)
 {
     no_vcl_TEdit_SetMaxLength(static_cast<TEdit*>(owner)->handle_, value);
 }
 
-bool TEdit::GetReadOnlyImpl(void* owner)
+bool TEdit::GetReadOnlyImpl(TObject* owner)
 {
     return no_vcl_TEdit_GetReadOnly(static_cast<TEdit*>(owner)->handle_) != 0;
 }
 
-void TEdit::SetReadOnlyImpl(void* owner, const bool& value)
+void TEdit::SetReadOnlyImpl(TObject* owner, const bool& value)
 {
     no_vcl_TEdit_SetReadOnly(static_cast<TEdit*>(owner)->handle_, value ? 1 : 0);
 }
@@ -404,82 +404,82 @@ void NO_VCL_CALL TCheckBox::ClickTrampoline(no_vcl_obj_t sender)
         it->second->onClick_();
 }
 
-int TCheckBox::GetLeftImpl(void* owner)
+int TCheckBox::GetLeftImpl(TObject* owner)
 {
     return no_vcl_TCheckBox_GetLeft(static_cast<TCheckBox*>(owner)->handle_);
 }
 
-void TCheckBox::SetLeftImpl(void* owner, const int& value)
+void TCheckBox::SetLeftImpl(TObject* owner, const int& value)
 {
     no_vcl_TCheckBox_SetLeft(static_cast<TCheckBox*>(owner)->handle_, value);
 }
 
-int TCheckBox::GetTopImpl(void* owner)
+int TCheckBox::GetTopImpl(TObject* owner)
 {
     return no_vcl_TCheckBox_GetTop(static_cast<TCheckBox*>(owner)->handle_);
 }
 
-void TCheckBox::SetTopImpl(void* owner, const int& value)
+void TCheckBox::SetTopImpl(TObject* owner, const int& value)
 {
     no_vcl_TCheckBox_SetTop(static_cast<TCheckBox*>(owner)->handle_, value);
 }
 
-int TCheckBox::GetWidthImpl(void* owner)
+int TCheckBox::GetWidthImpl(TObject* owner)
 {
     return no_vcl_TCheckBox_GetWidth(static_cast<TCheckBox*>(owner)->handle_);
 }
 
-void TCheckBox::SetWidthImpl(void* owner, const int& value)
+void TCheckBox::SetWidthImpl(TObject* owner, const int& value)
 {
     no_vcl_TCheckBox_SetWidth(static_cast<TCheckBox*>(owner)->handle_, value);
 }
 
-int TCheckBox::GetHeightImpl(void* owner)
+int TCheckBox::GetHeightImpl(TObject* owner)
 {
     return no_vcl_TCheckBox_GetHeight(static_cast<TCheckBox*>(owner)->handle_);
 }
 
-void TCheckBox::SetHeightImpl(void* owner, const int& value)
+void TCheckBox::SetHeightImpl(TObject* owner, const int& value)
 {
     no_vcl_TCheckBox_SetHeight(static_cast<TCheckBox*>(owner)->handle_, value);
 }
 
-bool TCheckBox::GetVisibleImpl(void* owner)
+bool TCheckBox::GetVisibleImpl(TObject* owner)
 {
     return no_vcl_TCheckBox_GetVisible(static_cast<TCheckBox*>(owner)->handle_) != 0;
 }
 
-void TCheckBox::SetVisibleImpl(void* owner, const bool& value)
+void TCheckBox::SetVisibleImpl(TObject* owner, const bool& value)
 {
     no_vcl_TCheckBox_SetVisible(static_cast<TCheckBox*>(owner)->handle_, value ? 1 : 0);
 }
 
-bool TCheckBox::GetEnabledImpl(void* owner)
+bool TCheckBox::GetEnabledImpl(TObject* owner)
 {
     return no_vcl_TCheckBox_GetEnabled(static_cast<TCheckBox*>(owner)->handle_) != 0;
 }
 
-void TCheckBox::SetEnabledImpl(void* owner, const bool& value)
+void TCheckBox::SetEnabledImpl(TObject* owner, const bool& value)
 {
     no_vcl_TCheckBox_SetEnabled(static_cast<TCheckBox*>(owner)->handle_, value ? 1 : 0);
 }
 
-std::string TCheckBox::GetCaptionImpl(void* owner)
+std::string TCheckBox::GetCaptionImpl(TObject* owner)
 {
     return std::string(no_vcl_TCheckBox_GetCaption(static_cast<TCheckBox*>(owner)->handle_));
 }
 
-void TCheckBox::SetCaptionImpl(void* owner, const std::string& value)
+void TCheckBox::SetCaptionImpl(TObject* owner, const std::string& value)
 {
     no_vcl_TCheckBox_SetCaption(static_cast<TCheckBox*>(owner)->handle_, value.c_str());
 }
 
-bool TCheckBox::GetCheckedImpl(void* owner)
+bool TCheckBox::GetCheckedImpl(TObject* owner)
 {
     return no_vcl_TCheckBox_GetChecked(static_cast<TCheckBox*>(owner)->handle_) != 0;
 }
 
-void TCheckBox::SetCheckedImpl(void* owner, const bool& value)
+void TCheckBox::SetCheckedImpl(TObject* owner, const bool& value)
 {
     no_vcl_TCheckBox_SetChecked(static_cast<TCheckBox*>(owner)->handle_, value ? 1 : 0);
 }
@@ -524,82 +524,82 @@ void NO_VCL_CALL TRadioButton::ClickTrampoline(no_vcl_obj_t sender)
         it->second->onClick_();
 }
 
-int TRadioButton::GetLeftImpl(void* owner)
+int TRadioButton::GetLeftImpl(TObject* owner)
 {
     return no_vcl_TRadioButton_GetLeft(static_cast<TRadioButton*>(owner)->handle_);
 }
 
-void TRadioButton::SetLeftImpl(void* owner, const int& value)
+void TRadioButton::SetLeftImpl(TObject* owner, const int& value)
 {
     no_vcl_TRadioButton_SetLeft(static_cast<TRadioButton*>(owner)->handle_, value);
 }
 
-int TRadioButton::GetTopImpl(void* owner)
+int TRadioButton::GetTopImpl(TObject* owner)
 {
     return no_vcl_TRadioButton_GetTop(static_cast<TRadioButton*>(owner)->handle_);
 }
 
-void TRadioButton::SetTopImpl(void* owner, const int& value)
+void TRadioButton::SetTopImpl(TObject* owner, const int& value)
 {
     no_vcl_TRadioButton_SetTop(static_cast<TRadioButton*>(owner)->handle_, value);
 }
 
-int TRadioButton::GetWidthImpl(void* owner)
+int TRadioButton::GetWidthImpl(TObject* owner)
 {
     return no_vcl_TRadioButton_GetWidth(static_cast<TRadioButton*>(owner)->handle_);
 }
 
-void TRadioButton::SetWidthImpl(void* owner, const int& value)
+void TRadioButton::SetWidthImpl(TObject* owner, const int& value)
 {
     no_vcl_TRadioButton_SetWidth(static_cast<TRadioButton*>(owner)->handle_, value);
 }
 
-int TRadioButton::GetHeightImpl(void* owner)
+int TRadioButton::GetHeightImpl(TObject* owner)
 {
     return no_vcl_TRadioButton_GetHeight(static_cast<TRadioButton*>(owner)->handle_);
 }
 
-void TRadioButton::SetHeightImpl(void* owner, const int& value)
+void TRadioButton::SetHeightImpl(TObject* owner, const int& value)
 {
     no_vcl_TRadioButton_SetHeight(static_cast<TRadioButton*>(owner)->handle_, value);
 }
 
-bool TRadioButton::GetVisibleImpl(void* owner)
+bool TRadioButton::GetVisibleImpl(TObject* owner)
 {
     return no_vcl_TRadioButton_GetVisible(static_cast<TRadioButton*>(owner)->handle_) != 0;
 }
 
-void TRadioButton::SetVisibleImpl(void* owner, const bool& value)
+void TRadioButton::SetVisibleImpl(TObject* owner, const bool& value)
 {
     no_vcl_TRadioButton_SetVisible(static_cast<TRadioButton*>(owner)->handle_, value ? 1 : 0);
 }
 
-bool TRadioButton::GetEnabledImpl(void* owner)
+bool TRadioButton::GetEnabledImpl(TObject* owner)
 {
     return no_vcl_TRadioButton_GetEnabled(static_cast<TRadioButton*>(owner)->handle_) != 0;
 }
 
-void TRadioButton::SetEnabledImpl(void* owner, const bool& value)
+void TRadioButton::SetEnabledImpl(TObject* owner, const bool& value)
 {
     no_vcl_TRadioButton_SetEnabled(static_cast<TRadioButton*>(owner)->handle_, value ? 1 : 0);
 }
 
-std::string TRadioButton::GetCaptionImpl(void* owner)
+std::string TRadioButton::GetCaptionImpl(TObject* owner)
 {
     return std::string(no_vcl_TRadioButton_GetCaption(static_cast<TRadioButton*>(owner)->handle_));
 }
 
-void TRadioButton::SetCaptionImpl(void* owner, const std::string& value)
+void TRadioButton::SetCaptionImpl(TObject* owner, const std::string& value)
 {
     no_vcl_TRadioButton_SetCaption(static_cast<TRadioButton*>(owner)->handle_, value.c_str());
 }
 
-bool TRadioButton::GetCheckedImpl(void* owner)
+bool TRadioButton::GetCheckedImpl(TObject* owner)
 {
     return no_vcl_TRadioButton_GetChecked(static_cast<TRadioButton*>(owner)->handle_) != 0;
 }
 
-void TRadioButton::SetCheckedImpl(void* owner, const bool& value)
+void TRadioButton::SetCheckedImpl(TObject* owner, const bool& value)
 {
     no_vcl_TRadioButton_SetChecked(static_cast<TRadioButton*>(owner)->handle_, value ? 1 : 0);
 }
@@ -625,72 +625,72 @@ TPanel::~TPanel()
     no_vcl_TPanel_Destroy(handle_);
 }
 
-int TPanel::GetLeftImpl(void* owner)
+int TPanel::GetLeftImpl(TObject* owner)
 {
     return no_vcl_TPanel_GetLeft(static_cast<TPanel*>(owner)->handle_);
 }
 
-void TPanel::SetLeftImpl(void* owner, const int& value)
+void TPanel::SetLeftImpl(TObject* owner, const int& value)
 {
     no_vcl_TPanel_SetLeft(static_cast<TPanel*>(owner)->handle_, value);
 }
 
-int TPanel::GetTopImpl(void* owner)
+int TPanel::GetTopImpl(TObject* owner)
 {
     return no_vcl_TPanel_GetTop(static_cast<TPanel*>(owner)->handle_);
 }
 
-void TPanel::SetTopImpl(void* owner, const int& value)
+void TPanel::SetTopImpl(TObject* owner, const int& value)
 {
     no_vcl_TPanel_SetTop(static_cast<TPanel*>(owner)->handle_, value);
 }
 
-int TPanel::GetWidthImpl(void* owner)
+int TPanel::GetWidthImpl(TObject* owner)
 {
     return no_vcl_TPanel_GetWidth(static_cast<TPanel*>(owner)->handle_);
 }
 
-void TPanel::SetWidthImpl(void* owner, const int& value)
+void TPanel::SetWidthImpl(TObject* owner, const int& value)
 {
     no_vcl_TPanel_SetWidth(static_cast<TPanel*>(owner)->handle_, value);
 }
 
-int TPanel::GetHeightImpl(void* owner)
+int TPanel::GetHeightImpl(TObject* owner)
 {
     return no_vcl_TPanel_GetHeight(static_cast<TPanel*>(owner)->handle_);
 }
 
-void TPanel::SetHeightImpl(void* owner, const int& value)
+void TPanel::SetHeightImpl(TObject* owner, const int& value)
 {
     no_vcl_TPanel_SetHeight(static_cast<TPanel*>(owner)->handle_, value);
 }
 
-bool TPanel::GetVisibleImpl(void* owner)
+bool TPanel::GetVisibleImpl(TObject* owner)
 {
     return no_vcl_TPanel_GetVisible(static_cast<TPanel*>(owner)->handle_) != 0;
 }
 
-void TPanel::SetVisibleImpl(void* owner, const bool& value)
+void TPanel::SetVisibleImpl(TObject* owner, const bool& value)
 {
     no_vcl_TPanel_SetVisible(static_cast<TPanel*>(owner)->handle_, value ? 1 : 0);
 }
 
-bool TPanel::GetEnabledImpl(void* owner)
+bool TPanel::GetEnabledImpl(TObject* owner)
 {
     return no_vcl_TPanel_GetEnabled(static_cast<TPanel*>(owner)->handle_) != 0;
 }
 
-void TPanel::SetEnabledImpl(void* owner, const bool& value)
+void TPanel::SetEnabledImpl(TObject* owner, const bool& value)
 {
     no_vcl_TPanel_SetEnabled(static_cast<TPanel*>(owner)->handle_, value ? 1 : 0);
 }
 
-std::string TPanel::GetCaptionImpl(void* owner)
+std::string TPanel::GetCaptionImpl(TObject* owner)
 {
     return std::string(no_vcl_TPanel_GetCaption(static_cast<TPanel*>(owner)->handle_));
 }
 
-void TPanel::SetCaptionImpl(void* owner, const std::string& value)
+void TPanel::SetCaptionImpl(TObject* owner, const std::string& value)
 {
     no_vcl_TPanel_SetCaption(static_cast<TPanel*>(owner)->handle_, value.c_str());
 }
@@ -716,72 +716,72 @@ TGroupBox::~TGroupBox()
     no_vcl_TGroupBox_Destroy(handle_);
 }
 
-int TGroupBox::GetLeftImpl(void* owner)
+int TGroupBox::GetLeftImpl(TObject* owner)
 {
     return no_vcl_TGroupBox_GetLeft(static_cast<TGroupBox*>(owner)->handle_);
 }
 
-void TGroupBox::SetLeftImpl(void* owner, const int& value)
+void TGroupBox::SetLeftImpl(TObject* owner, const int& value)
 {
     no_vcl_TGroupBox_SetLeft(static_cast<TGroupBox*>(owner)->handle_, value);
 }
 
-int TGroupBox::GetTopImpl(void* owner)
+int TGroupBox::GetTopImpl(TObject* owner)
 {
     return no_vcl_TGroupBox_GetTop(static_cast<TGroupBox*>(owner)->handle_);
 }
 
-void TGroupBox::SetTopImpl(void* owner, const int& value)
+void TGroupBox::SetTopImpl(TObject* owner, const int& value)
 {
     no_vcl_TGroupBox_SetTop(static_cast<TGroupBox*>(owner)->handle_, value);
 }
 
-int TGroupBox::GetWidthImpl(void* owner)
+int TGroupBox::GetWidthImpl(TObject* owner)
 {
     return no_vcl_TGroupBox_GetWidth(static_cast<TGroupBox*>(owner)->handle_);
 }
 
-void TGroupBox::SetWidthImpl(void* owner, const int& value)
+void TGroupBox::SetWidthImpl(TObject* owner, const int& value)
 {
     no_vcl_TGroupBox_SetWidth(static_cast<TGroupBox*>(owner)->handle_, value);
 }
 
-int TGroupBox::GetHeightImpl(void* owner)
+int TGroupBox::GetHeightImpl(TObject* owner)
 {
     return no_vcl_TGroupBox_GetHeight(static_cast<TGroupBox*>(owner)->handle_);
 }
 
-void TGroupBox::SetHeightImpl(void* owner, const int& value)
+void TGroupBox::SetHeightImpl(TObject* owner, const int& value)
 {
     no_vcl_TGroupBox_SetHeight(static_cast<TGroupBox*>(owner)->handle_, value);
 }
 
-bool TGroupBox::GetVisibleImpl(void* owner)
+bool TGroupBox::GetVisibleImpl(TObject* owner)
 {
     return no_vcl_TGroupBox_GetVisible(static_cast<TGroupBox*>(owner)->handle_) != 0;
 }
 
-void TGroupBox::SetVisibleImpl(void* owner, const bool& value)
+void TGroupBox::SetVisibleImpl(TObject* owner, const bool& value)
 {
     no_vcl_TGroupBox_SetVisible(static_cast<TGroupBox*>(owner)->handle_, value ? 1 : 0);
 }
 
-bool TGroupBox::GetEnabledImpl(void* owner)
+bool TGroupBox::GetEnabledImpl(TObject* owner)
 {
     return no_vcl_TGroupBox_GetEnabled(static_cast<TGroupBox*>(owner)->handle_) != 0;
 }
 
-void TGroupBox::SetEnabledImpl(void* owner, const bool& value)
+void TGroupBox::SetEnabledImpl(TObject* owner, const bool& value)
 {
     no_vcl_TGroupBox_SetEnabled(static_cast<TGroupBox*>(owner)->handle_, value ? 1 : 0);
 }
 
-std::string TGroupBox::GetCaptionImpl(void* owner)
+std::string TGroupBox::GetCaptionImpl(TObject* owner)
 {
     return std::string(no_vcl_TGroupBox_GetCaption(static_cast<TGroupBox*>(owner)->handle_));
 }
 
-void TGroupBox::SetCaptionImpl(void* owner, const std::string& value)
+void TGroupBox::SetCaptionImpl(TObject* owner, const std::string& value)
 {
     no_vcl_TGroupBox_SetCaption(static_cast<TGroupBox*>(owner)->handle_, value.c_str());
 }
@@ -846,82 +846,82 @@ void NO_VCL_CALL TComboBox::ChangeTrampoline(no_vcl_obj_t sender)
         it->second->onChange_();
 }
 
-int TComboBox::GetLeftImpl(void* owner)
+int TComboBox::GetLeftImpl(TObject* owner)
 {
     return no_vcl_TComboBox_GetLeft(static_cast<TComboBox*>(owner)->handle_);
 }
 
-void TComboBox::SetLeftImpl(void* owner, const int& value)
+void TComboBox::SetLeftImpl(TObject* owner, const int& value)
 {
     no_vcl_TComboBox_SetLeft(static_cast<TComboBox*>(owner)->handle_, value);
 }
 
-int TComboBox::GetTopImpl(void* owner)
+int TComboBox::GetTopImpl(TObject* owner)
 {
     return no_vcl_TComboBox_GetTop(static_cast<TComboBox*>(owner)->handle_);
 }
 
-void TComboBox::SetTopImpl(void* owner, const int& value)
+void TComboBox::SetTopImpl(TObject* owner, const int& value)
 {
     no_vcl_TComboBox_SetTop(static_cast<TComboBox*>(owner)->handle_, value);
 }
 
-int TComboBox::GetWidthImpl(void* owner)
+int TComboBox::GetWidthImpl(TObject* owner)
 {
     return no_vcl_TComboBox_GetWidth(static_cast<TComboBox*>(owner)->handle_);
 }
 
-void TComboBox::SetWidthImpl(void* owner, const int& value)
+void TComboBox::SetWidthImpl(TObject* owner, const int& value)
 {
     no_vcl_TComboBox_SetWidth(static_cast<TComboBox*>(owner)->handle_, value);
 }
 
-int TComboBox::GetHeightImpl(void* owner)
+int TComboBox::GetHeightImpl(TObject* owner)
 {
     return no_vcl_TComboBox_GetHeight(static_cast<TComboBox*>(owner)->handle_);
 }
 
-void TComboBox::SetHeightImpl(void* owner, const int& value)
+void TComboBox::SetHeightImpl(TObject* owner, const int& value)
 {
     no_vcl_TComboBox_SetHeight(static_cast<TComboBox*>(owner)->handle_, value);
 }
 
-bool TComboBox::GetVisibleImpl(void* owner)
+bool TComboBox::GetVisibleImpl(TObject* owner)
 {
     return no_vcl_TComboBox_GetVisible(static_cast<TComboBox*>(owner)->handle_) != 0;
 }
 
-void TComboBox::SetVisibleImpl(void* owner, const bool& value)
+void TComboBox::SetVisibleImpl(TObject* owner, const bool& value)
 {
     no_vcl_TComboBox_SetVisible(static_cast<TComboBox*>(owner)->handle_, value ? 1 : 0);
 }
 
-bool TComboBox::GetEnabledImpl(void* owner)
+bool TComboBox::GetEnabledImpl(TObject* owner)
 {
     return no_vcl_TComboBox_GetEnabled(static_cast<TComboBox*>(owner)->handle_) != 0;
 }
 
-void TComboBox::SetEnabledImpl(void* owner, const bool& value)
+void TComboBox::SetEnabledImpl(TObject* owner, const bool& value)
 {
     no_vcl_TComboBox_SetEnabled(static_cast<TComboBox*>(owner)->handle_, value ? 1 : 0);
 }
 
-std::string TComboBox::GetTextImpl(void* owner)
+std::string TComboBox::GetTextImpl(TObject* owner)
 {
     return std::string(no_vcl_TComboBox_GetText(static_cast<TComboBox*>(owner)->handle_));
 }
 
-void TComboBox::SetTextImpl(void* owner, const std::string& value)
+void TComboBox::SetTextImpl(TObject* owner, const std::string& value)
 {
     no_vcl_TComboBox_SetText(static_cast<TComboBox*>(owner)->handle_, value.c_str());
 }
 
-int TComboBox::GetItemIndexImpl(void* owner)
+int TComboBox::GetItemIndexImpl(TObject* owner)
 {
     return no_vcl_TComboBox_GetItemIndex(static_cast<TComboBox*>(owner)->handle_);
 }
 
-void TComboBox::SetItemIndexImpl(void* owner, const int& value)
+void TComboBox::SetItemIndexImpl(TObject* owner, const int& value)
 {
     no_vcl_TComboBox_SetItemIndex(static_cast<TComboBox*>(owner)->handle_, value);
 }
@@ -985,72 +985,72 @@ void NO_VCL_CALL TListBox::ClickTrampoline(no_vcl_obj_t sender)
         it->second->onClick_();
 }
 
-int TListBox::GetLeftImpl(void* owner)
+int TListBox::GetLeftImpl(TObject* owner)
 {
     return no_vcl_TListBox_GetLeft(static_cast<TListBox*>(owner)->handle_);
 }
 
-void TListBox::SetLeftImpl(void* owner, const int& value)
+void TListBox::SetLeftImpl(TObject* owner, const int& value)
 {
     no_vcl_TListBox_SetLeft(static_cast<TListBox*>(owner)->handle_, value);
 }
 
-int TListBox::GetTopImpl(void* owner)
+int TListBox::GetTopImpl(TObject* owner)
 {
     return no_vcl_TListBox_GetTop(static_cast<TListBox*>(owner)->handle_);
 }
 
-void TListBox::SetTopImpl(void* owner, const int& value)
+void TListBox::SetTopImpl(TObject* owner, const int& value)
 {
     no_vcl_TListBox_SetTop(static_cast<TListBox*>(owner)->handle_, value);
 }
 
-int TListBox::GetWidthImpl(void* owner)
+int TListBox::GetWidthImpl(TObject* owner)
 {
     return no_vcl_TListBox_GetWidth(static_cast<TListBox*>(owner)->handle_);
 }
 
-void TListBox::SetWidthImpl(void* owner, const int& value)
+void TListBox::SetWidthImpl(TObject* owner, const int& value)
 {
     no_vcl_TListBox_SetWidth(static_cast<TListBox*>(owner)->handle_, value);
 }
 
-int TListBox::GetHeightImpl(void* owner)
+int TListBox::GetHeightImpl(TObject* owner)
 {
     return no_vcl_TListBox_GetHeight(static_cast<TListBox*>(owner)->handle_);
 }
 
-void TListBox::SetHeightImpl(void* owner, const int& value)
+void TListBox::SetHeightImpl(TObject* owner, const int& value)
 {
     no_vcl_TListBox_SetHeight(static_cast<TListBox*>(owner)->handle_, value);
 }
 
-bool TListBox::GetVisibleImpl(void* owner)
+bool TListBox::GetVisibleImpl(TObject* owner)
 {
     return no_vcl_TListBox_GetVisible(static_cast<TListBox*>(owner)->handle_) != 0;
 }
 
-void TListBox::SetVisibleImpl(void* owner, const bool& value)
+void TListBox::SetVisibleImpl(TObject* owner, const bool& value)
 {
     no_vcl_TListBox_SetVisible(static_cast<TListBox*>(owner)->handle_, value ? 1 : 0);
 }
 
-bool TListBox::GetEnabledImpl(void* owner)
+bool TListBox::GetEnabledImpl(TObject* owner)
 {
     return no_vcl_TListBox_GetEnabled(static_cast<TListBox*>(owner)->handle_) != 0;
 }
 
-void TListBox::SetEnabledImpl(void* owner, const bool& value)
+void TListBox::SetEnabledImpl(TObject* owner, const bool& value)
 {
     no_vcl_TListBox_SetEnabled(static_cast<TListBox*>(owner)->handle_, value ? 1 : 0);
 }
 
-int TListBox::GetItemIndexImpl(void* owner)
+int TListBox::GetItemIndexImpl(TObject* owner)
 {
     return no_vcl_TListBox_GetItemIndex(static_cast<TListBox*>(owner)->handle_);
 }
 
-void TListBox::SetItemIndexImpl(void* owner, const int& value)
+void TListBox::SetItemIndexImpl(TObject* owner, const int& value)
 {
     no_vcl_TListBox_SetItemIndex(static_cast<TListBox*>(owner)->handle_, value);
 }
@@ -1115,82 +1115,82 @@ void NO_VCL_CALL TMemo::ChangeTrampoline(no_vcl_obj_t sender)
         it->second->onChange_();
 }
 
-int TMemo::GetLeftImpl(void* owner)
+int TMemo::GetLeftImpl(TObject* owner)
 {
     return no_vcl_TMemo_GetLeft(static_cast<TMemo*>(owner)->handle_);
 }
 
-void TMemo::SetLeftImpl(void* owner, const int& value)
+void TMemo::SetLeftImpl(TObject* owner, const int& value)
 {
     no_vcl_TMemo_SetLeft(static_cast<TMemo*>(owner)->handle_, value);
 }
 
-int TMemo::GetTopImpl(void* owner)
+int TMemo::GetTopImpl(TObject* owner)
 {
     return no_vcl_TMemo_GetTop(static_cast<TMemo*>(owner)->handle_);
 }
 
-void TMemo::SetTopImpl(void* owner, const int& value)
+void TMemo::SetTopImpl(TObject* owner, const int& value)
 {
     no_vcl_TMemo_SetTop(static_cast<TMemo*>(owner)->handle_, value);
 }
 
-int TMemo::GetWidthImpl(void* owner)
+int TMemo::GetWidthImpl(TObject* owner)
 {
     return no_vcl_TMemo_GetWidth(static_cast<TMemo*>(owner)->handle_);
 }
 
-void TMemo::SetWidthImpl(void* owner, const int& value)
+void TMemo::SetWidthImpl(TObject* owner, const int& value)
 {
     no_vcl_TMemo_SetWidth(static_cast<TMemo*>(owner)->handle_, value);
 }
 
-int TMemo::GetHeightImpl(void* owner)
+int TMemo::GetHeightImpl(TObject* owner)
 {
     return no_vcl_TMemo_GetHeight(static_cast<TMemo*>(owner)->handle_);
 }
 
-void TMemo::SetHeightImpl(void* owner, const int& value)
+void TMemo::SetHeightImpl(TObject* owner, const int& value)
 {
     no_vcl_TMemo_SetHeight(static_cast<TMemo*>(owner)->handle_, value);
 }
 
-bool TMemo::GetVisibleImpl(void* owner)
+bool TMemo::GetVisibleImpl(TObject* owner)
 {
     return no_vcl_TMemo_GetVisible(static_cast<TMemo*>(owner)->handle_) != 0;
 }
 
-void TMemo::SetVisibleImpl(void* owner, const bool& value)
+void TMemo::SetVisibleImpl(TObject* owner, const bool& value)
 {
     no_vcl_TMemo_SetVisible(static_cast<TMemo*>(owner)->handle_, value ? 1 : 0);
 }
 
-bool TMemo::GetEnabledImpl(void* owner)
+bool TMemo::GetEnabledImpl(TObject* owner)
 {
     return no_vcl_TMemo_GetEnabled(static_cast<TMemo*>(owner)->handle_) != 0;
 }
 
-void TMemo::SetEnabledImpl(void* owner, const bool& value)
+void TMemo::SetEnabledImpl(TObject* owner, const bool& value)
 {
     no_vcl_TMemo_SetEnabled(static_cast<TMemo*>(owner)->handle_, value ? 1 : 0);
 }
 
-bool TMemo::GetReadOnlyImpl(void* owner)
+bool TMemo::GetReadOnlyImpl(TObject* owner)
 {
     return no_vcl_TMemo_GetReadOnly(static_cast<TMemo*>(owner)->handle_) != 0;
 }
 
-void TMemo::SetReadOnlyImpl(void* owner, const bool& value)
+void TMemo::SetReadOnlyImpl(TObject* owner, const bool& value)
 {
     no_vcl_TMemo_SetReadOnly(static_cast<TMemo*>(owner)->handle_, value ? 1 : 0);
 }
 
-int TMemo::GetScrollBarsImpl(void* owner)
+int TMemo::GetScrollBarsImpl(TObject* owner)
 {
     return no_vcl_TMemo_GetScrollBars(static_cast<TMemo*>(owner)->handle_);
 }
 
-void TMemo::SetScrollBarsImpl(void* owner, const int& value)
+void TMemo::SetScrollBarsImpl(TObject* owner, const int& value)
 {
     no_vcl_TMemo_SetScrollBars(static_cast<TMemo*>(owner)->handle_, value);
 }
@@ -1228,22 +1228,22 @@ void NO_VCL_CALL TTimer::TimerTrampoline(no_vcl_obj_t sender)
         it->second->onTimer_();
 }
 
-int TTimer::GetIntervalImpl(void* owner)
+int TTimer::GetIntervalImpl(TObject* owner)
 {
     return no_vcl_TTimer_GetInterval(static_cast<TTimer*>(owner)->handle_);
 }
 
-void TTimer::SetIntervalImpl(void* owner, const int& value)
+void TTimer::SetIntervalImpl(TObject* owner, const int& value)
 {
     no_vcl_TTimer_SetInterval(static_cast<TTimer*>(owner)->handle_, value);
 }
 
-bool TTimer::GetEnabledImpl(void* owner)
+bool TTimer::GetEnabledImpl(TObject* owner)
 {
     return no_vcl_TTimer_GetEnabled(static_cast<TTimer*>(owner)->handle_) != 0;
 }
 
-void TTimer::SetEnabledImpl(void* owner, const bool& value)
+void TTimer::SetEnabledImpl(TObject* owner, const bool& value)
 {
     no_vcl_TTimer_SetEnabled(static_cast<TTimer*>(owner)->handle_, value ? 1 : 0);
 }
@@ -1251,27 +1251,27 @@ void TTimer::SetEnabledImpl(void* owner, const bool& value)
 /* ---------------- TPen ---------------- */
 
 TPen::TPen(no_vcl_obj_t handle)
-    : Color(this, &TPen::GetColorImpl, &TPen::SetColorImpl)
+    : TObject(handle)
+    , Color(this, &TPen::GetColorImpl, &TPen::SetColorImpl)
     , Width(this, &TPen::GetWidthImpl, &TPen::SetWidthImpl)
-    , handle_(handle)
 {}
 
-TColor TPen::GetColorImpl(void* owner)
+TColor TPen::GetColorImpl(TObject* owner)
 {
     return static_cast<TColor>(no_vcl_TPen_GetColor(static_cast<TPen*>(owner)->handle_));
 }
 
-void TPen::SetColorImpl(void* owner, const TColor& value)
+void TPen::SetColorImpl(TObject* owner, const TColor& value)
 {
     no_vcl_TPen_SetColor(static_cast<TPen*>(owner)->handle_, value);
 }
 
-int TPen::GetWidthImpl(void* owner)
+int TPen::GetWidthImpl(TObject* owner)
 {
     return no_vcl_TPen_GetWidth(static_cast<TPen*>(owner)->handle_);
 }
 
-void TPen::SetWidthImpl(void* owner, const int& value)
+void TPen::SetWidthImpl(TObject* owner, const int& value)
 {
     no_vcl_TPen_SetWidth(static_cast<TPen*>(owner)->handle_, value);
 }
@@ -1279,16 +1279,16 @@ void TPen::SetWidthImpl(void* owner, const int& value)
 /* ---------------- TBrush ---------------- */
 
 TBrush::TBrush(no_vcl_obj_t handle)
-    : Color(this, &TBrush::GetColorImpl, &TBrush::SetColorImpl)
-    , handle_(handle)
+    : TObject(handle)
+    , Color(this, &TBrush::GetColorImpl, &TBrush::SetColorImpl)
 {}
 
-TColor TBrush::GetColorImpl(void* owner)
+TColor TBrush::GetColorImpl(TObject* owner)
 {
     return static_cast<TColor>(no_vcl_TBrush_GetColor(static_cast<TBrush*>(owner)->handle_));
 }
 
-void TBrush::SetColorImpl(void* owner, const TColor& value)
+void TBrush::SetColorImpl(TObject* owner, const TColor& value)
 {
     no_vcl_TBrush_SetColor(static_cast<TBrush*>(owner)->handle_, value);
 }
@@ -1296,38 +1296,38 @@ void TBrush::SetColorImpl(void* owner, const TColor& value)
 /* ---------------- TFont ---------------- */
 
 TFont::TFont(no_vcl_obj_t handle)
-    : Name(this, &TFont::GetNameImpl, &TFont::SetNameImpl)
+    : TObject(handle)
+    , Name(this, &TFont::GetNameImpl, &TFont::SetNameImpl)
     , Size(this, &TFont::GetSizeImpl, &TFont::SetSizeImpl)
     , Color(this, &TFont::GetColorImpl, &TFont::SetColorImpl)
-    , handle_(handle)
 {}
 
-std::string TFont::GetNameImpl(void* owner)
+std::string TFont::GetNameImpl(TObject* owner)
 {
     return std::string(no_vcl_TFont_GetName(static_cast<TFont*>(owner)->handle_));
 }
 
-void TFont::SetNameImpl(void* owner, const std::string& value)
+void TFont::SetNameImpl(TObject* owner, const std::string& value)
 {
     no_vcl_TFont_SetName(static_cast<TFont*>(owner)->handle_, value.c_str());
 }
 
-int TFont::GetSizeImpl(void* owner)
+int TFont::GetSizeImpl(TObject* owner)
 {
     return no_vcl_TFont_GetSize(static_cast<TFont*>(owner)->handle_);
 }
 
-void TFont::SetSizeImpl(void* owner, const int& value)
+void TFont::SetSizeImpl(TObject* owner, const int& value)
 {
     no_vcl_TFont_SetSize(static_cast<TFont*>(owner)->handle_, value);
 }
 
-TColor TFont::GetColorImpl(void* owner)
+TColor TFont::GetColorImpl(TObject* owner)
 {
     return static_cast<TColor>(no_vcl_TFont_GetColor(static_cast<TFont*>(owner)->handle_));
 }
 
-void TFont::SetColorImpl(void* owner, const TColor& value)
+void TFont::SetColorImpl(TObject* owner, const TColor& value)
 {
     no_vcl_TFont_SetColor(static_cast<TFont*>(owner)->handle_, value);
 }
@@ -1335,7 +1335,7 @@ void TFont::SetColorImpl(void* owner, const TColor& value)
 /* ---------------- TCanvas ---------------- */
 
 TCanvas::TCanvas(no_vcl_obj_t handle)
-    : handle_(handle)
+    : TObject(handle)
     , Pen(no_vcl_TCanvas_GetPen(handle))
     , Brush(no_vcl_TCanvas_GetBrush(handle))
     , Font(no_vcl_TCanvas_GetFont(handle))
@@ -1410,62 +1410,62 @@ void NO_VCL_CALL TPaintBox::PaintTrampoline(no_vcl_obj_t sender)
         it->second->onPaint_();
 }
 
-int TPaintBox::GetLeftImpl(void* owner)
+int TPaintBox::GetLeftImpl(TObject* owner)
 {
     return no_vcl_TPaintBox_GetLeft(static_cast<TPaintBox*>(owner)->handle_);
 }
 
-void TPaintBox::SetLeftImpl(void* owner, const int& value)
+void TPaintBox::SetLeftImpl(TObject* owner, const int& value)
 {
     no_vcl_TPaintBox_SetLeft(static_cast<TPaintBox*>(owner)->handle_, value);
 }
 
-int TPaintBox::GetTopImpl(void* owner)
+int TPaintBox::GetTopImpl(TObject* owner)
 {
     return no_vcl_TPaintBox_GetTop(static_cast<TPaintBox*>(owner)->handle_);
 }
 
-void TPaintBox::SetTopImpl(void* owner, const int& value)
+void TPaintBox::SetTopImpl(TObject* owner, const int& value)
 {
     no_vcl_TPaintBox_SetTop(static_cast<TPaintBox*>(owner)->handle_, value);
 }
 
-int TPaintBox::GetWidthImpl(void* owner)
+int TPaintBox::GetWidthImpl(TObject* owner)
 {
     return no_vcl_TPaintBox_GetWidth(static_cast<TPaintBox*>(owner)->handle_);
 }
 
-void TPaintBox::SetWidthImpl(void* owner, const int& value)
+void TPaintBox::SetWidthImpl(TObject* owner, const int& value)
 {
     no_vcl_TPaintBox_SetWidth(static_cast<TPaintBox*>(owner)->handle_, value);
 }
 
-int TPaintBox::GetHeightImpl(void* owner)
+int TPaintBox::GetHeightImpl(TObject* owner)
 {
     return no_vcl_TPaintBox_GetHeight(static_cast<TPaintBox*>(owner)->handle_);
 }
 
-void TPaintBox::SetHeightImpl(void* owner, const int& value)
+void TPaintBox::SetHeightImpl(TObject* owner, const int& value)
 {
     no_vcl_TPaintBox_SetHeight(static_cast<TPaintBox*>(owner)->handle_, value);
 }
 
-bool TPaintBox::GetVisibleImpl(void* owner)
+bool TPaintBox::GetVisibleImpl(TObject* owner)
 {
     return no_vcl_TPaintBox_GetVisible(static_cast<TPaintBox*>(owner)->handle_) != 0;
 }
 
-void TPaintBox::SetVisibleImpl(void* owner, const bool& value)
+void TPaintBox::SetVisibleImpl(TObject* owner, const bool& value)
 {
     no_vcl_TPaintBox_SetVisible(static_cast<TPaintBox*>(owner)->handle_, value ? 1 : 0);
 }
 
-bool TPaintBox::GetEnabledImpl(void* owner)
+bool TPaintBox::GetEnabledImpl(TObject* owner)
 {
     return no_vcl_TPaintBox_GetEnabled(static_cast<TPaintBox*>(owner)->handle_) != 0;
 }
 
-void TPaintBox::SetEnabledImpl(void* owner, const bool& value)
+void TPaintBox::SetEnabledImpl(TObject* owner, const bool& value)
 {
     no_vcl_TPaintBox_SetEnabled(static_cast<TPaintBox*>(owner)->handle_, value ? 1 : 0);
 }
