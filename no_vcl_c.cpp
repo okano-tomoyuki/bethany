@@ -274,7 +274,16 @@
     \
     X(no_vcl_obj_t,  TMaskEdit_Create,                        (no_vcl_obj_t owner),                                 (owner)) \
     X(no_vcl_str_t,  TMaskEdit_GetEditMask,                   (no_vcl_obj_t o),                                     (o)) \
-    X(void,          TMaskEdit_SetEditMask,                   (no_vcl_obj_t o, no_vcl_str_t v),                     (o, v))
+    X(void,          TMaskEdit_SetEditMask,                   (no_vcl_obj_t o, no_vcl_str_t v),                     (o, v)) \
+    \
+    X(no_vcl_obj_t,  TTabControl_Create,                      (no_vcl_obj_t owner),                                 (owner)) \
+    X(void,          TTabControl_Tabs_Add,                    (no_vcl_obj_t o, no_vcl_str_t t),                     (o, t)) \
+    X(void,          TTabControl_Tabs_Clear,                  (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_int_t,  TTabControl_Tabs_Count,                  (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_str_t,  TTabControl_Tabs_GetText,                (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(no_vcl_int_t,  TTabControl_GetTabIndex,                 (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TTabControl_SetTabIndex,                 (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(void,          TTabControl_SetOnChange,                 (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d))
 
 namespace
 {

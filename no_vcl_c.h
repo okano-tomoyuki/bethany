@@ -467,6 +467,19 @@ no_vcl_obj_t  NO_VCL_CALL no_vcl_TMaskEdit_Create(no_vcl_obj_t Owner);
 no_vcl_str_t  NO_VCL_CALL no_vcl_TMaskEdit_GetEditMask(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TMaskEdit_SetEditMask(no_vcl_obj_t Obj, no_vcl_str_t Value);
 
+/* docs/component-coverage.md の Tier 1、7 バッチ目(最後のバッチ)。
+ * Tabs/TabIndex/OnChange は TCustomTabControl では protected だが、唯一の具象クラス TTabControl が
+ * 独自のフィールドで再宣言して published にしているため、関数名は no_vcl_TTabControl_* にする。
+ * TPageControl/TTabSheet(所有ページの生成・破棄)は今回見送る。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TTabControl_Create(no_vcl_obj_t Owner);
+void          NO_VCL_CALL no_vcl_TTabControl_Tabs_Add(no_vcl_obj_t Obj, no_vcl_str_t Text);
+void          NO_VCL_CALL no_vcl_TTabControl_Tabs_Clear(no_vcl_obj_t Obj);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TTabControl_Tabs_Count(no_vcl_obj_t Obj);
+no_vcl_str_t  NO_VCL_CALL no_vcl_TTabControl_Tabs_GetText(no_vcl_obj_t Obj, no_vcl_int_t Index);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TTabControl_GetTabIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TTabControl_SetTabIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+void          NO_VCL_CALL no_vcl_TTabControl_SetOnChange(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+
 #ifdef __cplusplus
 }
 #endif

@@ -125,13 +125,14 @@ public:
     TFloatSpinEdit* FloatSpinEdit1;
     TSpinEdit*      SpinEdit1;
     TMaskEdit*      MaskEdit1;
+    TTabControl*    TabControl1;
 
     // C++Builder と同じく Owner を受け取り、TForm に渡す(Application->CreateForm が Application を渡す)。
     explicit TMainForm(TComponent* AOwner) : TForm(AOwner)
     {
         Caption = "no_vcl C++ wrapper";
         Width = 640;
-        Height = 860;
+        Height = 930;
 
         Button1 = new TButton(this);
         Button1->Parent = this;
@@ -454,6 +455,19 @@ public:
         MaskEdit1->Width = 100;
         MaskEdit1->EditMask = "000-0000;1;_";
 
+        // Tier 1、7 バッチ目(最後のバッチ)。ページ付きの TPageControl/TTabSheet は今回見送る。
+        TabControl1 = new TTabControl(this);
+        TabControl1->Parent = this;
+        TabControl1->Left = 20;
+        TabControl1->Top = 730;
+        TabControl1->Width = 300;
+        TabControl1->Height = 90;
+        TabControl1->TabsAdd("Tab A");
+        TabControl1->TabsAdd("Tab B");
+        TabControl1->TabsAdd("Tab C");
+        TabControl1->TabIndex = 0;
+        TabControl1->OnChange = [this](TObject* Sender) { TabControl1Change(Sender); };
+
         // 既知の問題: TStatusBar は、Application->Run() のメッセージループが始まる前に
         // ウィンドウハンドルを作らせると(コンストラクタの中で Parent を設定する等)、
         // 「トップレベルの子ウィンドウを作成できません」(Win32 エラー 1406)で失敗する。
@@ -633,6 +647,12 @@ private:
         std::fflush(stdout);
     }
 
+    void TabControl1Change(TObject* Sender)
+    {
+        std::printf("TabControl1Change: TabIndex=%d\n", (int)static_cast<TTabControl*>(Sender)->TabIndex);
+        std::fflush(stdout);
+    }
+
     void SpeedButton1Click(TObject* Sender)
     {
         std::printf("SpeedButton1Click: Down=%d\n", (bool)static_cast<TSpeedButton*>(Sender)->Down);
@@ -749,6 +769,8 @@ int main()
     // SpinEdit1->Value は int 版(TCustomSpinEdit)が基底の double 版を隠していることの確認。
     std::printf("SpinEdit1 Value: %d (expected 42, int hides the inherited double)\n", (int)Form1->SpinEdit1->Value);
     std::printf("MaskEdit1 EditMask: %s\n", std::string(Form1->MaskEdit1->EditMask).c_str());
+    std::printf("TabControl1 TabsCount/TabIndex: %d/%d (expected 3/0)\n",
+                Form1->TabControl1->TabsCount(), (int)Form1->TabControl1->TabIndex);
     // StatusBar1 は Run() の開始後に生成されるため、ここではまだ存在しない(StatusBarInitTimer 参照)。
 
     // 2 つ目以降に生成したフォームは MainForm にならない。

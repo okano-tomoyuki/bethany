@@ -51,12 +51,14 @@ TScrollingWinControl のいずれかで、いずれも実装済み。既存パ�
 | ✅ TTrackBar | comctrls.pp(TCustomTrackBar) | TWinControl(実装済み) | Min/Max/Position/OnChange。Application->Run() 開始前の生成でも問題が無いことを確認済み(ADR 0015 の 2 バッチ目) |
 | ✅ TProgressBar | comctrls.pp(TCustomProgressBar) | TWinControl(実装済み) | Min/Max/Position のみで表示専用。問題無しを確認済み(ADR 0015 の 2 バッチ目) |
 | ✅ TUpDown | comctrls.pp(TCustomUpDown) | TCustomControl(実装済み) | Min/Max/Position/Increment/Associate(対象の Edit と連動)。問題無しを確認済み(ADR 0015 の 2 バッチ目) |
-| TTabControl / TPageControl + TTabSheet | comctrls.pp(TCustomTabControl) | TWinControl(実装済み) | タブ切り替え UI に必須。TTabSheet は TCustomPage(TWinControl)なので所有ページの生成・破棄の設計が要る。着手時に TStatusBar と同じ問題が無いか確認する |
+| ✅ TTabControl | comctrls.pp(TCustomTabControl) | TWinControl(実装済み) | Tabs/TabIndex/OnChange のみ(単純なタブ切り替え UI。ADR 0015 の 6 バッチ目) |
+| TPageControl + TTabSheet | comctrls.pp | TWinControl | 所有ページ(TTabSheet)の生成・破棄の設計が要るため Tier 1 では見送り、Tier 2 に位置づけ直す |
 
 ### Tier 2 — 中コスト(新しいコレクション型が必要)
 
 | クラス | LCL 宣言ユニット | LCL での基底 | 必要になる補助 |
 |---|---|---|---|
+| TPageControl + TTabSheet | comctrls.pp(TCustomTabControl 系) | TWinControl | 所有ページ(TTabSheet)の生成・破棄の設計が要る。単純な TTabControl は Tier 1 で実装済み |
 | TTreeView | comctrls.pp(TCustomTreeView) | TCustomControl(実装済み) | TTreeNodes/TTreeNode 相当のノード操作 API(Add/Delete/Text/Parent/Expanded 等) |
 | TListView | comctrls.pp(TCustomListView) | TWinControl(実装済み) | TListItems/TListColumns 相当の行・列操作 API |
 | TStringGrid / TDrawGrid | grids.pas(TCustomGrid → TCustomDrawGrid) | TCustomControl(実装済み) | セル単位の Get/Set、OnDrawCell/OnSelectCell 等の専用イベント |
@@ -135,13 +137,16 @@ Tier 1 の 1 バッチ目([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.m
 
 ## 4. 推奨する着手順序
 
-1. **Tier 1 の 1 バッチ目**(TScrollBox・TToggleBox・TBevel・TShape・TStaticText・TStatusBar)は実装済み
-   ([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.md))。続けて残りの Tier 1 に着手する。
-   TTabControl/TPageControl は複雑度がやや上がるが、実用上の価値が高いため Tier 1 に含めている。
-2. **`TControl.Align` の追加**(上記 cross-cutting な課題)を、TSplitter に着手する前に済ませる。
+1. **Tier 1 は完了した**(19 クラス。[ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.md))。
+   TSplitter(`TControl.Align` 待ち)・TLabeledEdit(内部生成コンポーネントのラップ待ち)・
+   TPageControl+TTabSheet(所有ページの設計が必要、Tier 2 へ再分類)は cross-cutting な課題または
+   複雑度の都合で見送った。
+2. **`TControl.Align` の追加**(上記 cross-cutting な課題)を次に着手する。TSplitter が使えるようになるほか、
+   ツールバー・ステータス領域を持つ実用的なレイアウトの再現に直結する。
 3. **Tier 5(メニュー)** は複雑度は中程度だが、実用アプリでほぼ必須のため Tier 2 より先に着手する価値がある。
-4. **Tier 2** のうち TTreeView・TListView・TStringGrid は、それぞれ専用のコレクション API 設計 ADR を
-   1 つ書いてから着手する(TStrings 的な List 操作の共通パターンを固められる可能性がある)。
+4. **Tier 2** のうち TTreeView・TListView・TStringGrid・TPageControl+TTabSheet は、それぞれ専用の
+   コレクション/所有子コンポーネント設計の ADR を書いてから着手する(TStrings 的な List 操作や、
+   内部生成コンポーネントのラップの共通パターンを固められる可能性がある)。
 5. **Tier 3(TBitmap/TPicture)** は、TImage 単体のためというより、Tier 1/2 のいくつか(Glyph・ImageList)の
    完成度を上げるために必要になる。着手するタイミングで独立した ADR を書く。
 6. **Tier 4(ダイアログ)** は他とほぼ独立して進められるので、隙間で着手しやすい。

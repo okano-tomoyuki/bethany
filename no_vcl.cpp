@@ -1035,6 +1035,38 @@ TMaskEdit::TMaskEdit(TComponent* AOwner)
 std::string TMaskEdit::GetEditMaskImpl(TObject* owner) { return std::string(no_vcl_TMaskEdit_GetEditMask(owner->Handle())); }
 void TMaskEdit::SetEditMaskImpl(TObject* owner, const std::string& value) { no_vcl_TMaskEdit_SetEditMask(owner->Handle(), value.c_str()); }
 
+TTabControl::TTabControl(TComponent* AOwner)
+    : TCustomTabControl(no_vcl_TTabControl_Create(HandleOf(AOwner)))
+    , TabIndex(this, &TTabControl::GetTabIndexImpl, &TTabControl::SetTabIndexImpl)
+    , OnChange(this, &TTabControl::GetOnChangeImpl, &TTabControl::SetOnChangeImpl)
+{}
+
+void TTabControl::TabsAdd(const std::string& text) { no_vcl_TTabControl_Tabs_Add(handle_, text.c_str()); }
+void TTabControl::TabsClear()                      { no_vcl_TTabControl_Tabs_Clear(handle_); }
+int  TTabControl::TabsCount() const                { return no_vcl_TTabControl_Tabs_Count(handle_); }
+
+std::string TTabControl::TabsGetText(int index) const
+{
+    return std::string(no_vcl_TTabControl_Tabs_GetText(handle_, index));
+}
+
+int  TTabControl::GetTabIndexImpl(TObject* owner)                   { return no_vcl_TTabControl_GetTabIndex(owner->Handle()); }
+void TTabControl::SetTabIndexImpl(TObject* owner, const int& value) { no_vcl_TTabControl_SetTabIndex(owner->Handle(), value); }
+TNotifyEvent TTabControl::GetOnChangeImpl(TObject* owner) { return static_cast<TTabControl*>(owner)->onChange_; }
+
+void TTabControl::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TTabControl* self = static_cast<TTabControl*>(owner);
+    SetSimpleEvent(self->handle_, self->onChange_, self->onChangeHooked_, value,
+                   &no_vcl_TTabControl_SetOnChange, &TTabControl::ChangeTrampoline);
+}
+
+void NO_VCL_CALL TTabControl::ChangeTrampoline(no_vcl_obj_t sender, void*)
+{
+    if (TTabControl* self = static_cast<TTabControl*>(FromHandle(sender)))
+        CallNotify(self->onChange_, self);
+}
+
 TCustomMemo::TCustomMemo(no_vcl_obj_t handle)
     : TCustomEdit(handle)
     , ScrollBars(this, &TCustomMemo::GetScrollBarsImpl, &TCustomMemo::SetScrollBarsImpl)

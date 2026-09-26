@@ -1,4 +1,4 @@
-# 0015. Tier 1 の 1 バッチ目(TScrollBox・TToggleBox・TBevel・TShape・TStaticText・TStatusBar)を追加し、TStatusBar の既知の問題を記録する
+# 0015. Tier 1(19 クラス)をすべて追加し、TStatusBar の既知の問題を記録する
 
 - 状態: 承認
 - 日付: 2026-09-26
@@ -138,6 +138,21 @@ TBitBtn(buttons.pp、TCustomBitBtn → TCustomButton、既存の TButton と同�
 - **TMaskEdit**(TCustomMaskEdit): `EditMask` のみ対応。`EditMask` は `TCustomMaskEdit` では protected だが、
   唯一の具象クラス `TMaskEdit` が published にしているため、`TUpDown` と同じ形で `TMaskEdit` に直接置いた。
   `EditText`・`SpaceChar`・`ValidationErrorMode` 等は見送った。
+
+## 追記: Tier 1 の 6 バッチ目・最終バッチ(TTabControl)
+
+続けて、TTabControl(comctrls.pp、TCustomTabControl → TWinControl)を追加した。これで
+[docs/component-coverage.md](../component-coverage.md) の Tier 1 に挙げたクラスはすべて実装済みになった。
+
+- **TTabControl**: `Tabs`(ItemsAdd/Clear/Count/GetText の形)・`TabIndex`・`OnChange`。
+  `Tabs`/`TabIndex`/`OnChange` は LCL では `TCustomTabControl` の protected だが、唯一の具象クラス
+  `TTabControl` が独自のフィールドで再宣言して published にしているため、`TUpDown` と同じ形で
+  `TTabControl` に直接置いた。
+- **TPageControl・TTabSheet(ページ付きのタブ)は今回見送った。** `TTabSheet` は `TCustomPage`
+  (`TWinControl` 派生)で、タブごとにページというコンポーネントを所有し、その生成・破棄を no_vcl 側で
+  どう表すか(`TPageControl.Pages[i]` の C++ での表現、`AddPage`/`DeletePage` 相当の API 設計)が
+  単純な `Property<T>` の追加では済まないため、Tier 2 に位置づけ直した
+  (component-coverage.md を更新済み)。
 
 ## 影響(3 バッチ目の追記分)
 

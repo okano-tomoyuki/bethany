@@ -71,6 +71,13 @@ static void NO_VCL_CALL OnSpeedButtonClick(no_vcl_obj_t sender, void* data)
     fflush(stdout);
 }
 
+static void NO_VCL_CALL OnTabControlChange(no_vcl_obj_t sender, void* data)
+{
+    (void)data;
+    printf("TabControl changed! TabIndex=%d\n", no_vcl_TTabControl_GetTabIndex(sender));
+    fflush(stdout);
+}
+
 static void NO_VCL_CALL OnCheckBoxClick(no_vcl_obj_t sender, void* data)
 {
     (void)data;
@@ -266,6 +273,7 @@ int main(void)
     no_vcl_obj_t floatSpinEdit;
     no_vcl_obj_t spinEdit;
     no_vcl_obj_t maskEdit;
+    no_vcl_obj_t tabControl;
 
     no_vcl_FreeNotify_SetCallback(OnComponentFreed, &freedCount);
 
@@ -286,7 +294,7 @@ int main(void)
 
     no_vcl_TControl_SetCaption(form, "Hello from FPC DLL");
     no_vcl_TControl_SetWidth(form, 640);
-    no_vcl_TControl_SetHeight(form, 860);
+    no_vcl_TControl_SetHeight(form, 930);
     printf("Caption: %s\n", no_vcl_TControl_GetCaption(form));
 
     button = Place(no_vcl_TButton_Create(form), form, 20, 20);
@@ -517,6 +525,18 @@ int main(void)
            no_vcl_TCustomFloatSpinEdit_GetValue(floatSpinEdit), no_vcl_TCustomSpinEdit_GetValue(spinEdit),
            no_vcl_TMaskEdit_GetEditMask(maskEdit));
 
+    /* Tier 1、7 バッチ目(最後のバッチ)。ページ付きの TPageControl/TTabSheet は今回見送る。 */
+    tabControl = Place(no_vcl_TTabControl_Create(form), form, 20, 730);
+    no_vcl_TControl_SetWidth(tabControl, 300);
+    no_vcl_TControl_SetHeight(tabControl, 90);
+    no_vcl_TTabControl_Tabs_Add(tabControl, "Tab A");
+    no_vcl_TTabControl_Tabs_Add(tabControl, "Tab B");
+    no_vcl_TTabControl_Tabs_Add(tabControl, "Tab C");
+    no_vcl_TTabControl_SetTabIndex(tabControl, 0);
+    no_vcl_TTabControl_SetOnChange(tabControl, OnTabControlChange, NULL);
+    printf("TabControl TabsCount=%d, TabIndex=%d\n",
+           no_vcl_TTabControl_Tabs_Count(tabControl), no_vcl_TTabControl_GetTabIndex(tabControl));
+
     /* 既知の問題: TStatusBar は Application->Run() のメッセージループが始まる前にウィンドウハンドルを
        作らせると「トップレベルの子ウィンドウを作成できません」(Win32 エラー 1406)で失敗する。
        標準の Lazarus 実行ファイルでは起きず、DLL としてホストされる no_vcl 特有の現象と見られる
@@ -536,7 +556,7 @@ int main(void)
     /* Application が所有するフォーム(と、フォームが所有するコントロール)をまとめて破棄する。
        呼ばなくても DLL の切り離し時に LCL が破棄するが、そのときは破棄通知が呼ばれない。 */
     no_vcl_TComponent_DestroyComponents(app);
-    printf("Clicks: %d, Freed components: %d (expected 37: form + 36 owned)\n", clickCount, freedCount);
+    printf("Clicks: %d, Freed components: %d (expected 38: form + 37 owned)\n", clickCount, freedCount);
 
     printf("OK\n");
     return 0;

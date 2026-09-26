@@ -1073,6 +1073,44 @@ private:
     static void         SetEditMaskImpl(TObject* owner, const std::string& value);
 };
 
+// 単純なタブの切り替え UI(ページはコントロール自身では管理しない)。Tabs/TabIndex/OnChange は
+// LCL では TCustomTabControl の protected だが、唯一の具象クラス TTabControl が独自のフィールドで
+// 再宣言して published にしているため、すべて TTabControl に直接置く(TUpDown と同じ形)。
+// ページ付きの TPageControl/TTabSheet(所有ページの生成・破棄が必要)は今回見送る。
+class TCustomTabControl : public TWinControl
+{
+protected:
+    explicit TCustomTabControl(no_vcl_obj_t handle) : TWinControl(handle) {}
+    ~TCustomTabControl() override = default;
+};
+
+class TTabControl : public TCustomTabControl
+{
+public:
+    explicit TTabControl(TComponent* AOwner);
+
+    Property<int>          TabIndex;
+    Property<TNotifyEvent> OnChange;
+
+    void        TabsAdd(const std::string& text);
+    void        TabsClear();
+    int         TabsCount() const;
+    std::string TabsGetText(int index) const;
+
+protected:
+    ~TTabControl() override = default;
+
+private:
+    TNotifyEvent onChange_;
+    bool         onChangeHooked_ = false;
+    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender, void* data);
+
+    static int           GetTabIndexImpl(TObject* owner);
+    static void          SetTabIndexImpl(TObject* owner, const int& value);
+    static TNotifyEvent  GetOnChangeImpl(TObject* owner);
+    static void          SetOnChangeImpl(TObject* owner, const TNotifyEvent& value);
+};
+
 class TCustomMemo : public TCustomEdit
 {
 public:

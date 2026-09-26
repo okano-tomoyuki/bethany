@@ -1673,6 +1673,51 @@ begin
   TMaskEdit(Obj).EditMask := Value;
 end;
 
+{ docs/component-coverage.md の Tier 1、7 バッチ目(最後のバッチ)。
+  Tabs/TabIndex/OnChange は TCustomTabControl では protected だが、唯一の具象クラス TTabControl が
+  独自のフィールドで再宣言して published にしているため、TTabControl(Obj) で直接アクセスする
+  (TUpDown と同じ形)。TPageControl/TTabSheet(所有ページの生成・破棄)は今回見送る。 }
+
+function TTabControl_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TTabControl.Create(TComponent(Owner)));
+end;
+
+procedure TTabControl_Tabs_Add(Obj: Pointer; Text: PChar); NO_VCL_CALL;
+begin
+  TTabControl(Obj).Tabs.Add(Text);
+end;
+
+procedure TTabControl_Tabs_Clear(Obj: Pointer); NO_VCL_CALL;
+begin
+  TTabControl(Obj).Tabs.Clear;
+end;
+
+function TTabControl_Tabs_Count(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TTabControl(Obj).Tabs.Count;
+end;
+
+function TTabControl_Tabs_GetText(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
+begin
+  Result := ReturnStr(TTabControl(Obj).Tabs[Index]);
+end;
+
+function TTabControl_GetTabIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TTabControl(Obj).TabIndex;
+end;
+
+procedure TTabControl_SetTabIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TTabControl(Obj).TabIndex := Value;
+end;
+
+procedure TTabControl_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TTabControl(Obj).OnChange := @BridgeFor(TTabControl(Obj), MethodData(TTabControl(Obj).OnChange), Cb, Data).DoClick;
+end;
+
 exports
   FreeNotify_SetCallback,
 
@@ -1941,7 +1986,16 @@ exports
 
   TMaskEdit_Create,
   TMaskEdit_GetEditMask,
-  TMaskEdit_SetEditMask;
+  TMaskEdit_SetEditMask,
+
+  TTabControl_Create,
+  TTabControl_Tabs_Add,
+  TTabControl_Tabs_Clear,
+  TTabControl_Tabs_Count,
+  TTabControl_Tabs_GetText,
+  TTabControl_GetTabIndex,
+  TTabControl_SetTabIndex,
+  TTabControl_SetOnChange;
 
 begin
   RequireDerivedFormResource := False;
