@@ -1,7 +1,12 @@
 #include <cassert>
 #include <mutex>
 
+#if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
+#else
+#include <dlfcn.h>
+#endif
+
 #include "no_vcl_c.h"
 
 // no_vcl.dll からエクスポートされる関数の一覧(戻り値型, 名前, 引数リスト, 呼び出し時の引数)。
@@ -299,7 +304,11 @@ NO_VCL_FUNCS(NO_VCL_DECLARE)
 template<typename Func>
 void no_vcl_map(Func& f, HMODULE m, const char* n)
 {
+#if defined(_WIN32) || defined(_WIN64)
     void* p = reinterpret_cast<void*>(::GetProcAddress(m, n));
+#else
+    void* p = ::dlsym(m, n);
+#endif
     f = reinterpret_cast<Func>(p);
 }
 
@@ -311,7 +320,11 @@ void no_vcl_init(void)
     if (!m)
     {
         std::call_once(once, [&](){
+#if defined(_WIN32) || defined(_WIN64)
             m = ::LoadLibraryA("no_vcl.dll");
+#else
+            m = ::dlopen("libno_vcl.so", RTLD_LAZY);
+#endif
         });
     }
 
