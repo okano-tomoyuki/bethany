@@ -148,6 +148,9 @@ enum TCloseAction
 // OnClose の型。Action には既定の動作が入っており、書き換えると Close の動作が変わる。
 using TCloseEvent = std::function<void(TObject* Sender, TCloseAction& Action)>;
 
+// OnCloseQuery の型。CanClose には true が入っており、false にすると閉じるのを取りやめる(OnClose より前に呼ばれる)。
+using TCloseQueryEvent = std::function<void(TObject* Sender, bool& CanClose)>;
+
 class TPersistent : public TObject
 {
 protected:
@@ -283,9 +286,15 @@ public:
     // Application->CreateForm で生成した場合は、派生クラスのコンストラクタの完了直後(C++Builder と同じ時点)。
     // new で直接生成した場合は、C++ ではコンストラクタの完了を検知できないため、最初に表示される直前になる。
     // どちらの場合もコンストラクタの中で設定すればよい。
-    Property<TNotifyEvent> OnCreate;
-    Property<TNotifyEvent> OnShow;
-    Property<TCloseEvent>  OnClose;
+    Property<TNotifyEvent>     OnCreate;
+    Property<TNotifyEvent>     OnShow;
+    Property<TNotifyEvent>     OnHide;
+    Property<TNotifyEvent>     OnActivate;
+    Property<TNotifyEvent>     OnDeactivate;
+    Property<TCloseQueryEvent> OnCloseQuery;
+    Property<TCloseEvent>      OnClose;
+    // 破棄の最初に呼ばれる(子コントロールはまだ有効)。このあとラッパーも delete される。
+    Property<TNotifyEvent>     OnDestroy;
 
 protected:
     explicit TCustomForm(no_vcl_obj_t handle);
@@ -294,24 +303,49 @@ protected:
 private:
     friend class TApplication;
 
-    TNotifyEvent onCreate_;
-    TNotifyEvent onShow_;
-    TCloseEvent  onClose_;
-    bool         created_ = false;
-    bool         onCloseHooked_ = false;
+    TNotifyEvent     onCreate_;
+    TNotifyEvent     onShow_;
+    TNotifyEvent     onHide_;
+    TNotifyEvent     onActivate_;
+    TNotifyEvent     onDeactivate_;
+    TCloseQueryEvent onCloseQuery_;
+    TCloseEvent      onClose_;
+    TNotifyEvent     onDestroy_;
+    bool             created_ = false;
+    bool             onHideHooked_ = false;
+    bool             onActivateHooked_ = false;
+    bool             onDeactivateHooked_ = false;
+    bool             onCloseQueryHooked_ = false;
+    bool             onCloseHooked_ = false;
+    bool             onDestroyHooked_ = false;
 
     // OnCreate がまだ呼ばれていなければ呼ぶ。
     void DoCreate();
 
     static void NO_VCL_CALL ShowTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL HideTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL ActivateTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL DeactivateTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL CloseQueryTrampoline(no_vcl_obj_t sender, no_vcl_bool_t* canClose, void* data);
     static void NO_VCL_CALL CloseTrampoline(no_vcl_obj_t sender, no_vcl_int_t* action, void* data);
+    static void NO_VCL_CALL DestroyTrampoline(no_vcl_obj_t sender, void* data);
 
-    static TNotifyEvent GetOnCreateImpl(TObject* owner);
-    static void         SetOnCreateImpl(TObject* owner, const TNotifyEvent& value);
-    static TNotifyEvent GetOnShowImpl(TObject* owner);
-    static void         SetOnShowImpl(TObject* owner, const TNotifyEvent& value);
-    static TCloseEvent  GetOnCloseImpl(TObject* owner);
-    static void         SetOnCloseImpl(TObject* owner, const TCloseEvent& value);
+    static TNotifyEvent     GetOnCreateImpl(TObject* owner);
+    static void             SetOnCreateImpl(TObject* owner, const TNotifyEvent& value);
+    static TNotifyEvent     GetOnShowImpl(TObject* owner);
+    static void             SetOnShowImpl(TObject* owner, const TNotifyEvent& value);
+    static TNotifyEvent     GetOnHideImpl(TObject* owner);
+    static void             SetOnHideImpl(TObject* owner, const TNotifyEvent& value);
+    static TNotifyEvent     GetOnActivateImpl(TObject* owner);
+    static void             SetOnActivateImpl(TObject* owner, const TNotifyEvent& value);
+    static TNotifyEvent     GetOnDeactivateImpl(TObject* owner);
+    static void             SetOnDeactivateImpl(TObject* owner, const TNotifyEvent& value);
+    static TCloseQueryEvent GetOnCloseQueryImpl(TObject* owner);
+    static void             SetOnCloseQueryImpl(TObject* owner, const TCloseQueryEvent& value);
+    static TCloseEvent      GetOnCloseImpl(TObject* owner);
+    static void             SetOnCloseImpl(TObject* owner, const TCloseEvent& value);
+    static TNotifyEvent     GetOnDestroyImpl(TObject* owner);
+    static void             SetOnDestroyImpl(TObject* owner, const TNotifyEvent& value);
 };
 
 class TForm : public TCustomForm

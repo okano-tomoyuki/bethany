@@ -80,6 +80,22 @@ static void NO_VCL_CALL OnFormClose(no_vcl_obj_t sender, no_vcl_int_t* action, v
     fflush(stdout);
 }
 
+static void NO_VCL_CALL OnFormCloseQuery(no_vcl_obj_t sender, no_vcl_bool_t* canClose, void* data)
+{
+    (void)sender;
+    (void)data;
+    printf("Form close query: default canClose=%d\n", *canClose != 0);
+    fflush(stdout);
+}
+
+/* 破棄の最初に呼ばれる。子コントロールはまだ有効なので、data で渡したボタンの Caption を読める。 */
+static void NO_VCL_CALL OnFormDestroy(no_vcl_obj_t sender, void* data)
+{
+    (void)sender;
+    printf("Form destroying: button caption=%s\n", no_vcl_TControl_GetCaption((no_vcl_obj_t)data));
+    fflush(stdout);
+}
+
 static void NO_VCL_CALL OnFormShow(no_vcl_obj_t sender, void* data)
 {
     (void)sender;
@@ -193,6 +209,8 @@ int main(void)
     no_vcl_TControl_SetWidth(button, 100);
     no_vcl_TControl_SetHeight(button, 30);
     no_vcl_TControl_SetOnClick(button, OnButtonClick, &clickCount);
+    no_vcl_TCustomForm_SetOnCloseQuery(form, OnFormCloseQuery, NULL);
+    no_vcl_TCustomForm_SetOnDestroy(form, OnFormDestroy, button);
     printf("Button caption: %s\n", no_vcl_TControl_GetCaption(button));
     printf("Button parent is form: %s\n", no_vcl_TControl_GetParent(button) == form ? "yes" : "no");
 

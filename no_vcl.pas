@@ -38,16 +38,19 @@ type
     property Data: Pointer read FData write FData;
   end;
 
-  { OnClose(TCloseEvent)用のコールバック。Action は TCloseAction の序数(caNone=0, caHide, caFree, caMinimize)を
-    指すポインタで、コールバックの中で書き換えると Close の動作が変わる(Pascal の var 引数に相当)。 }
-  TNoVclCloseCallback = procedure(Sender: Pointer; Action: PInteger; Data: Pointer); NO_VCL_CALL;
+  { 書き換え可能な引数(Pascal の var 引数)を 1 つ持つイベント用のコールバック。Value はその値を指すポインタで、
+    コールバックの中で書き換えると呼び出し元に反映される。
+      OnClose      (TCloseEvent)     : TCloseAction の序数(caNone=0, caHide, caFree, caMinimize)
+      OnCloseQuery (TCloseQueryEvent): CanClose(0 = False、0 以外 = True。渡すときの True は -1) }
+  TNoVclVarCallback = procedure(Sender: Pointer; Value: PInteger; Data: Pointer); NO_VCL_CALL;
 
-  TCloseCallbackBridge = class(TComponent)
+  TVarCallbackBridge = class(TComponent)
   private
-    FCallback: TNoVclCloseCallback;
+    FCallback: TNoVclVarCallback;
     FData: Pointer;
   public
     procedure DoClose(Sender: TObject; var CloseAction: TCloseAction);
+    procedure DoCloseQuery(Sender: TObject; var CanClose: Boolean);
   end;
 
   { protected メンバへアクセスするための派生クラス(protected hack)。
@@ -66,24 +69,44 @@ var
   GFreeNotifier: TFreeNotifier;
   GFreeCallback: TNoVclCallback = nil;
   GFreeData: Pointer = nil;
+  { DLL の切り離し中は True。LCL の終了処理で起きるイベント(フォームの OnDestroy・OnHide 等)を呼び出し側へ送らない。 }
+  GDetaching: Boolean = False;
 
 procedure TCallbackBridge.DoClick(Sender: TObject);
 begin
-  if Assigned(FCallback) then
+  if Assigned(FCallback) and not GDetaching then
     FCallback(Pointer(Sender), FData);
 end;
 
-procedure TCloseCallbackBridge.DoClose(Sender: TObject; var CloseAction: TCloseAction);
+procedure TVarCallbackBridge.DoClose(Sender: TObject; var CloseAction: TCloseAction);
 var
   A: Integer;
 begin
-  if not Assigned(FCallback) then
+  if not Assigned(FCallback) or GDetaching then
     Exit;
   A := Ord(CloseAction);
   FCallback(Pointer(Sender), @A, FData);
   { 範囲外の値が書き込まれた場合は、既定の動作のままにする }
   if (A >= Ord(Low(TCloseAction))) and (A <= Ord(High(TCloseAction))) then
     CloseAction := TCloseAction(A);
+end;
+
+procedure TVarCallbackBridge.DoCloseQuery(Sender: TObject; var CanClose: Boolean);
+var
+  A: Integer;
+begin
+  if not Assigned(FCallback) or GDetaching then
+    Exit;
+  if CanClose then A := -1 else A := 0;
+  FCallback(Pointer(Sender), @A, FData);
+  CanClose := A <> 0;
+end;
+
+function NewVarBridge(Owner: TComponent; Cb: TNoVclVarCallback; Data: Pointer): TVarCallbackBridge;
+begin
+  Result := TVarCallbackBridge.Create(Owner);
+  Result.FCallback := Cb;
+  Result.FData := Data;
 end;
 
 procedure TFreeNotifier.Notification(AComponent: TComponent; Operation: TOperation);
@@ -113,6 +136,7 @@ end;
   フックはユニットの終了処理より前に呼ばれる。 }
 procedure DetachHook(DllParam: PtrInt);
 begin
+  GDetaching := True;
   GFreeCallback := nil;
   GFreeData := nil;
 end;
@@ -280,19 +304,40 @@ begin
   TCustomForm(Obj).Release;
 end;
 
-procedure TCustomForm_SetOnClose(Obj: Pointer; Cb: TNoVclCloseCallback; Data: Pointer); NO_VCL_CALL;
-var
-  B: TCloseCallbackBridge;
+procedure TCustomForm_SetOnClose(Obj: Pointer; Cb: TNoVclVarCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  B := TCloseCallbackBridge.Create(TComponent(Obj));
-  B.FCallback := Cb;
-  B.FData := Data;
-  TCustomForm(Obj).OnClose := @B.DoClose;
+  TCustomForm(Obj).OnClose := @NewVarBridge(TComponent(Obj), Cb, Data).DoClose;
+end;
+
+procedure TCustomForm_SetOnCloseQuery(Obj: Pointer; Cb: TNoVclVarCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TCustomForm(Obj).OnCloseQuery := @NewVarBridge(TComponent(Obj), Cb, Data).DoCloseQuery;
 end;
 
 procedure TCustomForm_SetOnShow(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
   TCustomForm(Obj).OnShow := @NewBridge(TComponent(Obj), Cb, Data).DoClick;
+end;
+
+procedure TCustomForm_SetOnHide(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TCustomForm(Obj).OnHide := @NewBridge(TComponent(Obj), Cb, Data).DoClick;
+end;
+
+procedure TCustomForm_SetOnActivate(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TCustomForm(Obj).OnActivate := @NewBridge(TComponent(Obj), Cb, Data).DoClick;
+end;
+
+procedure TCustomForm_SetOnDeactivate(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TCustomForm(Obj).OnDeactivate := @NewBridge(TComponent(Obj), Cb, Data).DoClick;
+end;
+
+{ 破棄の最初(BeforeDestruction)で呼ばれる。子コントロールはまだ生きており、破棄通知はこの後に来る。 }
+procedure TCustomForm_SetOnDestroy(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TCustomForm(Obj).OnDestroy := @NewBridge(TComponent(Obj), Cb, Data).DoClick;
 end;
 
 { TApplication
@@ -747,7 +792,12 @@ exports
   TCustomForm_Close,
   TCustomForm_Release,
   TCustomForm_SetOnClose,
+  TCustomForm_SetOnCloseQuery,
   TCustomForm_SetOnShow,
+  TCustomForm_SetOnHide,
+  TCustomForm_SetOnActivate,
+  TCustomForm_SetOnDeactivate,
+  TCustomForm_SetOnDestroy,
 
   GetApplication,
   TApplication_CreateForm,

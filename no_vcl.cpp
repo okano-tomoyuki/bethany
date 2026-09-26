@@ -165,7 +165,12 @@ TCustomForm::TCustomForm(no_vcl_obj_t handle)
     : TScrollingWinControl(handle)
     , OnCreate(this, &TCustomForm::GetOnCreateImpl, &TCustomForm::SetOnCreateImpl)
     , OnShow(this, &TCustomForm::GetOnShowImpl, &TCustomForm::SetOnShowImpl)
+    , OnHide(this, &TCustomForm::GetOnHideImpl, &TCustomForm::SetOnHideImpl)
+    , OnActivate(this, &TCustomForm::GetOnActivateImpl, &TCustomForm::SetOnActivateImpl)
+    , OnDeactivate(this, &TCustomForm::GetOnDeactivateImpl, &TCustomForm::SetOnDeactivateImpl)
+    , OnCloseQuery(this, &TCustomForm::GetOnCloseQueryImpl, &TCustomForm::SetOnCloseQueryImpl)
     , OnClose(this, &TCustomForm::GetOnCloseImpl, &TCustomForm::SetOnCloseImpl)
+    , OnDestroy(this, &TCustomForm::GetOnDestroyImpl, &TCustomForm::SetOnDestroyImpl)
 {
     // OnShow のブリッジは常に登録する。new で直接生成したフォームの OnCreate を、最初の表示の直前に呼ぶため。
     no_vcl_TCustomForm_SetOnShow(handle_, &TCustomForm::ShowTrampoline, nullptr);
@@ -218,6 +223,107 @@ void TCustomForm::SetOnCloseImpl(TObject* owner, const TCloseEvent& value)
         no_vcl_TCustomForm_SetOnClose(self->handle_, &TCustomForm::CloseTrampoline, nullptr);
         self->onCloseHooked_ = true;
     }
+}
+
+namespace
+{
+
+// フォームのイベントの Setter で共通の処理: ハンドラを保持し、最初に空でないハンドラが設定されたときだけブリッジを登録する。
+template<typename Event, typename Callback>
+void SetFormEvent(no_vcl_obj_t handle, Event& slot, bool& hooked, const Event& value,
+                  void (NO_VCL_CALL *setOn)(no_vcl_obj_t, Callback, void*), Callback trampoline)
+{
+    slot = value;
+    if (value && !hooked)
+    {
+        setOn(handle, trampoline, nullptr);
+        hooked = true;
+    }
+}
+
+// ハンドラの中でハンドラ自身を差し替えても実行中の std::function が破棄されないよう、コピーしてから呼ぶ。
+void CallNotify(TNotifyEvent handler, TObject* sender)
+{
+    if (handler)
+        handler(sender);
+}
+
+} // namespace
+
+void NO_VCL_CALL TCustomForm::HideTrampoline(no_vcl_obj_t sender, void*)
+{
+    if (TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender)))
+        CallNotify(self->onHide_, self);
+}
+
+void NO_VCL_CALL TCustomForm::ActivateTrampoline(no_vcl_obj_t sender, void*)
+{
+    if (TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender)))
+        CallNotify(self->onActivate_, self);
+}
+
+void NO_VCL_CALL TCustomForm::DeactivateTrampoline(no_vcl_obj_t sender, void*)
+{
+    if (TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender)))
+        CallNotify(self->onDeactivate_, self);
+}
+
+void NO_VCL_CALL TCustomForm::DestroyTrampoline(no_vcl_obj_t sender, void*)
+{
+    if (TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender)))
+        CallNotify(self->onDestroy_, self);
+}
+
+void NO_VCL_CALL TCustomForm::CloseQueryTrampoline(no_vcl_obj_t sender, no_vcl_bool_t* canClose, void*)
+{
+    TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender));
+    if (!self || !self->onCloseQuery_)
+        return;
+    TCloseQueryEvent handler = self->onCloseQuery_;
+    bool value = *canClose != 0;
+    handler(self, value);
+    *canClose = value ? 1 : 0;
+}
+
+TNotifyEvent TCustomForm::GetOnHideImpl(TObject* owner)       { return static_cast<TCustomForm*>(owner)->onHide_; }
+TNotifyEvent TCustomForm::GetOnActivateImpl(TObject* owner)   { return static_cast<TCustomForm*>(owner)->onActivate_; }
+TNotifyEvent TCustomForm::GetOnDeactivateImpl(TObject* owner) { return static_cast<TCustomForm*>(owner)->onDeactivate_; }
+TNotifyEvent TCustomForm::GetOnDestroyImpl(TObject* owner)    { return static_cast<TCustomForm*>(owner)->onDestroy_; }
+TCloseQueryEvent TCustomForm::GetOnCloseQueryImpl(TObject* owner) { return static_cast<TCustomForm*>(owner)->onCloseQuery_; }
+
+void TCustomForm::SetOnHideImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCustomForm* self = static_cast<TCustomForm*>(owner);
+    SetFormEvent(self->handle_, self->onHide_, self->onHideHooked_, value,
+                 &no_vcl_TCustomForm_SetOnHide, &TCustomForm::HideTrampoline);
+}
+
+void TCustomForm::SetOnActivateImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCustomForm* self = static_cast<TCustomForm*>(owner);
+    SetFormEvent(self->handle_, self->onActivate_, self->onActivateHooked_, value,
+                 &no_vcl_TCustomForm_SetOnActivate, &TCustomForm::ActivateTrampoline);
+}
+
+void TCustomForm::SetOnDeactivateImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCustomForm* self = static_cast<TCustomForm*>(owner);
+    SetFormEvent(self->handle_, self->onDeactivate_, self->onDeactivateHooked_, value,
+                 &no_vcl_TCustomForm_SetOnDeactivate, &TCustomForm::DeactivateTrampoline);
+}
+
+void TCustomForm::SetOnDestroyImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCustomForm* self = static_cast<TCustomForm*>(owner);
+    SetFormEvent(self->handle_, self->onDestroy_, self->onDestroyHooked_, value,
+                 &no_vcl_TCustomForm_SetOnDestroy, &TCustomForm::DestroyTrampoline);
+}
+
+void TCustomForm::SetOnCloseQueryImpl(TObject* owner, const TCloseQueryEvent& value)
+{
+    TCustomForm* self = static_cast<TCustomForm*>(owner);
+    SetFormEvent(self->handle_, self->onCloseQuery_, self->onCloseQueryHooked_, value,
+                 &no_vcl_TCustomForm_SetOnCloseQuery, &TCustomForm::CloseQueryTrampoline);
 }
 
 no_vcl_obj_t TForm::pendingHandle_ = nullptr;

@@ -66,6 +66,13 @@ public:
             std::fflush(stdout);
             Action = caFree;
         };
+        OnActivate = [](TObject*) { std::printf("TSubForm OnActivate\n"); std::fflush(stdout); };
+        OnDeactivate = [](TObject*) { std::printf("TSubForm OnDeactivate\n"); std::fflush(stdout); };
+        OnHide = [](TObject*) { std::printf("TSubForm OnHide\n"); std::fflush(stdout); };
+        OnDestroy = [this](TObject*) {
+            std::printf("TSubForm OnDestroy: ReleaseButton->Caption=%s\n", std::string(ReleaseButton->Caption).c_str());
+            std::fflush(stdout);
+        };
     }
 
 protected:
@@ -235,7 +242,9 @@ public:
 
         OnCreate = [this](TObject* Sender) { FormCreate(Sender); };
         OnShow = [this](TObject* Sender) { FormShow(Sender); };
+        OnCloseQuery = [this](TObject* Sender, bool& CanClose) { FormCloseQuery(Sender, CanClose); };
         OnClose = [this](TObject* Sender, TCloseAction& Action) { FormClose(Sender, Action); };
+        OnDestroy = [this](TObject* Sender) { FormDestroy(Sender); };
     }
 
     TButton* OpenSubButton;
@@ -266,16 +275,35 @@ private:
         std::fflush(stdout);
     }
 
-    // 1 回目は閉じるのを取りやめ、2 回目は既定の動作(MainForm なので caFree = アプリケーションの終了)のままにする。
-    void FormClose(TObject*, TCloseAction& Action)
+    // 閉じる操作の 1 回目は OnCloseQuery で、2 回目は OnClose で取りやめ、
+    // 3 回目は既定の動作(MainForm なので caFree = アプリケーションの終了)のままにする。
+    void FormCloseQuery(TObject*, bool& CanClose)
     {
         ++closeAttempts_;
-        std::printf("FormClose: attempt=%d, default Action=%d\n", closeAttempts_, (int)Action);
+        std::printf("FormCloseQuery: attempt=%d, default CanClose=%d\n", closeAttempts_, (int)CanClose);
         if (closeAttempts_ == 1)
+        {
+            CanClose = false;
+            std::printf("FormCloseQuery: blocked (CanClose = false)\n");
+        }
+        std::fflush(stdout);
+    }
+
+    void FormClose(TObject*, TCloseAction& Action)
+    {
+        std::printf("FormClose: attempt=%d, default Action=%d\n", closeAttempts_, (int)Action);
+        if (closeAttempts_ == 2)
         {
             Action = caNone;
             std::printf("FormClose: blocked (Action = caNone)\n");
         }
+        std::fflush(stdout);
+    }
+
+    // main から戻った後の終了処理で呼ばれる。この時点では子コントロールもまだ有効。
+    void FormDestroy(TObject*)
+    {
+        std::printf("FormDestroy: Button1->Caption=%s\n", std::string(Button1->Caption).c_str());
         std::fflush(stdout);
     }
 
@@ -407,7 +435,7 @@ int main()
     tempLabel->Free();
     std::printf("Destroyed labels after Free(): %d (expected 1)\n", g_destroyedLabels);
 
-    std::printf("Running (click the buttons, then close the window twice: the first close is blocked, or press Quit)...\n");
+    std::printf("Running (click the buttons, then close the window three times: the first two closes are blocked, or press Quit)...\n");
     std::fflush(stdout);
     Application->Run();
 

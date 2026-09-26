@@ -107,6 +107,7 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 | Text | TControl(protected) | TCustomEdit / TCustomComboBox | TControl(protected)、TCustomEdit / TCustomComboBox で `using` | `TControl_GetText` / `SetText`(protected hack) |
 | Show / Hide / ShowModal / Close | TCustomForm(public) | TCustomForm | TCustomForm(public。Show/Hide は TControl のものを隠す) | `TCustomForm_*` |
 | Release / OnClose / OnShow | TCustomForm(public) | TCustomForm | TCustomForm(public) | `TCustomForm_Release` / `SetOnClose` / `SetOnShow` |
+| OnCloseQuery / OnHide / OnActivate / OnDeactivate / OnDestroy | TCustomForm(public) | TCustomForm | TCustomForm(public) | `TCustomForm_SetOn*`([ADR 0012](adr/0012-remaining-form-events.md)) |
 | OnCreate | TCustomForm(public) | TCustomForm | TCustomForm(public。発火は C++ 側、[ADR 0011](adr/0011-form-release-onclose-oncreate.md)) | (なし) |
 | Checked | TButtonControl(protected) | TCheckBox / TRadioButton | TButtonControl(protected)、TCheckBox / TRadioButton で `using` | `TButtonControl_GetChecked` / `SetChecked`(protected hack) |
 | MaxLength / ReadOnly / OnChange | TCustomEdit(public) | TCustomEdit | TCustomEdit(public) | `TCustomEdit_*` |
@@ -126,6 +127,8 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 C API では `no_vcl_Txxx_SetOnXxx(obj, callback, data)` で登録する([ADR 0009](adr/0009-events-as-properties-with-sender.md))。
 OnClose は `Property<TCloseEvent>`(`std::function<void(TObject* Sender, TCloseAction& Action)>`)で、
 C API のコールバックは Action へのポインタを受け取る([ADR 0011](adr/0011-form-release-onclose-oncreate.md))。
+OnCloseQuery も同じ形で、`Property<TCloseQueryEvent>`(`std::function<void(TObject* Sender, bool& CanClose)>`)、
+C API のコールバックは CanClose へのポインタを受け取る([ADR 0012](adr/0012-remaining-form-events.md))。
 
 ## 4. 生存期間([ADR 0008](adr/0008-wrapper-lifetime-follows-lcl.md))
 

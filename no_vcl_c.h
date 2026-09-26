@@ -22,6 +22,10 @@ typedef void (NO_VCL_CALL *no_vcl_callback_t)(no_vcl_obj_t sender, void* data);
    コールバックの中で書き換えると動作が変わる(例: no_vcl_caNone で閉じるのを取りやめる)。 */
 typedef void (NO_VCL_CALL *no_vcl_close_callback_t)(no_vcl_obj_t sender, no_vcl_int_t* action, void* data);
 
+/* TCustomForm の OnCloseQuery 用。*canClose は 0 以外(閉じてよい)が入った状態で呼ばれ、
+   0 を書き込むと閉じるのを取りやめる(OnClose より前に呼ばれる)。 */
+typedef void (NO_VCL_CALL *no_vcl_close_query_callback_t)(no_vcl_obj_t sender, no_vcl_bool_t* canClose, void* data);
+
 enum
 {
     no_vcl_caNone     = 0,  /* 閉じない */
@@ -93,7 +97,13 @@ void          NO_VCL_CALL no_vcl_TCustomForm_Close(no_vcl_obj_t Obj);
 /* 保留中のメッセージを処理し終えてから破棄する。フォーム自身やその子のイベントハンドラの中からでも安全に呼べる。 */
 void          NO_VCL_CALL no_vcl_TCustomForm_Release(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TCustomForm_SetOnClose(no_vcl_obj_t Obj, no_vcl_close_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TCustomForm_SetOnCloseQuery(no_vcl_obj_t Obj, no_vcl_close_query_callback_t Cb, void* Data);
 void          NO_VCL_CALL no_vcl_TCustomForm_SetOnShow(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TCustomForm_SetOnHide(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TCustomForm_SetOnActivate(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TCustomForm_SetOnDeactivate(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+/* 破棄の最初に呼ばれる(子コントロールはまだ有効)。DLL の切り離し時の破棄では呼ばれない。 */
+void          NO_VCL_CALL no_vcl_TCustomForm_SetOnDestroy(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
 
 /* TApplication
  * no_vcl_GetApplication は LCL のグローバルな Application(DLL の読み込み時に初期化済み)を返す。
