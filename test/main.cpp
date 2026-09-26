@@ -26,6 +26,56 @@ protected:
     }
 };
 
+// C++Builder のフォームユニットと同じく、フォームはグローバルなポインタ変数で持つ。
+class TMainForm;
+TMainForm* Form1 = nullptr;
+
+// 閉じ方の確認用のサブフォーム。
+//   - Release me ボタン: 自身のボタンのハンドラの中から Release() する(Free() と違い安全)。
+//   - ウィンドウを閉じる: OnClose で Action = caFree にし、LCL に Release させる。
+class TSubForm : public TForm
+{
+public:
+    TButton* ReleaseButton;
+
+    explicit TSubForm(TComponent* AOwner) : TForm(AOwner)
+    {
+        Caption = "Sub form";
+        Width = 260;
+        Height = 120;
+
+        ReleaseButton = new TButton(this);
+        ReleaseButton->Parent = this;
+        ReleaseButton->Caption = "Release me";
+        ReleaseButton->Left = 20;
+        ReleaseButton->Top = 20;
+        ReleaseButton->Width = 120;
+        ReleaseButton->OnClick = [this](TObject*) {
+            std::printf("TSubForm: Release() from its own button\n");
+            std::fflush(stdout);
+            Release();
+        };
+
+        // new で直接生成したフォームの OnCreate は、最初に表示される直前に呼ばれる。
+        OnCreate = [this](TObject* Sender) {
+            std::printf("TSubForm OnCreate: Sender is this: %s\n", Sender == this ? "yes" : "no");
+            std::fflush(stdout);
+        };
+        OnClose = [](TObject*, TCloseAction& Action) {
+            std::printf("TSubForm OnClose: default Action=%d, set caFree\n", (int)Action);
+            std::fflush(stdout);
+            Action = caFree;
+        };
+    }
+
+protected:
+    ~TSubForm() override
+    {
+        std::printf("~TSubForm\n");
+        std::fflush(stdout);
+    }
+};
+
 // デザイナーが生成することを想定した形のフォーム。
 // コントロールは生ポインタメンバとして持ち、コンストラクタ本体で new する(破棄は Owner に任せる)。
 // イベントハンドラはメンバ関数にし、[this] のラムダで割り当てる。
@@ -175,7 +225,20 @@ public:
         PaintBox1->Width = 220;
         PaintBox1->Height = 130;
         PaintBox1->OnPaint = [this](TObject* Sender) { PaintBox1Paint(Sender); };
+
+        OpenSubButton = new TButton(this);
+        OpenSubButton->Parent = this;
+        OpenSubButton->Caption = "Open sub";
+        OpenSubButton->Left = 400;
+        OpenSubButton->Top = 170;
+        OpenSubButton->OnClick = [this](TObject* Sender) { OpenSubButtonClick(Sender); };
+
+        OnCreate = [this](TObject* Sender) { FormCreate(Sender); };
+        OnShow = [this](TObject* Sender) { FormShow(Sender); };
+        OnClose = [this](TObject* Sender, TCloseAction& Action) { FormClose(Sender, Action); };
     }
+
+    TButton* OpenSubButton;
 
 protected:
     // Application が所有するフォームは、main から戻った後にまとめて破棄される。
@@ -188,6 +251,35 @@ protected:
 private:
     int clicks_ = 0;
     int ticks_ = 0;
+    int closeAttempts_ = 0;
+
+    void FormCreate(TObject* Sender)
+    {
+        std::printf("FormCreate: Sender is Form: %s, Form1 assigned: %s\n",
+                    Sender == this ? "yes" : "no", Form1 == this ? "yes" : "no");
+        std::fflush(stdout);
+    }
+
+    void FormShow(TObject*)
+    {
+        std::printf("FormShow\n");
+        std::fflush(stdout);
+    }
+
+    // 1 回目は閉じるのを取りやめ、2 回目は既定の動作(MainForm なので caFree = アプリケーションの終了)のままにする。
+    void FormClose(TObject*, TCloseAction& Action)
+    {
+        ++closeAttempts_;
+        std::printf("FormClose: attempt=%d, default Action=%d\n", closeAttempts_, (int)Action);
+        if (closeAttempts_ == 1)
+        {
+            Action = caNone;
+            std::printf("FormClose: blocked (Action = caNone)\n");
+        }
+        std::fflush(stdout);
+    }
+
+    void OpenSubButtonClick(TObject*);
 
     void Button1Click(TObject* Sender)
     {
@@ -267,10 +359,14 @@ private:
     }
 };
 
-} // namespace
+void TMainForm::OpenSubButtonClick(TObject*)
+{
+    // Owner を this にしているが、caFree / Release で先に破棄されても Owner 側から外れるだけで問題ない。
+    TSubForm* sub = new TSubForm(this);
+    sub->Show();
+}
 
-// C++Builder のフォームユニットと同じく、フォームはグローバルなポインタ変数で持つ。
-TMainForm* Form1 = nullptr;
+} // namespace
 
 int main()
 {
@@ -311,7 +407,7 @@ int main()
     tempLabel->Free();
     std::printf("Destroyed labels after Free(): %d (expected 1)\n", g_destroyedLabels);
 
-    std::printf("Running (click the buttons, then press Quit or close the window)...\n");
+    std::printf("Running (click the buttons, then close the window twice: the first close is blocked, or press Quit)...\n");
     std::fflush(stdout);
     Application->Run();
 

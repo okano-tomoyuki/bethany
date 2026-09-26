@@ -136,6 +136,18 @@ private:
 // のようにラムダで割り当てる。nullptr を代入するとハンドラを解除できる。
 using TNotifyEvent = std::function<void(TObject* Sender)>;
 
+// フォームを閉じるときの動作(C++Builder / LCL の TCloseAction と同じ値)。
+enum TCloseAction
+{
+    caNone,      // 閉じない
+    caHide,      // 隠す(MainForm 以外の既定値)
+    caFree,      // 破棄する(MainForm の既定値。MainForm ならアプリケーションを終了する)
+    caMinimize   // 最小化する
+};
+
+// OnClose の型。Action には既定の動作が入っており、書き換えると Close の動作が変わる。
+using TCloseEvent = std::function<void(TObject* Sender, TCloseAction& Action)>;
+
 class TPersistent : public TObject
 {
 protected:
@@ -263,9 +275,43 @@ public:
     int  ShowModal();
     void Close();
 
+    // 保留中のメッセージを処理し終えてから破棄する(破棄後はラッパーも delete される)。
+    // Free() と違い、フォーム自身やその子のイベントハンドラの中からでも安全に呼べる。
+    void Release();
+
+    // フォームの生成が完了したときに 1 度だけ呼ばれる。
+    // Application->CreateForm で生成した場合は、派生クラスのコンストラクタの完了直後(C++Builder と同じ時点)。
+    // new で直接生成した場合は、C++ ではコンストラクタの完了を検知できないため、最初に表示される直前になる。
+    // どちらの場合もコンストラクタの中で設定すればよい。
+    Property<TNotifyEvent> OnCreate;
+    Property<TNotifyEvent> OnShow;
+    Property<TCloseEvent>  OnClose;
+
 protected:
-    explicit TCustomForm(no_vcl_obj_t handle) : TScrollingWinControl(handle) {}
+    explicit TCustomForm(no_vcl_obj_t handle);
     ~TCustomForm() override = default;
+
+private:
+    friend class TApplication;
+
+    TNotifyEvent onCreate_;
+    TNotifyEvent onShow_;
+    TCloseEvent  onClose_;
+    bool         created_ = false;
+    bool         onCloseHooked_ = false;
+
+    // OnCreate がまだ呼ばれていなければ呼ぶ。
+    void DoCreate();
+
+    static void NO_VCL_CALL ShowTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL CloseTrampoline(no_vcl_obj_t sender, no_vcl_int_t* action, void* data);
+
+    static TNotifyEvent GetOnCreateImpl(TObject* owner);
+    static void         SetOnCreateImpl(TObject* owner, const TNotifyEvent& value);
+    static TNotifyEvent GetOnShowImpl(TObject* owner);
+    static void         SetOnShowImpl(TObject* owner, const TNotifyEvent& value);
+    static TCloseEvent  GetOnCloseImpl(TObject* owner);
+    static void         SetOnCloseImpl(TObject* owner, const TCloseEvent& value);
 };
 
 class TForm : public TCustomForm
@@ -352,6 +398,9 @@ void TApplication::CreateForm(T** Reference)
         throw;
     }
     EndCreateForm();
+
+    // C++Builder では OnCreate は最派生クラスのコンストラクタの完了後(AfterConstruction)に呼ばれる。
+    static_cast<TCustomForm*>(*Reference)->DoCreate();
 }
 
 /* ---------------- Panel / GroupBox / Label ---------------- */

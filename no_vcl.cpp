@@ -159,6 +159,66 @@ void TCustomForm::Show()      { no_vcl_TCustomForm_Show(handle_); }
 void TCustomForm::Hide()      { no_vcl_TCustomForm_Hide(handle_); }
 int  TCustomForm::ShowModal() { return no_vcl_TCustomForm_ShowModal(handle_); }
 void TCustomForm::Close()     { no_vcl_TCustomForm_Close(handle_); }
+void TCustomForm::Release()   { no_vcl_TCustomForm_Release(handle_); }
+
+TCustomForm::TCustomForm(no_vcl_obj_t handle)
+    : TScrollingWinControl(handle)
+    , OnCreate(this, &TCustomForm::GetOnCreateImpl, &TCustomForm::SetOnCreateImpl)
+    , OnShow(this, &TCustomForm::GetOnShowImpl, &TCustomForm::SetOnShowImpl)
+    , OnClose(this, &TCustomForm::GetOnCloseImpl, &TCustomForm::SetOnCloseImpl)
+{
+    // OnShow のブリッジは常に登録する。new で直接生成したフォームの OnCreate を、最初の表示の直前に呼ぶため。
+    no_vcl_TCustomForm_SetOnShow(handle_, &TCustomForm::ShowTrampoline, nullptr);
+}
+
+void TCustomForm::DoCreate()
+{
+    if (created_)
+        return;
+    created_ = true;
+    TNotifyEvent handler = onCreate_;
+    if (handler)
+        handler(this);
+}
+
+void NO_VCL_CALL TCustomForm::ShowTrampoline(no_vcl_obj_t sender, void*)
+{
+    TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender));
+    if (!self)
+        return;
+    self->DoCreate();
+    TNotifyEvent handler = self->onShow_;
+    if (handler)
+        handler(self);
+}
+
+void NO_VCL_CALL TCustomForm::CloseTrampoline(no_vcl_obj_t sender, no_vcl_int_t* action, void*)
+{
+    TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender));
+    if (!self || !self->onClose_)
+        return;
+    TCloseEvent handler = self->onClose_;
+    TCloseAction value = static_cast<TCloseAction>(*action);
+    handler(self, value);
+    *action = static_cast<no_vcl_int_t>(value);
+}
+
+TNotifyEvent TCustomForm::GetOnCreateImpl(TObject* owner) { return static_cast<TCustomForm*>(owner)->onCreate_; }
+void TCustomForm::SetOnCreateImpl(TObject* owner, const TNotifyEvent& value) { static_cast<TCustomForm*>(owner)->onCreate_ = value; }
+TNotifyEvent TCustomForm::GetOnShowImpl(TObject* owner) { return static_cast<TCustomForm*>(owner)->onShow_; }
+void TCustomForm::SetOnShowImpl(TObject* owner, const TNotifyEvent& value) { static_cast<TCustomForm*>(owner)->onShow_ = value; }
+TCloseEvent TCustomForm::GetOnCloseImpl(TObject* owner) { return static_cast<TCustomForm*>(owner)->onClose_; }
+
+void TCustomForm::SetOnCloseImpl(TObject* owner, const TCloseEvent& value)
+{
+    TCustomForm* self = static_cast<TCustomForm*>(owner);
+    self->onClose_ = value;
+    if (value && !self->onCloseHooked_)
+    {
+        no_vcl_TCustomForm_SetOnClose(self->handle_, &TCustomForm::CloseTrampoline, nullptr);
+        self->onCloseHooked_ = true;
+    }
+}
 
 no_vcl_obj_t TForm::pendingHandle_ = nullptr;
 

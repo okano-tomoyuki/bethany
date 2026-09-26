@@ -18,6 +18,18 @@ typedef int         no_vcl_bool_t;
 /* sender はイベントを発生させたオブジェクト、data はコールバック登録時に渡した利用者データ。 */
 typedef void (NO_VCL_CALL *no_vcl_callback_t)(no_vcl_obj_t sender, void* data);
 
+/* TCustomForm の OnClose 用。*action は Close の動作(no_vcl_ca*)で、既定値が入った状態で呼ばれる。
+   コールバックの中で書き換えると動作が変わる(例: no_vcl_caNone で閉じるのを取りやめる)。 */
+typedef void (NO_VCL_CALL *no_vcl_close_callback_t)(no_vcl_obj_t sender, no_vcl_int_t* action, void* data);
+
+enum
+{
+    no_vcl_caNone     = 0,  /* 閉じない */
+    no_vcl_caHide     = 1,  /* 隠す(MainForm 以外の既定値) */
+    no_vcl_caFree     = 2,  /* 破棄する(MainForm の既定値。MainForm ならアプリケーションを終了する) */
+    no_vcl_caMinimize = 3   /* 最小化する */
+};
+
 /*
  * 関数は「LCL でそのメンバが公開(public/published)されるクラス」の名前で 1 本ずつ用意する。
  * 例えば Left/Top 等は TControl で公開されているため、TButton でも TLabel でも
@@ -78,6 +90,10 @@ void          NO_VCL_CALL no_vcl_TCustomForm_Show(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TCustomForm_Hide(no_vcl_obj_t Obj);
 no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomForm_ShowModal(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TCustomForm_Close(no_vcl_obj_t Obj);
+/* 保留中のメッセージを処理し終えてから破棄する。フォーム自身やその子のイベントハンドラの中からでも安全に呼べる。 */
+void          NO_VCL_CALL no_vcl_TCustomForm_Release(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomForm_SetOnClose(no_vcl_obj_t Obj, no_vcl_close_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TCustomForm_SetOnShow(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
 
 /* TApplication
  * no_vcl_GetApplication は LCL のグローバルな Application(DLL の読み込み時に初期化済み)を返す。

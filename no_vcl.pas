@@ -38,6 +38,18 @@ type
     property Data: Pointer read FData write FData;
   end;
 
+  { OnClose(TCloseEvent)用のコールバック。Action は TCloseAction の序数(caNone=0, caHide, caFree, caMinimize)を
+    指すポインタで、コールバックの中で書き換えると Close の動作が変わる(Pascal の var 引数に相当)。 }
+  TNoVclCloseCallback = procedure(Sender: Pointer; Action: PInteger; Data: Pointer); NO_VCL_CALL;
+
+  TCloseCallbackBridge = class(TComponent)
+  private
+    FCallback: TNoVclCloseCallback;
+    FData: Pointer;
+  public
+    procedure DoClose(Sender: TObject; var CloseAction: TCloseAction);
+  end;
+
   { protected メンバへアクセスするための派生クラス(protected hack)。
     同一ユニット内で宣言した派生クラス経由なら、基底の protected メンバに触れられる。 }
   TControlAccess = class(TControl);
@@ -59,6 +71,19 @@ procedure TCallbackBridge.DoClick(Sender: TObject);
 begin
   if Assigned(FCallback) then
     FCallback(Pointer(Sender), FData);
+end;
+
+procedure TCloseCallbackBridge.DoClose(Sender: TObject; var CloseAction: TCloseAction);
+var
+  A: Integer;
+begin
+  if not Assigned(FCallback) then
+    Exit;
+  A := Ord(CloseAction);
+  FCallback(Pointer(Sender), @A, FData);
+  { 範囲外の値が書き込まれた場合は、既定の動作のままにする }
+  if (A >= Ord(Low(TCloseAction))) and (A <= Ord(High(TCloseAction))) then
+    CloseAction := TCloseAction(A);
 end;
 
 procedure TFreeNotifier.Notification(AComponent: TComponent; Operation: TOperation);
@@ -246,6 +271,28 @@ end;
 procedure TCustomForm_Close(Obj: Pointer); NO_VCL_CALL;
 begin
   TCustomForm(Obj).Close;
+end;
+
+{ 保留中のメッセージを処理し終えてから破棄する(Application.ReleaseComponent)。
+  フォーム自身やその子のイベントハンドラの中からでも安全に呼べる。 }
+procedure TCustomForm_Release(Obj: Pointer); NO_VCL_CALL;
+begin
+  TCustomForm(Obj).Release;
+end;
+
+procedure TCustomForm_SetOnClose(Obj: Pointer; Cb: TNoVclCloseCallback; Data: Pointer); NO_VCL_CALL;
+var
+  B: TCloseCallbackBridge;
+begin
+  B := TCloseCallbackBridge.Create(TComponent(Obj));
+  B.FCallback := Cb;
+  B.FData := Data;
+  TCustomForm(Obj).OnClose := @B.DoClose;
+end;
+
+procedure TCustomForm_SetOnShow(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TCustomForm(Obj).OnShow := @NewBridge(TComponent(Obj), Cb, Data).DoClick;
 end;
 
 { TApplication
@@ -698,6 +745,9 @@ exports
   TCustomForm_Hide,
   TCustomForm_ShowModal,
   TCustomForm_Close,
+  TCustomForm_Release,
+  TCustomForm_SetOnClose,
+  TCustomForm_SetOnShow,
 
   GetApplication,
   TApplication_CreateForm,

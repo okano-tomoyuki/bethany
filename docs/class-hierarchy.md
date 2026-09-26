@@ -106,6 +106,8 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 | OnClick | TControl(public) | TControl | `TControl::OnClick` | `TControl_SetOnClick` |
 | Text | TControl(protected) | TCustomEdit / TCustomComboBox | TControl(protected)、TCustomEdit / TCustomComboBox で `using` | `TControl_GetText` / `SetText`(protected hack) |
 | Show / Hide / ShowModal / Close | TCustomForm(public) | TCustomForm | TCustomForm(public。Show/Hide は TControl のものを隠す) | `TCustomForm_*` |
+| Release / OnClose / OnShow | TCustomForm(public) | TCustomForm | TCustomForm(public) | `TCustomForm_Release` / `SetOnClose` / `SetOnShow` |
+| OnCreate | TCustomForm(public) | TCustomForm | TCustomForm(public。発火は C++ 側、[ADR 0011](adr/0011-form-release-onclose-oncreate.md)) | (なし) |
 | Checked | TButtonControl(protected) | TCheckBox / TRadioButton | TButtonControl(protected)、TCheckBox / TRadioButton で `using` | `TButtonControl_GetChecked` / `SetChecked`(protected hack) |
 | MaxLength / ReadOnly / OnChange | TCustomEdit(public) | TCustomEdit | TCustomEdit(public) | `TCustomEdit_*` |
 | Lines / ScrollBars | TCustomMemo(public) | TCustomMemo | TCustomMemo(public) | `TCustomMemo_*` |
@@ -120,14 +122,17 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 
 破棄は種類によらず `TComponent_Destroy`(C++ では `TComponent::Free()`)で行う。
 
-イベント(OnClick・OnChange・OnPaint・OnTimer)は C++ では `Property<TNotifyEvent>`(`TNotifyEvent = std::function<void(TObject* Sender)>`)、
+イベント(OnClick・OnChange・OnPaint・OnTimer・OnShow 等)は C++ では `Property<TNotifyEvent>`(`TNotifyEvent = std::function<void(TObject* Sender)>`)、
 C API では `no_vcl_Txxx_SetOnXxx(obj, callback, data)` で登録する([ADR 0009](adr/0009-events-as-properties-with-sender.md))。
+OnClose は `Property<TCloseEvent>`(`std::function<void(TObject* Sender, TCloseAction& Action)>`)で、
+C API のコールバックは Action へのポインタを受け取る([ADR 0011](adr/0011-form-release-onclose-oncreate.md))。
 
 ## 4. 生存期間([ADR 0008](adr/0008-wrapper-lifetime-follows-lcl.md))
 
 - C++ ラッパーの寿命は LCL オブジェクトの寿命と一致する。LCL オブジェクトが破棄されると
   (`Free()` でも Owner による連鎖破棄でも)、破棄通知を受けてラッパーも delete される。
 - コンポーネントは `new` で生成し、`delete` ではなく `Free()` で破棄する。Owner を持つものは Owner に任せてよい。
+  フォーム自身やその子のイベントハンドラの中でフォームを破棄するときは `Release()` を使う(OnClose で `Action = caFree` としても同じ)。
 - `TObject` から具象クラスまで、コンポーネント系の全クラスのデストラクタは protected
   (スタック生成・`delete`・`unique_ptr` はコンパイルエラー)。派生クラスを作る場合もデストラクタを protected で宣言する。
 - 非所有の `TCanvas`/`TPen`/`TBrush`/`TFont` は値メンバとして持つため、デストラクタは public。

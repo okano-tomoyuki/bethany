@@ -40,6 +40,9 @@
     X(void,          TCustomForm_Hide,              (no_vcl_obj_t o),                                         (o)) \
     X(no_vcl_int_t,  TCustomForm_ShowModal,         (no_vcl_obj_t o),                                         (o)) \
     X(void,          TCustomForm_Close,             (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomForm_Release,           (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomForm_SetOnClose,        (no_vcl_obj_t o, no_vcl_close_callback_t cb, void* d),    (o, cb, d)) \
+    X(void,          TCustomForm_SetOnShow,         (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),          (o, cb, d)) \
     \
     X(no_vcl_obj_t,  GetApplication,                (void),                                                   ()) \
     X(no_vcl_obj_t,  TApplication_CreateForm,       (no_vcl_obj_t o),                                         (o)) \

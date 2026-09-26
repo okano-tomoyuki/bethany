@@ -65,6 +65,29 @@ static void NO_VCL_CALL OnMemoChange(no_vcl_obj_t sender, void* data)
     fflush(stdout);
 }
 
+/* *action には既定の動作が入っている。1 回目は閉じるのを取りやめ、2 回目は既定の動作のままにする。 */
+static void NO_VCL_CALL OnFormClose(no_vcl_obj_t sender, no_vcl_int_t* action, void* data)
+{
+    int* attempts = (int*)data;
+    (void)sender;
+    ++*attempts;
+    printf("Form closing: attempt=%d, default action=%d\n", *attempts, *action);
+    if (*attempts == 1)
+    {
+        *action = no_vcl_caNone;
+        printf("Form closing: blocked (no_vcl_caNone)\n");
+    }
+    fflush(stdout);
+}
+
+static void NO_VCL_CALL OnFormShow(no_vcl_obj_t sender, void* data)
+{
+    (void)sender;
+    (void)data;
+    printf("Form shown\n");
+    fflush(stdout);
+}
+
 /* TColorはDelphi/LCLの$00BBGGRR順パック整数 */
 #define CL_BLACK  0x000000
 #define CL_WHITE  0xFFFFFF
@@ -125,6 +148,7 @@ int main(void)
 {
     int freedCount = 0;
     int clickCount = 0;
+    int closeAttempts = 0;
     no_vcl_obj_t app;
     no_vcl_obj_t form;
     no_vcl_obj_t button;
@@ -156,6 +180,8 @@ int main(void)
         return 1;
     }
     printf("MainForm is form: %s\n", no_vcl_TApplication_GetMainForm(app) == form ? "yes" : "no");
+    no_vcl_TCustomForm_SetOnClose(form, OnFormClose, &closeAttempts);
+    no_vcl_TCustomForm_SetOnShow(form, OnFormShow, NULL);
 
     no_vcl_TControl_SetCaption(form, "Hello from FPC DLL");
     no_vcl_TControl_SetWidth(form, 640);
@@ -237,7 +263,7 @@ int main(void)
     no_vcl_TControl_SetHeight(paintBox, 130);
     no_vcl_TPaintBox_SetOnPaint(paintBox, OnPaintBoxPaint, NULL);
 
-    printf("Running (click the button, then close the window to continue)...\n");
+    printf("Running (click the button, then close the window twice: the first close is blocked)...\n");
     fflush(stdout);
     /* MainForm を表示してメッセージループに入り、MainForm が閉じられると戻る。 */
     no_vcl_TApplication_Run(app);
