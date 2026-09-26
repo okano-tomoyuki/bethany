@@ -102,9 +102,33 @@ begin
   CanClose := A <> 0;
 end;
 
-function NewVarBridge(Owner: TComponent; Cb: TNoVclVarCallback; Data: Pointer): TVarCallbackBridge;
+{ ブリッジの取得(*_SetOnXxx は必ずこれを通す)。
+  Current はイベントに現在設定されているメソッドの Data(= メソッドの持ち主のオブジェクト)。
+  それが Owner の持つこのライブラリのブリッジなら、新しく作らずにコールバックを差し替えて再利用する
+  (同じイベントに何度登録してもブリッジが蓄積しない)。
+  Cb に nil を渡すとハンドラの解除になる。ブリッジ自体は残して何もしないようにする
+  (解除がコールバックの実行中に行われても、実行中のブリッジを破棄しないため)。 }
+function MethodData(const M: TNotifyEvent): Pointer; overload;
 begin
-  Result := TVarCallbackBridge.Create(Owner);
+  Result := TMethod(M).Data;
+end;
+
+function MethodData(const M: TCloseEvent): Pointer; overload;
+begin
+  Result := TMethod(M).Data;
+end;
+
+function MethodData(const M: TCloseQueryEvent): Pointer; overload;
+begin
+  Result := TMethod(M).Data;
+end;
+
+function VarBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclVarCallback; Data: Pointer): TVarCallbackBridge;
+begin
+  if (Current <> nil) and (TObject(Current) is TVarCallbackBridge) and (TVarCallbackBridge(Current).Owner = Owner) then
+    Result := TVarCallbackBridge(Current)
+  else
+    Result := TVarCallbackBridge.Create(Owner);
   Result.FCallback := Cb;
   Result.FData := Data;
 end;
@@ -116,11 +140,27 @@ begin
     GFreeCallback(Pointer(AComponent), GFreeData);
 end;
 
-function NewBridge(Owner: TComponent; Cb: TNoVclCallback; Data: Pointer): TCallbackBridge;
+function BridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclCallback; Data: Pointer): TCallbackBridge;
 begin
-  Result := TCallbackBridge.Create(Owner);
+  if (Current <> nil) and (TObject(Current) is TCallbackBridge) and (TCallbackBridge(Current).Owner = Owner) then
+    Result := TCallbackBridge(Current)
+  else
+    Result := TCallbackBridge.Create(Owner);
   Result.Callback := Cb;
   Result.Data := Data;
+end;
+
+{ 文字列を返す関数は必ずこれを通す。
+  プロパティの読み出し結果(Caption 等)は一時的な AnsiString で、PChar にキャストしてそのまま返すと、
+  関数を抜けた時点で参照カウントが 0 になって解放され、呼び出し側は解放済みのメモリを指すことになる。
+  スレッドごとのバッファに保持してから返すことで、同じスレッドで次に文字列を返す関数を呼ぶまで有効にする。 }
+threadvar
+  GReturnStr: AnsiString;
+
+function ReturnStr(const S: AnsiString): PChar;
+begin
+  GReturnStr := S;
+  Result := PChar(GReturnStr);
 end;
 
 { 生成したコンポーネントを破棄通知の対象に登録して返す。*_Create は必ずこれを通す。 }
@@ -236,7 +276,7 @@ end;
 
 function TControl_GetCaption(Obj: Pointer): PChar; NO_VCL_CALL;
 begin
-  Result := PChar(TControl(Obj).Caption);
+  Result := ReturnStr(TControl(Obj).Caption);
 end;
 
 procedure TControl_SetCaption(Obj: Pointer; Value: PChar); NO_VCL_CALL;
@@ -247,7 +287,7 @@ end;
 { Text は TControl で protected。TCustomEdit と TCustomComboBox がそれぞれ公開している。 }
 function TControl_GetText(Obj: Pointer): PChar; NO_VCL_CALL;
 begin
-  Result := PChar(TControlAccess(Obj).Text);
+  Result := ReturnStr(TControlAccess(Obj).Text);
 end;
 
 procedure TControl_SetText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
@@ -267,7 +307,7 @@ end;
 
 procedure TControl_SetOnClick(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TControl(Obj).OnClick := @NewBridge(TControl(Obj), Cb, Data).DoClick;
+  TControl(Obj).OnClick := @BridgeFor(TControl(Obj), MethodData(TControl(Obj).OnClick), Cb, Data).DoClick;
 end;
 
 { TCustomForm / TForm }
@@ -306,38 +346,38 @@ end;
 
 procedure TCustomForm_SetOnClose(Obj: Pointer; Cb: TNoVclVarCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomForm(Obj).OnClose := @NewVarBridge(TComponent(Obj), Cb, Data).DoClose;
+  TCustomForm(Obj).OnClose := @VarBridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnClose), Cb, Data).DoClose;
 end;
 
 procedure TCustomForm_SetOnCloseQuery(Obj: Pointer; Cb: TNoVclVarCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomForm(Obj).OnCloseQuery := @NewVarBridge(TComponent(Obj), Cb, Data).DoCloseQuery;
+  TCustomForm(Obj).OnCloseQuery := @VarBridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnCloseQuery), Cb, Data).DoCloseQuery;
 end;
 
 procedure TCustomForm_SetOnShow(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomForm(Obj).OnShow := @NewBridge(TComponent(Obj), Cb, Data).DoClick;
+  TCustomForm(Obj).OnShow := @BridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnShow), Cb, Data).DoClick;
 end;
 
 procedure TCustomForm_SetOnHide(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomForm(Obj).OnHide := @NewBridge(TComponent(Obj), Cb, Data).DoClick;
+  TCustomForm(Obj).OnHide := @BridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnHide), Cb, Data).DoClick;
 end;
 
 procedure TCustomForm_SetOnActivate(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomForm(Obj).OnActivate := @NewBridge(TComponent(Obj), Cb, Data).DoClick;
+  TCustomForm(Obj).OnActivate := @BridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnActivate), Cb, Data).DoClick;
 end;
 
 procedure TCustomForm_SetOnDeactivate(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomForm(Obj).OnDeactivate := @NewBridge(TComponent(Obj), Cb, Data).DoClick;
+  TCustomForm(Obj).OnDeactivate := @BridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnDeactivate), Cb, Data).DoClick;
 end;
 
 { 破棄の最初(BeforeDestruction)で呼ばれる。子コントロールはまだ生きており、破棄通知はこの後に来る。 }
 procedure TCustomForm_SetOnDestroy(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomForm(Obj).OnDestroy := @NewBridge(TComponent(Obj), Cb, Data).DoClick;
+  TCustomForm(Obj).OnDestroy := @BridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnDestroy), Cb, Data).DoClick;
 end;
 
 { TApplication
@@ -389,7 +429,7 @@ end;
 
 function TApplication_GetTitle(Obj: Pointer): PChar; NO_VCL_CALL;
 begin
-  Result := PChar(TApplication(Obj).Title);
+  Result := ReturnStr(TApplication(Obj).Title);
 end;
 
 procedure TApplication_SetTitle(Obj: Pointer; Value: PChar); NO_VCL_CALL;
@@ -476,7 +516,7 @@ end;
 
 procedure TCustomEdit_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomEdit(Obj).OnChange := @NewBridge(TCustomEdit(Obj), Cb, Data).DoClick;
+  TCustomEdit(Obj).OnChange := @BridgeFor(TCustomEdit(Obj), MethodData(TCustomEdit(Obj).OnChange), Cb, Data).DoClick;
 end;
 
 function TEdit_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
@@ -503,7 +543,7 @@ end;
 
 function TCustomMemo_Lines_GetText(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
 begin
-  Result := PChar(TCustomMemo(Obj).Lines[Index]);
+  Result := ReturnStr(TCustomMemo(Obj).Lines[Index]);
 end;
 
 function TCustomMemo_GetScrollBars(Obj: Pointer): Integer; NO_VCL_CALL;
@@ -550,7 +590,7 @@ end;
 
 function TCustomComboBox_Items_GetText(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
 begin
-  Result := PChar(TCustomComboBox(Obj).Items[Index]);
+  Result := ReturnStr(TCustomComboBox(Obj).Items[Index]);
 end;
 
 function TComboBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
@@ -561,7 +601,7 @@ end;
 { OnChange は TCustomComboBox では protected で、公開しているのは TComboBox だけ。 }
 procedure TComboBox_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TComboBox(Obj).OnChange := @NewBridge(TComboBox(Obj), Cb, Data).DoClick;
+  TComboBox(Obj).OnChange := @BridgeFor(TComboBox(Obj), MethodData(TComboBox(Obj).OnChange), Cb, Data).DoClick;
 end;
 
 { TCustomListBox / TListBox }
@@ -593,7 +633,7 @@ end;
 
 function TCustomListBox_Items_GetText(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
 begin
-  Result := PChar(TCustomListBox(Obj).Items[Index]);
+  Result := ReturnStr(TCustomListBox(Obj).Items[Index]);
 end;
 
 function TListBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
@@ -625,7 +665,7 @@ end;
 
 procedure TCustomTimer_SetOnTimer(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomTimer(Obj).OnTimer := @NewBridge(TCustomTimer(Obj), Cb, Data).DoClick;
+  TCustomTimer(Obj).OnTimer := @BridgeFor(TCustomTimer(Obj), MethodData(TCustomTimer(Obj).OnTimer), Cb, Data).DoClick;
 end;
 
 function TTimer_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
@@ -647,7 +687,7 @@ end;
 
 procedure TPaintBox_SetOnPaint(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TPaintBox(Obj).OnPaint := @NewBridge(TPaintBox(Obj), Cb, Data).DoClick;
+  TPaintBox(Obj).OnPaint := @BridgeFor(TPaintBox(Obj), MethodData(TPaintBox(Obj).OnPaint), Cb, Data).DoClick;
 end;
 
 { TCanvas }
@@ -729,7 +769,7 @@ end;
 
 function TFont_GetName(Obj: Pointer): PChar; NO_VCL_CALL;
 begin
-  Result := PChar(TFont(Obj).Name);
+  Result := ReturnStr(TFont(Obj).Name);
 end;
 
 procedure TFont_SetName(Obj: Pointer; Value: PChar); NO_VCL_CALL;

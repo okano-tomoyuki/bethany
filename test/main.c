@@ -178,6 +178,7 @@ int main(void)
     no_vcl_obj_t comboBox;
     no_vcl_obj_t listBox;
     no_vcl_obj_t memo;
+    no_vcl_obj_t noHandler;
     no_vcl_obj_t tickLabel;
     no_vcl_obj_t timer;
     no_vcl_obj_t paintBox;
@@ -224,6 +225,8 @@ int main(void)
 
     checkBox = Place(no_vcl_TCheckBox_Create(form), form, 20, 130);
     no_vcl_TControl_SetCaption(checkBox, "Check me");
+    /* 登録し直すと最後に登録したものだけが呼ばれる(ブリッジは再利用され、蓄積しない)。 */
+    no_vcl_TControl_SetOnClick(checkBox, OnButtonClick, &clickCount);
     no_vcl_TControl_SetOnClick(checkBox, OnCheckBoxClick, NULL);
 
     radio1 = Place(no_vcl_TRadioButton_Create(form), form, 20, 160);
@@ -259,7 +262,9 @@ int main(void)
     no_vcl_TCustomListBox_Items_Add(listBox, "List 3");
     no_vcl_TControl_SetWidth(listBox, 150);
     no_vcl_TControl_SetHeight(listBox, 80);
+    /* 利用者による選択の変更(マウス・キー操作とも)で呼ばれる。プログラムからの ItemIndex の変更では呼ばれない。 */
     no_vcl_TControl_SetOnClick(listBox, OnListBoxClick, NULL);
+    no_vcl_TCustomListBox_SetItemIndex(listBox, 1);
 
     memo = Place(no_vcl_TMemo_Create(form), form, 220, 280);
     no_vcl_TCustomMemo_Lines_Add(memo, "Memo line 1");
@@ -267,6 +272,12 @@ int main(void)
     no_vcl_TControl_SetWidth(memo, 150);
     no_vcl_TControl_SetHeight(memo, 80);
     no_vcl_TCustomEdit_SetOnChange(memo, OnMemoChange, NULL);
+
+    /* NULL を登録するとハンドラが解除され、押しても何も呼ばれない。 */
+    noHandler = Place(no_vcl_TButton_Create(form), form, 20, 280);
+    no_vcl_TControl_SetCaption(noHandler, "No handler");
+    no_vcl_TControl_SetOnClick(noHandler, OnButtonClick, &clickCount);
+    no_vcl_TControl_SetOnClick(noHandler, NULL, NULL);
 
     tickLabel = Place(no_vcl_TLabel_Create(form), form, 20, 230);
     no_vcl_TControl_SetCaption(tickLabel, "Tick: 0");
@@ -290,7 +301,7 @@ int main(void)
     /* Application が所有するフォーム(と、フォームが所有するコントロール)をまとめて破棄する。
        呼ばなくても DLL の切り離し時に LCL が破棄するが、そのときは破棄通知が呼ばれない。 */
     no_vcl_TComponent_DestroyComponents(app);
-    printf("Clicks: %d, Freed components: %d (expected 15: form + 14 owned)\n", clickCount, freedCount);
+    printf("Clicks: %d, Freed components: %d (expected 16: form + 15 owned)\n", clickCount, freedCount);
 
     printf("OK\n");
     return 0;

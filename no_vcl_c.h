@@ -12,10 +12,14 @@ extern "C" {
 #endif
 
 typedef void*       no_vcl_obj_t;
+/* 文字列は UTF-8。関数が返す文字列は DLL 内のスレッドごとのバッファを指し、同じスレッドで次に文字列を返す関数を
+   呼ぶまで有効(解放は不要)。保持する場合や、2 つの戻り値を同時に使う場合(printf の引数に 2 つ並べる等)はコピーすること。 */
 typedef const char* no_vcl_str_t;
 typedef int         no_vcl_int_t;
 typedef int         no_vcl_bool_t;
-/* sender はイベントを発生させたオブジェクト、data はコールバック登録時に渡した利用者データ。 */
+/* sender はイベントを発生させたオブジェクト、data はコールバック登録時に渡した利用者データ。
+   イベントの登録関数(no_vcl_*_SetOnXxx)は同じイベントに何度呼んでもよく、最後に登録したものだけが呼ばれる。
+   コールバックに NULL を渡すとハンドラを解除する(コールバックの実行中に解除してもよい)。 */
 typedef void (NO_VCL_CALL *no_vcl_callback_t)(no_vcl_obj_t sender, void* data);
 
 /* TCustomForm の OnClose 用。*action は Close の動作(no_vcl_ca*)で、既定値が入った状態で呼ばれる。
@@ -165,7 +169,9 @@ no_vcl_obj_t  NO_VCL_CALL no_vcl_TComboBox_Create(no_vcl_obj_t Owner);
 /* OnChange は TCustomComboBox では protected で、公開しているのは TComboBox だけ。 */
 void          NO_VCL_CALL no_vcl_TComboBox_SetOnChange(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
 
-/* TCustomListBox / TListBox */
+/* TCustomListBox / TListBox
+ * 利用者による選択の変更(マウス・キー操作とも)は no_vcl_TControl_SetOnClick で受け取れる
+ * (LCL の ClickOnSelChange が既定で有効なため。VCL と同じ)。プログラムからの ItemIndex の変更では呼ばれない。 */
 no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomListBox_GetItemIndex(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TCustomListBox_SetItemIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
 void          NO_VCL_CALL no_vcl_TCustomListBox_Items_Add(no_vcl_obj_t Obj, no_vcl_str_t Text);

@@ -21,11 +21,15 @@ TComponent::TComponent(no_vcl_obj_t handle)
         Registry()[handle_] = this;
 }
 
-// ラッパーは LCL オブジェクトの破棄通知(FreeNotifyTrampoline)からしか delete されないため、
-// ここで LCL オブジェクトを破棄することはない(LCL オブジェクトは既に破棄の途中にある)。
+// ラッパーは通常、LCL オブジェクトの破棄通知(FreeNotifyTrampoline)からしか delete されず、
+// そのとき LCL オブジェクトは既に破棄の途中にある。
+// 例外は派生クラスのコンストラクタが例外を投げた場合で、このときは LCL オブジェクトだけが取り残されるため、ここで破棄する。
+// 先にレジストリから外すので、この破棄に伴う自身への通知(破棄通知・OnDestroy 等)はラッパーに届かない。
 TComponent::~TComponent()
 {
     Registry().erase(handle_);
+    if (!freedByLcl_ && handle_)
+        no_vcl_TComponent_Destroy(handle_);
 }
 
 void TComponent::Free()
@@ -42,6 +46,7 @@ void NO_VCL_CALL TComponent::FreeNotifyTrampoline(no_vcl_obj_t handle, void*)
 
     TComponent* self = it->second;
     registry.erase(it);
+    self->freedByLcl_ = true;
     delete self;
 }
 

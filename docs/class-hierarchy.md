@@ -85,6 +85,10 @@ TObject
     └── TCanvas
 ```
 
+文字列を返す C API(`no_vcl_TControl_GetCaption` 等)の戻り値は、DLL 内のスレッドごとのバッファを指し、
+同じスレッドで次に文字列を返す関数を呼ぶまで有効([ADR 0013](adr/0013-string-return-bridge-reuse-ctor-exception.md))。
+保持する場合や 2 つの戻り値を同時に使う場合は呼び出し側でコピーすること。
+
 具象クラス(TForm・TButton 等)だけが public なコンストラクタ `(TComponent* AOwner)` を持つ。
 TCustomXxx 等の中間クラスのコンストラクタは protected で、直接は生成できない。
 TApplication はグローバル変数 `Application` の 1 つだけで、利用者は生成できない([ADR 0010](adr/0010-application-object.md))。

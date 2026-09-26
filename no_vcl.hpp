@@ -183,6 +183,11 @@ protected:
     static TComponent*  FromHandle(no_vcl_obj_t handle);
 
 private:
+    // LCL オブジェクトの破棄通知によって delete されるときに true にする。
+    // それ以外でデストラクタが走るのは、派生クラスのコンストラクタが例外を投げた場合(基底部分の巻き戻し)だけで、
+    // そのときは LCL オブジェクトが取り残されないよう、ここで破棄する。
+    bool freedByLcl_ = false;
+
     static void NO_VCL_CALL FreeNotifyTrampoline(no_vcl_obj_t handle, void* data);
     static std::unordered_map<no_vcl_obj_t, TComponent*>& Registry();
 };
@@ -653,6 +658,8 @@ private:
     static void         SetOnChangeImpl(TObject* owner, const TNotifyEvent& value);
 };
 
+// 利用者による選択の変更(マウス・キー操作とも)では OnClick が呼ばれる(VCL と同じ)。
+// プログラムからの ItemIndex の変更では呼ばれない。
 class TCustomListBox : public TWinControl
 {
 public:

@@ -72,4 +72,4 @@ LCL にも同じ構造(グローバル変数 `Application`・`CreateForm`・`Run
 - C API の `no_vcl_Application_Run()` / `no_vcl_Application_ProcessMessages()` を使っていたコードは、
   `no_vcl_TApplication_Run(no_vcl_GetApplication())` 等に書き換えが必要(テストは追随済み)。
 - `new TForm(Application)` で生成したフォームは MainForm にならない(C++Builder と同じ)。
-- 既知の制約: コンストラクタが例外を投げた場合、そのラッパーのレジストリ登録が残る(コンポーネント全般に共通の問題で、今回は対処していない)。
+- 既知の制約だったコンストラクタが例外を投げた場合の問題は、[ADR 0013](0013-string-return-bridge-reuse-ctor-exception.md) で対処した。
