@@ -2,56 +2,65 @@
 
 #include "no_vcl_c.h"
 
-static int g_clickCount = 0;
-static int g_freedCount = 0;
+/* コールバックの data には、登録時に渡したポインタがそのまま返ってくる。
+   ここではカウンタやラベルのハンドルを渡し、グローバル変数を使わずに状態を持ち回る。 */
 
-static void NO_VCL_CALL OnComponentFreed(no_vcl_obj_t obj)
+static void NO_VCL_CALL OnComponentFreed(no_vcl_obj_t obj, void* data)
 {
     (void)obj;
-    ++g_freedCount;
+    ++*(int*)data;
 }
 
-static void NO_VCL_CALL OnButtonClick(no_vcl_obj_t sender)
+static void NO_VCL_CALL OnButtonClick(no_vcl_obj_t sender, void* data)
 {
+    int* clickCount = (int*)data;
     (void)sender;
-    ++g_clickCount;
-    printf("Button clicked! (count=%d)\n", g_clickCount);
+    ++*clickCount;
+    printf("Button clicked! (count=%d)\n", *clickCount);
     fflush(stdout);
 }
 
-static void NO_VCL_CALL OnCheckBoxClick(no_vcl_obj_t sender)
+static void NO_VCL_CALL OnCheckBoxClick(no_vcl_obj_t sender, void* data)
 {
+    (void)data;
     printf("CheckBox clicked! Checked=%d\n", no_vcl_TButtonControl_GetChecked(sender));
     fflush(stdout);
 }
 
-static void NO_VCL_CALL OnRadioButtonClick(no_vcl_obj_t sender)
+/* 2つのラジオボタンで共有し、sender でどちらが押されたかを区別する。 */
+static void NO_VCL_CALL OnRadioButtonClick(no_vcl_obj_t sender, void* data)
 {
-    printf("RadioButton clicked! Checked=%d\n", no_vcl_TButtonControl_GetChecked(sender));
+    (void)data;
+    printf("RadioButton clicked! %s Checked=%d\n",
+           no_vcl_TControl_GetCaption(sender), no_vcl_TButtonControl_GetChecked(sender));
     fflush(stdout);
 }
 
-static void NO_VCL_CALL OnEditChange(no_vcl_obj_t sender)
+static void NO_VCL_CALL OnEditChange(no_vcl_obj_t sender, void* data)
 {
+    (void)data;
     printf("Edit changed! Text=%s\n", no_vcl_TControl_GetText(sender));
     fflush(stdout);
 }
 
-static void NO_VCL_CALL OnComboBoxChange(no_vcl_obj_t sender)
+static void NO_VCL_CALL OnComboBoxChange(no_vcl_obj_t sender, void* data)
 {
+    (void)data;
     printf("ComboBox changed! ItemIndex=%d Text=%s\n",
            no_vcl_TCustomComboBox_GetItemIndex(sender), no_vcl_TControl_GetText(sender));
     fflush(stdout);
 }
 
-static void NO_VCL_CALL OnListBoxClick(no_vcl_obj_t sender)
+static void NO_VCL_CALL OnListBoxClick(no_vcl_obj_t sender, void* data)
 {
+    (void)data;
     printf("ListBox clicked! ItemIndex=%d\n", no_vcl_TCustomListBox_GetItemIndex(sender));
     fflush(stdout);
 }
 
-static void NO_VCL_CALL OnMemoChange(no_vcl_obj_t sender)
+static void NO_VCL_CALL OnMemoChange(no_vcl_obj_t sender, void* data)
 {
+    (void)data;
     printf("Memo changed! LineCount=%d\n", no_vcl_TCustomMemo_Lines_Count(sender));
     fflush(stdout);
 }
@@ -64,12 +73,13 @@ static void NO_VCL_CALL OnMemoChange(no_vcl_obj_t sender)
 #define CL_BLUE   0xFF0000
 #define CL_YELLOW 0x00FFFF
 
-static void NO_VCL_CALL OnPaintBoxPaint(no_vcl_obj_t sender)
+static void NO_VCL_CALL OnPaintBoxPaint(no_vcl_obj_t sender, void* data)
 {
     no_vcl_obj_t canvas = no_vcl_TPaintBox_GetCanvas(sender);
     no_vcl_obj_t pen = no_vcl_TCanvas_GetPen(canvas);
     no_vcl_obj_t brush = no_vcl_TCanvas_GetBrush(canvas);
     no_vcl_obj_t font = no_vcl_TCanvas_GetFont(canvas);
+    (void)data;
 
     no_vcl_TPen_SetColor(pen, CL_RED);
     no_vcl_TPen_SetWidth(pen, 2);
@@ -89,17 +99,16 @@ static void NO_VCL_CALL OnPaintBoxPaint(no_vcl_obj_t sender)
     no_vcl_TCanvas_TextOut(canvas, 10, 100, "Canvas drawing test");
 }
 
-static no_vcl_obj_t g_tickLabel = NULL;
-static int g_tickCount = 0;
-
-static void NO_VCL_CALL OnTimerTick(no_vcl_obj_t sender)
+/* data にはカウントを表示するラベルのハンドルを渡す。 */
+static void NO_VCL_CALL OnTimerTick(no_vcl_obj_t sender, void* data)
 {
+    static int tickCount = 0;
     char buf[64];
     (void)sender;
-    ++g_tickCount;
-    snprintf(buf, sizeof(buf), "Tick: %d", g_tickCount);
-    no_vcl_TControl_SetCaption(g_tickLabel, buf);
-    printf("Timer tick! count=%d\n", g_tickCount);
+    ++tickCount;
+    snprintf(buf, sizeof(buf), "Tick: %d", tickCount);
+    no_vcl_TControl_SetCaption((no_vcl_obj_t)data, buf);
+    printf("Timer tick! count=%d\n", tickCount);
     fflush(stdout);
 }
 
@@ -114,6 +123,8 @@ static no_vcl_obj_t Place(no_vcl_obj_t control, no_vcl_obj_t parent, int left, i
 
 int main(void)
 {
+    int freedCount = 0;
+    int clickCount = 0;
     no_vcl_obj_t form;
     no_vcl_obj_t button;
     no_vcl_obj_t label;
@@ -126,10 +137,11 @@ int main(void)
     no_vcl_obj_t comboBox;
     no_vcl_obj_t listBox;
     no_vcl_obj_t memo;
+    no_vcl_obj_t tickLabel;
     no_vcl_obj_t timer;
     no_vcl_obj_t paintBox;
 
-    no_vcl_FreeNotify_SetCallback(OnComponentFreed);
+    no_vcl_FreeNotify_SetCallback(OnComponentFreed, &freedCount);
 
     form = no_vcl_TForm_Create(NULL);
     if (!form)
@@ -147,7 +159,7 @@ int main(void)
     no_vcl_TControl_SetCaption(button, "Click me");
     no_vcl_TControl_SetWidth(button, 100);
     no_vcl_TControl_SetHeight(button, 30);
-    no_vcl_TControl_SetOnClick(button, OnButtonClick);
+    no_vcl_TControl_SetOnClick(button, OnButtonClick, &clickCount);
     printf("Button caption: %s\n", no_vcl_TControl_GetCaption(button));
     printf("Button parent is form: %s\n", no_vcl_TControl_GetParent(button) == form ? "yes" : "no");
 
@@ -157,20 +169,20 @@ int main(void)
     edit = Place(no_vcl_TEdit_Create(form), form, 20, 90);
     no_vcl_TControl_SetText(edit, "Edit me");
     no_vcl_TControl_SetWidth(edit, 150);
-    no_vcl_TCustomEdit_SetOnChange(edit, OnEditChange);
+    no_vcl_TCustomEdit_SetOnChange(edit, OnEditChange, NULL);
 
     checkBox = Place(no_vcl_TCheckBox_Create(form), form, 20, 130);
     no_vcl_TControl_SetCaption(checkBox, "Check me");
-    no_vcl_TControl_SetOnClick(checkBox, OnCheckBoxClick);
+    no_vcl_TControl_SetOnClick(checkBox, OnCheckBoxClick, NULL);
 
     radio1 = Place(no_vcl_TRadioButton_Create(form), form, 20, 160);
     no_vcl_TControl_SetCaption(radio1, "Option A");
     no_vcl_TButtonControl_SetChecked(radio1, 1);
-    no_vcl_TControl_SetOnClick(radio1, OnRadioButtonClick);
+    no_vcl_TControl_SetOnClick(radio1, OnRadioButtonClick, NULL);
 
     radio2 = Place(no_vcl_TRadioButton_Create(form), form, 20, 190);
     no_vcl_TControl_SetCaption(radio2, "Option B");
-    no_vcl_TControl_SetOnClick(radio2, OnRadioButtonClick);
+    no_vcl_TControl_SetOnClick(radio2, OnRadioButtonClick, NULL);
 
     panel = Place(no_vcl_TPanel_Create(form), form, 220, 20);
     no_vcl_TControl_SetCaption(panel, "");
@@ -188,7 +200,7 @@ int main(void)
     no_vcl_TCustomComboBox_Items_Add(comboBox, "Combo C");
     no_vcl_TCustomComboBox_SetItemIndex(comboBox, 0);
     no_vcl_TControl_SetWidth(comboBox, 150);
-    no_vcl_TComboBox_SetOnChange(comboBox, OnComboBoxChange);
+    no_vcl_TComboBox_SetOnChange(comboBox, OnComboBoxChange, NULL);
 
     listBox = Place(no_vcl_TListBox_Create(form), form, 220, 190);
     no_vcl_TCustomListBox_Items_Add(listBox, "List 1");
@@ -196,27 +208,27 @@ int main(void)
     no_vcl_TCustomListBox_Items_Add(listBox, "List 3");
     no_vcl_TControl_SetWidth(listBox, 150);
     no_vcl_TControl_SetHeight(listBox, 80);
-    no_vcl_TControl_SetOnClick(listBox, OnListBoxClick);
+    no_vcl_TControl_SetOnClick(listBox, OnListBoxClick, NULL);
 
     memo = Place(no_vcl_TMemo_Create(form), form, 220, 280);
     no_vcl_TCustomMemo_Lines_Add(memo, "Memo line 1");
     no_vcl_TCustomMemo_Lines_Add(memo, "Memo line 2");
     no_vcl_TControl_SetWidth(memo, 150);
     no_vcl_TControl_SetHeight(memo, 80);
-    no_vcl_TCustomEdit_SetOnChange(memo, OnMemoChange);
+    no_vcl_TCustomEdit_SetOnChange(memo, OnMemoChange, NULL);
 
-    g_tickLabel = Place(no_vcl_TLabel_Create(form), form, 20, 230);
-    no_vcl_TControl_SetCaption(g_tickLabel, "Tick: 0");
+    tickLabel = Place(no_vcl_TLabel_Create(form), form, 20, 230);
+    no_vcl_TControl_SetCaption(tickLabel, "Tick: 0");
 
     timer = no_vcl_TTimer_Create(form);
     no_vcl_TCustomTimer_SetInterval(timer, 500);
-    no_vcl_TCustomTimer_SetOnTimer(timer, OnTimerTick);
+    no_vcl_TCustomTimer_SetOnTimer(timer, OnTimerTick, tickLabel);
     no_vcl_TCustomTimer_SetEnabled(timer, 1);
 
     paintBox = Place(no_vcl_TPaintBox_Create(form), form, 400, 20);
     no_vcl_TControl_SetWidth(paintBox, 220);
     no_vcl_TControl_SetHeight(paintBox, 130);
-    no_vcl_TPaintBox_SetOnPaint(paintBox, OnPaintBoxPaint);
+    no_vcl_TPaintBox_SetOnPaint(paintBox, OnPaintBoxPaint, NULL);
 
     printf("Showing form (click the button, then close the window to continue)...\n");
     fflush(stdout);
@@ -224,7 +236,7 @@ int main(void)
 
     /* Owner である form を破棄すると、form が所有するコントロールも LCL 側で破棄される。 */
     no_vcl_TComponent_Destroy(form);
-    printf("Freed components: %d (expected 15: form + 14 owned)\n", g_freedCount);
+    printf("Clicks: %d, Freed components: %d (expected 15: form + 14 owned)\n", clickCount, freedCount);
 
     printf("OK\n");
     return 0;

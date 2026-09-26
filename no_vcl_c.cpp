@@ -9,7 +9,7 @@
 // extern "C" のラッパー(no_vcl_<名前>)がまとめて生成される。
 // 宣言は no_vcl_c.h にも手で書く(型が食い違えばコンパイルエラーになる)。
 #define NO_VCL_FUNCS(X) \
-    X(void,          FreeNotify_SetCallback,        (no_vcl_callback_t cb),                                   (cb)) \
+    X(void,          FreeNotify_SetCallback,        (no_vcl_callback_t cb, void* d),                          (cb, d)) \
     X(void,          TComponent_Destroy,            (no_vcl_obj_t o),                                         (o)) \
     \
     X(no_vcl_obj_t,  TControl_GetParent,            (no_vcl_obj_t o),                                         (o)) \
@@ -32,7 +32,7 @@
     X(void,          TControl_SetText,              (no_vcl_obj_t o, no_vcl_str_t v),                         (o, v)) \
     X(void,          TControl_Show,                 (no_vcl_obj_t o),                                         (o)) \
     X(void,          TControl_Hide,                 (no_vcl_obj_t o),                                         (o)) \
-    X(void,          TControl_SetOnClick,           (no_vcl_obj_t o, no_vcl_callback_t cb),                   (o, cb)) \
+    X(void,          TControl_SetOnClick,           (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),          (o, cb, d)) \
     \
     X(no_vcl_obj_t,  TForm_Create,                  (no_vcl_obj_t owner),                                     (owner)) \
     X(void,          TCustomForm_Show,              (no_vcl_obj_t o),                                         (o)) \
@@ -57,7 +57,7 @@
     X(void,          TCustomEdit_SetMaxLength,      (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
     X(no_vcl_bool_t, TCustomEdit_GetReadOnly,       (no_vcl_obj_t o),                                         (o)) \
     X(void,          TCustomEdit_SetReadOnly,       (no_vcl_obj_t o, no_vcl_bool_t v),                        (o, v)) \
-    X(void,          TCustomEdit_SetOnChange,       (no_vcl_obj_t o, no_vcl_callback_t cb),                   (o, cb)) \
+    X(void,          TCustomEdit_SetOnChange,       (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),          (o, cb, d)) \
     X(no_vcl_obj_t,  TEdit_Create,                  (no_vcl_obj_t owner),                                     (owner)) \
     \
     X(void,          TCustomMemo_Lines_Add,         (no_vcl_obj_t o, no_vcl_str_t s),                         (o, s)) \
@@ -75,7 +75,7 @@
     X(no_vcl_int_t,  TCustomComboBox_Items_Count,   (no_vcl_obj_t o),                                         (o)) \
     X(no_vcl_str_t,  TCustomComboBox_Items_GetText, (no_vcl_obj_t o, no_vcl_int_t i),                         (o, i)) \
     X(no_vcl_obj_t,  TComboBox_Create,              (no_vcl_obj_t owner),                                     (owner)) \
-    X(void,          TComboBox_SetOnChange,         (no_vcl_obj_t o, no_vcl_callback_t cb),                   (o, cb)) \
+    X(void,          TComboBox_SetOnChange,         (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),          (o, cb, d)) \
     \
     X(no_vcl_int_t,  TCustomListBox_GetItemIndex,   (no_vcl_obj_t o),                                         (o)) \
     X(void,          TCustomListBox_SetItemIndex,   (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
@@ -89,12 +89,12 @@
     X(void,          TCustomTimer_SetInterval,      (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
     X(no_vcl_bool_t, TCustomTimer_GetEnabled,       (no_vcl_obj_t o),                                         (o)) \
     X(void,          TCustomTimer_SetEnabled,       (no_vcl_obj_t o, no_vcl_bool_t v),                        (o, v)) \
-    X(void,          TCustomTimer_SetOnTimer,       (no_vcl_obj_t o, no_vcl_callback_t cb),                   (o, cb)) \
+    X(void,          TCustomTimer_SetOnTimer,       (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),          (o, cb, d)) \
     X(no_vcl_obj_t,  TTimer_Create,                 (no_vcl_obj_t owner),                                     (owner)) \
     \
     X(no_vcl_obj_t,  TPaintBox_Create,              (no_vcl_obj_t owner),                                     (owner)) \
     X(no_vcl_obj_t,  TPaintBox_GetCanvas,           (no_vcl_obj_t o),                                         (o)) \
-    X(void,          TPaintBox_SetOnPaint,          (no_vcl_obj_t o, no_vcl_callback_t cb),                   (o, cb)) \
+    X(void,          TPaintBox_SetOnPaint,          (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),          (o, cb, d)) \
     \
     X(void,          TCanvas_MoveTo,                (no_vcl_obj_t o, no_vcl_int_t x, no_vcl_int_t y),         (o, x, y)) \
     X(void,          TCanvas_LineTo,                (no_vcl_obj_t o, no_vcl_int_t x, no_vcl_int_t y),         (o, x, y)) \

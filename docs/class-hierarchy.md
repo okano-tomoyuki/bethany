@@ -99,7 +99,7 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 |---|---|---|---|---|
 | Parent / Left / Top / Width / Height / Visible / Enabled / Caption | TControl(public/published) | TControl | TControl(public) | `TControl_*` |
 | Show / Hide | TControl(public) | TControl | TControl(public) | `TControl_Show` / `Hide` |
-| OnClick | TControl(public) | TControl | `TControl::SetOnClick` | `TControl_SetOnClick` |
+| OnClick | TControl(public) | TControl | `TControl::OnClick` | `TControl_SetOnClick` |
 | Text | TControl(protected) | TCustomEdit / TCustomComboBox | TControl(protected)、TCustomEdit / TCustomComboBox で `using` | `TControl_GetText` / `SetText`(protected hack) |
 | Show / Hide / ShowModal / Close | TCustomForm(public) | TCustomForm | TCustomForm(public。Show/Hide は TControl のものを隠す) | `TCustomForm_*` |
 | Checked | TButtonControl(protected) | TCheckBox / TRadioButton | TButtonControl(protected)、TCheckBox / TRadioButton で `using` | `TButtonControl_GetChecked` / `SetChecked`(protected hack) |
@@ -112,6 +112,9 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 | Interval / Enabled / OnTimer | TCustomTimer(public) | TCustomTimer | TCustomTimer(public) | `TCustomTimer_*` |
 
 破棄は種類によらず `TComponent_Destroy`(C++ では `TComponent::Free()`)で行う。
+
+イベント(OnClick・OnChange・OnPaint・OnTimer)は C++ では `Property<TNotifyEvent>`(`TNotifyEvent = std::function<void(TObject* Sender)>`)、
+C API では `no_vcl_Txxx_SetOnXxx(obj, callback, data)` で登録する([ADR 0009](adr/0009-events-as-properties-with-sender.md))。
 
 ## 4. 生存期間([ADR 0008](adr/0008-wrapper-lifetime-follows-lcl.md))
 

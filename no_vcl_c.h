@@ -15,7 +15,8 @@ typedef void*       no_vcl_obj_t;
 typedef const char* no_vcl_str_t;
 typedef int         no_vcl_int_t;
 typedef int         no_vcl_bool_t;
-typedef void (NO_VCL_CALL *no_vcl_callback_t)(no_vcl_obj_t sender);
+/* sender はイベントを発生させたオブジェクト、data はコールバック登録時に渡した利用者データ。 */
+typedef void (NO_VCL_CALL *no_vcl_callback_t)(no_vcl_obj_t sender, void* data);
 
 /*
  * 関数は「LCL でそのメンバが公開(public/published)されるクラス」の名前で 1 本ずつ用意する。
@@ -34,7 +35,7 @@ typedef void (NO_VCL_CALL *no_vcl_callback_t)(no_vcl_obj_t sender);
  * 無効になったことを知る手段として使う。コールバックは 1 つだけ登録でき、C++ ラッパー(no_vcl.hpp)を
  * 使う場合はラッパーが登録するため上書きしないこと。
  */
-void          NO_VCL_CALL no_vcl_FreeNotify_SetCallback(no_vcl_callback_t Cb);
+void          NO_VCL_CALL no_vcl_FreeNotify_SetCallback(no_vcl_callback_t Cb, void* Data);
 
 /* TComponent */
 void          NO_VCL_CALL no_vcl_TComponent_Destroy(no_vcl_obj_t Obj);
@@ -67,7 +68,7 @@ void          NO_VCL_CALL no_vcl_TControl_SetText(no_vcl_obj_t Obj, no_vcl_str_t
 void          NO_VCL_CALL no_vcl_TControl_Show(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TControl_Hide(no_vcl_obj_t Obj);
 
-void          NO_VCL_CALL no_vcl_TControl_SetOnClick(no_vcl_obj_t Obj, no_vcl_callback_t Cb);
+void          NO_VCL_CALL no_vcl_TControl_SetOnClick(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
 
 /* TCustomForm / TForm */
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TForm_Create(no_vcl_obj_t Owner);
@@ -98,7 +99,7 @@ no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomEdit_GetMaxLength(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TCustomEdit_SetMaxLength(no_vcl_obj_t Obj, no_vcl_int_t Value);
 no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomEdit_GetReadOnly(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TCustomEdit_SetReadOnly(no_vcl_obj_t Obj, no_vcl_bool_t Value);
-void          NO_VCL_CALL no_vcl_TCustomEdit_SetOnChange(no_vcl_obj_t Obj, no_vcl_callback_t Cb);
+void          NO_VCL_CALL no_vcl_TCustomEdit_SetOnChange(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TEdit_Create(no_vcl_obj_t Owner);
 
 /* TCustomMemo / TMemo */
@@ -119,7 +120,7 @@ no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomComboBox_Items_Count(no_vcl_obj_t Obj);
 no_vcl_str_t  NO_VCL_CALL no_vcl_TCustomComboBox_Items_GetText(no_vcl_obj_t Obj, no_vcl_int_t Index);
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TComboBox_Create(no_vcl_obj_t Owner);
 /* OnChange は TCustomComboBox では protected で、公開しているのは TComboBox だけ。 */
-void          NO_VCL_CALL no_vcl_TComboBox_SetOnChange(no_vcl_obj_t Obj, no_vcl_callback_t Cb);
+void          NO_VCL_CALL no_vcl_TComboBox_SetOnChange(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
 
 /* TCustomListBox / TListBox */
 no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomListBox_GetItemIndex(no_vcl_obj_t Obj);
@@ -135,7 +136,7 @@ no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomTimer_GetInterval(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TCustomTimer_SetInterval(no_vcl_obj_t Obj, no_vcl_int_t Value);
 no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomTimer_GetEnabled(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TCustomTimer_SetEnabled(no_vcl_obj_t Obj, no_vcl_bool_t Value);
-void          NO_VCL_CALL no_vcl_TCustomTimer_SetOnTimer(no_vcl_obj_t Obj, no_vcl_callback_t Cb);
+void          NO_VCL_CALL no_vcl_TCustomTimer_SetOnTimer(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TTimer_Create(no_vcl_obj_t Owner);
 
 /* TPaintBox */
@@ -143,7 +144,7 @@ no_vcl_obj_t  NO_VCL_CALL no_vcl_TPaintBox_Create(no_vcl_obj_t Owner);
 /* Canvas はコントロールが内部で保持するオブジェクトの参照を返すだけで、
    独自の Create/Destroy は持たない(コントロール破棄時に一緒に破棄される) */
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TPaintBox_GetCanvas(no_vcl_obj_t Obj);
-void          NO_VCL_CALL no_vcl_TPaintBox_SetOnPaint(no_vcl_obj_t Obj, no_vcl_callback_t Cb);
+void          NO_VCL_CALL no_vcl_TPaintBox_SetOnPaint(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
 
 /* TCanvas (非所有: Create/Destroy なし) */
 void          NO_VCL_CALL no_vcl_TCanvas_MoveTo(no_vcl_obj_t Obj, no_vcl_int_t X, no_vcl_int_t Y);

@@ -65,8 +65,15 @@ public:
         , setter_(setter)
     {}
 
+    // コピー構築は所有者を取り違えるので禁止する。一方、プロパティ同士の代入
+    // (Label1->Caption = Edit1->Text; / RadioButton2->OnClick = RadioButton1->OnClick;)は
+    // 値のコピーとして扱う(所有者は付け替えない)。
     Property(const Property&) = delete;
-    Property& operator=(const Property&) = delete;
+    Property& operator=(const Property& other)
+    {
+        setter_(owner_, other.getter_(other.owner_));
+        return *this;
+    }
 
     Property& operator=(const T& value)
     {
@@ -84,6 +91,12 @@ private:
     Getter   getter_;
     Setter   setter_;
 };
+
+// イベントハンドラの型。C++Builder の TNotifyEvent に合わせ、イベントを発生させたオブジェクトを
+// Sender として受け取る(static_cast / dynamic_cast で具体的な型に戻して使う)。
+// 本家の __closure は標準 C++ に無いため、メンバ関数は [this](TObject* Sender) { Button1Click(Sender); }
+// のようにラムダで割り当てる。nullptr を代入するとハンドラを解除できる。
+using TNotifyEvent = std::function<void(TObject* Sender)>;
 
 class TPersistent : public TObject
 {
@@ -117,7 +130,7 @@ protected:
     static TComponent*  FromHandle(no_vcl_obj_t handle);
 
 private:
-    static void NO_VCL_CALL FreeNotifyTrampoline(no_vcl_obj_t handle);
+    static void NO_VCL_CALL FreeNotifyTrampoline(no_vcl_obj_t handle, void* data);
     static std::unordered_map<no_vcl_obj_t, TComponent*>& Registry();
 };
 
@@ -134,11 +147,10 @@ public:
     Property<bool>         Visible;
     Property<bool>         Enabled;
     Property<std::string>  Caption;
+    Property<TNotifyEvent> OnClick;
 
     void Show();
     void Hide();
-
-    void SetOnClick(std::function<void()> handler);
 
 protected:
     explicit TControl(no_vcl_obj_t handle);
@@ -148,9 +160,11 @@ protected:
     Property<std::string>  Text;
 
 private:
-    std::function<void()> onClick_;
-    bool                  onClickHooked_ = false;
-    static void NO_VCL_CALL ClickTrampoline(no_vcl_obj_t sender);
+    TNotifyEvent onClick_;
+    bool         onClickHooked_ = false;
+    static void NO_VCL_CALL ClickTrampoline(no_vcl_obj_t sender, void* data);
+    static TNotifyEvent GetOnClickImpl(TObject* owner);
+    static void         SetOnClickImpl(TObject* owner, const TNotifyEvent& value);
 
     static TWinControl* GetParentImpl(TObject* owner);
     static void         SetParentImpl(TObject* owner, TWinControl* const& value);
@@ -342,19 +356,20 @@ class TCustomEdit : public TWinControl
 {
 public:
     using TControl::Text;
-    Property<int>  MaxLength;
-    Property<bool> ReadOnly;
-
-    void SetOnChange(std::function<void()> handler);
+    Property<int>          MaxLength;
+    Property<bool>         ReadOnly;
+    Property<TNotifyEvent> OnChange;
 
 protected:
     explicit TCustomEdit(no_vcl_obj_t handle);
     ~TCustomEdit() override = default;
 
 private:
-    std::function<void()> onChange_;
-    bool                  onChangeHooked_ = false;
-    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender);
+    TNotifyEvent onChange_;
+    bool         onChangeHooked_ = false;
+    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender, void* data);
+    static TNotifyEvent GetOnChangeImpl(TObject* owner);
+    static void         SetOnChangeImpl(TObject* owner, const TNotifyEvent& value);
 
     static int  GetMaxLengthImpl(TObject* owner);
     static void SetMaxLengthImpl(TObject* owner, const int& value);
@@ -424,18 +439,20 @@ private:
 class TComboBox : public TCustomComboBox
 {
 public:
-    explicit TComboBox(TComponent* AOwner);
-
     // LCL では TCustomComboBox の protected で、公開しているのは TComboBox だけ。
-    void SetOnChange(std::function<void()> handler);
+    Property<TNotifyEvent> OnChange;
+
+    explicit TComboBox(TComponent* AOwner);
 
 protected:
     ~TComboBox() override = default;
 
 private:
-    std::function<void()> onChange_;
-    bool                  onChangeHooked_ = false;
-    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender);
+    TNotifyEvent onChange_;
+    bool         onChangeHooked_ = false;
+    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender, void* data);
+    static TNotifyEvent GetOnChangeImpl(TObject* owner);
+    static void         SetOnChangeImpl(TObject* owner, const TNotifyEvent& value);
 };
 
 class TCustomListBox : public TWinControl
@@ -541,19 +558,20 @@ public:
 class TPaintBox : public TGraphicControl
 {
 public:
-    TCanvas Canvas;
+    TCanvas                Canvas;
+    Property<TNotifyEvent> OnPaint;
 
     explicit TPaintBox(TComponent* AOwner);
-
-    void SetOnPaint(std::function<void()> handler);
 
 protected:
     ~TPaintBox() override = default;
 
 private:
-    std::function<void()> onPaint_;
-    bool                  onPaintHooked_ = false;
-    static void NO_VCL_CALL PaintTrampoline(no_vcl_obj_t sender);
+    TNotifyEvent onPaint_;
+    bool         onPaintHooked_ = false;
+    static void NO_VCL_CALL PaintTrampoline(no_vcl_obj_t sender, void* data);
+    static TNotifyEvent GetOnPaintImpl(TObject* owner);
+    static void         SetOnPaintImpl(TObject* owner, const TNotifyEvent& value);
 };
 
 /* ---------------- Timer ---------------- */
@@ -561,19 +579,20 @@ private:
 class TCustomTimer : public TComponent
 {
 public:
-    Property<int>  Interval;
-    Property<bool> Enabled;
-
-    void SetOnTimer(std::function<void()> handler);
+    Property<int>          Interval;
+    Property<bool>         Enabled;
+    Property<TNotifyEvent> OnTimer;
 
 protected:
     explicit TCustomTimer(no_vcl_obj_t handle);
     ~TCustomTimer() override = default;
 
 private:
-    std::function<void()> onTimer_;
-    bool                  onTimerHooked_ = false;
-    static void NO_VCL_CALL TimerTrampoline(no_vcl_obj_t sender);
+    TNotifyEvent onTimer_;
+    bool         onTimerHooked_ = false;
+    static void NO_VCL_CALL TimerTrampoline(no_vcl_obj_t sender, void* data);
+    static TNotifyEvent GetOnTimerImpl(TObject* owner);
+    static void         SetOnTimerImpl(TObject* owner, const TNotifyEvent& value);
 
     static int  GetIntervalImpl(TObject* owner);
     static void SetIntervalImpl(TObject* owner, const int& value);

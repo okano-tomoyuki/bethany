@@ -11,7 +11,7 @@ TComponent::TComponent(no_vcl_obj_t handle)
     static bool callbackInstalled = false;
     if (!callbackInstalled)
     {
-        no_vcl_FreeNotify_SetCallback(&TComponent::FreeNotifyTrampoline);
+        no_vcl_FreeNotify_SetCallback(&TComponent::FreeNotifyTrampoline, nullptr);
         callbackInstalled = true;
     }
 
@@ -31,7 +31,7 @@ void TComponent::Free()
     no_vcl_TComponent_Destroy(handle_);
 }
 
-void NO_VCL_CALL TComponent::FreeNotifyTrampoline(no_vcl_obj_t handle)
+void NO_VCL_CALL TComponent::FreeNotifyTrampoline(no_vcl_obj_t handle, void*)
 {
     std::unordered_map<no_vcl_obj_t, TComponent*>& registry = Registry();
     auto it = registry.find(handle);
@@ -68,27 +68,41 @@ TControl::TControl(no_vcl_obj_t handle)
     , Visible(this, &TControl::GetVisibleImpl, &TControl::SetVisibleImpl)
     , Enabled(this, &TControl::GetEnabledImpl, &TControl::SetEnabledImpl)
     , Caption(this, &TControl::GetCaptionImpl, &TControl::SetCaptionImpl)
+    , OnClick(this, &TControl::GetOnClickImpl, &TControl::SetOnClickImpl)
     , Text(this, &TControl::GetTextImpl, &TControl::SetTextImpl)
 {}
 
 void TControl::Show() { no_vcl_TControl_Show(handle_); }
 void TControl::Hide() { no_vcl_TControl_Hide(handle_); }
 
-void TControl::SetOnClick(std::function<void()> handler)
+// イベントの実装はどれも同じ形:
+//   Setter  - ハンドラを保持し、最初に空でないハンドラが設定されたときだけ Pascal 側のブリッジを登録する。
+//   トランポリン - ハンドルからラッパーを引き、ラッパー自身を Sender として渡す。ハンドラの中で
+//             ハンドラ自身を差し替えても実行中の std::function が破棄されないよう、コピーしてから呼ぶ。
+
+TNotifyEvent TControl::GetOnClickImpl(TObject* owner)
 {
-    onClick_ = std::move(handler);
-    if (!onClickHooked_)
+    return static_cast<TControl*>(owner)->onClick_;
+}
+
+void TControl::SetOnClickImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TControl* self = static_cast<TControl*>(owner);
+    self->onClick_ = value;
+    if (value && !self->onClickHooked_)
     {
-        no_vcl_TControl_SetOnClick(handle_, &TControl::ClickTrampoline);
-        onClickHooked_ = true;
+        no_vcl_TControl_SetOnClick(self->handle_, &TControl::ClickTrampoline, nullptr);
+        self->onClickHooked_ = true;
     }
 }
 
-void NO_VCL_CALL TControl::ClickTrampoline(no_vcl_obj_t sender)
+void NO_VCL_CALL TControl::ClickTrampoline(no_vcl_obj_t sender, void*)
 {
     TControl* self = static_cast<TControl*>(FromHandle(sender));
-    if (self && self->onClick_)
-        self->onClick_();
+    if (!self || !self->onClick_)
+        return;
+    TNotifyEvent handler = self->onClick_;
+    handler(self);
 }
 
 TWinControl* TControl::GetParentImpl(TObject* owner)
@@ -197,23 +211,32 @@ TCustomEdit::TCustomEdit(no_vcl_obj_t handle)
     : TWinControl(handle)
     , MaxLength(this, &TCustomEdit::GetMaxLengthImpl, &TCustomEdit::SetMaxLengthImpl)
     , ReadOnly(this, &TCustomEdit::GetReadOnlyImpl, &TCustomEdit::SetReadOnlyImpl)
+    , OnChange(this, &TCustomEdit::GetOnChangeImpl, &TCustomEdit::SetOnChangeImpl)
 {}
 
-void TCustomEdit::SetOnChange(std::function<void()> handler)
+TNotifyEvent TCustomEdit::GetOnChangeImpl(TObject* owner)
 {
-    onChange_ = std::move(handler);
-    if (!onChangeHooked_)
+    return static_cast<TCustomEdit*>(owner)->onChange_;
+}
+
+void TCustomEdit::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCustomEdit* self = static_cast<TCustomEdit*>(owner);
+    self->onChange_ = value;
+    if (value && !self->onChangeHooked_)
     {
-        no_vcl_TCustomEdit_SetOnChange(handle_, &TCustomEdit::ChangeTrampoline);
-        onChangeHooked_ = true;
+        no_vcl_TCustomEdit_SetOnChange(self->handle_, &TCustomEdit::ChangeTrampoline, nullptr);
+        self->onChangeHooked_ = true;
     }
 }
 
-void NO_VCL_CALL TCustomEdit::ChangeTrampoline(no_vcl_obj_t sender)
+void NO_VCL_CALL TCustomEdit::ChangeTrampoline(no_vcl_obj_t sender, void*)
 {
     TCustomEdit* self = static_cast<TCustomEdit*>(FromHandle(sender));
-    if (self && self->onChange_)
-        self->onChange_();
+    if (!self || !self->onChange_)
+        return;
+    TNotifyEvent handler = self->onChange_;
+    handler(self);
 }
 
 int  TCustomEdit::GetMaxLengthImpl(TObject* owner)                   { return no_vcl_TCustomEdit_GetMaxLength(owner->Handle()); }
@@ -267,23 +290,32 @@ void TCustomComboBox::SetItemIndexImpl(TObject* owner, const int& value) { no_vc
 
 TComboBox::TComboBox(TComponent* AOwner)
     : TCustomComboBox(no_vcl_TComboBox_Create(HandleOf(AOwner)))
+    , OnChange(this, &TComboBox::GetOnChangeImpl, &TComboBox::SetOnChangeImpl)
 {}
 
-void TComboBox::SetOnChange(std::function<void()> handler)
+TNotifyEvent TComboBox::GetOnChangeImpl(TObject* owner)
 {
-    onChange_ = std::move(handler);
-    if (!onChangeHooked_)
+    return static_cast<TComboBox*>(owner)->onChange_;
+}
+
+void TComboBox::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TComboBox* self = static_cast<TComboBox*>(owner);
+    self->onChange_ = value;
+    if (value && !self->onChangeHooked_)
     {
-        no_vcl_TComboBox_SetOnChange(handle_, &TComboBox::ChangeTrampoline);
-        onChangeHooked_ = true;
+        no_vcl_TComboBox_SetOnChange(self->handle_, &TComboBox::ChangeTrampoline, nullptr);
+        self->onChangeHooked_ = true;
     }
 }
 
-void NO_VCL_CALL TComboBox::ChangeTrampoline(no_vcl_obj_t sender)
+void NO_VCL_CALL TComboBox::ChangeTrampoline(no_vcl_obj_t sender, void*)
 {
     TComboBox* self = static_cast<TComboBox*>(FromHandle(sender));
-    if (self && self->onChange_)
-        self->onChange_();
+    if (!self || !self->onChange_)
+        return;
+    TNotifyEvent handler = self->onChange_;
+    handler(self);
 }
 
 TCustomListBox::TCustomListBox(no_vcl_obj_t handle)
@@ -366,23 +398,32 @@ void TCanvas::TextOut(int x, int y, const std::string& t) { no_vcl_TCanvas_TextO
 TPaintBox::TPaintBox(TComponent* AOwner)
     : TGraphicControl(no_vcl_TPaintBox_Create(HandleOf(AOwner)))
     , Canvas(no_vcl_TPaintBox_GetCanvas(handle_))
+    , OnPaint(this, &TPaintBox::GetOnPaintImpl, &TPaintBox::SetOnPaintImpl)
 {}
 
-void TPaintBox::SetOnPaint(std::function<void()> handler)
+TNotifyEvent TPaintBox::GetOnPaintImpl(TObject* owner)
 {
-    onPaint_ = std::move(handler);
-    if (!onPaintHooked_)
+    return static_cast<TPaintBox*>(owner)->onPaint_;
+}
+
+void TPaintBox::SetOnPaintImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TPaintBox* self = static_cast<TPaintBox*>(owner);
+    self->onPaint_ = value;
+    if (value && !self->onPaintHooked_)
     {
-        no_vcl_TPaintBox_SetOnPaint(handle_, &TPaintBox::PaintTrampoline);
-        onPaintHooked_ = true;
+        no_vcl_TPaintBox_SetOnPaint(self->handle_, &TPaintBox::PaintTrampoline, nullptr);
+        self->onPaintHooked_ = true;
     }
 }
 
-void NO_VCL_CALL TPaintBox::PaintTrampoline(no_vcl_obj_t sender)
+void NO_VCL_CALL TPaintBox::PaintTrampoline(no_vcl_obj_t sender, void*)
 {
     TPaintBox* self = static_cast<TPaintBox*>(FromHandle(sender));
-    if (self && self->onPaint_)
-        self->onPaint_();
+    if (!self || !self->onPaint_)
+        return;
+    TNotifyEvent handler = self->onPaint_;
+    handler(self);
 }
 
 /* ---------------- Timer ---------------- */
@@ -391,23 +432,32 @@ TCustomTimer::TCustomTimer(no_vcl_obj_t handle)
     : TComponent(handle)
     , Interval(this, &TCustomTimer::GetIntervalImpl, &TCustomTimer::SetIntervalImpl)
     , Enabled(this, &TCustomTimer::GetEnabledImpl, &TCustomTimer::SetEnabledImpl)
+    , OnTimer(this, &TCustomTimer::GetOnTimerImpl, &TCustomTimer::SetOnTimerImpl)
 {}
 
-void TCustomTimer::SetOnTimer(std::function<void()> handler)
+TNotifyEvent TCustomTimer::GetOnTimerImpl(TObject* owner)
 {
-    onTimer_ = std::move(handler);
-    if (!onTimerHooked_)
+    return static_cast<TCustomTimer*>(owner)->onTimer_;
+}
+
+void TCustomTimer::SetOnTimerImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCustomTimer* self = static_cast<TCustomTimer*>(owner);
+    self->onTimer_ = value;
+    if (value && !self->onTimerHooked_)
     {
-        no_vcl_TCustomTimer_SetOnTimer(handle_, &TCustomTimer::TimerTrampoline);
-        onTimerHooked_ = true;
+        no_vcl_TCustomTimer_SetOnTimer(self->handle_, &TCustomTimer::TimerTrampoline, nullptr);
+        self->onTimerHooked_ = true;
     }
 }
 
-void NO_VCL_CALL TCustomTimer::TimerTrampoline(no_vcl_obj_t sender)
+void NO_VCL_CALL TCustomTimer::TimerTrampoline(no_vcl_obj_t sender, void*)
 {
     TCustomTimer* self = static_cast<TCustomTimer*>(FromHandle(sender));
-    if (self && self->onTimer_)
-        self->onTimer_();
+    if (!self || !self->onTimer_)
+        return;
+    TNotifyEvent handler = self->onTimer_;
+    handler(self);
 }
 
 int  TCustomTimer::GetIntervalImpl(TObject* owner)                   { return no_vcl_TCustomTimer_GetInterval(owner->Handle()); }

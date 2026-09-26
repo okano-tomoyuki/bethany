@@ -23,16 +23,19 @@ uses
   CustomTimer;
 
 type
-  TNoVclCallback = procedure(Sender: Pointer); NO_VCL_CALL;
+  { Data は登録時に渡された利用者データをそのまま返す(C 側で状態を持ち回るため) }
+  TNoVclCallback = procedure(Sender: Pointer; Data: Pointer); NO_VCL_CALL;
 
   { Cのプレーンな関数ポインタ(no_vcl_callback_t)を
     LCLのTNotifyEvent(オブジェクトメソッド)へ橋渡しする }
   TCallbackBridge = class(TComponent)
   private
     FCallback: TNoVclCallback;
+    FData: Pointer;
   public
     procedure DoClick(Sender: TObject);
     property Callback: TNoVclCallback read FCallback write FCallback;
+    property Data: Pointer read FData write FData;
   end;
 
   { protected メンバへアクセスするための派生クラス(protected hack)。
@@ -50,24 +53,26 @@ type
 var
   GFreeNotifier: TFreeNotifier;
   GFreeCallback: TNoVclCallback = nil;
+  GFreeData: Pointer = nil;
 
 procedure TCallbackBridge.DoClick(Sender: TObject);
 begin
   if Assigned(FCallback) then
-    FCallback(Pointer(Sender));
+    FCallback(Pointer(Sender), FData);
 end;
 
 procedure TFreeNotifier.Notification(AComponent: TComponent; Operation: TOperation);
 begin
   inherited Notification(AComponent, Operation);
   if (Operation = opRemove) and Assigned(GFreeCallback) then
-    GFreeCallback(Pointer(AComponent));
+    GFreeCallback(Pointer(AComponent), GFreeData);
 end;
 
-function NewBridge(Owner: TComponent; Cb: TNoVclCallback): TCallbackBridge;
+function NewBridge(Owner: TComponent; Cb: TNoVclCallback; Data: Pointer): TCallbackBridge;
 begin
   Result := TCallbackBridge.Create(Owner);
   Result.Callback := Cb;
+  Result.Data := Data;
 end;
 
 { 生成したコンポーネントを破棄通知の対象に登録して返す。*_Create は必ずこれを通す。 }
@@ -79,9 +84,10 @@ end;
 
 { FreeNotify }
 
-procedure FreeNotify_SetCallback(Cb: TNoVclCallback); NO_VCL_CALL;
+procedure FreeNotify_SetCallback(Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
   GFreeCallback := Cb;
+  GFreeData := Data;
 end;
 
 { TComponent }
@@ -194,9 +200,9 @@ begin
   TControl(Obj).Hide;
 end;
 
-procedure TControl_SetOnClick(Obj: Pointer; Cb: TNoVclCallback); NO_VCL_CALL;
+procedure TControl_SetOnClick(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TControl(Obj).OnClick := @NewBridge(TControl(Obj), Cb).DoClick;
+  TControl(Obj).OnClick := @NewBridge(TControl(Obj), Cb, Data).DoClick;
 end;
 
 { TCustomForm / TForm }
@@ -305,9 +311,9 @@ begin
   TCustomEdit(Obj).ReadOnly := Value;
 end;
 
-procedure TCustomEdit_SetOnChange(Obj: Pointer; Cb: TNoVclCallback); NO_VCL_CALL;
+procedure TCustomEdit_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomEdit(Obj).OnChange := @NewBridge(TCustomEdit(Obj), Cb).DoClick;
+  TCustomEdit(Obj).OnChange := @NewBridge(TCustomEdit(Obj), Cb, Data).DoClick;
 end;
 
 function TEdit_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
@@ -390,9 +396,9 @@ begin
 end;
 
 { OnChange は TCustomComboBox では protected で、公開しているのは TComboBox だけ。 }
-procedure TComboBox_SetOnChange(Obj: Pointer; Cb: TNoVclCallback); NO_VCL_CALL;
+procedure TComboBox_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TComboBox(Obj).OnChange := @NewBridge(TComboBox(Obj), Cb).DoClick;
+  TComboBox(Obj).OnChange := @NewBridge(TComboBox(Obj), Cb, Data).DoClick;
 end;
 
 { TCustomListBox / TListBox }
@@ -454,9 +460,9 @@ begin
   TCustomTimer(Obj).Enabled := Value;
 end;
 
-procedure TCustomTimer_SetOnTimer(Obj: Pointer; Cb: TNoVclCallback); NO_VCL_CALL;
+procedure TCustomTimer_SetOnTimer(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomTimer(Obj).OnTimer := @NewBridge(TCustomTimer(Obj), Cb).DoClick;
+  TCustomTimer(Obj).OnTimer := @NewBridge(TCustomTimer(Obj), Cb, Data).DoClick;
 end;
 
 function TTimer_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
@@ -476,9 +482,9 @@ begin
   Result := Pointer(TPaintBox(Obj).Canvas);
 end;
 
-procedure TPaintBox_SetOnPaint(Obj: Pointer; Cb: TNoVclCallback); NO_VCL_CALL;
+procedure TPaintBox_SetOnPaint(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TPaintBox(Obj).OnPaint := @NewBridge(TPaintBox(Obj), Cb).DoClick;
+  TPaintBox(Obj).OnPaint := @NewBridge(TPaintBox(Obj), Cb, Data).DoClick;
 end;
 
 { TCanvas }
