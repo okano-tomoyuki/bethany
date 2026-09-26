@@ -413,9 +413,127 @@ void NO_VCL_CALL TWinControl::KeyPressTrampoline(no_vcl_obj_t sender, no_vcl_int
     *key = static_cast<unsigned char>(keyValue);
 }
 
+TCustomScrollBar::TCustomScrollBar(no_vcl_obj_t handle)
+    : TWinControl(handle)
+    , Kind(this, &TCustomScrollBar::GetKindImpl, &TCustomScrollBar::SetKindImpl)
+    , Min(this, &TCustomScrollBar::GetMinImpl, &TCustomScrollBar::SetMinImpl)
+    , Max(this, &TCustomScrollBar::GetMaxImpl, &TCustomScrollBar::SetMaxImpl)
+    , Position(this, &TCustomScrollBar::GetPositionImpl, &TCustomScrollBar::SetPositionImpl)
+    , PageSize(this, &TCustomScrollBar::GetPageSizeImpl, &TCustomScrollBar::SetPageSizeImpl)
+    , OnChange(this, &TCustomScrollBar::GetOnChangeImpl, &TCustomScrollBar::SetOnChangeImpl)
+{}
+
+TScrollBarKind TCustomScrollBar::GetKindImpl(TObject* owner) { return static_cast<TScrollBarKind>(no_vcl_TCustomScrollBar_GetKind(owner->Handle())); }
+void TCustomScrollBar::SetKindImpl(TObject* owner, const TScrollBarKind& value) { no_vcl_TCustomScrollBar_SetKind(owner->Handle(), value); }
+int  TCustomScrollBar::GetMinImpl(TObject* owner)      { return no_vcl_TCustomScrollBar_GetMin(owner->Handle()); }
+void TCustomScrollBar::SetMinImpl(TObject* owner, const int& value)      { no_vcl_TCustomScrollBar_SetMin(owner->Handle(), value); }
+int  TCustomScrollBar::GetMaxImpl(TObject* owner)      { return no_vcl_TCustomScrollBar_GetMax(owner->Handle()); }
+void TCustomScrollBar::SetMaxImpl(TObject* owner, const int& value)      { no_vcl_TCustomScrollBar_SetMax(owner->Handle(), value); }
+int  TCustomScrollBar::GetPositionImpl(TObject* owner) { return no_vcl_TCustomScrollBar_GetPosition(owner->Handle()); }
+void TCustomScrollBar::SetPositionImpl(TObject* owner, const int& value) { no_vcl_TCustomScrollBar_SetPosition(owner->Handle(), value); }
+int  TCustomScrollBar::GetPageSizeImpl(TObject* owner) { return no_vcl_TCustomScrollBar_GetPageSize(owner->Handle()); }
+void TCustomScrollBar::SetPageSizeImpl(TObject* owner, const int& value) { no_vcl_TCustomScrollBar_SetPageSize(owner->Handle(), value); }
+TNotifyEvent TCustomScrollBar::GetOnChangeImpl(TObject* owner) { return static_cast<TCustomScrollBar*>(owner)->onChange_; }
+
+void TCustomScrollBar::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCustomScrollBar* self = static_cast<TCustomScrollBar*>(owner);
+    SetSimpleEvent(self->handle_, self->onChange_, self->onChangeHooked_, value,
+                   &no_vcl_TCustomScrollBar_SetOnChange, &TCustomScrollBar::ChangeTrampoline);
+}
+
+void NO_VCL_CALL TCustomScrollBar::ChangeTrampoline(no_vcl_obj_t sender, void*)
+{
+    if (TCustomScrollBar* self = static_cast<TCustomScrollBar*>(FromHandle(sender)))
+        CallNotify(self->onChange_, self);
+}
+
+TScrollBar::TScrollBar(TComponent* AOwner)
+    : TCustomScrollBar(no_vcl_TScrollBar_Create(HandleOf(AOwner)))
+{}
+
+TCustomTrackBar::TCustomTrackBar(no_vcl_obj_t handle)
+    : TWinControl(handle)
+    , Min(this, &TCustomTrackBar::GetMinImpl, &TCustomTrackBar::SetMinImpl)
+    , Max(this, &TCustomTrackBar::GetMaxImpl, &TCustomTrackBar::SetMaxImpl)
+    , Position(this, &TCustomTrackBar::GetPositionImpl, &TCustomTrackBar::SetPositionImpl)
+    , OnChange(this, &TCustomTrackBar::GetOnChangeImpl, &TCustomTrackBar::SetOnChangeImpl)
+{}
+
+int  TCustomTrackBar::GetMinImpl(TObject* owner)      { return no_vcl_TCustomTrackBar_GetMin(owner->Handle()); }
+void TCustomTrackBar::SetMinImpl(TObject* owner, const int& value)      { no_vcl_TCustomTrackBar_SetMin(owner->Handle(), value); }
+int  TCustomTrackBar::GetMaxImpl(TObject* owner)      { return no_vcl_TCustomTrackBar_GetMax(owner->Handle()); }
+void TCustomTrackBar::SetMaxImpl(TObject* owner, const int& value)      { no_vcl_TCustomTrackBar_SetMax(owner->Handle(), value); }
+int  TCustomTrackBar::GetPositionImpl(TObject* owner) { return no_vcl_TCustomTrackBar_GetPosition(owner->Handle()); }
+void TCustomTrackBar::SetPositionImpl(TObject* owner, const int& value) { no_vcl_TCustomTrackBar_SetPosition(owner->Handle(), value); }
+TNotifyEvent TCustomTrackBar::GetOnChangeImpl(TObject* owner) { return static_cast<TCustomTrackBar*>(owner)->onChange_; }
+
+void TCustomTrackBar::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCustomTrackBar* self = static_cast<TCustomTrackBar*>(owner);
+    SetSimpleEvent(self->handle_, self->onChange_, self->onChangeHooked_, value,
+                   &no_vcl_TCustomTrackBar_SetOnChange, &TCustomTrackBar::ChangeTrampoline);
+}
+
+void NO_VCL_CALL TCustomTrackBar::ChangeTrampoline(no_vcl_obj_t sender, void*)
+{
+    if (TCustomTrackBar* self = static_cast<TCustomTrackBar*>(FromHandle(sender)))
+        CallNotify(self->onChange_, self);
+}
+
+TTrackBar::TTrackBar(TComponent* AOwner)
+    : TCustomTrackBar(no_vcl_TTrackBar_Create(HandleOf(AOwner)))
+{}
+
+TCustomProgressBar::TCustomProgressBar(no_vcl_obj_t handle)
+    : TWinControl(handle)
+    , Min(this, &TCustomProgressBar::GetMinImpl, &TCustomProgressBar::SetMinImpl)
+    , Max(this, &TCustomProgressBar::GetMaxImpl, &TCustomProgressBar::SetMaxImpl)
+    , Position(this, &TCustomProgressBar::GetPositionImpl, &TCustomProgressBar::SetPositionImpl)
+{}
+
+int  TCustomProgressBar::GetMinImpl(TObject* owner)      { return no_vcl_TCustomProgressBar_GetMin(owner->Handle()); }
+void TCustomProgressBar::SetMinImpl(TObject* owner, const int& value)      { no_vcl_TCustomProgressBar_SetMin(owner->Handle(), value); }
+int  TCustomProgressBar::GetMaxImpl(TObject* owner)      { return no_vcl_TCustomProgressBar_GetMax(owner->Handle()); }
+void TCustomProgressBar::SetMaxImpl(TObject* owner, const int& value)      { no_vcl_TCustomProgressBar_SetMax(owner->Handle(), value); }
+int  TCustomProgressBar::GetPositionImpl(TObject* owner) { return no_vcl_TCustomProgressBar_GetPosition(owner->Handle()); }
+void TCustomProgressBar::SetPositionImpl(TObject* owner, const int& value) { no_vcl_TCustomProgressBar_SetPosition(owner->Handle(), value); }
+
+TProgressBar::TProgressBar(TComponent* AOwner)
+    : TCustomProgressBar(no_vcl_TProgressBar_Create(HandleOf(AOwner)))
+{}
+
 TScrollBox::TScrollBox(TComponent* AOwner)
     : TScrollingWinControl(no_vcl_TScrollBox_Create(HandleOf(AOwner)))
 {}
+
+TUpDown::TUpDown(TComponent* AOwner)
+    : TCustomControl(no_vcl_TUpDown_Create(HandleOf(AOwner)))
+    , Min(this, &TUpDown::GetMinImpl, &TUpDown::SetMinImpl)
+    , Max(this, &TUpDown::GetMaxImpl, &TUpDown::SetMaxImpl)
+    , Position(this, &TUpDown::GetPositionImpl, &TUpDown::SetPositionImpl)
+    , Increment(this, &TUpDown::GetIncrementImpl, &TUpDown::SetIncrementImpl)
+    , Associate(this, &TUpDown::GetAssociateImpl, &TUpDown::SetAssociateImpl)
+{}
+
+int  TUpDown::GetMinImpl(TObject* owner)       { return no_vcl_TUpDown_GetMin(owner->Handle()); }
+void TUpDown::SetMinImpl(TObject* owner, const int& value)       { no_vcl_TUpDown_SetMin(owner->Handle(), value); }
+int  TUpDown::GetMaxImpl(TObject* owner)       { return no_vcl_TUpDown_GetMax(owner->Handle()); }
+void TUpDown::SetMaxImpl(TObject* owner, const int& value)       { no_vcl_TUpDown_SetMax(owner->Handle(), value); }
+int  TUpDown::GetPositionImpl(TObject* owner)  { return no_vcl_TUpDown_GetPosition(owner->Handle()); }
+void TUpDown::SetPositionImpl(TObject* owner, const int& value)  { no_vcl_TUpDown_SetPosition(owner->Handle(), value); }
+int  TUpDown::GetIncrementImpl(TObject* owner) { return no_vcl_TUpDown_GetIncrement(owner->Handle()); }
+void TUpDown::SetIncrementImpl(TObject* owner, const int& value) { no_vcl_TUpDown_SetIncrement(owner->Handle(), value); }
+
+TWinControl* TUpDown::GetAssociateImpl(TObject* owner)
+{
+    return static_cast<TWinControl*>(FromHandle(no_vcl_TUpDown_GetAssociate(owner->Handle())));
+}
+
+void TUpDown::SetAssociateImpl(TObject* owner, TWinControl* const& value)
+{
+    no_vcl_TUpDown_SetAssociate(owner->Handle(), HandleOf(value));
+}
 
 /* ---------------- Form ---------------- */
 

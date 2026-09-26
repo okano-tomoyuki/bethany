@@ -329,6 +329,59 @@ void          NO_VCL_CALL no_vcl_TStatusBar_SetSimpleText(no_vcl_obj_t Obj, no_v
 no_vcl_bool_t NO_VCL_CALL no_vcl_TStatusBar_GetSimplePanel(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TStatusBar_SetSimplePanel(no_vcl_obj_t Obj, no_vcl_bool_t Value);
 
+/* docs/component-coverage.md の Tier 1、2 バッチ目(範囲・数値系のコントロール)。
+ * いずれも ComCtrls のネイティブコントロール。TStatusBar と異なり、Application_Run 開始前の
+ * 生成でも問題が無いことを確認済み(詳細は docs/adr/0015-... を参照)。 */
+
+/* TScrollBar */
+enum { no_vcl_sbHorizontal = 0, no_vcl_sbVertical };
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TScrollBar_Create(no_vcl_obj_t Owner);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomScrollBar_GetKind(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomScrollBar_SetKind(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomScrollBar_GetMin(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomScrollBar_SetMin(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomScrollBar_GetMax(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomScrollBar_SetMax(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomScrollBar_GetPosition(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomScrollBar_SetPosition(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomScrollBar_GetPageSize(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomScrollBar_SetPageSize(no_vcl_obj_t Obj, no_vcl_int_t Value);
+void          NO_VCL_CALL no_vcl_TCustomScrollBar_SetOnChange(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+
+/* TTrackBar */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TTrackBar_Create(no_vcl_obj_t Owner);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomTrackBar_GetMin(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomTrackBar_SetMin(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomTrackBar_GetMax(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomTrackBar_SetMax(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomTrackBar_GetPosition(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomTrackBar_SetPosition(no_vcl_obj_t Obj, no_vcl_int_t Value);
+void          NO_VCL_CALL no_vcl_TCustomTrackBar_SetOnChange(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+
+/* TProgressBar (表示専用。イベントは無い) */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TProgressBar_Create(no_vcl_obj_t Owner);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomProgressBar_GetMin(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomProgressBar_SetMin(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomProgressBar_GetMax(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomProgressBar_SetMax(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomProgressBar_GetPosition(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomProgressBar_SetPosition(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+/* TUpDown。Min/Max/Position/Increment/Associate は TCustomUpDown では protected だが、
+ * 唯一の具象クラス TUpDown が published にしているため、関数名は no_vcl_TUpDown_* にする。
+ * Associate は対象の TWinControl(TEdit 等)。OnClick/OnChanging は未対応。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TUpDown_Create(no_vcl_obj_t Owner);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TUpDown_GetMin(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TUpDown_SetMin(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TUpDown_GetMax(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TUpDown_SetMax(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TUpDown_GetPosition(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TUpDown_SetPosition(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TUpDown_GetIncrement(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TUpDown_SetIncrement(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TUpDown_GetAssociate(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TUpDown_SetAssociate(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+
 #ifdef __cplusplus
 }
 #endif

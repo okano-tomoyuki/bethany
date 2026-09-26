@@ -70,3 +70,22 @@ no_vcl の通常の使い方(`Application->CreateForm(&Form1); Application->Run(
   書き方とは異なる、no_vcl 固有の制約)。
 - 今回追加した他の 5 クラス(TScrollBox・TToggleBox・TBevel・TShape・TStaticText)にはこの問題は無く、
   通常どおりコンストラクタの中で生成・配置できる。
+
+## 追記: Tier 1 の 2 バッチ目(範囲・数値系のコントロール)
+
+続けて、TScrollBar(stdctrls.pp)・TTrackBar・TProgressBar・TUpDown(いずれも comctrls.pp)を追加した。
+
+- **TScrollBar**: Kind(TScrollBarKind)・Min・Max・Position・PageSize・OnChange。
+- **TTrackBar**: Min・Max・Position・OnChange。
+- **TProgressBar**: Min・Max・Position。表示専用でイベントは無い。
+- **TUpDown**: Min・Max・Position・Increment・Associate(対象の TWinControl。`TControl.Parent` と同じ
+  ハンドル方式)。Min/Max/Position/Increment/Associate は LCL では `TCustomUpDown` の protected だが、
+  唯一の具象クラス `TUpDown` が published にしている(`TCheckBox.Checked` と同じ形)ため、
+  関数名は `TUpDown_*` にし、protected hack は使わず `TUpDown(Obj)` で直接アクセスした。
+  OnClick・OnChanging は独自のシグネチャ(押されたボタンの方向・ユーザー操作かどうかを渡す)のため
+  今回は見送った。
+
+いずれも ComCtrls のネイティブコントロールだが、**TStatusBar のような生成タイミングの問題は無く**、
+通常どおり Application->Run() より前(フォームのコンストラクタの中)で生成・配置できることを確認した
+(最小限の再現コードで、Application->Run() 呼び出し前に 4 クラスすべてを生成・`Show()` して問題が
+起きないことを確認済み)。TStatusBar の問題は ComCtrls 全般ではなく、TStatusBar 固有と改めて裏付けられた。

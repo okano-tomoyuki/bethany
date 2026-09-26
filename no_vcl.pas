@@ -1169,6 +1169,213 @@ begin
   TStatusBar(Obj).SimplePanel := Value;
 end;
 
+{ docs/component-coverage.md の Tier 1、2 バッチ目(範囲・数値系のコントロール)。
+  いずれも ComCtrls のネイティブコントロール。ADR 0015 で見つかった TStatusBar の問題
+  (Application.Run 開始前の生成が失敗する)は、TProgressBar では起きないことを確認済みで、
+  TScrollBar・TTrackBar・TUpDown でも同様に確認した(いずれも問題なし)。 }
+
+{ TScrollBar }
+
+function TScrollBar_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TScrollBar.Create(TComponent(Owner)));
+end;
+
+function TCustomScrollBar_GetKind(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TCustomScrollBar(Obj).Kind);
+end;
+
+procedure TCustomScrollBar_SetKind(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomScrollBar(Obj).Kind := TScrollBarKind(Value);
+end;
+
+function TCustomScrollBar_GetMin(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomScrollBar(Obj).Min;
+end;
+
+procedure TCustomScrollBar_SetMin(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomScrollBar(Obj).Min := Value;
+end;
+
+function TCustomScrollBar_GetMax(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomScrollBar(Obj).Max;
+end;
+
+procedure TCustomScrollBar_SetMax(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomScrollBar(Obj).Max := Value;
+end;
+
+function TCustomScrollBar_GetPosition(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomScrollBar(Obj).Position;
+end;
+
+procedure TCustomScrollBar_SetPosition(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomScrollBar(Obj).Position := Value;
+end;
+
+function TCustomScrollBar_GetPageSize(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomScrollBar(Obj).PageSize;
+end;
+
+procedure TCustomScrollBar_SetPageSize(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomScrollBar(Obj).PageSize := Value;
+end;
+
+procedure TCustomScrollBar_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TCustomScrollBar(Obj).OnChange := @BridgeFor(TCustomScrollBar(Obj), MethodData(TCustomScrollBar(Obj).OnChange), Cb, Data).DoClick;
+end;
+
+{ TTrackBar }
+
+function TTrackBar_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TTrackBar.Create(TComponent(Owner)));
+end;
+
+function TCustomTrackBar_GetMin(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomTrackBar(Obj).Min;
+end;
+
+procedure TCustomTrackBar_SetMin(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomTrackBar(Obj).Min := Value;
+end;
+
+function TCustomTrackBar_GetMax(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomTrackBar(Obj).Max;
+end;
+
+procedure TCustomTrackBar_SetMax(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomTrackBar(Obj).Max := Value;
+end;
+
+function TCustomTrackBar_GetPosition(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomTrackBar(Obj).Position;
+end;
+
+procedure TCustomTrackBar_SetPosition(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomTrackBar(Obj).Position := Value;
+end;
+
+procedure TCustomTrackBar_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TCustomTrackBar(Obj).OnChange := @BridgeFor(TCustomTrackBar(Obj), MethodData(TCustomTrackBar(Obj).OnChange), Cb, Data).DoClick;
+end;
+
+{ TProgressBar: 表示専用で、対応するイベントは無い。 }
+
+function TProgressBar_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TProgressBar.Create(TComponent(Owner)));
+end;
+
+function TCustomProgressBar_GetMin(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomProgressBar(Obj).Min;
+end;
+
+procedure TCustomProgressBar_SetMin(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomProgressBar(Obj).Min := Value;
+end;
+
+function TCustomProgressBar_GetMax(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomProgressBar(Obj).Max;
+end;
+
+procedure TCustomProgressBar_SetMax(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomProgressBar(Obj).Max := Value;
+end;
+
+function TCustomProgressBar_GetPosition(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomProgressBar(Obj).Position;
+end;
+
+procedure TCustomProgressBar_SetPosition(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomProgressBar(Obj).Position := Value;
+end;
+
+{ TUpDown: Min/Max/Position/Increment/Associate は TCustomUpDown では protected で、
+  唯一の具象クラス TUpDown が published にしている(TCheckBox の Checked と同じ形)ため、
+  関数名は TUpDown_* にし、TUpDown(Obj) で直接アクセスする(protected hack は不要)。
+  Associate は対象の TWinControl(TEdit 等)への参照で、TControl.Parent と同じくハンドルで表す。
+  OnClick/OnChanging は独自のシグネチャ(ボタン方向・ユーザー操作かどうかを渡す)のため今回は未対応。 }
+
+function TUpDown_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TUpDown.Create(TComponent(Owner)));
+end;
+
+function TUpDown_GetMin(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TUpDown(Obj).Min;
+end;
+
+procedure TUpDown_SetMin(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TUpDown(Obj).Min := Value;
+end;
+
+function TUpDown_GetMax(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TUpDown(Obj).Max;
+end;
+
+procedure TUpDown_SetMax(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TUpDown(Obj).Max := Value;
+end;
+
+function TUpDown_GetPosition(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TUpDown(Obj).Position;
+end;
+
+procedure TUpDown_SetPosition(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TUpDown(Obj).Position := Value;
+end;
+
+function TUpDown_GetIncrement(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TUpDown(Obj).Increment;
+end;
+
+procedure TUpDown_SetIncrement(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TUpDown(Obj).Increment := Value;
+end;
+
+function TUpDown_GetAssociate(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TUpDown(Obj).Associate);
+end;
+
+procedure TUpDown_SetAssociate(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TUpDown(Obj).Associate := TWinControl(Value);
+end;
+
 exports
   FreeNotify_SetCallback,
 
@@ -1333,7 +1540,49 @@ exports
   TStatusBar_GetSimpleText,
   TStatusBar_SetSimpleText,
   TStatusBar_GetSimplePanel,
-  TStatusBar_SetSimplePanel;
+  TStatusBar_SetSimplePanel,
+
+  TScrollBar_Create,
+  TCustomScrollBar_GetKind,
+  TCustomScrollBar_SetKind,
+  TCustomScrollBar_GetMin,
+  TCustomScrollBar_SetMin,
+  TCustomScrollBar_GetMax,
+  TCustomScrollBar_SetMax,
+  TCustomScrollBar_GetPosition,
+  TCustomScrollBar_SetPosition,
+  TCustomScrollBar_GetPageSize,
+  TCustomScrollBar_SetPageSize,
+  TCustomScrollBar_SetOnChange,
+
+  TTrackBar_Create,
+  TCustomTrackBar_GetMin,
+  TCustomTrackBar_SetMin,
+  TCustomTrackBar_GetMax,
+  TCustomTrackBar_SetMax,
+  TCustomTrackBar_GetPosition,
+  TCustomTrackBar_SetPosition,
+  TCustomTrackBar_SetOnChange,
+
+  TProgressBar_Create,
+  TCustomProgressBar_GetMin,
+  TCustomProgressBar_SetMin,
+  TCustomProgressBar_GetMax,
+  TCustomProgressBar_SetMax,
+  TCustomProgressBar_GetPosition,
+  TCustomProgressBar_SetPosition,
+
+  TUpDown_Create,
+  TUpDown_GetMin,
+  TUpDown_SetMin,
+  TUpDown_GetMax,
+  TUpDown_SetMax,
+  TUpDown_GetPosition,
+  TUpDown_SetPosition,
+  TUpDown_GetIncrement,
+  TUpDown_SetIncrement,
+  TUpDown_GetAssociate,
+  TUpDown_SetAssociate;
 
 begin
   RequireDerivedFormResource := False;

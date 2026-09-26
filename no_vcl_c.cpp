@@ -170,7 +170,49 @@
     X(no_vcl_str_t,  TStatusBar_GetSimpleText,       (no_vcl_obj_t o),                                         (o)) \
     X(void,          TStatusBar_SetSimpleText,       (no_vcl_obj_t o, no_vcl_str_t v),                         (o, v)) \
     X(no_vcl_bool_t, TStatusBar_GetSimplePanel,      (no_vcl_obj_t o),                                         (o)) \
-    X(void,          TStatusBar_SetSimplePanel,      (no_vcl_obj_t o, no_vcl_bool_t v),                        (o, v))
+    X(void,          TStatusBar_SetSimplePanel,      (no_vcl_obj_t o, no_vcl_bool_t v),                        (o, v)) \
+    \
+    X(no_vcl_obj_t,  TScrollBar_Create,               (no_vcl_obj_t owner),                                    (owner)) \
+    X(no_vcl_int_t,  TCustomScrollBar_GetKind,        (no_vcl_obj_t o),                                        (o)) \
+    X(void,          TCustomScrollBar_SetKind,        (no_vcl_obj_t o, no_vcl_int_t v),                        (o, v)) \
+    X(no_vcl_int_t,  TCustomScrollBar_GetMin,         (no_vcl_obj_t o),                                        (o)) \
+    X(void,          TCustomScrollBar_SetMin,         (no_vcl_obj_t o, no_vcl_int_t v),                        (o, v)) \
+    X(no_vcl_int_t,  TCustomScrollBar_GetMax,         (no_vcl_obj_t o),                                        (o)) \
+    X(void,          TCustomScrollBar_SetMax,         (no_vcl_obj_t o, no_vcl_int_t v),                        (o, v)) \
+    X(no_vcl_int_t,  TCustomScrollBar_GetPosition,    (no_vcl_obj_t o),                                        (o)) \
+    X(void,          TCustomScrollBar_SetPosition,    (no_vcl_obj_t o, no_vcl_int_t v),                        (o, v)) \
+    X(no_vcl_int_t,  TCustomScrollBar_GetPageSize,    (no_vcl_obj_t o),                                        (o)) \
+    X(void,          TCustomScrollBar_SetPageSize,    (no_vcl_obj_t o, no_vcl_int_t v),                        (o, v)) \
+    X(void,          TCustomScrollBar_SetOnChange,    (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),         (o, cb, d)) \
+    \
+    X(no_vcl_obj_t,  TTrackBar_Create,                (no_vcl_obj_t owner),                                    (owner)) \
+    X(no_vcl_int_t,  TCustomTrackBar_GetMin,          (no_vcl_obj_t o),                                        (o)) \
+    X(void,          TCustomTrackBar_SetMin,          (no_vcl_obj_t o, no_vcl_int_t v),                        (o, v)) \
+    X(no_vcl_int_t,  TCustomTrackBar_GetMax,          (no_vcl_obj_t o),                                        (o)) \
+    X(void,          TCustomTrackBar_SetMax,          (no_vcl_obj_t o, no_vcl_int_t v),                        (o, v)) \
+    X(no_vcl_int_t,  TCustomTrackBar_GetPosition,     (no_vcl_obj_t o),                                        (o)) \
+    X(void,          TCustomTrackBar_SetPosition,     (no_vcl_obj_t o, no_vcl_int_t v),                        (o, v)) \
+    X(void,          TCustomTrackBar_SetOnChange,     (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),         (o, cb, d)) \
+    \
+    X(no_vcl_obj_t,  TProgressBar_Create,             (no_vcl_obj_t owner),                                    (owner)) \
+    X(no_vcl_int_t,  TCustomProgressBar_GetMin,       (no_vcl_obj_t o),                                        (o)) \
+    X(void,          TCustomProgressBar_SetMin,       (no_vcl_obj_t o, no_vcl_int_t v),                        (o, v)) \
+    X(no_vcl_int_t,  TCustomProgressBar_GetMax,       (no_vcl_obj_t o),                                        (o)) \
+    X(void,          TCustomProgressBar_SetMax,       (no_vcl_obj_t o, no_vcl_int_t v),                        (o, v)) \
+    X(no_vcl_int_t,  TCustomProgressBar_GetPosition,  (no_vcl_obj_t o),                                        (o)) \
+    X(void,          TCustomProgressBar_SetPosition,  (no_vcl_obj_t o, no_vcl_int_t v),                        (o, v)) \
+    \
+    X(no_vcl_obj_t,  TUpDown_Create,                  (no_vcl_obj_t owner),                                    (owner)) \
+    X(no_vcl_int_t,  TUpDown_GetMin,                  (no_vcl_obj_t o),                                        (o)) \
+    X(void,          TUpDown_SetMin,                  (no_vcl_obj_t o, no_vcl_int_t v),                        (o, v)) \
+    X(no_vcl_int_t,  TUpDown_GetMax,                  (no_vcl_obj_t o),                                        (o)) \
+    X(void,          TUpDown_SetMax,                  (no_vcl_obj_t o, no_vcl_int_t v),                        (o, v)) \
+    X(no_vcl_int_t,  TUpDown_GetPosition,             (no_vcl_obj_t o),                                        (o)) \
+    X(void,          TUpDown_SetPosition,             (no_vcl_obj_t o, no_vcl_int_t v),                        (o, v)) \
+    X(no_vcl_int_t,  TUpDown_GetIncrement,            (no_vcl_obj_t o),                                        (o)) \
+    X(void,          TUpDown_SetIncrement,            (no_vcl_obj_t o, no_vcl_int_t v),                        (o, v)) \
+    X(no_vcl_obj_t,  TUpDown_GetAssociate,            (no_vcl_obj_t o),                                        (o)) \
+    X(void,          TUpDown_SetAssociate,            (no_vcl_obj_t o, no_vcl_obj_t v),                        (o, v))
 
 namespace
 {

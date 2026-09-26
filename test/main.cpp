@@ -112,13 +112,18 @@ public:
     TStaticText*  StaticText1;
     TStatusBar*   StatusBar1 = nullptr;
     TTimer*       StatusBarInitTimer;
+    TScrollBar*   ScrollBar1;
+    TTrackBar*    TrackBar1;
+    TProgressBar* ProgressBar1;
+    TEdit*        UpDownEdit;
+    TUpDown*      UpDown1;
 
     // C++Builder と同じく Owner を受け取り、TForm に渡す(Application->CreateForm が Application を渡す)。
     explicit TMainForm(TComponent* AOwner) : TForm(AOwner)
     {
         Caption = "no_vcl C++ wrapper";
         Width = 640;
-        Height = 520;
+        Height = 620;
 
         Button1 = new TButton(this);
         Button1->Parent = this;
@@ -309,6 +314,54 @@ public:
         StaticText1->Width = 150;
         StaticText1->BorderStyle = sbsSunken;
 
+        // Tier 1、3 バッチ目(範囲・数値系のコントロール)。いずれも ADR 0015 で TStatusBar のような
+        // 生成タイミングの問題が無いことを確認済みで、コンストラクタの中で普通に生成できる。
+        ScrollBar1 = new TScrollBar(this);
+        ScrollBar1->Parent = this;
+        ScrollBar1->Left = 20;
+        ScrollBar1->Top = 480;
+        ScrollBar1->Width = 150;
+        ScrollBar1->Min = 0;
+        ScrollBar1->Max = 100;
+        ScrollBar1->Position = 30;
+        ScrollBar1->OnChange = [this](TObject* Sender) { ScrollBar1Change(Sender); };
+
+        TrackBar1 = new TTrackBar(this);
+        TrackBar1->Parent = this;
+        TrackBar1->Left = 190;
+        TrackBar1->Top = 480;
+        TrackBar1->Width = 150;
+        TrackBar1->Min = 0;
+        TrackBar1->Max = 10;
+        TrackBar1->Position = 5;
+        TrackBar1->OnChange = [this](TObject* Sender) { TrackBar1Change(Sender); };
+
+        ProgressBar1 = new TProgressBar(this);
+        ProgressBar1->Parent = this;
+        ProgressBar1->Left = 360;
+        ProgressBar1->Top = 480;
+        ProgressBar1->Width = 150;
+        ProgressBar1->Min = 0;
+        ProgressBar1->Max = 100;
+        ProgressBar1->Position = 42;
+
+        UpDownEdit = new TEdit(this);
+        UpDownEdit->Parent = this;
+        UpDownEdit->Text = "3";
+        UpDownEdit->Left = 20;
+        UpDownEdit->Top = 510;
+        UpDownEdit->Width = 60;
+
+        UpDown1 = new TUpDown(this);
+        UpDown1->Parent = this;
+        UpDown1->Left = 80;
+        UpDown1->Top = 510;
+        UpDown1->Min = 0;
+        UpDown1->Max = 10;
+        UpDown1->Position = 3;
+        UpDown1->Increment = 1;
+        UpDown1->Associate = UpDownEdit;
+
         // 既知の問題: TStatusBar は、Application->Run() のメッセージループが始まる前に
         // ウィンドウハンドルを作らせると(コンストラクタの中で Parent を設定する等)、
         // 「トップレベルの子ウィンドウを作成できません」(Win32 エラー 1406)で失敗する。
@@ -462,6 +515,18 @@ private:
         std::fflush(stdout);
     }
 
+    void ScrollBar1Change(TObject* Sender)
+    {
+        std::printf("ScrollBar1Change: Position=%d\n", (int)static_cast<TScrollBar*>(Sender)->Position);
+        std::fflush(stdout);
+    }
+
+    void TrackBar1Change(TObject* Sender)
+    {
+        std::printf("TrackBar1Change: Position=%d\n", (int)static_cast<TTrackBar*>(Sender)->Position);
+        std::fflush(stdout);
+    }
+
     void CheckBox1Click(TObject* Sender)
     {
         std::printf("CheckBox1Click: Checked=%d\n", (bool)static_cast<TCheckBox*>(Sender)->Checked);
@@ -555,6 +620,11 @@ int main()
     std::printf("Shape1 Shape/Brush.Color/Pen.Color: %d/%06x/%06x\n",
                 (int)Form1->Shape1->Shape, (unsigned)(int)Form1->Shape1->Brush.Color, (unsigned)(int)Form1->Shape1->Pen.Color);
     std::printf("StaticText1 BorderStyle: %d (expected sbsSunken=2)\n", (int)Form1->StaticText1->BorderStyle);
+    std::printf("ScrollBar1 Position: %d (expected 30)\n", (int)Form1->ScrollBar1->Position);
+    std::printf("TrackBar1 Position: %d (expected 5)\n", (int)Form1->TrackBar1->Position);
+    std::printf("ProgressBar1 Position: %d (expected 42)\n", (int)Form1->ProgressBar1->Position);
+    std::printf("UpDown1 Position: %d, Associate is UpDownEdit: %s\n",
+                (int)Form1->UpDown1->Position, Form1->UpDown1->Associate == Form1->UpDownEdit ? "yes" : "no");
     // StatusBar1 は Run() の開始後に生成されるため、ここではまだ存在しない(StatusBarInitTimer 参照)。
 
     // 2 つ目以降に生成したフォームは MainForm にならない。

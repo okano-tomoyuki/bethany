@@ -39,7 +39,7 @@ TScrollingWinControl のいずれかで、いずれも実装済み。既存パ�
 | ✅ TStaticText | stdctrls.pp(TCustomStaticText) | TWinControl(実装済み) | BorderStyle(ADR 0015) |
 | ✅ TStatusBar | comctrls.pp | TWinControl(実装済み) | SimpleText/SimplePanel のみ(Panels は未対応)。**既知の問題:** Application->Run() 開始前に生成すると Win32 エラー 1406 で失敗する。回避策と詳細は [ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.md) |
 | TSplitter | extctrls.pp(TCustomSplitter) | TCustomControl(実装済み) | `TControl.Align` が no_vcl に無いと実用にならないため保留(下記「cross-cutting な既知の課題」参照) |
-| TScrollBar | stdctrls.pp(TCustomScrollBar) | TWinControl(実装済み) | Kind/Min/Max/Position/OnChange |
+| ✅ TScrollBar | stdctrls.pp(TCustomScrollBar) | TWinControl(実装済み) | Kind/Min/Max/Position/PageSize/OnChange(ADR 0015 の 2 バッチ目) |
 | TRadioGroup | extctrls.pp(TCustomRadioGroup) | TCustomGroupBox(実装済み) | Items(TStrings)/ItemIndex。ComboBox の Items 実装を流用できる |
 | TCheckGroup | extctrls.pp(TCustomCheckGroup) | TCustomGroupBox(実装済み) | RadioGroup と同型 + 項目ごとの Checked |
 | TCheckListBox | checklst.pas(TCustomCheckListBox) | TCustomListBox(実装済み) | ListBox の Items 実装 + 項目ごとの Checked |
@@ -48,9 +48,9 @@ TScrollingWinControl のいずれかで、いずれも実装済み。既存パ�
 | TBitBtn | buttons.pp(TCustomBitBtn) | TCustomButton(実装済み) | Kind(bkOK 等)のみ先行実装し、Glyph は Tier 3 まで保留 |
 | TSpinEdit / TFloatSpinEdit | spin.pp | TCustomEdit(実装済み) | TCustomSpinEdit が Value 等を Integer で再宣言(TCustomFloatSpinEdit の Double 版を隠す)。C++ でも同じ隠蔽を再現する |
 | TMaskEdit | maskedit.pp(TCustomMaskEdit) | TCustomEdit(実装済み) | EditMask/Text |
-| TTrackBar | comctrls.pp(TCustomTrackBar) | TWinControl(実装済み) | Min/Max/Position/OnChange。ComCtrls のネイティブコントロールのため、着手時に TStatusBar と同じ問題が無いか確認する(TProgressBar は問題なしと確認済み) |
-| TProgressBar | comctrls.pp(TCustomProgressBar) | TWinControl(実装済み) | Min/Max/Position のみで表示専用。ADR 0015 の調査で、Application->Run() 開始前の生成でも問題が無いことを確認済み |
-| TUpDown | comctrls.pp(TCustomUpDown) | TCustomControl(実装済み) | Position/Associate(対象の Edit と連動)。着手時に TStatusBar と同じ問題が無いか確認する |
+| ✅ TTrackBar | comctrls.pp(TCustomTrackBar) | TWinControl(実装済み) | Min/Max/Position/OnChange。Application->Run() 開始前の生成でも問題が無いことを確認済み(ADR 0015 の 2 バッチ目) |
+| ✅ TProgressBar | comctrls.pp(TCustomProgressBar) | TWinControl(実装済み) | Min/Max/Position のみで表示専用。問題無しを確認済み(ADR 0015 の 2 バッチ目) |
+| ✅ TUpDown | comctrls.pp(TCustomUpDown) | TCustomControl(実装済み) | Min/Max/Position/Increment/Associate(対象の Edit と連動)。問題無しを確認済み(ADR 0015 の 2 バッチ目) |
 | TTabControl / TPageControl + TTabSheet | comctrls.pp(TCustomTabControl) | TWinControl(実装済み) | タブ切り替え UI に必須。TTabSheet は TCustomPage(TWinControl)なので所有ページの生成・破棄の設計が要る。着手時に TStatusBar と同じ問題が無いか確認する |
 
 ### Tier 2 — 中コスト(新しいコレクション型が必要)

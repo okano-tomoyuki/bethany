@@ -34,6 +34,20 @@ static void NO_VCL_CALL OnEditKeyDown(no_vcl_obj_t sender, no_vcl_int_t* key, no
     fflush(stdout);
 }
 
+static void NO_VCL_CALL OnScrollBarChange(no_vcl_obj_t sender, void* data)
+{
+    (void)data;
+    printf("ScrollBar changed! Position=%d\n", no_vcl_TCustomScrollBar_GetPosition(sender));
+    fflush(stdout);
+}
+
+static void NO_VCL_CALL OnTrackBarChange(no_vcl_obj_t sender, void* data)
+{
+    (void)data;
+    printf("TrackBar changed! Position=%d\n", no_vcl_TCustomTrackBar_GetPosition(sender));
+    fflush(stdout);
+}
+
 static void NO_VCL_CALL OnCheckBoxClick(no_vcl_obj_t sender, void* data)
 {
     (void)data;
@@ -216,6 +230,11 @@ int main(void)
     no_vcl_obj_t shape;
     no_vcl_obj_t staticText;
     no_vcl_obj_t statusBarInitTimer;
+    no_vcl_obj_t scrollBar;
+    no_vcl_obj_t trackBar;
+    no_vcl_obj_t progressBar;
+    no_vcl_obj_t upDownEdit;
+    no_vcl_obj_t upDown;
 
     no_vcl_FreeNotify_SetCallback(OnComponentFreed, &freedCount);
 
@@ -236,7 +255,7 @@ int main(void)
 
     no_vcl_TControl_SetCaption(form, "Hello from FPC DLL");
     no_vcl_TControl_SetWidth(form, 640);
-    no_vcl_TControl_SetHeight(form, 520);
+    no_vcl_TControl_SetHeight(form, 620);
     printf("Caption: %s\n", no_vcl_TControl_GetCaption(form));
 
     button = Place(no_vcl_TButton_Create(form), form, 20, 20);
@@ -360,6 +379,44 @@ int main(void)
     no_vcl_TControl_SetWidth(staticText, 150);
     no_vcl_TCustomStaticText_SetBorderStyle(staticText, no_vcl_sbsSunken);
 
+    /* Tier 1、3 バッチ目(範囲・数値系のコントロール)。ADR 0015 で TStatusBar のような生成タイミングの
+       問題が無いことを確認済みで、普通にここで生成できる。 */
+    scrollBar = Place(no_vcl_TScrollBar_Create(form), form, 20, 480);
+    no_vcl_TControl_SetWidth(scrollBar, 150);
+    no_vcl_TCustomScrollBar_SetMin(scrollBar, 0);
+    no_vcl_TCustomScrollBar_SetMax(scrollBar, 100);
+    no_vcl_TCustomScrollBar_SetPosition(scrollBar, 30);
+    no_vcl_TCustomScrollBar_SetOnChange(scrollBar, OnScrollBarChange, NULL);
+
+    trackBar = Place(no_vcl_TTrackBar_Create(form), form, 190, 480);
+    no_vcl_TControl_SetWidth(trackBar, 150);
+    no_vcl_TCustomTrackBar_SetMin(trackBar, 0);
+    no_vcl_TCustomTrackBar_SetMax(trackBar, 10);
+    no_vcl_TCustomTrackBar_SetPosition(trackBar, 5);
+    no_vcl_TCustomTrackBar_SetOnChange(trackBar, OnTrackBarChange, NULL);
+
+    progressBar = Place(no_vcl_TProgressBar_Create(form), form, 360, 480);
+    no_vcl_TControl_SetWidth(progressBar, 150);
+    no_vcl_TCustomProgressBar_SetMin(progressBar, 0);
+    no_vcl_TCustomProgressBar_SetMax(progressBar, 100);
+    no_vcl_TCustomProgressBar_SetPosition(progressBar, 42);
+    printf("ScrollBar/TrackBar/ProgressBar Position: %d/%d/%d\n",
+           no_vcl_TCustomScrollBar_GetPosition(scrollBar), no_vcl_TCustomTrackBar_GetPosition(trackBar),
+           no_vcl_TCustomProgressBar_GetPosition(progressBar));
+
+    upDownEdit = Place(no_vcl_TEdit_Create(form), form, 20, 510);
+    no_vcl_TControl_SetText(upDownEdit, "3");
+    no_vcl_TControl_SetWidth(upDownEdit, 60);
+
+    upDown = Place(no_vcl_TUpDown_Create(form), form, 80, 510);
+    no_vcl_TUpDown_SetMin(upDown, 0);
+    no_vcl_TUpDown_SetMax(upDown, 10);
+    no_vcl_TUpDown_SetPosition(upDown, 3);
+    no_vcl_TUpDown_SetIncrement(upDown, 1);
+    no_vcl_TUpDown_SetAssociate(upDown, upDownEdit);
+    printf("UpDown Position: %d, Associate is upDownEdit: %s\n",
+           no_vcl_TUpDown_GetPosition(upDown), no_vcl_TUpDown_GetAssociate(upDown) == upDownEdit ? "yes" : "no");
+
     /* 既知の問題: TStatusBar は Application->Run() のメッセージループが始まる前にウィンドウハンドルを
        作らせると「トップレベルの子ウィンドウを作成できません」(Win32 エラー 1406)で失敗する。
        標準の Lazarus 実行ファイルでは起きず、DLL としてホストされる no_vcl 特有の現象と見られる
@@ -379,7 +436,7 @@ int main(void)
     /* Application が所有するフォーム(と、フォームが所有するコントロール)をまとめて破棄する。
        呼ばなくても DLL の切り離し時に LCL が破棄するが、そのときは破棄通知が呼ばれない。 */
     no_vcl_TComponent_DestroyComponents(app);
-    printf("Clicks: %d, Freed components: %d (expected 24: form + 23 owned)\n", clickCount, freedCount);
+    printf("Clicks: %d, Freed components: %d (expected 29: form + 28 owned)\n", clickCount, freedCount);
 
     printf("OK\n");
     return 0;

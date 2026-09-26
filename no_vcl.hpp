@@ -367,6 +367,118 @@ private:
     static void           SetOnKeyPressImpl(TObject* owner, const TKeyPressEvent& value);
 };
 
+// つまみを左右または上下にドラッグして値を選ぶスクロールバー。
+enum TScrollBarKind { sbHorizontal, sbVertical };
+
+class TCustomScrollBar : public TWinControl
+{
+public:
+    Property<TScrollBarKind> Kind;
+    Property<int>            Min;
+    Property<int>            Max;
+    Property<int>            Position;
+    Property<int>            PageSize;
+    Property<TNotifyEvent>   OnChange;
+
+protected:
+    explicit TCustomScrollBar(no_vcl_obj_t handle);
+    ~TCustomScrollBar() override = default;
+
+private:
+    TNotifyEvent onChange_;
+    bool         onChangeHooked_ = false;
+    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender, void* data);
+
+    static TScrollBarKind GetKindImpl(TObject* owner);
+    static void           SetKindImpl(TObject* owner, const TScrollBarKind& value);
+    static int            GetMinImpl(TObject* owner);
+    static void           SetMinImpl(TObject* owner, const int& value);
+    static int            GetMaxImpl(TObject* owner);
+    static void           SetMaxImpl(TObject* owner, const int& value);
+    static int            GetPositionImpl(TObject* owner);
+    static void           SetPositionImpl(TObject* owner, const int& value);
+    static int            GetPageSizeImpl(TObject* owner);
+    static void           SetPageSizeImpl(TObject* owner, const int& value);
+    static TNotifyEvent   GetOnChangeImpl(TObject* owner);
+    static void           SetOnChangeImpl(TObject* owner, const TNotifyEvent& value);
+};
+
+class TScrollBar : public TCustomScrollBar
+{
+public:
+    explicit TScrollBar(TComponent* AOwner);
+
+protected:
+    ~TScrollBar() override = default;
+};
+
+// つまみをドラッグして値を選ぶスライダー。
+class TCustomTrackBar : public TWinControl
+{
+public:
+    Property<int>          Min;
+    Property<int>          Max;
+    Property<int>          Position;
+    Property<TNotifyEvent> OnChange;
+
+protected:
+    explicit TCustomTrackBar(no_vcl_obj_t handle);
+    ~TCustomTrackBar() override = default;
+
+private:
+    TNotifyEvent onChange_;
+    bool         onChangeHooked_ = false;
+    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender, void* data);
+
+    static int          GetMinImpl(TObject* owner);
+    static void         SetMinImpl(TObject* owner, const int& value);
+    static int          GetMaxImpl(TObject* owner);
+    static void         SetMaxImpl(TObject* owner, const int& value);
+    static int          GetPositionImpl(TObject* owner);
+    static void         SetPositionImpl(TObject* owner, const int& value);
+    static TNotifyEvent GetOnChangeImpl(TObject* owner);
+    static void         SetOnChangeImpl(TObject* owner, const TNotifyEvent& value);
+};
+
+class TTrackBar : public TCustomTrackBar
+{
+public:
+    explicit TTrackBar(TComponent* AOwner);
+
+protected:
+    ~TTrackBar() override = default;
+};
+
+// 進捗を表示する表示専用コントロール(イベントは無い)。
+class TCustomProgressBar : public TWinControl
+{
+public:
+    Property<int> Min;
+    Property<int> Max;
+    Property<int> Position;
+
+protected:
+    explicit TCustomProgressBar(no_vcl_obj_t handle);
+    ~TCustomProgressBar() override = default;
+
+private:
+    static int  GetMinImpl(TObject* owner);
+    static void SetMinImpl(TObject* owner, const int& value);
+    static int  GetMaxImpl(TObject* owner);
+    static void SetMaxImpl(TObject* owner, const int& value);
+    static int  GetPositionImpl(TObject* owner);
+    static void SetPositionImpl(TObject* owner, const int& value);
+};
+
+class TProgressBar : public TCustomProgressBar
+{
+public:
+    explicit TProgressBar(TComponent* AOwner);
+
+protected:
+    ~TProgressBar() override = default;
+};
+
 class TGraphicControl : public TControl
 {
 protected:
@@ -379,6 +491,37 @@ class TCustomControl : public TWinControl
 protected:
     explicit TCustomControl(no_vcl_obj_t handle) : TWinControl(handle) {}
     ~TCustomControl() override = default;
+};
+
+// Edit 等に付属する上下矢印。Min/Max/Position/Increment/Associate は LCL では TCustomUpDown の
+// protected だが、唯一の具象クラス TUpDown が published にしているため、TUpDown に直接置く
+// (TCheckBox の Checked と同じ形)。OnClick/OnChanging は独自のシグネチャのため今回は未対応。
+class TUpDown : public TCustomControl
+{
+public:
+    explicit TUpDown(TComponent* AOwner);
+
+    Property<int>          Min;
+    Property<int>          Max;
+    Property<int>          Position;
+    Property<int>          Increment;
+    // 値を増減させる対象のコントロール(TEdit 等)。
+    Property<TWinControl*> Associate;
+
+protected:
+    ~TUpDown() override = default;
+
+private:
+    static int          GetMinImpl(TObject* owner);
+    static void         SetMinImpl(TObject* owner, const int& value);
+    static int          GetMaxImpl(TObject* owner);
+    static void         SetMaxImpl(TObject* owner, const int& value);
+    static int          GetPositionImpl(TObject* owner);
+    static void         SetPositionImpl(TObject* owner, const int& value);
+    static int          GetIncrementImpl(TObject* owner);
+    static void         SetIncrementImpl(TObject* owner, const int& value);
+    static TWinControl* GetAssociateImpl(TObject* owner);
+    static void         SetAssociateImpl(TObject* owner, TWinControl* const& value);
 };
 
 /* ---------------- Form ---------------- */
