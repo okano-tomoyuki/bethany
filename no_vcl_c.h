@@ -30,6 +30,52 @@ typedef void (NO_VCL_CALL *no_vcl_close_callback_t)(no_vcl_obj_t sender, no_vcl_
    0 を書き込むと閉じるのを取りやめる(OnClose より前に呼ばれる)。 */
 typedef void (NO_VCL_CALL *no_vcl_close_query_callback_t)(no_vcl_obj_t sender, no_vcl_bool_t* canClose, void* data);
 
+/* キー入力・マウス操作のイベント用。Shift は修飾キー・マウスボタンの状態を表すビット集合で、
+   複数のビットを OR して渡す/受け取る(押されていれば該当ビットが立つ)。 */
+enum
+{
+    no_vcl_ssShift  = 0x0001,
+    no_vcl_ssAlt    = 0x0002,
+    no_vcl_ssCtrl   = 0x0004,
+    no_vcl_ssLeft   = 0x0008,  /* マウスの左ボタンが押されている */
+    no_vcl_ssRight  = 0x0010,
+    no_vcl_ssMiddle = 0x0020,
+    no_vcl_ssDouble = 0x0040,  /* ダブルクリックの一部として発生した */
+    no_vcl_ssMeta   = 0x0080,
+    no_vcl_ssSuper  = 0x0100,
+    no_vcl_ssHyper  = 0x0200,
+    no_vcl_ssAltGr  = 0x0400,
+    no_vcl_ssCaps   = 0x0800,
+    no_vcl_ssNum    = 0x1000,
+    no_vcl_ssScroll = 0x2000,
+    no_vcl_ssTriple = 0x4000,
+    no_vcl_ssQuad   = 0x8000,
+    no_vcl_ssExtra1 = 0x10000,
+    no_vcl_ssExtra2 = 0x20000
+};
+
+/* マウスボタン(OnMouseDown / OnMouseUp の button 引数)。 */
+enum
+{
+    no_vcl_mbLeft   = 0,
+    no_vcl_mbRight  = 1,
+    no_vcl_mbMiddle = 2,
+    no_vcl_mbExtra1 = 3,
+    no_vcl_mbExtra2 = 4
+};
+
+/* OnKeyDown/OnKeyUp 用。*key はキーコード(Windows の仮想キーコード)で、書き換えると LCL に渡る値が変わる。
+   0 にすると、そのキー入力を LCL に渡さない(既定の処理をさせない)。 */
+typedef void (NO_VCL_CALL *no_vcl_key_callback_t)(no_vcl_obj_t sender, no_vcl_int_t* key, no_vcl_int_t shift, void* data);
+/* OnKeyPress 用。*key は文字コードで、書き換え・0 にする効果は上記と同じ。 */
+typedef void (NO_VCL_CALL *no_vcl_key_press_callback_t)(no_vcl_obj_t sender, no_vcl_int_t* key, void* data);
+/* OnMouseDown/OnMouseUp 用。 */
+typedef void (NO_VCL_CALL *no_vcl_mouse_callback_t)(no_vcl_obj_t sender, no_vcl_int_t button, no_vcl_int_t shift, no_vcl_int_t x, no_vcl_int_t y, void* data);
+/* OnMouseMove 用。 */
+typedef void (NO_VCL_CALL *no_vcl_mouse_move_callback_t)(no_vcl_obj_t sender, no_vcl_int_t shift, no_vcl_int_t x, no_vcl_int_t y, void* data);
+/* OnMouseWheel 用。*handled に 0 以外を書き込むと、ホイール操作をこのハンドラで処理済みとして扱う(既定のスクロール等が起きなくなる)。 */
+typedef void (NO_VCL_CALL *no_vcl_mouse_wheel_callback_t)(no_vcl_obj_t sender, no_vcl_int_t shift, no_vcl_int_t wheelDelta, no_vcl_int_t x, no_vcl_int_t y, no_vcl_bool_t* handled, void* data);
+
 enum
 {
     no_vcl_caNone     = 0,  /* 閉じない */
@@ -91,6 +137,19 @@ void          NO_VCL_CALL no_vcl_TControl_Show(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TControl_Hide(no_vcl_obj_t Obj);
 
 void          NO_VCL_CALL no_vcl_TControl_SetOnClick(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TControl_SetOnDblClick(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TControl_SetOnResize(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TControl_SetOnMouseDown(no_vcl_obj_t Obj, no_vcl_mouse_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TControl_SetOnMouseUp(no_vcl_obj_t Obj, no_vcl_mouse_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TControl_SetOnMouseMove(no_vcl_obj_t Obj, no_vcl_mouse_move_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TControl_SetOnMouseEnter(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TControl_SetOnMouseLeave(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TControl_SetOnMouseWheel(no_vcl_obj_t Obj, no_vcl_mouse_wheel_callback_t Cb, void* Data);
+
+/* TWinControl */
+void          NO_VCL_CALL no_vcl_TWinControl_SetOnKeyDown(no_vcl_obj_t Obj, no_vcl_key_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TWinControl_SetOnKeyUp(no_vcl_obj_t Obj, no_vcl_key_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TWinControl_SetOnKeyPress(no_vcl_obj_t Obj, no_vcl_key_press_callback_t Cb, void* Data);
 
 /* TCustomForm / TForm */
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TForm_Create(no_vcl_obj_t Owner);

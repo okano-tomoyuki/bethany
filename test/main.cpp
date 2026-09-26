@@ -120,6 +120,15 @@ public:
         Button1->Width = 100;
         Button1->Height = 30;
         Button1->OnClick = [this](TObject* Sender) { Button1Click(Sender); };
+        Button1->OnDblClick = [this](TObject* Sender) { Button1DblClick(Sender); };
+        Button1->OnMouseDown = [this](TObject* Sender, TMouseButton Button, TShiftState Shift, int X, int Y) {
+            Button1MouseDown(Sender, Button, Shift, X, Y);
+        };
+        Button1->OnMouseUp = [this](TObject* Sender, TMouseButton Button, TShiftState Shift, int X, int Y) {
+            Button1MouseUp(Sender, Button, Shift, X, Y);
+        };
+        Button1->OnMouseEnter = [this](TObject* Sender) { Button1MouseEnter(Sender); };
+        Button1->OnMouseLeave = [this](TObject* Sender) { Button1MouseLeave(Sender); };
 
         Label1 = new TLabel(this);
         Label1->Parent = this;
@@ -134,6 +143,8 @@ public:
         Edit1->Top = 90;
         Edit1->Width = 150;
         Edit1->OnChange = [this](TObject* Sender) { TextChange(Sender); };
+        Edit1->OnKeyDown = [this](TObject* Sender, int& Key, TShiftState Shift) { Edit1KeyDown(Sender, Key, Shift); };
+        Edit1->OnKeyPress = [this](TObject* Sender, char& Key) { Edit1KeyPress(Sender, Key); };
 
         CheckBox1 = new TCheckBox(this);
         CheckBox1->Parent = this;
@@ -242,6 +253,7 @@ public:
 
         OnCreate = [this](TObject* Sender) { FormCreate(Sender); };
         OnShow = [this](TObject* Sender) { FormShow(Sender); };
+        OnResize = [this](TObject* Sender) { FormResize(Sender); };
         OnCloseQuery = [this](TObject* Sender, bool& CanClose) { FormCloseQuery(Sender, CanClose); };
         OnClose = [this](TObject* Sender, TCloseAction& Action) { FormClose(Sender, Action); };
         OnDestroy = [this](TObject* Sender) { FormDestroy(Sender); };
@@ -315,6 +327,54 @@ private:
         ++clicks_;
         button->Caption = "Clicked " + std::to_string(clicks_);
         std::printf("Button1Click: Sender is Button1: %s, count=%d\n", Sender == Button1 ? "yes" : "no", clicks_);
+        std::fflush(stdout);
+    }
+
+    void Button1DblClick(TObject*)
+    {
+        std::printf("Button1DblClick\n");
+        std::fflush(stdout);
+    }
+
+    void Button1MouseDown(TObject*, TMouseButton Button, TShiftState Shift, int X, int Y)
+    {
+        std::printf("Button1MouseDown: button=%d shift=0x%x pos=(%d,%d)\n", (int)Button, Shift, X, Y);
+        std::fflush(stdout);
+    }
+
+    void Button1MouseUp(TObject*, TMouseButton Button, TShiftState Shift, int X, int Y)
+    {
+        std::printf("Button1MouseUp: button=%d shift=0x%x pos=(%d,%d)\n", (int)Button, Shift, X, Y);
+        std::fflush(stdout);
+    }
+
+    void Button1MouseEnter(TObject*)
+    {
+        std::printf("Button1MouseEnter\n");
+        std::fflush(stdout);
+    }
+
+    void Button1MouseLeave(TObject*)
+    {
+        std::printf("Button1MouseLeave\n");
+        std::fflush(stdout);
+    }
+
+    void Edit1KeyDown(TObject*, int& Key, TShiftState Shift)
+    {
+        std::printf("Edit1KeyDown: key=%d shift=0x%x\n", Key, Shift);
+        std::fflush(stdout);
+    }
+
+    void Edit1KeyPress(TObject*, char& Key)
+    {
+        std::printf("Edit1KeyPress: key=%d ('%c')\n", (int)(unsigned char)Key, Key >= 32 ? Key : '?');
+        std::fflush(stdout);
+    }
+
+    void FormResize(TObject*)
+    {
+        std::printf("FormResize: %dx%d\n", (int)Width, (int)Height);
         std::fflush(stdout);
     }
 

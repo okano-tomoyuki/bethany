@@ -20,6 +20,20 @@ static void NO_VCL_CALL OnButtonClick(no_vcl_obj_t sender, void* data)
     fflush(stdout);
 }
 
+static void NO_VCL_CALL OnButtonMouseDown(no_vcl_obj_t sender, no_vcl_int_t button, no_vcl_int_t shift, no_vcl_int_t x, no_vcl_int_t y, void* data)
+{
+    (void)sender; (void)data;
+    printf("Button mouse down! button=%d shift=0x%x pos=(%d,%d)\n", (int)button, (unsigned)shift, (int)x, (int)y);
+    fflush(stdout);
+}
+
+static void NO_VCL_CALL OnEditKeyDown(no_vcl_obj_t sender, no_vcl_int_t* key, no_vcl_int_t shift, void* data)
+{
+    (void)sender; (void)data;
+    printf("Edit key down! key=%d shift=0x%x\n", (int)*key, (unsigned)shift);
+    fflush(stdout);
+}
+
 static void NO_VCL_CALL OnCheckBoxClick(no_vcl_obj_t sender, void* data)
 {
     (void)data;
@@ -210,6 +224,7 @@ int main(void)
     no_vcl_TControl_SetWidth(button, 100);
     no_vcl_TControl_SetHeight(button, 30);
     no_vcl_TControl_SetOnClick(button, OnButtonClick, &clickCount);
+    no_vcl_TControl_SetOnMouseDown(button, OnButtonMouseDown, NULL);
     no_vcl_TCustomForm_SetOnCloseQuery(form, OnFormCloseQuery, NULL);
     no_vcl_TCustomForm_SetOnDestroy(form, OnFormDestroy, button);
     printf("Button caption: %s\n", no_vcl_TControl_GetCaption(button));
@@ -222,6 +237,7 @@ int main(void)
     no_vcl_TControl_SetText(edit, "Edit me");
     no_vcl_TControl_SetWidth(edit, 150);
     no_vcl_TCustomEdit_SetOnChange(edit, OnEditChange, NULL);
+    no_vcl_TWinControl_SetOnKeyDown(edit, OnEditKeyDown, NULL);
 
     checkBox = Place(no_vcl_TCheckBox_Create(form), form, 20, 130);
     no_vcl_TControl_SetCaption(checkBox, "Check me");

@@ -31,6 +31,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0011](adr/0011-form-release-onclose-oncreate.md) | フォームに Release・OnClose・OnCreate(と OnShow)を追加し、OnCreate の発火時点を C++ 側で補う | 承認 |
 | [0012](adr/0012-remaining-form-events.md) | フォームの残りのイベント(OnCloseQuery・OnHide・OnActivate・OnDeactivate・OnDestroy)を追加し、DLL の切り離し中はイベントを送らない | 承認 |
 | [0013](adr/0013-string-return-bridge-reuse-ctor-exception.md) | 文字列はスレッドローカルバッファ経由で返し、イベントのブリッジは再利用し、コンストラクタが例外を投げたら LCL オブジェクトを破棄する | 承認 |
+| [0014](adr/0014-control-key-mouse-events.md) | TControl / TWinControl のキー入力・マウス操作イベントを追加し、TForm もこれを継承する | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。

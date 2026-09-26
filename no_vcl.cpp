@@ -5,6 +5,31 @@
 namespace no_vcl
 {
 
+namespace
+{
+
+// イベントの Setter で共通の処理: ハンドラを保持し、最初に空でないハンドラが設定されたときだけブリッジを登録する。
+template<typename Event, typename Callback>
+void SetSimpleEvent(no_vcl_obj_t handle, Event& slot, bool& hooked, const Event& value,
+                     void (NO_VCL_CALL *setOn)(no_vcl_obj_t, Callback, void*), Callback trampoline)
+{
+    slot = value;
+    if (value && !hooked)
+    {
+        setOn(handle, trampoline, nullptr);
+        hooked = true;
+    }
+}
+
+// ハンドラの中でハンドラ自身を差し替えても実行中の std::function が破棄されないよう、コピーしてから呼ぶ。
+void CallNotify(const TNotifyEvent& handler, TObject* sender)
+{
+    if (handler)
+        handler(sender);
+}
+
+} // namespace
+
 /* ---------------- TComponent ---------------- */
 
 TComponent::TComponent(no_vcl_obj_t handle)
@@ -76,6 +101,14 @@ TControl::TControl(no_vcl_obj_t handle)
     , Enabled(this, &TControl::GetEnabledImpl, &TControl::SetEnabledImpl)
     , Caption(this, &TControl::GetCaptionImpl, &TControl::SetCaptionImpl)
     , OnClick(this, &TControl::GetOnClickImpl, &TControl::SetOnClickImpl)
+    , OnDblClick(this, &TControl::GetOnDblClickImpl, &TControl::SetOnDblClickImpl)
+    , OnResize(this, &TControl::GetOnResizeImpl, &TControl::SetOnResizeImpl)
+    , OnMouseDown(this, &TControl::GetOnMouseDownImpl, &TControl::SetOnMouseDownImpl)
+    , OnMouseUp(this, &TControl::GetOnMouseUpImpl, &TControl::SetOnMouseUpImpl)
+    , OnMouseMove(this, &TControl::GetOnMouseMoveImpl, &TControl::SetOnMouseMoveImpl)
+    , OnMouseEnter(this, &TControl::GetOnMouseEnterImpl, &TControl::SetOnMouseEnterImpl)
+    , OnMouseLeave(this, &TControl::GetOnMouseLeaveImpl, &TControl::SetOnMouseLeaveImpl)
+    , OnMouseWheel(this, &TControl::GetOnMouseWheelImpl, &TControl::SetOnMouseWheelImpl)
     , Text(this, &TControl::GetTextImpl, &TControl::SetTextImpl)
 {}
 
@@ -158,6 +191,228 @@ void TControl::SetTextImpl(TObject* owner, const std::string& value)
     no_vcl_TControl_SetText(owner->Handle(), value.c_str());
 }
 
+TNotifyEvent TControl::GetOnDblClickImpl(TObject* owner)   { return static_cast<TControl*>(owner)->onDblClick_; }
+TNotifyEvent TControl::GetOnResizeImpl(TObject* owner)     { return static_cast<TControl*>(owner)->onResize_; }
+TNotifyEvent TControl::GetOnMouseEnterImpl(TObject* owner) { return static_cast<TControl*>(owner)->onMouseEnter_; }
+TNotifyEvent TControl::GetOnMouseLeaveImpl(TObject* owner) { return static_cast<TControl*>(owner)->onMouseLeave_; }
+TMouseEvent  TControl::GetOnMouseDownImpl(TObject* owner)  { return static_cast<TControl*>(owner)->onMouseDown_; }
+TMouseEvent  TControl::GetOnMouseUpImpl(TObject* owner)    { return static_cast<TControl*>(owner)->onMouseUp_; }
+TMouseMoveEvent  TControl::GetOnMouseMoveImpl(TObject* owner)  { return static_cast<TControl*>(owner)->onMouseMove_; }
+TMouseWheelEvent TControl::GetOnMouseWheelImpl(TObject* owner) { return static_cast<TControl*>(owner)->onMouseWheel_; }
+
+void TControl::SetOnDblClickImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TControl* self = static_cast<TControl*>(owner);
+    SetSimpleEvent(self->handle_, self->onDblClick_, self->onDblClickHooked_, value,
+                   &no_vcl_TControl_SetOnDblClick, &TControl::DblClickTrampoline);
+}
+
+void TControl::SetOnResizeImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TControl* self = static_cast<TControl*>(owner);
+    SetSimpleEvent(self->handle_, self->onResize_, self->onResizeHooked_, value,
+                   &no_vcl_TControl_SetOnResize, &TControl::ResizeTrampoline);
+}
+
+void TControl::SetOnMouseEnterImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TControl* self = static_cast<TControl*>(owner);
+    SetSimpleEvent(self->handle_, self->onMouseEnter_, self->onMouseEnterHooked_, value,
+                   &no_vcl_TControl_SetOnMouseEnter, &TControl::MouseEnterTrampoline);
+}
+
+void TControl::SetOnMouseLeaveImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TControl* self = static_cast<TControl*>(owner);
+    SetSimpleEvent(self->handle_, self->onMouseLeave_, self->onMouseLeaveHooked_, value,
+                   &no_vcl_TControl_SetOnMouseLeave, &TControl::MouseLeaveTrampoline);
+}
+
+void TControl::SetOnMouseDownImpl(TObject* owner, const TMouseEvent& value)
+{
+    TControl* self = static_cast<TControl*>(owner);
+    self->onMouseDown_ = value;
+    if (value && !self->onMouseDownHooked_)
+    {
+        no_vcl_TControl_SetOnMouseDown(self->handle_, &TControl::MouseDownTrampoline, nullptr);
+        self->onMouseDownHooked_ = true;
+    }
+}
+
+void TControl::SetOnMouseUpImpl(TObject* owner, const TMouseEvent& value)
+{
+    TControl* self = static_cast<TControl*>(owner);
+    self->onMouseUp_ = value;
+    if (value && !self->onMouseUpHooked_)
+    {
+        no_vcl_TControl_SetOnMouseUp(self->handle_, &TControl::MouseUpTrampoline, nullptr);
+        self->onMouseUpHooked_ = true;
+    }
+}
+
+void TControl::SetOnMouseMoveImpl(TObject* owner, const TMouseMoveEvent& value)
+{
+    TControl* self = static_cast<TControl*>(owner);
+    self->onMouseMove_ = value;
+    if (value && !self->onMouseMoveHooked_)
+    {
+        no_vcl_TControl_SetOnMouseMove(self->handle_, &TControl::MouseMoveTrampoline, nullptr);
+        self->onMouseMoveHooked_ = true;
+    }
+}
+
+void TControl::SetOnMouseWheelImpl(TObject* owner, const TMouseWheelEvent& value)
+{
+    TControl* self = static_cast<TControl*>(owner);
+    self->onMouseWheel_ = value;
+    if (value && !self->onMouseWheelHooked_)
+    {
+        no_vcl_TControl_SetOnMouseWheel(self->handle_, &TControl::MouseWheelTrampoline, nullptr);
+        self->onMouseWheelHooked_ = true;
+    }
+}
+
+void NO_VCL_CALL TControl::DblClickTrampoline(no_vcl_obj_t sender, void*)
+{
+    if (TControl* self = static_cast<TControl*>(FromHandle(sender)))
+        CallNotify(self->onDblClick_, self);
+}
+
+void NO_VCL_CALL TControl::ResizeTrampoline(no_vcl_obj_t sender, void*)
+{
+    if (TControl* self = static_cast<TControl*>(FromHandle(sender)))
+        CallNotify(self->onResize_, self);
+}
+
+void NO_VCL_CALL TControl::MouseEnterTrampoline(no_vcl_obj_t sender, void*)
+{
+    if (TControl* self = static_cast<TControl*>(FromHandle(sender)))
+        CallNotify(self->onMouseEnter_, self);
+}
+
+void NO_VCL_CALL TControl::MouseLeaveTrampoline(no_vcl_obj_t sender, void*)
+{
+    if (TControl* self = static_cast<TControl*>(FromHandle(sender)))
+        CallNotify(self->onMouseLeave_, self);
+}
+
+void NO_VCL_CALL TControl::MouseDownTrampoline(no_vcl_obj_t sender, no_vcl_int_t button, no_vcl_int_t shift, no_vcl_int_t x, no_vcl_int_t y, void*)
+{
+    TControl* self = static_cast<TControl*>(FromHandle(sender));
+    if (!self || !self->onMouseDown_)
+        return;
+    TMouseEvent handler = self->onMouseDown_;
+    handler(self, static_cast<TMouseButton>(button), static_cast<TShiftState>(shift), x, y);
+}
+
+void NO_VCL_CALL TControl::MouseUpTrampoline(no_vcl_obj_t sender, no_vcl_int_t button, no_vcl_int_t shift, no_vcl_int_t x, no_vcl_int_t y, void*)
+{
+    TControl* self = static_cast<TControl*>(FromHandle(sender));
+    if (!self || !self->onMouseUp_)
+        return;
+    TMouseEvent handler = self->onMouseUp_;
+    handler(self, static_cast<TMouseButton>(button), static_cast<TShiftState>(shift), x, y);
+}
+
+void NO_VCL_CALL TControl::MouseMoveTrampoline(no_vcl_obj_t sender, no_vcl_int_t shift, no_vcl_int_t x, no_vcl_int_t y, void*)
+{
+    TControl* self = static_cast<TControl*>(FromHandle(sender));
+    if (!self || !self->onMouseMove_)
+        return;
+    TMouseMoveEvent handler = self->onMouseMove_;
+    handler(self, static_cast<TShiftState>(shift), x, y);
+}
+
+void NO_VCL_CALL TControl::MouseWheelTrampoline(no_vcl_obj_t sender, no_vcl_int_t shift, no_vcl_int_t wheelDelta, no_vcl_int_t x, no_vcl_int_t y, no_vcl_bool_t* handled, void*)
+{
+    TControl* self = static_cast<TControl*>(FromHandle(sender));
+    if (!self || !self->onMouseWheel_)
+        return;
+    TMouseWheelEvent handler = self->onMouseWheel_;
+    bool handledValue = *handled != 0;
+    handler(self, static_cast<TShiftState>(shift), wheelDelta, x, y, handledValue);
+    *handled = handledValue ? 1 : 0;
+}
+
+/* ---------------- TWinControl ---------------- */
+
+TWinControl::TWinControl(no_vcl_obj_t handle)
+    : TControl(handle)
+    , OnKeyDown(this, &TWinControl::GetOnKeyDownImpl, &TWinControl::SetOnKeyDownImpl)
+    , OnKeyUp(this, &TWinControl::GetOnKeyUpImpl, &TWinControl::SetOnKeyUpImpl)
+    , OnKeyPress(this, &TWinControl::GetOnKeyPressImpl, &TWinControl::SetOnKeyPressImpl)
+{}
+
+TKeyEvent TWinControl::GetOnKeyDownImpl(TObject* owner) { return static_cast<TWinControl*>(owner)->onKeyDown_; }
+TKeyEvent TWinControl::GetOnKeyUpImpl(TObject* owner)   { return static_cast<TWinControl*>(owner)->onKeyUp_; }
+TKeyPressEvent TWinControl::GetOnKeyPressImpl(TObject* owner) { return static_cast<TWinControl*>(owner)->onKeyPress_; }
+
+void TWinControl::SetOnKeyDownImpl(TObject* owner, const TKeyEvent& value)
+{
+    TWinControl* self = static_cast<TWinControl*>(owner);
+    self->onKeyDown_ = value;
+    if (value && !self->onKeyDownHooked_)
+    {
+        no_vcl_TWinControl_SetOnKeyDown(self->handle_, &TWinControl::KeyDownTrampoline, nullptr);
+        self->onKeyDownHooked_ = true;
+    }
+}
+
+void TWinControl::SetOnKeyUpImpl(TObject* owner, const TKeyEvent& value)
+{
+    TWinControl* self = static_cast<TWinControl*>(owner);
+    self->onKeyUp_ = value;
+    if (value && !self->onKeyUpHooked_)
+    {
+        no_vcl_TWinControl_SetOnKeyUp(self->handle_, &TWinControl::KeyUpTrampoline, nullptr);
+        self->onKeyUpHooked_ = true;
+    }
+}
+
+void TWinControl::SetOnKeyPressImpl(TObject* owner, const TKeyPressEvent& value)
+{
+    TWinControl* self = static_cast<TWinControl*>(owner);
+    self->onKeyPress_ = value;
+    if (value && !self->onKeyPressHooked_)
+    {
+        no_vcl_TWinControl_SetOnKeyPress(self->handle_, &TWinControl::KeyPressTrampoline, nullptr);
+        self->onKeyPressHooked_ = true;
+    }
+}
+
+void NO_VCL_CALL TWinControl::KeyDownTrampoline(no_vcl_obj_t sender, no_vcl_int_t* key, no_vcl_int_t shift, void*)
+{
+    TWinControl* self = static_cast<TWinControl*>(FromHandle(sender));
+    if (!self || !self->onKeyDown_)
+        return;
+    TKeyEvent handler = self->onKeyDown_;
+    int keyValue = *key;
+    handler(self, keyValue, static_cast<TShiftState>(shift));
+    *key = keyValue;
+}
+
+void NO_VCL_CALL TWinControl::KeyUpTrampoline(no_vcl_obj_t sender, no_vcl_int_t* key, no_vcl_int_t shift, void*)
+{
+    TWinControl* self = static_cast<TWinControl*>(FromHandle(sender));
+    if (!self || !self->onKeyUp_)
+        return;
+    TKeyEvent handler = self->onKeyUp_;
+    int keyValue = *key;
+    handler(self, keyValue, static_cast<TShiftState>(shift));
+    *key = keyValue;
+}
+
+void NO_VCL_CALL TWinControl::KeyPressTrampoline(no_vcl_obj_t sender, no_vcl_int_t* key, void*)
+{
+    TWinControl* self = static_cast<TWinControl*>(FromHandle(sender));
+    if (!self || !self->onKeyPress_)
+        return;
+    TKeyPressEvent handler = self->onKeyPress_;
+    char keyValue = static_cast<char>(*key);
+    handler(self, keyValue);
+    *key = static_cast<unsigned char>(keyValue);
+}
+
 /* ---------------- Form ---------------- */
 
 void TCustomForm::Show()      { no_vcl_TCustomForm_Show(handle_); }
@@ -230,31 +485,6 @@ void TCustomForm::SetOnCloseImpl(TObject* owner, const TCloseEvent& value)
     }
 }
 
-namespace
-{
-
-// フォームのイベントの Setter で共通の処理: ハンドラを保持し、最初に空でないハンドラが設定されたときだけブリッジを登録する。
-template<typename Event, typename Callback>
-void SetFormEvent(no_vcl_obj_t handle, Event& slot, bool& hooked, const Event& value,
-                  void (NO_VCL_CALL *setOn)(no_vcl_obj_t, Callback, void*), Callback trampoline)
-{
-    slot = value;
-    if (value && !hooked)
-    {
-        setOn(handle, trampoline, nullptr);
-        hooked = true;
-    }
-}
-
-// ハンドラの中でハンドラ自身を差し替えても実行中の std::function が破棄されないよう、コピーしてから呼ぶ。
-void CallNotify(TNotifyEvent handler, TObject* sender)
-{
-    if (handler)
-        handler(sender);
-}
-
-} // namespace
-
 void NO_VCL_CALL TCustomForm::HideTrampoline(no_vcl_obj_t sender, void*)
 {
     if (TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender)))
@@ -299,35 +529,35 @@ TCloseQueryEvent TCustomForm::GetOnCloseQueryImpl(TObject* owner) { return stati
 void TCustomForm::SetOnHideImpl(TObject* owner, const TNotifyEvent& value)
 {
     TCustomForm* self = static_cast<TCustomForm*>(owner);
-    SetFormEvent(self->handle_, self->onHide_, self->onHideHooked_, value,
+    SetSimpleEvent(self->handle_, self->onHide_, self->onHideHooked_, value,
                  &no_vcl_TCustomForm_SetOnHide, &TCustomForm::HideTrampoline);
 }
 
 void TCustomForm::SetOnActivateImpl(TObject* owner, const TNotifyEvent& value)
 {
     TCustomForm* self = static_cast<TCustomForm*>(owner);
-    SetFormEvent(self->handle_, self->onActivate_, self->onActivateHooked_, value,
+    SetSimpleEvent(self->handle_, self->onActivate_, self->onActivateHooked_, value,
                  &no_vcl_TCustomForm_SetOnActivate, &TCustomForm::ActivateTrampoline);
 }
 
 void TCustomForm::SetOnDeactivateImpl(TObject* owner, const TNotifyEvent& value)
 {
     TCustomForm* self = static_cast<TCustomForm*>(owner);
-    SetFormEvent(self->handle_, self->onDeactivate_, self->onDeactivateHooked_, value,
+    SetSimpleEvent(self->handle_, self->onDeactivate_, self->onDeactivateHooked_, value,
                  &no_vcl_TCustomForm_SetOnDeactivate, &TCustomForm::DeactivateTrampoline);
 }
 
 void TCustomForm::SetOnDestroyImpl(TObject* owner, const TNotifyEvent& value)
 {
     TCustomForm* self = static_cast<TCustomForm*>(owner);
-    SetFormEvent(self->handle_, self->onDestroy_, self->onDestroyHooked_, value,
+    SetSimpleEvent(self->handle_, self->onDestroy_, self->onDestroyHooked_, value,
                  &no_vcl_TCustomForm_SetOnDestroy, &TCustomForm::DestroyTrampoline);
 }
 
 void TCustomForm::SetOnCloseQueryImpl(TObject* owner, const TCloseQueryEvent& value)
 {
     TCustomForm* self = static_cast<TCustomForm*>(owner);
-    SetFormEvent(self->handle_, self->onCloseQuery_, self->onCloseQueryHooked_, value,
+    SetSimpleEvent(self->handle_, self->onCloseQuery_, self->onCloseQueryHooked_, value,
                  &no_vcl_TCustomForm_SetOnCloseQuery, &TCustomForm::CloseQueryTrampoline);
 }
 

@@ -34,6 +34,17 @@
     X(void,          TControl_Show,                 (no_vcl_obj_t o),                                         (o)) \
     X(void,          TControl_Hide,                 (no_vcl_obj_t o),                                         (o)) \
     X(void,          TControl_SetOnClick,           (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),          (o, cb, d)) \
+    X(void,          TControl_SetOnDblClick,        (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),          (o, cb, d)) \
+    X(void,          TControl_SetOnResize,          (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),          (o, cb, d)) \
+    X(void,          TControl_SetOnMouseDown,       (no_vcl_obj_t o, no_vcl_mouse_callback_t cb, void* d),    (o, cb, d)) \
+    X(void,          TControl_SetOnMouseUp,         (no_vcl_obj_t o, no_vcl_mouse_callback_t cb, void* d),    (o, cb, d)) \
+    X(void,          TControl_SetOnMouseMove,       (no_vcl_obj_t o, no_vcl_mouse_move_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TControl_SetOnMouseEnter,      (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),          (o, cb, d)) \
+    X(void,          TControl_SetOnMouseLeave,      (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),          (o, cb, d)) \
+    X(void,          TControl_SetOnMouseWheel,      (no_vcl_obj_t o, no_vcl_mouse_wheel_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TWinControl_SetOnKeyDown,      (no_vcl_obj_t o, no_vcl_key_callback_t cb, void* d),      (o, cb, d)) \
+    X(void,          TWinControl_SetOnKeyUp,        (no_vcl_obj_t o, no_vcl_key_callback_t cb, void* d),      (o, cb, d)) \
+    X(void,          TWinControl_SetOnKeyPress,     (no_vcl_obj_t o, no_vcl_key_press_callback_t cb, void* d), (o, cb, d)) \
     \
     X(no_vcl_obj_t,  TForm_Create,                  (no_vcl_obj_t owner),                                     (owner)) \
     X(void,          TCustomForm_Show,              (no_vcl_obj_t o),                                         (o)) \

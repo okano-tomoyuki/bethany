@@ -151,6 +151,46 @@ using TCloseEvent = std::function<void(TObject* Sender, TCloseAction& Action)>;
 // OnCloseQuery の型。CanClose には true が入っており、false にすると閉じるのを取りやめる(OnClose より前に呼ばれる)。
 using TCloseQueryEvent = std::function<void(TObject* Sender, bool& CanClose)>;
 
+// 修飾キー・マウスボタンの状態を表すビット集合(LCL の TShiftState に対応)。複数のビットを OR して使う。
+using TShiftState = unsigned int;
+const TShiftState ssShift  = 0x0001;
+const TShiftState ssAlt    = 0x0002;
+const TShiftState ssCtrl   = 0x0004;
+const TShiftState ssLeft   = 0x0008;  // マウスの左ボタンが押されている
+const TShiftState ssRight  = 0x0010;
+const TShiftState ssMiddle = 0x0020;
+const TShiftState ssDouble = 0x0040;  // ダブルクリックの一部として発生した
+const TShiftState ssMeta   = 0x0080;
+const TShiftState ssSuper  = 0x0100;
+const TShiftState ssHyper  = 0x0200;
+const TShiftState ssAltGr  = 0x0400;
+const TShiftState ssCaps   = 0x0800;
+const TShiftState ssNum    = 0x1000;
+const TShiftState ssScroll = 0x2000;
+const TShiftState ssTriple = 0x4000;
+const TShiftState ssQuad   = 0x8000;
+const TShiftState ssExtra1 = 0x10000;
+const TShiftState ssExtra2 = 0x20000;
+
+// マウスボタン(OnMouseDown / OnMouseUp の Button)。
+enum TMouseButton
+{
+    mbLeft,
+    mbRight,
+    mbMiddle,
+    mbExtra1,
+    mbExtra2
+};
+
+// キー入力・マウス操作のイベント。Key・Handled は書き換え可能で、書き換えると LCL に渡る値・以降の既定の処理が変わる
+// (OnKeyDown/OnKeyUp で Key を 0 にする、OnKeyPress で Key を 0 にする、いずれもその入力を LCL に渡さない)。
+using TKeyEvent = std::function<void(TObject* Sender, int& Key, TShiftState Shift)>;
+using TKeyPressEvent = std::function<void(TObject* Sender, char& Key)>;
+using TMouseEvent = std::function<void(TObject* Sender, TMouseButton Button, TShiftState Shift, int X, int Y)>;
+using TMouseMoveEvent = std::function<void(TObject* Sender, TShiftState Shift, int X, int Y)>;
+// Handled に true を書き込むと、ホイール操作をこのハンドラで処理済みとして扱う(既定のスクロール等が起きなくなる)。
+using TMouseWheelEvent = std::function<void(TObject* Sender, TShiftState Shift, int WheelDelta, int X, int Y, bool& Handled)>;
+
 class TPersistent : public TObject
 {
 protected:
@@ -206,6 +246,15 @@ public:
     Property<bool>         Enabled;
     Property<std::string>  Caption;
     Property<TNotifyEvent> OnClick;
+    Property<TNotifyEvent> OnDblClick;
+    // LCL では他のウィンドウメッセージへの応答等で発生し、必ずしもユーザー操作直後とは限らない。
+    Property<TNotifyEvent> OnResize;
+    Property<TMouseEvent>      OnMouseDown;
+    Property<TMouseEvent>      OnMouseUp;
+    Property<TMouseMoveEvent>  OnMouseMove;
+    Property<TNotifyEvent>     OnMouseEnter;
+    Property<TNotifyEvent>     OnMouseLeave;
+    Property<TMouseWheelEvent> OnMouseWheel;
 
     void Show();
     void Hide();
@@ -223,6 +272,49 @@ private:
     static void NO_VCL_CALL ClickTrampoline(no_vcl_obj_t sender, void* data);
     static TNotifyEvent GetOnClickImpl(TObject* owner);
     static void         SetOnClickImpl(TObject* owner, const TNotifyEvent& value);
+
+    TNotifyEvent     onDblClick_;
+    TNotifyEvent     onResize_;
+    TMouseEvent      onMouseDown_;
+    TMouseEvent      onMouseUp_;
+    TMouseMoveEvent  onMouseMove_;
+    TNotifyEvent     onMouseEnter_;
+    TNotifyEvent     onMouseLeave_;
+    TMouseWheelEvent onMouseWheel_;
+    bool onDblClickHooked_   = false;
+    bool onResizeHooked_     = false;
+    bool onMouseDownHooked_  = false;
+    bool onMouseUpHooked_    = false;
+    bool onMouseMoveHooked_  = false;
+    bool onMouseEnterHooked_ = false;
+    bool onMouseLeaveHooked_ = false;
+    bool onMouseWheelHooked_ = false;
+
+    static void NO_VCL_CALL DblClickTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL ResizeTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL MouseEnterTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL MouseLeaveTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL MouseDownTrampoline(no_vcl_obj_t sender, no_vcl_int_t button, no_vcl_int_t shift, no_vcl_int_t x, no_vcl_int_t y, void* data);
+    static void NO_VCL_CALL MouseUpTrampoline(no_vcl_obj_t sender, no_vcl_int_t button, no_vcl_int_t shift, no_vcl_int_t x, no_vcl_int_t y, void* data);
+    static void NO_VCL_CALL MouseMoveTrampoline(no_vcl_obj_t sender, no_vcl_int_t shift, no_vcl_int_t x, no_vcl_int_t y, void* data);
+    static void NO_VCL_CALL MouseWheelTrampoline(no_vcl_obj_t sender, no_vcl_int_t shift, no_vcl_int_t wheelDelta, no_vcl_int_t x, no_vcl_int_t y, no_vcl_bool_t* handled, void* data);
+
+    static TNotifyEvent GetOnDblClickImpl(TObject* owner);
+    static void         SetOnDblClickImpl(TObject* owner, const TNotifyEvent& value);
+    static TNotifyEvent GetOnResizeImpl(TObject* owner);
+    static void         SetOnResizeImpl(TObject* owner, const TNotifyEvent& value);
+    static TNotifyEvent GetOnMouseEnterImpl(TObject* owner);
+    static void         SetOnMouseEnterImpl(TObject* owner, const TNotifyEvent& value);
+    static TNotifyEvent GetOnMouseLeaveImpl(TObject* owner);
+    static void         SetOnMouseLeaveImpl(TObject* owner, const TNotifyEvent& value);
+    static TMouseEvent  GetOnMouseDownImpl(TObject* owner);
+    static void         SetOnMouseDownImpl(TObject* owner, const TMouseEvent& value);
+    static TMouseEvent  GetOnMouseUpImpl(TObject* owner);
+    static void         SetOnMouseUpImpl(TObject* owner, const TMouseEvent& value);
+    static TMouseMoveEvent GetOnMouseMoveImpl(TObject* owner);
+    static void            SetOnMouseMoveImpl(TObject* owner, const TMouseMoveEvent& value);
+    static TMouseWheelEvent GetOnMouseWheelImpl(TObject* owner);
+    static void             SetOnMouseWheelImpl(TObject* owner, const TMouseWheelEvent& value);
 
     static TWinControl* GetParentImpl(TObject* owner);
     static void         SetParentImpl(TObject* owner, TWinControl* const& value);
@@ -246,9 +338,33 @@ private:
 
 class TWinControl : public TControl
 {
+public:
+    Property<TKeyEvent>      OnKeyDown;
+    Property<TKeyEvent>      OnKeyUp;
+    Property<TKeyPressEvent> OnKeyPress;
+
 protected:
-    explicit TWinControl(no_vcl_obj_t handle) : TControl(handle) {}
+    explicit TWinControl(no_vcl_obj_t handle);
     ~TWinControl() override = default;
+
+private:
+    TKeyEvent      onKeyDown_;
+    TKeyEvent      onKeyUp_;
+    TKeyPressEvent onKeyPress_;
+    bool onKeyDownHooked_  = false;
+    bool onKeyUpHooked_    = false;
+    bool onKeyPressHooked_ = false;
+
+    static void NO_VCL_CALL KeyDownTrampoline(no_vcl_obj_t sender, no_vcl_int_t* key, no_vcl_int_t shift, void* data);
+    static void NO_VCL_CALL KeyUpTrampoline(no_vcl_obj_t sender, no_vcl_int_t* key, no_vcl_int_t shift, void* data);
+    static void NO_VCL_CALL KeyPressTrampoline(no_vcl_obj_t sender, no_vcl_int_t* key, void* data);
+
+    static TKeyEvent GetOnKeyDownImpl(TObject* owner);
+    static void      SetOnKeyDownImpl(TObject* owner, const TKeyEvent& value);
+    static TKeyEvent GetOnKeyUpImpl(TObject* owner);
+    static void      SetOnKeyUpImpl(TObject* owner, const TKeyEvent& value);
+    static TKeyPressEvent GetOnKeyPressImpl(TObject* owner);
+    static void           SetOnKeyPressImpl(TObject* owner, const TKeyPressEvent& value);
 };
 
 class TGraphicControl : public TControl

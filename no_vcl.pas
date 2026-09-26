@@ -53,6 +53,63 @@ type
     procedure DoCloseQuery(Sender: TObject; var CanClose: Boolean);
   end;
 
+  { OnKeyDown/OnKeyUp(TKeyEvent)用。Key(キーコード)は書き換え可能(var 引数)。0 にすると LCL に渡さない。
+    Shift は TShiftStateEnum の各値をビットとして表した LongWord(no_vcl_ss* のビット和、ShiftStateToInt 参照)。 }
+  TNoVclKeyCallback = procedure(Sender: Pointer; Key: PInteger; Shift: LongWord; Data: Pointer); NO_VCL_CALL;
+
+  TKeyCallbackBridge = class(TComponent)
+  private
+    FCallback: TNoVclKeyCallback;
+    FData: Pointer;
+  public
+    procedure DoKey(Sender: TObject; var Key: Word; Shift: TShiftState);
+  end;
+
+  { OnKeyPress(TKeyPressEvent)用。Key は文字コード、書き換え可能。0 にすると LCL に渡さない。 }
+  TNoVclKeyPressCallback = procedure(Sender: Pointer; Key: PInteger; Data: Pointer); NO_VCL_CALL;
+
+  TKeyPressCallbackBridge = class(TComponent)
+  private
+    FCallback: TNoVclKeyPressCallback;
+    FData: Pointer;
+  public
+    procedure DoKeyPress(Sender: TObject; var Key: char);
+  end;
+
+  { OnMouseDown/OnMouseUp(TMouseEvent)用。Button は TMouseButton の序数(no_vcl_mb*)、Shift は上記と同じ。 }
+  TNoVclMouseCallback = procedure(Sender: Pointer; Button, Shift, X, Y: Integer; Data: Pointer); NO_VCL_CALL;
+
+  TMouseCallbackBridge = class(TComponent)
+  private
+    FCallback: TNoVclMouseCallback;
+    FData: Pointer;
+  public
+    procedure DoMouse(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+  end;
+
+  { OnMouseMove(TMouseMoveEvent)用。 }
+  TNoVclMouseMoveCallback = procedure(Sender: Pointer; Shift, X, Y: Integer; Data: Pointer); NO_VCL_CALL;
+
+  TMouseMoveCallbackBridge = class(TComponent)
+  private
+    FCallback: TNoVclMouseMoveCallback;
+    FData: Pointer;
+  public
+    procedure DoMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
+  end;
+
+  { OnMouseWheel(TMouseWheelEvent)用。Handled は書き換え可能(0 以外 = True)。
+    True にすると、ホイール操作をこのハンドラで処理済みとして扱う(既定のスクロール等が起きなくなる)。 }
+  TNoVclMouseWheelCallback = procedure(Sender: Pointer; Shift, WheelDelta, X, Y: Integer; Handled: PInteger; Data: Pointer); NO_VCL_CALL;
+
+  TMouseWheelCallbackBridge = class(TComponent)
+  private
+    FCallback: TNoVclMouseWheelCallback;
+    FData: Pointer;
+  public
+    procedure DoMouseWheel(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
+  end;
+
   { protected メンバへアクセスするための派生クラス(protected hack)。
     同一ユニット内で宣言した派生クラス経由なら、基底の protected メンバに触れられる。 }
   TControlAccess = class(TControl);
@@ -102,6 +159,75 @@ begin
   CanClose := A <> 0;
 end;
 
+{ TShiftState(集合型)を LongWord のビット集合(no_vcl_ss* と対応)に変換する。
+  ループで変換することで、集合の実際のバイトサイズ(packset ディレクティブの効果)に依存しない。 }
+function ShiftStateToInt(const S: TShiftState): LongWord;
+var
+  I: TShiftStateEnum;
+begin
+  Result := 0;
+  for I := Low(TShiftStateEnum) to High(TShiftStateEnum) do
+    if I in S then
+      Result := Result or (LongWord(1) shl Ord(I));
+end;
+
+function IntToShiftState(V: LongWord): TShiftState;
+var
+  I: TShiftStateEnum;
+begin
+  Result := [];
+  for I := Low(TShiftStateEnum) to High(TShiftStateEnum) do
+    if (V and (LongWord(1) shl Ord(I))) <> 0 then
+      Include(Result, I);
+end;
+
+procedure TKeyCallbackBridge.DoKey(Sender: TObject; var Key: Word; Shift: TShiftState);
+var
+  K: Integer;
+begin
+  if not Assigned(FCallback) or GDetaching then
+    Exit;
+  K := Key;
+  FCallback(Pointer(Sender), @K, ShiftStateToInt(Shift), FData);
+  Key := Word(K and $FFFF);
+end;
+
+procedure TKeyPressCallbackBridge.DoKeyPress(Sender: TObject; var Key: char);
+var
+  K: Integer;
+begin
+  if not Assigned(FCallback) or GDetaching then
+    Exit;
+  K := Ord(Key);
+  FCallback(Pointer(Sender), @K, FData);
+  Key := Chr(K and $FF);
+end;
+
+procedure TMouseCallbackBridge.DoMouse(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+begin
+  if not Assigned(FCallback) or GDetaching then
+    Exit;
+  FCallback(Pointer(Sender), Ord(Button), ShiftStateToInt(Shift), X, Y, FData);
+end;
+
+procedure TMouseMoveCallbackBridge.DoMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
+begin
+  if not Assigned(FCallback) or GDetaching then
+    Exit;
+  FCallback(Pointer(Sender), ShiftStateToInt(Shift), X, Y, FData);
+end;
+
+procedure TMouseWheelCallbackBridge.DoMouseWheel(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
+var
+  H: Integer;
+begin
+  if not Assigned(FCallback) or GDetaching then
+    Exit;
+  if Handled then H := -1 else H := 0;
+  FCallback(Pointer(Sender), ShiftStateToInt(Shift), WheelDelta, MousePos.X, MousePos.Y, @H, FData);
+  Handled := H <> 0;
+end;
+
 { ブリッジの取得(*_SetOnXxx は必ずこれを通す)。
   Current はイベントに現在設定されているメソッドの Data(= メソッドの持ち主のオブジェクト)。
   それが Owner の持つこのライブラリのブリッジなら、新しく作らずにコールバックを差し替えて再利用する
@@ -121,6 +247,81 @@ end;
 function MethodData(const M: TCloseQueryEvent): Pointer; overload;
 begin
   Result := TMethod(M).Data;
+end;
+
+function MethodData(const M: TKeyEvent): Pointer; overload;
+begin
+  Result := TMethod(M).Data;
+end;
+
+function MethodData(const M: TKeyPressEvent): Pointer; overload;
+begin
+  Result := TMethod(M).Data;
+end;
+
+function MethodData(const M: TMouseEvent): Pointer; overload;
+begin
+  Result := TMethod(M).Data;
+end;
+
+function MethodData(const M: TMouseMoveEvent): Pointer; overload;
+begin
+  Result := TMethod(M).Data;
+end;
+
+function MethodData(const M: TMouseWheelEvent): Pointer; overload;
+begin
+  Result := TMethod(M).Data;
+end;
+
+function KeyBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclKeyCallback; Data: Pointer): TKeyCallbackBridge;
+begin
+  if (Current <> nil) and (TObject(Current) is TKeyCallbackBridge) and (TKeyCallbackBridge(Current).Owner = Owner) then
+    Result := TKeyCallbackBridge(Current)
+  else
+    Result := TKeyCallbackBridge.Create(Owner);
+  Result.FCallback := Cb;
+  Result.FData := Data;
+end;
+
+function KeyPressBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclKeyPressCallback; Data: Pointer): TKeyPressCallbackBridge;
+begin
+  if (Current <> nil) and (TObject(Current) is TKeyPressCallbackBridge) and (TKeyPressCallbackBridge(Current).Owner = Owner) then
+    Result := TKeyPressCallbackBridge(Current)
+  else
+    Result := TKeyPressCallbackBridge.Create(Owner);
+  Result.FCallback := Cb;
+  Result.FData := Data;
+end;
+
+function MouseBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclMouseCallback; Data: Pointer): TMouseCallbackBridge;
+begin
+  if (Current <> nil) and (TObject(Current) is TMouseCallbackBridge) and (TMouseCallbackBridge(Current).Owner = Owner) then
+    Result := TMouseCallbackBridge(Current)
+  else
+    Result := TMouseCallbackBridge.Create(Owner);
+  Result.FCallback := Cb;
+  Result.FData := Data;
+end;
+
+function MouseMoveBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclMouseMoveCallback; Data: Pointer): TMouseMoveCallbackBridge;
+begin
+  if (Current <> nil) and (TObject(Current) is TMouseMoveCallbackBridge) and (TMouseMoveCallbackBridge(Current).Owner = Owner) then
+    Result := TMouseMoveCallbackBridge(Current)
+  else
+    Result := TMouseMoveCallbackBridge.Create(Owner);
+  Result.FCallback := Cb;
+  Result.FData := Data;
+end;
+
+function MouseWheelBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclMouseWheelCallback; Data: Pointer): TMouseWheelCallbackBridge;
+begin
+  if (Current <> nil) and (TObject(Current) is TMouseWheelCallbackBridge) and (TMouseWheelCallbackBridge(Current).Owner = Owner) then
+    Result := TMouseWheelCallbackBridge(Current)
+  else
+    Result := TMouseWheelCallbackBridge.Create(Owner);
+  Result.FCallback := Cb;
+  Result.FData := Data;
 end;
 
 function VarBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclVarCallback; Data: Pointer): TVarCallbackBridge;
@@ -308,6 +509,63 @@ end;
 procedure TControl_SetOnClick(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
   TControl(Obj).OnClick := @BridgeFor(TControl(Obj), MethodData(TControl(Obj).OnClick), Cb, Data).DoClick;
+end;
+
+procedure TControl_SetOnDblClick(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TControlAccess(Obj).OnDblClick := @BridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnDblClick), Cb, Data).DoClick;
+end;
+
+procedure TControl_SetOnResize(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TControl(Obj).OnResize := @BridgeFor(TControl(Obj), MethodData(TControl(Obj).OnResize), Cb, Data).DoClick;
+end;
+
+procedure TControl_SetOnMouseDown(Obj: Pointer; Cb: TNoVclMouseCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TControlAccess(Obj).OnMouseDown := @MouseBridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnMouseDown), Cb, Data).DoMouse;
+end;
+
+procedure TControl_SetOnMouseUp(Obj: Pointer; Cb: TNoVclMouseCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TControlAccess(Obj).OnMouseUp := @MouseBridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnMouseUp), Cb, Data).DoMouse;
+end;
+
+procedure TControl_SetOnMouseMove(Obj: Pointer; Cb: TNoVclMouseMoveCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TControlAccess(Obj).OnMouseMove := @MouseMoveBridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnMouseMove), Cb, Data).DoMouseMove;
+end;
+
+procedure TControl_SetOnMouseEnter(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TControlAccess(Obj).OnMouseEnter := @BridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnMouseEnter), Cb, Data).DoClick;
+end;
+
+procedure TControl_SetOnMouseLeave(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TControlAccess(Obj).OnMouseLeave := @BridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnMouseLeave), Cb, Data).DoClick;
+end;
+
+procedure TControl_SetOnMouseWheel(Obj: Pointer; Cb: TNoVclMouseWheelCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TControlAccess(Obj).OnMouseWheel := @MouseWheelBridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnMouseWheel), Cb, Data).DoMouseWheel;
+end;
+
+{ TWinControl }
+
+procedure TWinControl_SetOnKeyDown(Obj: Pointer; Cb: TNoVclKeyCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TWinControl(Obj).OnKeyDown := @KeyBridgeFor(TWinControl(Obj), MethodData(TWinControl(Obj).OnKeyDown), Cb, Data).DoKey;
+end;
+
+procedure TWinControl_SetOnKeyUp(Obj: Pointer; Cb: TNoVclKeyCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TWinControl(Obj).OnKeyUp := @KeyBridgeFor(TWinControl(Obj), MethodData(TWinControl(Obj).OnKeyUp), Cb, Data).DoKey;
+end;
+
+procedure TWinControl_SetOnKeyPress(Obj: Pointer; Cb: TNoVclKeyPressCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TWinControl(Obj).OnKeyPress := @KeyPressBridgeFor(TWinControl(Obj), MethodData(TWinControl(Obj).OnKeyPress), Cb, Data).DoKeyPress;
 end;
 
 { TCustomForm / TForm }
@@ -824,6 +1082,18 @@ exports
   TControl_Show,
   TControl_Hide,
   TControl_SetOnClick,
+  TControl_SetOnDblClick,
+  TControl_SetOnResize,
+  TControl_SetOnMouseDown,
+  TControl_SetOnMouseUp,
+  TControl_SetOnMouseMove,
+  TControl_SetOnMouseEnter,
+  TControl_SetOnMouseLeave,
+  TControl_SetOnMouseWheel,
+
+  TWinControl_SetOnKeyDown,
+  TWinControl_SetOnKeyUp,
+  TWinControl_SetOnKeyPress,
 
   TForm_Create,
   TCustomForm_Show,

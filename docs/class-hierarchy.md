@@ -109,6 +109,10 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 | Show / Hide | TControl(public) | TControl | TControl(public) | `TControl_Show` / `Hide` |
 | OnClick | TControl(public) | TControl | `TControl::OnClick` | `TControl_SetOnClick` |
 | Text | TControl(protected) | TCustomEdit / TCustomComboBox | TControl(protected)、TCustomEdit / TCustomComboBox で `using` | `TControl_GetText` / `SetText`(protected hack) |
+| OnResize | TControl(public) | TControl | TControl(public) | `TControl_SetOnResize` |
+| OnDblClick / OnMouseEnter / OnMouseLeave | TControl(protected) | TControl | TControl(public。protected hack で登録) | `TControl_SetOn*`(protected hack) |
+| OnMouseDown / OnMouseUp / OnMouseMove / OnMouseWheel | TControl(protected) | TControl | TControl(public。protected hack で登録) | `TControl_SetOn*`(protected hack、[ADR 0014](adr/0014-control-key-mouse-events.md)) |
+| OnKeyDown / OnKeyUp / OnKeyPress | TWinControl(public) | TWinControl | TWinControl(public) | `TWinControl_SetOn*`([ADR 0014](adr/0014-control-key-mouse-events.md)) |
 | Show / Hide / ShowModal / Close | TCustomForm(public) | TCustomForm | TCustomForm(public。Show/Hide は TControl のものを隠す) | `TCustomForm_*` |
 | Release / OnClose / OnShow | TCustomForm(public) | TCustomForm | TCustomForm(public) | `TCustomForm_Release` / `SetOnClose` / `SetOnShow` |
 | OnCloseQuery / OnHide / OnActivate / OnDeactivate / OnDestroy | TCustomForm(public) | TCustomForm | TCustomForm(public) | `TCustomForm_SetOn*`([ADR 0012](adr/0012-remaining-form-events.md)) |
@@ -126,6 +130,10 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 | DestroyComponents | TComponent(public) | TComponent | (C API のみ) | `TComponent_DestroyComponents` |
 
 破棄は種類によらず `TComponent_Destroy`(C++ では `TComponent::Free()`)で行う。
+
+修飾キー・マウスボタンの状態(TShiftState)は、C API・C++ とも `no_vcl_ss*` / `ssShift` 等のビット定数を OR した
+単純な整数のビット集合として表す(TColor と同様、Pascal の集合型を素の整数として扱う)。
+マウスボタンは `TMouseButton` の序数と同じ整数(`no_vcl_mb*` / `TMouseButton`)([ADR 0014](adr/0014-control-key-mouse-events.md))。
 
 イベント(OnClick・OnChange・OnPaint・OnTimer・OnShow 等)は C++ では `Property<TNotifyEvent>`(`TNotifyEvent = std::function<void(TObject* Sender)>`)、
 C API では `no_vcl_Txxx_SetOnXxx(obj, callback, data)` で登録する([ADR 0009](adr/0009-events-as-properties-with-sender.md))。
