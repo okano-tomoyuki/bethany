@@ -125,6 +125,7 @@ int main(void)
 {
     int freedCount = 0;
     int clickCount = 0;
+    no_vcl_obj_t app;
     no_vcl_obj_t form;
     no_vcl_obj_t button;
     no_vcl_obj_t label;
@@ -143,12 +144,18 @@ int main(void)
 
     no_vcl_FreeNotify_SetCallback(OnComponentFreed, &freedCount);
 
-    form = no_vcl_TForm_Create(NULL);
+    app = no_vcl_GetApplication();
+    no_vcl_TApplication_SetTitle(app, "no_vcl C test");
+    printf("Title: %s\n", no_vcl_TApplication_GetTitle(app));
+
+    /* 最初に CreateForm で生成したフォームが MainForm になる(Owner は Application)。 */
+    form = no_vcl_TApplication_CreateForm(app);
     if (!form)
     {
-        printf("TForm_Create failed\n");
+        printf("TApplication_CreateForm failed\n");
         return 1;
     }
+    printf("MainForm is form: %s\n", no_vcl_TApplication_GetMainForm(app) == form ? "yes" : "no");
 
     no_vcl_TControl_SetCaption(form, "Hello from FPC DLL");
     no_vcl_TControl_SetWidth(form, 640);
@@ -230,12 +237,15 @@ int main(void)
     no_vcl_TControl_SetHeight(paintBox, 130);
     no_vcl_TPaintBox_SetOnPaint(paintBox, OnPaintBoxPaint, NULL);
 
-    printf("Showing form (click the button, then close the window to continue)...\n");
+    printf("Running (click the button, then close the window to continue)...\n");
     fflush(stdout);
-    no_vcl_TCustomForm_ShowModal(form);
+    /* MainForm を表示してメッセージループに入り、MainForm が閉じられると戻る。 */
+    no_vcl_TApplication_Run(app);
+    printf("Run returned. Terminated=%d\n", no_vcl_TApplication_GetTerminated(app) != 0);
 
-    /* Owner である form を破棄すると、form が所有するコントロールも LCL 側で破棄される。 */
-    no_vcl_TComponent_Destroy(form);
+    /* Application が所有するフォーム(と、フォームが所有するコントロール)をまとめて破棄する。
+       呼ばなくても DLL の切り離し時に LCL が破棄するが、そのときは破棄通知が呼ばれない。 */
+    no_vcl_TComponent_DestroyComponents(app);
     printf("Clicks: %d, Freed components: %d (expected 15: form + 14 owned)\n", clickCount, freedCount);
 
     printf("OK\n");

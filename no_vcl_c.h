@@ -39,6 +39,8 @@ void          NO_VCL_CALL no_vcl_FreeNotify_SetCallback(no_vcl_callback_t Cb, vo
 
 /* TComponent */
 void          NO_VCL_CALL no_vcl_TComponent_Destroy(no_vcl_obj_t Obj);
+/* 所有しているコンポーネントをすべて破棄する(Obj 自身は残る)。 */
+void          NO_VCL_CALL no_vcl_TComponent_DestroyComponents(no_vcl_obj_t Obj);
 
 /* TControl */
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TControl_GetParent(no_vcl_obj_t Obj);
@@ -77,9 +79,24 @@ void          NO_VCL_CALL no_vcl_TCustomForm_Hide(no_vcl_obj_t Obj);
 no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomForm_ShowModal(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TCustomForm_Close(no_vcl_obj_t Obj);
 
-/* Application */
-void          NO_VCL_CALL no_vcl_Application_Run(void);
-void          NO_VCL_CALL no_vcl_Application_ProcessMessages(void);
+/* TApplication
+ * no_vcl_GetApplication は LCL のグローバルな Application(DLL の読み込み時に初期化済み)を返す。
+ * no_vcl_TApplication_CreateForm は Application を Owner とする TForm を生成して返す。
+ * 最初に生成したフォームが MainForm になり、no_vcl_TApplication_Run はそれを表示して
+ * メッセージループに入る(MainForm が閉じられると戻る)。
+ * Application が所有するフォームは DLL の切り離し時に LCL が破棄するが、その時点では破棄通知は
+ * 呼ばれない。破棄を通知で受けたい場合は、終了前に no_vcl_TComponent_DestroyComponents(app) を呼ぶ。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_GetApplication(void);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TApplication_CreateForm(no_vcl_obj_t Obj);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TApplication_GetMainForm(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TApplication_Run(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TApplication_ProcessMessages(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TApplication_Terminate(no_vcl_obj_t Obj);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TApplication_GetTerminated(no_vcl_obj_t Obj);
+no_vcl_str_t  NO_VCL_CALL no_vcl_TApplication_GetTitle(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TApplication_SetTitle(no_vcl_obj_t Obj, no_vcl_str_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TApplication_GetShowMainForm(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TApplication_SetShowMainForm(no_vcl_obj_t Obj, no_vcl_bool_t Value);
 
 /* TPanel / TGroupBox / TLabel */
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TPanel_Create(no_vcl_obj_t Owner);

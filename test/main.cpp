@@ -18,7 +18,12 @@ public:
     explicit TTracedLabel(TComponent* AOwner) : TLabel(AOwner) {}
 
 protected:
-    ~TTracedLabel() override { ++g_destroyedLabels; }
+    ~TTracedLabel() override
+    {
+        ++g_destroyedLabels;
+        std::printf("~TTracedLabel: destroyed labels=%d\n", g_destroyedLabels);
+        std::fflush(stdout);
+    }
 };
 
 // デザイナーが生成することを想定した形のフォーム。
@@ -43,7 +48,8 @@ public:
     TTimer*       Timer1;
     TPaintBox*    PaintBox1;
 
-    TMainForm() : TForm(nullptr)
+    // C++Builder と同じく Owner を受け取り、TForm に渡す(Application->CreateForm が Application を渡す)。
+    explicit TMainForm(TComponent* AOwner) : TForm(AOwner)
     {
         Caption = "no_vcl C++ wrapper";
         Width = 640;
@@ -172,7 +178,12 @@ public:
     }
 
 protected:
-    ~TMainForm() override = default;
+    // Application が所有するフォームは、main から戻った後にまとめて破棄される。
+    ~TMainForm() override
+    {
+        std::printf("~TMainForm\n");
+        std::fflush(stdout);
+    }
 
 private:
     int clicks_ = 0;
@@ -258,37 +269,54 @@ private:
 
 } // namespace
 
+// C++Builder のフォームユニットと同じく、フォームはグローバルなポインタ変数で持つ。
+TMainForm* Form1 = nullptr;
+
 int main()
 {
-    TMainForm* form = new TMainForm();
-    std::printf("Caption: %s\n", std::string(form->Caption).c_str());
+    Application->Initialize();
+    Application->Title = "no_vcl test";
+    Application->CreateForm(&Form1);
 
-    TWinControl* buttonParent = form->Button1->Parent;
-    std::printf("Button1->Parent is form: %s\n", buttonParent == form ? "yes" : "no");
+    std::printf("Title: %s\n", std::string(Application->Title).c_str());
+    std::printf("Application->MainForm is Form1: %s\n", Application->MainForm == Form1 ? "yes" : "no");
+    std::printf("MainForm caption: %s\n", std::string(Application->MainForm->Caption).c_str());
+    std::printf("Button1->Parent->Caption: %s\n", std::string(Form1->Button1->Parent->Caption).c_str());
+
+    // 2 つ目以降に生成したフォームは MainForm にならない。
+    TForm* subForm = new TForm(Application);
+    std::printf("MainForm after creating another form is still Form1: %s\n", Application->MainForm == Form1 ? "yes" : "no");
+    subForm->Free();
 
     // ハンドラの解除(nullptr の代入)。解除したボタンを押しても何も起きない。
-    TButton* disabledHandler = new TButton(form);
-    disabledHandler->Parent = form;
+    TButton* disabledHandler = new TButton(Form1);
+    disabledHandler->Parent = Form1;
     disabledHandler->Caption = "No handler";
     disabledHandler->Left = 20;
     disabledHandler->Top = 280;
     disabledHandler->OnClick = [](TObject*) { std::printf("must not be called\n"); };
     disabledHandler->OnClick = nullptr;
 
+    // Application->Terminate() でメッセージループを抜ける(ウィンドウを閉じても抜ける)。
+    TButton* quitButton = new TButton(Form1);
+    quitButton->Parent = Form1;
+    quitButton->Caption = "Quit";
+    quitButton->Left = 20;
+    quitButton->Top = 320;
+    quitButton->OnClick = [](TObject*) { Application->Terminate(); };
+
     // Free() で個別に破棄すると、ラッパーも破棄される。
-    TTracedLabel* tempLabel = new TTracedLabel(form);
-    tempLabel->Parent = form;
+    TTracedLabel* tempLabel = new TTracedLabel(Form1);
+    tempLabel->Parent = Form1;
     tempLabel->Free();
     std::printf("Destroyed labels after Free(): %d (expected 1)\n", g_destroyedLabels);
 
-    std::printf("Showing form (click the button, then close the window to continue)...\n");
+    std::printf("Running (click the buttons, then press Quit or close the window)...\n");
     std::fflush(stdout);
-    form->ShowModal();
+    Application->Run();
 
-    // Owner である form を破棄すると、form が所有するコンポーネントのラッパーもまとめて破棄される。
-    form->Free();
-    std::printf("Destroyed labels after form->Free(): %d (expected 2)\n", g_destroyedLabels);
-
-    std::printf("OK\n");
+    std::printf("Run returned. Terminated=%d\n", (bool)Application->Terminated);
+    std::printf("OK (Form1 and its components are destroyed after main returns)\n");
+    std::fflush(stdout);
     return 0;
 }

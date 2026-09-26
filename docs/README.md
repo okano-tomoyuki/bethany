@@ -27,6 +27,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0007](adr/0007-lcl-faithful-hierarchy.md) | クラス階層を LCL の継承関係に忠実に揃え、Owner と Parent を分離する | 承認 |
 | [0008](adr/0008-wrapper-lifetime-follows-lcl.md) | C++ ラッパーの寿命を LCL オブジェクトに一致させ、ヒープ生成と Free() を強制する | 承認 |
 | [0009](adr/0009-events-as-properties-with-sender.md) | イベントは Sender を受け取るプロパティとし、C API のコールバックに利用者データを渡す | 承認 |
+| [0010](adr/0010-application-object.md) | Application をグローバルな TApplication* として公開し、CreateForm と終了時の破棄を C++Builder に揃える | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。

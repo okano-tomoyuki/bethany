@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <functional>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 
 #include "no_vcl_c.h"
@@ -86,10 +87,47 @@ public:
         return getter_(owner_);
     }
 
+    // ポインタ型のプロパティ(Parent 等)で、Button1->Parent->Caption のようにメンバへ直接たどれるようにする。
+    // ポインタ以外の型では使うとコンパイルエラーになる。
+    T operator->() const
+    {
+        return getter_(owner_);
+    }
+
 private:
     TObject* owner_;
     Getter   getter_;
     Setter   setter_;
+};
+
+// 読み取り専用のプロパティ(Application->MainForm / Terminated 等)。代入はコンパイルエラーになる。
+template<typename T>
+class ReadOnlyProperty
+{
+public:
+    using Getter = T (*)(TObject*);
+
+    ReadOnlyProperty(TObject* owner, Getter getter)
+        : owner_(owner)
+        , getter_(getter)
+    {}
+
+    ReadOnlyProperty(const ReadOnlyProperty&) = delete;
+    ReadOnlyProperty& operator=(const ReadOnlyProperty&) = delete;
+
+    operator T() const
+    {
+        return getter_(owner_);
+    }
+
+    T operator->() const
+    {
+        return getter_(owner_);
+    }
+
+private:
+    TObject* owner_;
+    Getter   getter_;
 };
 
 // イベントハンドラの型。C++Builder の TNotifyEvent に合わせ、イベントを発生させたオブジェクトを
@@ -237,7 +275,84 @@ public:
 
 protected:
     ~TForm() override = default;
+
+private:
+    friend class TApplication;
+
+    // TApplication::CreateForm が LCL の CreateForm で生成済みの、コンストラクタに引き取られるのを待つハンドル。
+    // Owner が Application のときだけ、新たに生成せずこれを使う。
+    static no_vcl_obj_t pendingHandle_;
+    static no_vcl_obj_t CreateHandle(TComponent* AOwner);
 };
+
+// C++Builder の TApplication。LCL の TApplication は FCL の TCustomApplication の派生だが、
+// C++Builder に合わせて TComponent 直下に置く。インスタンスはグローバル変数 Application の 1 つだけ。
+//
+// Application が所有するフォーム(CreateForm や new TForm(Application) で生成したもの)は、
+// プログラムの終了時(main から戻った後)にまとめて破棄され、ラッパーのデストラクタも呼ばれる。
+class TApplication : public TComponent
+{
+public:
+    // CreateForm で最初に生成したフォーム。Run はこれを表示し、これが閉じられると戻る。
+    ReadOnlyProperty<TForm*> MainForm;
+    ReadOnlyProperty<bool>   Terminated;
+    Property<std::string>    Title;
+    Property<bool>           ShowMainForm;
+
+    // LCL 側は DLL の読み込み時に初期化済みのため何もしない(C++Builder のコードとの互換のために置く)。
+    void Initialize() {}
+
+    // C++Builder の Application->CreateForm(__classid(TForm1), &Form1) に相当する。
+    // __classid は標準 C++ に無いため、型は引数から推論する: Application->CreateForm(&Form1);
+    // T は TForm の派生で、(TComponent* AOwner) を受け取って TForm(AOwner) に渡すコンストラクタを持つこと。
+    // 本家と違い、Reference への代入はコンストラクタの完了後になる。
+    template<typename T>
+    void CreateForm(T** Reference);
+
+    void Run();
+    void ProcessMessages();
+    void Terminate();
+
+protected:
+    ~TApplication() override = default;
+
+private:
+    friend TApplication* NewApplication();
+    explicit TApplication(no_vcl_obj_t handle);
+
+    void BeginCreateForm();
+    void EndCreateForm();
+    static void Shutdown();
+
+    static TForm*      GetMainFormImpl(TObject* owner);
+    static bool        GetTerminatedImpl(TObject* owner);
+    static std::string GetTitleImpl(TObject* owner);
+    static void        SetTitleImpl(TObject* owner, const std::string& value);
+    static bool        GetShowMainFormImpl(TObject* owner);
+    static void        SetShowMainFormImpl(TObject* owner, const bool& value);
+};
+
+// C++Builder と同じく、アプリケーションに 1 つのグローバル変数として公開する。
+// 静的初期化の順序は規定されないため、他の翻訳単位のグローバル変数の初期化子からは使わないこと。
+extern TApplication* Application;
+
+template<typename T>
+void TApplication::CreateForm(T** Reference)
+{
+    static_assert(std::is_base_of<TForm, T>::value, "CreateForm can only create classes derived from TForm");
+
+    BeginCreateForm();
+    try
+    {
+        *Reference = new T(this);
+    }
+    catch (...)
+    {
+        EndCreateForm();
+        throw;
+    }
+    EndCreateForm();
+}
 
 /* ---------------- Panel / GroupBox / Label ---------------- */
 

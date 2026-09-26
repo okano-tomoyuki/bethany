@@ -1,5 +1,7 @@
 #include "no_vcl.hpp"
 
+#include <cstdlib>
+
 namespace no_vcl
 {
 
@@ -158,9 +160,104 @@ void TCustomForm::Hide()      { no_vcl_TCustomForm_Hide(handle_); }
 int  TCustomForm::ShowModal() { return no_vcl_TCustomForm_ShowModal(handle_); }
 void TCustomForm::Close()     { no_vcl_TCustomForm_Close(handle_); }
 
+no_vcl_obj_t TForm::pendingHandle_ = nullptr;
+
 TForm::TForm(TComponent* AOwner)
-    : TCustomForm(no_vcl_TForm_Create(HandleOf(AOwner)))
+    : TCustomForm(CreateHandle(AOwner))
 {}
+
+no_vcl_obj_t TForm::CreateHandle(TComponent* AOwner)
+{
+    if (pendingHandle_ && AOwner && AOwner == Application)
+    {
+        no_vcl_obj_t handle = pendingHandle_;
+        pendingHandle_ = nullptr;
+        return handle;
+    }
+    return no_vcl_TForm_Create(HandleOf(AOwner));
+}
+
+/* ---------------- TApplication ---------------- */
+
+TApplication* NewApplication()
+{
+    return new TApplication(no_vcl_GetApplication());
+}
+
+TApplication* Application = NewApplication();
+
+TApplication::TApplication(no_vcl_obj_t handle)
+    : TComponent(handle)
+    , MainForm(this, &TApplication::GetMainFormImpl)
+    , Terminated(this, &TApplication::GetTerminatedImpl)
+    , Title(this, &TApplication::GetTitleImpl, &TApplication::SetTitleImpl)
+    , ShowMainForm(this, &TApplication::GetShowMainFormImpl, &TApplication::SetShowMainFormImpl)
+{
+    // 基底の TComponent のコンストラクタでレジストリ(関数内 static)が構築済みのため、
+    // ここで登録した終了処理はレジストリの破棄より先に呼ばれる。
+    std::atexit(&TApplication::Shutdown);
+}
+
+// main から戻った後(C++ の実行環境がまだ有効なうち)に、Application が所有するフォームを破棄する。
+// 破棄通知によってラッパーのデストラクタも呼ばれる。その後の DLL の切り離しでは通知は来ない。
+// Application 自身のラッパーは解放しない(LCL の Application は DLL の切り離しまで生きている)。
+void TApplication::Shutdown()
+{
+    if (Application)
+        no_vcl_TComponent_DestroyComponents(Application->handle_);
+    no_vcl_FreeNotify_SetCallback(nullptr, nullptr);
+}
+
+void TApplication::BeginCreateForm()
+{
+    // 前回のハンドルが引き取られていなければ破棄する(T のコンストラクタが Application 以外を Owner にした場合)。
+    if (TForm::pendingHandle_)
+        no_vcl_TComponent_Destroy(TForm::pendingHandle_);
+    TForm::pendingHandle_ = no_vcl_TApplication_CreateForm(handle_);
+}
+
+void TApplication::EndCreateForm()
+{
+    if (TForm::pendingHandle_)
+    {
+        no_vcl_TComponent_Destroy(TForm::pendingHandle_);
+        TForm::pendingHandle_ = nullptr;
+    }
+}
+
+void TApplication::Run()             { no_vcl_TApplication_Run(handle_); }
+void TApplication::ProcessMessages() { no_vcl_TApplication_ProcessMessages(handle_); }
+void TApplication::Terminate()       { no_vcl_TApplication_Terminate(handle_); }
+
+TForm* TApplication::GetMainFormImpl(TObject* owner)
+{
+    return dynamic_cast<TForm*>(FromHandle(no_vcl_TApplication_GetMainForm(owner->Handle())));
+}
+
+bool TApplication::GetTerminatedImpl(TObject* owner)
+{
+    return no_vcl_TApplication_GetTerminated(owner->Handle()) != 0;
+}
+
+std::string TApplication::GetTitleImpl(TObject* owner)
+{
+    return std::string(no_vcl_TApplication_GetTitle(owner->Handle()));
+}
+
+void TApplication::SetTitleImpl(TObject* owner, const std::string& value)
+{
+    no_vcl_TApplication_SetTitle(owner->Handle(), value.c_str());
+}
+
+bool TApplication::GetShowMainFormImpl(TObject* owner)
+{
+    return no_vcl_TApplication_GetShowMainForm(owner->Handle()) != 0;
+}
+
+void TApplication::SetShowMainFormImpl(TObject* owner, const bool& value)
+{
+    no_vcl_TApplication_SetShowMainForm(owner->Handle(), value ? 1 : 0);
+}
 
 /* ---------------- Panel / GroupBox / Label ---------------- */
 

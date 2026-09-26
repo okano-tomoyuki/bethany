@@ -13,6 +13,7 @@ TreeView・Grid 等の未実装クラスは確認していない。
 TObject
 └── TPersistent
     ├── TComponent
+    │   ├── TCustomApplication ── TApplication              ※TCustomApplication は FCL 固有
     │   ├── TCustomTimer ── TTimer
     │   └── TLCLComponent                                  ※LCL 固有
     │       ├── TMenu ── TMainMenu / TPopupMenu             ※TControl ではない
@@ -56,11 +57,13 @@ TObject
 LCL の継承関係の**部分列**にする(途中の階層を省くことはあっても、LCL に無い継承関係は作らない)。
 省くのは「LCL/FPC 固有で、C++Builder に存在せず、公開するメンバも持たないクラス」
 (TLCLComponent・TCustomDesignControl・TFPCanvasHelper・TFPCustomPen/Brush/Font・TFPCustomCanvas)。
+TCustomApplication も FCL 固有で C++Builder に無いため省き、Run・Terminate・Title 等は TApplication に置く。
 
 ```
 TObject
 └── TPersistent
     ├── TComponent
+    │   ├── TApplication
     │   ├── TCustomTimer ── TTimer
     │   └── TControl
     │       ├── TGraphicControl
@@ -84,6 +87,7 @@ TObject
 
 具象クラス(TForm・TButton 等)だけが public なコンストラクタ `(TComponent* AOwner)` を持つ。
 TCustomXxx 等の中間クラスのコンストラクタは protected で、直接は生成できない。
+TApplication はグローバル変数 `Application` の 1 つだけで、利用者は生成できない([ADR 0010](adr/0010-application-object.md))。
 
 ## 3. メンバの配置
 
@@ -110,6 +114,9 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 | Items / ItemIndex | TCustomListBox(public) | TCustomListBox | TCustomListBox(public) | `TCustomListBox_*` |
 | Canvas / OnPaint | TPaintBox(public/published) | TPaintBox | TPaintBox(public) | `TPaintBox_*` |
 | Interval / Enabled / OnTimer | TCustomTimer(public) | TCustomTimer | TCustomTimer(public) | `TCustomTimer_*` |
+| Run / Terminate / Terminated / Title | TCustomApplication(public。Run・Terminate・Title は TApplication で再宣言) | TApplication | TApplication(public) | `TApplication_*` |
+| CreateForm / MainForm / ProcessMessages / ShowMainForm | TApplication(public) | TApplication | TApplication(public。CreateForm は型を引数から推論するテンプレート) | `TApplication_*`(CreateForm は素の TForm を返す) |
+| DestroyComponents | TComponent(public) | TComponent | (C API のみ) | `TComponent_DestroyComponents` |
 
 破棄は種類によらず `TComponent_Destroy`(C++ では `TComponent::Free()`)で行う。
 
@@ -124,3 +131,5 @@ C API では `no_vcl_Txxx_SetOnXxx(obj, callback, data)` で登録する([ADR 00
 - `TObject` から具象クラスまで、コンポーネント系の全クラスのデストラクタは protected
   (スタック生成・`delete`・`unique_ptr` はコンパイルエラー)。派生クラスを作る場合もデストラクタを protected で宣言する。
 - 非所有の `TCanvas`/`TPen`/`TBrush`/`TFont` は値メンバとして持つため、デストラクタは public。
+- Application が所有するフォームは、main から戻った後の C++ の終了処理でまとめて破棄される
+  (デストラクタも呼ばれる)。DLL の切り離し時には破棄通知は呼ばれない([ADR 0010](adr/0010-application-object.md))。

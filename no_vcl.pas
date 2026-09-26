@@ -82,6 +82,16 @@ begin
   Result := Pointer(C);
 end;
 
+{ DLL の切り離し(プロセス終了時の FreeLibrary / ExitProcess)では、この後の LCL の終了処理で
+  Application とそれが所有するフォームが破棄される。その時点では呼び出し側(C++ のレジストリや
+  C のコールバックが参照するデータ)が既に破棄されている可能性があるため、通知を止めておく。
+  フックはユニットの終了処理より前に呼ばれる。 }
+procedure DetachHook(DllParam: PtrInt);
+begin
+  GFreeCallback := nil;
+  GFreeData := nil;
+end;
+
 { FreeNotify }
 
 procedure FreeNotify_SetCallback(Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
@@ -95,6 +105,12 @@ end;
 procedure TComponent_Destroy(Obj: Pointer); NO_VCL_CALL;
 begin
   TComponent(Obj).Free;
+end;
+
+{ 所有しているコンポーネントをすべて破棄する(自身は残る)。 }
+procedure TComponent_DestroyComponents(Obj: Pointer); NO_VCL_CALL;
+begin
+  TComponent(Obj).DestroyComponents;
 end;
 
 { TControl }
@@ -232,16 +248,71 @@ begin
   TCustomForm(Obj).Close;
 end;
 
-{ Application }
+{ TApplication
 
-procedure Application_Run; NO_VCL_CALL;
+  Application は LCL(Forms ユニット)のグローバル変数で、DLL の読み込み時に生成・初期化済み。
+  LCL の TApplication は FCL の TCustomApplication から派生するが、C++Builder に合わせ
+  TComponent 直下のクラスとして扱い、関数名も TApplication_* にそろえる。 }
+
+function GetApplication: Pointer; NO_VCL_CALL;
 begin
-  Application.Run;
+  Result := Pointer(Application);
 end;
 
-procedure Application_ProcessMessages; NO_VCL_CALL;
+{ MainForm を設定できるのは LCL では CreateForm の中だけ(UpdateMainForm は CreateForm が
+  生成中のフォームにしか効かない)ため、クラスを渡せない C/C++ 側向けに素の TForm を
+  CreateForm で生成して返す。最初に生成したフォームが MainForm になる。 }
+function TApplication_CreateForm(Obj: Pointer): Pointer; NO_VCL_CALL;
+var
+  F: TForm;
 begin
-  Application.ProcessMessages;
+  TApplication(Obj).CreateForm(TForm, F);
+  Result := Watch(F);
+end;
+
+function TApplication_GetMainForm(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TApplication(Obj).MainForm);
+end;
+
+procedure TApplication_Run(Obj: Pointer); NO_VCL_CALL;
+begin
+  TApplication(Obj).Run;
+end;
+
+procedure TApplication_ProcessMessages(Obj: Pointer); NO_VCL_CALL;
+begin
+  TApplication(Obj).ProcessMessages;
+end;
+
+procedure TApplication_Terminate(Obj: Pointer); NO_VCL_CALL;
+begin
+  TApplication(Obj).Terminate;
+end;
+
+function TApplication_GetTerminated(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TApplication(Obj).Terminated;
+end;
+
+function TApplication_GetTitle(Obj: Pointer): PChar; NO_VCL_CALL;
+begin
+  Result := PChar(TApplication(Obj).Title);
+end;
+
+procedure TApplication_SetTitle(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+begin
+  TApplication(Obj).Title := Value;
+end;
+
+function TApplication_GetShowMainForm(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TApplication(Obj).ShowMainForm;
+end;
+
+procedure TApplication_SetShowMainForm(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TApplication(Obj).ShowMainForm := Value;
 end;
 
 { TPanel / TGroupBox / TLabel }
@@ -598,6 +669,7 @@ exports
   FreeNotify_SetCallback,
 
   TComponent_Destroy,
+  TComponent_DestroyComponents,
 
   TControl_GetParent,
   TControl_SetParent,
@@ -627,8 +699,17 @@ exports
   TCustomForm_ShowModal,
   TCustomForm_Close,
 
-  Application_Run,
-  Application_ProcessMessages,
+  GetApplication,
+  TApplication_CreateForm,
+  TApplication_GetMainForm,
+  TApplication_Run,
+  TApplication_ProcessMessages,
+  TApplication_Terminate,
+  TApplication_GetTerminated,
+  TApplication_GetTitle,
+  TApplication_SetTitle,
+  TApplication_GetShowMainForm,
+  TApplication_SetShowMainForm,
 
   TPanel_Create,
   TGroupBox_Create,
@@ -709,4 +790,5 @@ begin
   RequireDerivedFormResource := False;
   Application.Initialize;
   GFreeNotifier := TFreeNotifier.Create(nil);
+  Dll_Process_Detach_Hook := @DetachHook;
 end.

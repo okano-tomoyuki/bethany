@@ -11,6 +11,7 @@
 #define NO_VCL_FUNCS(X) \
     X(void,          FreeNotify_SetCallback,        (no_vcl_callback_t cb, void* d),                          (cb, d)) \
     X(void,          TComponent_Destroy,            (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TComponent_DestroyComponents,  (no_vcl_obj_t o),                                         (o)) \
     \
     X(no_vcl_obj_t,  TControl_GetParent,            (no_vcl_obj_t o),                                         (o)) \
     X(void,          TControl_SetParent,            (no_vcl_obj_t o, no_vcl_obj_t p),                         (o, p)) \
@@ -40,8 +41,17 @@
     X(no_vcl_int_t,  TCustomForm_ShowModal,         (no_vcl_obj_t o),                                         (o)) \
     X(void,          TCustomForm_Close,             (no_vcl_obj_t o),                                         (o)) \
     \
-    X(void,          Application_Run,               (void),                                                   ()) \
-    X(void,          Application_ProcessMessages,   (void),                                                   ()) \
+    X(no_vcl_obj_t,  GetApplication,                (void),                                                   ()) \
+    X(no_vcl_obj_t,  TApplication_CreateForm,       (no_vcl_obj_t o),                                         (o)) \
+    X(no_vcl_obj_t,  TApplication_GetMainForm,      (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TApplication_Run,              (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TApplication_ProcessMessages,  (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TApplication_Terminate,        (no_vcl_obj_t o),                                         (o)) \
+    X(no_vcl_bool_t, TApplication_GetTerminated,    (no_vcl_obj_t o),                                         (o)) \
+    X(no_vcl_str_t,  TApplication_GetTitle,         (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TApplication_SetTitle,         (no_vcl_obj_t o, no_vcl_str_t v),                         (o, v)) \
+    X(no_vcl_bool_t, TApplication_GetShowMainForm,  (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TApplication_SetShowMainForm,  (no_vcl_obj_t o, no_vcl_bool_t v),                        (o, v)) \
     \
     X(no_vcl_obj_t,  TPanel_Create,                 (no_vcl_obj_t owner),                                     (owner)) \
     X(no_vcl_obj_t,  TGroupBox_Create,              (no_vcl_obj_t owner),                                     (owner)) \
