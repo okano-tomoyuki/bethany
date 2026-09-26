@@ -113,8 +113,9 @@ public:
     Property<std::string> Caption;
 
     // Owner(メモリ管理)とParent(表示上の親)は同じオブジェクトにまとめている。
-    // TForm/TPanel/TGroupBoxいずれの上にも配置できるよう、引数はTObject&で受ける。
-    explicit TButton(TObject& parent);
+    // TForm/TPanel/TGroupBoxいずれの上にも配置できるよう、引数はTObject*で受ける。
+    // C++BuilderのOwner引数(TComponent* Owner)に合わせ、参照ではなくポインタにしている。
+    explicit TButton(TObject* parent);
     ~TButton() override;
 
     void SetOnClick(std::function<void()> handler);
@@ -148,7 +149,7 @@ public:
     Property<bool>         Enabled;
     Property<std::string> Caption;
 
-    explicit TLabel(TObject& parent);
+    explicit TLabel(TObject* parent);
     ~TLabel() override;
 
 private:
@@ -181,7 +182,7 @@ public:
     Property<int>          MaxLength;
     Property<bool>          ReadOnly;
 
-    explicit TEdit(TObject& parent);
+    explicit TEdit(TObject* parent);
     ~TEdit() override;
 
     void SetOnChange(std::function<void()> handler);
@@ -224,7 +225,7 @@ public:
     Property<std::string> Caption;
     Property<bool>          Checked;
 
-    explicit TCheckBox(TObject& parent);
+    explicit TCheckBox(TObject* parent);
     ~TCheckBox() override;
 
     void SetOnClick(std::function<void()> handler);
@@ -265,7 +266,7 @@ public:
     Property<std::string> Caption;
     Property<bool>          Checked;
 
-    explicit TRadioButton(TObject& parent);
+    explicit TRadioButton(TObject* parent);
     ~TRadioButton() override;
 
     void SetOnClick(std::function<void()> handler);
@@ -305,7 +306,7 @@ public:
     Property<bool>         Enabled;
     Property<std::string> Caption;
 
-    explicit TPanel(TObject& parent);
+    explicit TPanel(TObject* parent);
     ~TPanel() override;
 
 private:
@@ -336,7 +337,7 @@ public:
     Property<bool>         Enabled;
     Property<std::string> Caption;
 
-    explicit TGroupBox(TObject& parent);
+    explicit TGroupBox(TObject* parent);
     ~TGroupBox() override;
 
 private:
@@ -368,7 +369,7 @@ public:
     Property<std::string> Text;
     Property<int>          ItemIndex;
 
-    explicit TComboBox(TObject& parent);
+    explicit TComboBox(TObject* parent);
     ~TComboBox() override;
 
     void        ItemsAdd(const std::string& text);
@@ -413,7 +414,7 @@ public:
     Property<bool> Enabled;
     Property<int> ItemIndex;
 
-    explicit TListBox(TObject& parent);
+    explicit TListBox(TObject* parent);
     ~TListBox() override;
 
     void        ItemsAdd(const std::string& text);
@@ -457,7 +458,7 @@ public:
     Property<bool> ReadOnly;
     Property<int>  ScrollBars;
 
-    explicit TMemo(TObject& parent);
+    explicit TMemo(TObject* parent);
     ~TMemo() override;
 
     void        LinesAdd(const std::string& text);
@@ -498,7 +499,7 @@ public:
     Property<bool> Enabled;
 
     // TTimerは非ビジュアルコンポーネントなのでParentは無く、Ownerのみ受け取る。
-    explicit TTimer(TObject& owner);
+    explicit TTimer(TObject* owner);
     ~TTimer() override;
 
     void SetOnTimer(std::function<void()> handler);
@@ -604,13 +605,13 @@ public:
     Property<bool> Enabled;
     TCanvas        Canvas;
 
-    explicit TPaintBox(TObject& parent);
+    explicit TPaintBox(TObject* parent);
     ~TPaintBox() override;
 
     void SetOnPaint(std::function<void()> handler);
 
 private:
-    static no_vcl_obj_t MakeHandle(TObject& parent);
+    static no_vcl_obj_t MakeHandle(TObject* parent);
 
     static void NO_VCL_CALL PaintTrampoline(no_vcl_obj_t sender);
     static std::unordered_map<no_vcl_obj_t, TPaintBox*> s_registry;

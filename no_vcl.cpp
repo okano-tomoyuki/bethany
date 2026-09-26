@@ -1,5 +1,7 @@
 #include "no_vcl.hpp"
 
+#include <cassert>
+
 namespace no_vcl
 {
 
@@ -57,15 +59,16 @@ void TForm::SetCaptionImpl(void* owner, const std::string& value)
 
 std::unordered_map<no_vcl_obj_t, TButton*> TButton::s_registry;
 
-TButton::TButton(TObject& parent)
+TButton::TButton(TObject* parent)
     : Left(this, &TButton::GetLeftImpl, &TButton::SetLeftImpl)
     , Top(this, &TButton::GetTopImpl, &TButton::SetTopImpl)
     , Width(this, &TButton::GetWidthImpl, &TButton::SetWidthImpl)
     , Height(this, &TButton::GetHeightImpl, &TButton::SetHeightImpl)
     , Caption(this, &TButton::GetCaptionImpl, &TButton::SetCaptionImpl)
 {
-    handle_ = no_vcl_TButton_Create(parent.Handle());
-    no_vcl_TButton_SetParent(handle_, parent.Handle());
+    assert(parent != nullptr);
+    handle_ = no_vcl_TButton_Create(parent->Handle());
+    no_vcl_TButton_SetParent(handle_, parent->Handle());
 
     s_registry[handle_] = this;
     no_vcl_TButton_SetOnClick(handle_, &TButton::ClickTrampoline);
@@ -141,7 +144,7 @@ void TButton::SetCaptionImpl(void* owner, const std::string& value)
 
 /* ---------------- TLabel ---------------- */
 
-TLabel::TLabel(TObject& parent)
+TLabel::TLabel(TObject* parent)
     : Left(this, &TLabel::GetLeftImpl, &TLabel::SetLeftImpl)
     , Top(this, &TLabel::GetTopImpl, &TLabel::SetTopImpl)
     , Width(this, &TLabel::GetWidthImpl, &TLabel::SetWidthImpl)
@@ -150,8 +153,9 @@ TLabel::TLabel(TObject& parent)
     , Enabled(this, &TLabel::GetEnabledImpl, &TLabel::SetEnabledImpl)
     , Caption(this, &TLabel::GetCaptionImpl, &TLabel::SetCaptionImpl)
 {
-    handle_ = no_vcl_TLabel_Create(parent.Handle());
-    no_vcl_TLabel_SetParent(handle_, parent.Handle());
+    assert(parent != nullptr);
+    handle_ = no_vcl_TLabel_Create(parent->Handle());
+    no_vcl_TLabel_SetParent(handle_, parent->Handle());
 }
 
 TLabel::~TLabel()
@@ -233,7 +237,7 @@ void TLabel::SetCaptionImpl(void* owner, const std::string& value)
 
 std::unordered_map<no_vcl_obj_t, TEdit*> TEdit::s_registry;
 
-TEdit::TEdit(TObject& parent)
+TEdit::TEdit(TObject* parent)
     : Left(this, &TEdit::GetLeftImpl, &TEdit::SetLeftImpl)
     , Top(this, &TEdit::GetTopImpl, &TEdit::SetTopImpl)
     , Width(this, &TEdit::GetWidthImpl, &TEdit::SetWidthImpl)
@@ -244,8 +248,9 @@ TEdit::TEdit(TObject& parent)
     , MaxLength(this, &TEdit::GetMaxLengthImpl, &TEdit::SetMaxLengthImpl)
     , ReadOnly(this, &TEdit::GetReadOnlyImpl, &TEdit::SetReadOnlyImpl)
 {
-    handle_ = no_vcl_TEdit_Create(parent.Handle());
-    no_vcl_TEdit_SetParent(handle_, parent.Handle());
+    assert(parent != nullptr);
+    handle_ = no_vcl_TEdit_Create(parent->Handle());
+    no_vcl_TEdit_SetParent(handle_, parent->Handle());
 
     s_registry[handle_] = this;
     no_vcl_TEdit_SetOnChange(handle_, &TEdit::ChangeTrampoline);
@@ -363,7 +368,7 @@ void TEdit::SetReadOnlyImpl(void* owner, const bool& value)
 
 std::unordered_map<no_vcl_obj_t, TCheckBox*> TCheckBox::s_registry;
 
-TCheckBox::TCheckBox(TObject& parent)
+TCheckBox::TCheckBox(TObject* parent)
     : Left(this, &TCheckBox::GetLeftImpl, &TCheckBox::SetLeftImpl)
     , Top(this, &TCheckBox::GetTopImpl, &TCheckBox::SetTopImpl)
     , Width(this, &TCheckBox::GetWidthImpl, &TCheckBox::SetWidthImpl)
@@ -373,8 +378,9 @@ TCheckBox::TCheckBox(TObject& parent)
     , Caption(this, &TCheckBox::GetCaptionImpl, &TCheckBox::SetCaptionImpl)
     , Checked(this, &TCheckBox::GetCheckedImpl, &TCheckBox::SetCheckedImpl)
 {
-    handle_ = no_vcl_TCheckBox_Create(parent.Handle());
-    no_vcl_TCheckBox_SetParent(handle_, parent.Handle());
+    assert(parent != nullptr);
+    handle_ = no_vcl_TCheckBox_Create(parent->Handle());
+    no_vcl_TCheckBox_SetParent(handle_, parent->Handle());
 
     s_registry[handle_] = this;
     no_vcl_TCheckBox_SetOnClick(handle_, &TCheckBox::ClickTrampoline);
@@ -482,7 +488,7 @@ void TCheckBox::SetCheckedImpl(void* owner, const bool& value)
 
 std::unordered_map<no_vcl_obj_t, TRadioButton*> TRadioButton::s_registry;
 
-TRadioButton::TRadioButton(TObject& parent)
+TRadioButton::TRadioButton(TObject* parent)
     : Left(this, &TRadioButton::GetLeftImpl, &TRadioButton::SetLeftImpl)
     , Top(this, &TRadioButton::GetTopImpl, &TRadioButton::SetTopImpl)
     , Width(this, &TRadioButton::GetWidthImpl, &TRadioButton::SetWidthImpl)
@@ -492,8 +498,9 @@ TRadioButton::TRadioButton(TObject& parent)
     , Caption(this, &TRadioButton::GetCaptionImpl, &TRadioButton::SetCaptionImpl)
     , Checked(this, &TRadioButton::GetCheckedImpl, &TRadioButton::SetCheckedImpl)
 {
-    handle_ = no_vcl_TRadioButton_Create(parent.Handle());
-    no_vcl_TRadioButton_SetParent(handle_, parent.Handle());
+    assert(parent != nullptr);
+    handle_ = no_vcl_TRadioButton_Create(parent->Handle());
+    no_vcl_TRadioButton_SetParent(handle_, parent->Handle());
 
     s_registry[handle_] = this;
     no_vcl_TRadioButton_SetOnClick(handle_, &TRadioButton::ClickTrampoline);
@@ -599,7 +606,7 @@ void TRadioButton::SetCheckedImpl(void* owner, const bool& value)
 
 /* ---------------- TPanel ---------------- */
 
-TPanel::TPanel(TObject& parent)
+TPanel::TPanel(TObject* parent)
     : Left(this, &TPanel::GetLeftImpl, &TPanel::SetLeftImpl)
     , Top(this, &TPanel::GetTopImpl, &TPanel::SetTopImpl)
     , Width(this, &TPanel::GetWidthImpl, &TPanel::SetWidthImpl)
@@ -608,8 +615,9 @@ TPanel::TPanel(TObject& parent)
     , Enabled(this, &TPanel::GetEnabledImpl, &TPanel::SetEnabledImpl)
     , Caption(this, &TPanel::GetCaptionImpl, &TPanel::SetCaptionImpl)
 {
-    handle_ = no_vcl_TPanel_Create(parent.Handle());
-    no_vcl_TPanel_SetParent(handle_, parent.Handle());
+    assert(parent != nullptr);
+    handle_ = no_vcl_TPanel_Create(parent->Handle());
+    no_vcl_TPanel_SetParent(handle_, parent->Handle());
 }
 
 TPanel::~TPanel()
@@ -689,7 +697,7 @@ void TPanel::SetCaptionImpl(void* owner, const std::string& value)
 
 /* ---------------- TGroupBox ---------------- */
 
-TGroupBox::TGroupBox(TObject& parent)
+TGroupBox::TGroupBox(TObject* parent)
     : Left(this, &TGroupBox::GetLeftImpl, &TGroupBox::SetLeftImpl)
     , Top(this, &TGroupBox::GetTopImpl, &TGroupBox::SetTopImpl)
     , Width(this, &TGroupBox::GetWidthImpl, &TGroupBox::SetWidthImpl)
@@ -698,8 +706,9 @@ TGroupBox::TGroupBox(TObject& parent)
     , Enabled(this, &TGroupBox::GetEnabledImpl, &TGroupBox::SetEnabledImpl)
     , Caption(this, &TGroupBox::GetCaptionImpl, &TGroupBox::SetCaptionImpl)
 {
-    handle_ = no_vcl_TGroupBox_Create(parent.Handle());
-    no_vcl_TGroupBox_SetParent(handle_, parent.Handle());
+    assert(parent != nullptr);
+    handle_ = no_vcl_TGroupBox_Create(parent->Handle());
+    no_vcl_TGroupBox_SetParent(handle_, parent->Handle());
 }
 
 TGroupBox::~TGroupBox()
@@ -781,7 +790,7 @@ void TGroupBox::SetCaptionImpl(void* owner, const std::string& value)
 
 std::unordered_map<no_vcl_obj_t, TComboBox*> TComboBox::s_registry;
 
-TComboBox::TComboBox(TObject& parent)
+TComboBox::TComboBox(TObject* parent)
     : Left(this, &TComboBox::GetLeftImpl, &TComboBox::SetLeftImpl)
     , Top(this, &TComboBox::GetTopImpl, &TComboBox::SetTopImpl)
     , Width(this, &TComboBox::GetWidthImpl, &TComboBox::SetWidthImpl)
@@ -791,8 +800,9 @@ TComboBox::TComboBox(TObject& parent)
     , Text(this, &TComboBox::GetTextImpl, &TComboBox::SetTextImpl)
     , ItemIndex(this, &TComboBox::GetItemIndexImpl, &TComboBox::SetItemIndexImpl)
 {
-    handle_ = no_vcl_TComboBox_Create(parent.Handle());
-    no_vcl_TComboBox_SetParent(handle_, parent.Handle());
+    assert(parent != nullptr);
+    handle_ = no_vcl_TComboBox_Create(parent->Handle());
+    no_vcl_TComboBox_SetParent(handle_, parent->Handle());
 
     s_registry[handle_] = this;
     no_vcl_TComboBox_SetOnChange(handle_, &TComboBox::ChangeTrampoline);
@@ -920,7 +930,7 @@ void TComboBox::SetItemIndexImpl(void* owner, const int& value)
 
 std::unordered_map<no_vcl_obj_t, TListBox*> TListBox::s_registry;
 
-TListBox::TListBox(TObject& parent)
+TListBox::TListBox(TObject* parent)
     : Left(this, &TListBox::GetLeftImpl, &TListBox::SetLeftImpl)
     , Top(this, &TListBox::GetTopImpl, &TListBox::SetTopImpl)
     , Width(this, &TListBox::GetWidthImpl, &TListBox::SetWidthImpl)
@@ -929,8 +939,9 @@ TListBox::TListBox(TObject& parent)
     , Enabled(this, &TListBox::GetEnabledImpl, &TListBox::SetEnabledImpl)
     , ItemIndex(this, &TListBox::GetItemIndexImpl, &TListBox::SetItemIndexImpl)
 {
-    handle_ = no_vcl_TListBox_Create(parent.Handle());
-    no_vcl_TListBox_SetParent(handle_, parent.Handle());
+    assert(parent != nullptr);
+    handle_ = no_vcl_TListBox_Create(parent->Handle());
+    no_vcl_TListBox_SetParent(handle_, parent->Handle());
 
     s_registry[handle_] = this;
     no_vcl_TListBox_SetOnClick(handle_, &TListBox::ClickTrampoline);
@@ -1048,7 +1059,7 @@ void TListBox::SetItemIndexImpl(void* owner, const int& value)
 
 std::unordered_map<no_vcl_obj_t, TMemo*> TMemo::s_registry;
 
-TMemo::TMemo(TObject& parent)
+TMemo::TMemo(TObject* parent)
     : Left(this, &TMemo::GetLeftImpl, &TMemo::SetLeftImpl)
     , Top(this, &TMemo::GetTopImpl, &TMemo::SetTopImpl)
     , Width(this, &TMemo::GetWidthImpl, &TMemo::SetWidthImpl)
@@ -1058,8 +1069,9 @@ TMemo::TMemo(TObject& parent)
     , ReadOnly(this, &TMemo::GetReadOnlyImpl, &TMemo::SetReadOnlyImpl)
     , ScrollBars(this, &TMemo::GetScrollBarsImpl, &TMemo::SetScrollBarsImpl)
 {
-    handle_ = no_vcl_TMemo_Create(parent.Handle());
-    no_vcl_TMemo_SetParent(handle_, parent.Handle());
+    assert(parent != nullptr);
+    handle_ = no_vcl_TMemo_Create(parent->Handle());
+    no_vcl_TMemo_SetParent(handle_, parent->Handle());
 
     s_registry[handle_] = this;
     no_vcl_TMemo_SetOnChange(handle_, &TMemo::ChangeTrampoline);
@@ -1187,11 +1199,12 @@ void TMemo::SetScrollBarsImpl(void* owner, const int& value)
 
 std::unordered_map<no_vcl_obj_t, TTimer*> TTimer::s_registry;
 
-TTimer::TTimer(TObject& owner)
+TTimer::TTimer(TObject* owner)
     : Interval(this, &TTimer::GetIntervalImpl, &TTimer::SetIntervalImpl)
     , Enabled(this, &TTimer::GetEnabledImpl, &TTimer::SetEnabledImpl)
 {
-    handle_ = no_vcl_TTimer_Create(owner.Handle());
+    assert(owner != nullptr);
+    handle_ = no_vcl_TTimer_Create(owner->Handle());
 
     s_registry[handle_] = this;
     no_vcl_TTimer_SetOnTimer(handle_, &TTimer::TimerTrampoline);
@@ -1357,14 +1370,15 @@ void TCanvas::TextOut(int x, int y, const std::string& text)
 
 std::unordered_map<no_vcl_obj_t, TPaintBox*> TPaintBox::s_registry;
 
-no_vcl_obj_t TPaintBox::MakeHandle(TObject& parent)
+no_vcl_obj_t TPaintBox::MakeHandle(TObject* parent)
 {
-    no_vcl_obj_t h = no_vcl_TPaintBox_Create(parent.Handle());
-    no_vcl_TPaintBox_SetParent(h, parent.Handle());
+    assert(parent != nullptr);
+    no_vcl_obj_t h = no_vcl_TPaintBox_Create(parent->Handle());
+    no_vcl_TPaintBox_SetParent(h, parent->Handle());
     return h;
 }
 
-TPaintBox::TPaintBox(TObject& parent)
+TPaintBox::TPaintBox(TObject* parent)
     : TObject(MakeHandle(parent))
     , Left(this, &TPaintBox::GetLeftImpl, &TPaintBox::SetLeftImpl)
     , Top(this, &TPaintBox::GetTopImpl, &TPaintBox::SetTopImpl)
