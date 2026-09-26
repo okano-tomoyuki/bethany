@@ -122,13 +122,16 @@ public:
     TCheckListBox* CheckListBox1;
     TSpeedButton* SpeedButton1;
     TBitBtn*      BitBtn1;
+    TFloatSpinEdit* FloatSpinEdit1;
+    TSpinEdit*      SpinEdit1;
+    TMaskEdit*      MaskEdit1;
 
     // C++Builder と同じく Owner を受け取り、TForm に渡す(Application->CreateForm が Application を渡す)。
     explicit TMainForm(TComponent* AOwner) : TForm(AOwner)
     {
         Caption = "no_vcl C++ wrapper";
         Width = 640;
-        Height = 790;
+        Height = 860;
 
         Button1 = new TButton(this);
         Button1->Parent = this;
@@ -422,6 +425,35 @@ public:
         BitBtn1->Top = 650;
         BitBtn1->Kind = bkOK;
 
+        // Tier 1、6 バッチ目(数値・書式付き Edit)。
+        FloatSpinEdit1 = new TFloatSpinEdit(this);
+        FloatSpinEdit1->Parent = this;
+        FloatSpinEdit1->Left = 20;
+        FloatSpinEdit1->Top = 690;
+        FloatSpinEdit1->Width = 100;
+        FloatSpinEdit1->MinValue = 0.0;
+        FloatSpinEdit1->MaxValue = 10.0;
+        FloatSpinEdit1->Increment = 0.5;
+        FloatSpinEdit1->DecimalPlaces = 1;
+        FloatSpinEdit1->Value = 2.5;
+
+        SpinEdit1 = new TSpinEdit(this);
+        SpinEdit1->Parent = this;
+        SpinEdit1->Left = 130;
+        SpinEdit1->Top = 690;
+        SpinEdit1->Width = 100;
+        SpinEdit1->MinValue = 0;
+        SpinEdit1->MaxValue = 100;
+        SpinEdit1->Increment = 5;
+        SpinEdit1->Value = 42;
+
+        MaskEdit1 = new TMaskEdit(this);
+        MaskEdit1->Parent = this;
+        MaskEdit1->Left = 240;
+        MaskEdit1->Top = 690;
+        MaskEdit1->Width = 100;
+        MaskEdit1->EditMask = "000-0000;1;_";
+
         // 既知の問題: TStatusBar は、Application->Run() のメッセージループが始まる前に
         // ウィンドウハンドルを作らせると(コンストラクタの中で Parent を設定する等)、
         // 「トップレベルの子ウィンドウを作成できません」(Win32 エラー 1406)で失敗する。
@@ -713,6 +745,10 @@ int main()
                 Form1->CheckListBox1->ItemsCount(), Form1->CheckListBox1->GetChecked(1));
     std::printf("BitBtn1 Kind: %d (expected bkOK=1), Caption: %s\n",
                 (int)Form1->BitBtn1->Kind, std::string(Form1->BitBtn1->Caption).c_str());
+    std::printf("FloatSpinEdit1 Value: %.1f (expected 2.5)\n", (double)Form1->FloatSpinEdit1->Value);
+    // SpinEdit1->Value は int 版(TCustomSpinEdit)が基底の double 版を隠していることの確認。
+    std::printf("SpinEdit1 Value: %d (expected 42, int hides the inherited double)\n", (int)Form1->SpinEdit1->Value);
+    std::printf("MaskEdit1 EditMask: %s\n", std::string(Form1->MaskEdit1->EditMask).c_str());
     // StatusBar1 は Run() の開始後に生成されるため、ここではまだ存在しない(StatusBarInitTimer 参照)。
 
     // 2 つ目以降に生成したフォームは MainForm にならない。

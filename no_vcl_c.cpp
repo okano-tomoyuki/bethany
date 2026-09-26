@@ -248,7 +248,33 @@
     \
     X(no_vcl_obj_t,  TBitBtn_Create,                          (no_vcl_obj_t owner),                                 (owner)) \
     X(no_vcl_int_t,  TCustomBitBtn_GetKind,                    (no_vcl_obj_t o),                                    (o)) \
-    X(void,          TCustomBitBtn_SetKind,                    (no_vcl_obj_t o, no_vcl_int_t v),                    (o, v))
+    X(void,          TCustomBitBtn_SetKind,                    (no_vcl_obj_t o, no_vcl_int_t v),                    (o, v)) \
+    \
+    X(no_vcl_obj_t,   TFloatSpinEdit_Create,                          (no_vcl_obj_t owner),                          (owner)) \
+    X(no_vcl_float_t, TCustomFloatSpinEdit_GetValue,                  (no_vcl_obj_t o),                              (o)) \
+    X(void,           TCustomFloatSpinEdit_SetValue,                  (no_vcl_obj_t o, no_vcl_float_t v),            (o, v)) \
+    X(no_vcl_float_t, TCustomFloatSpinEdit_GetMinValue,               (no_vcl_obj_t o),                              (o)) \
+    X(void,           TCustomFloatSpinEdit_SetMinValue,               (no_vcl_obj_t o, no_vcl_float_t v),            (o, v)) \
+    X(no_vcl_float_t, TCustomFloatSpinEdit_GetMaxValue,               (no_vcl_obj_t o),                              (o)) \
+    X(void,           TCustomFloatSpinEdit_SetMaxValue,               (no_vcl_obj_t o, no_vcl_float_t v),            (o, v)) \
+    X(no_vcl_float_t, TCustomFloatSpinEdit_GetIncrement,              (no_vcl_obj_t o),                              (o)) \
+    X(void,           TCustomFloatSpinEdit_SetIncrement,              (no_vcl_obj_t o, no_vcl_float_t v),            (o, v)) \
+    X(no_vcl_int_t,   TCustomFloatSpinEdit_GetDecimalPlaces,          (no_vcl_obj_t o),                              (o)) \
+    X(void,           TCustomFloatSpinEdit_SetDecimalPlaces,          (no_vcl_obj_t o, no_vcl_int_t v),              (o, v)) \
+    \
+    X(no_vcl_obj_t,  TSpinEdit_Create,                        (no_vcl_obj_t owner),                                 (owner)) \
+    X(no_vcl_int_t,  TCustomSpinEdit_GetValue,                (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomSpinEdit_SetValue,                (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TCustomSpinEdit_GetMinValue,             (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomSpinEdit_SetMinValue,             (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TCustomSpinEdit_GetMaxValue,             (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomSpinEdit_SetMaxValue,             (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TCustomSpinEdit_GetIncrement,            (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomSpinEdit_SetIncrement,            (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    \
+    X(no_vcl_obj_t,  TMaskEdit_Create,                        (no_vcl_obj_t owner),                                 (owner)) \
+    X(no_vcl_str_t,  TMaskEdit_GetEditMask,                   (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TMaskEdit_SetEditMask,                   (no_vcl_obj_t o, no_vcl_str_t v),                     (o, v))
 
 namespace
 {

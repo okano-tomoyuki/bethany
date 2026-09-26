@@ -22,6 +22,8 @@ uses
   ComCtrls,
   CheckLst,
   Buttons,
+  Spin,
+  MaskEdit,
   Graphics,
   CustomTimer;
 
@@ -1548,6 +1550,129 @@ begin
   TCustomBitBtn(Obj).Kind := TBitBtnKind(Value);
 end;
 
+{ docs/component-coverage.md の Tier 1、6 バッチ目(数値・書式付き Edit)。
+  TCustomSpinEdit(整数)は TCustomFloatSpinEdit(実数)の派生で、Value/MinValue/MaxValue/Increment を
+  Integer で再宣言して Double 版を隠す。C++ 側でも同じ隠蔽を再現するため、関数名を宣言元のクラスごとに
+  分ける(TCustomFloatSpinEdit_* は Double、TCustomSpinEdit_* は Integer)。 }
+
+function TFloatSpinEdit_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TFloatSpinEdit.Create(TComponent(Owner)));
+end;
+
+function TCustomFloatSpinEdit_GetValue(Obj: Pointer): Double; NO_VCL_CALL;
+begin
+  Result := TCustomFloatSpinEdit(Obj).Value;
+end;
+
+procedure TCustomFloatSpinEdit_SetValue(Obj: Pointer; Value: Double); NO_VCL_CALL;
+begin
+  TCustomFloatSpinEdit(Obj).Value := Value;
+end;
+
+function TCustomFloatSpinEdit_GetMinValue(Obj: Pointer): Double; NO_VCL_CALL;
+begin
+  Result := TCustomFloatSpinEdit(Obj).MinValue;
+end;
+
+procedure TCustomFloatSpinEdit_SetMinValue(Obj: Pointer; Value: Double); NO_VCL_CALL;
+begin
+  TCustomFloatSpinEdit(Obj).MinValue := Value;
+end;
+
+function TCustomFloatSpinEdit_GetMaxValue(Obj: Pointer): Double; NO_VCL_CALL;
+begin
+  Result := TCustomFloatSpinEdit(Obj).MaxValue;
+end;
+
+procedure TCustomFloatSpinEdit_SetMaxValue(Obj: Pointer; Value: Double); NO_VCL_CALL;
+begin
+  TCustomFloatSpinEdit(Obj).MaxValue := Value;
+end;
+
+function TCustomFloatSpinEdit_GetIncrement(Obj: Pointer): Double; NO_VCL_CALL;
+begin
+  Result := TCustomFloatSpinEdit(Obj).Increment;
+end;
+
+procedure TCustomFloatSpinEdit_SetIncrement(Obj: Pointer; Value: Double); NO_VCL_CALL;
+begin
+  TCustomFloatSpinEdit(Obj).Increment := Value;
+end;
+
+function TCustomFloatSpinEdit_GetDecimalPlaces(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomFloatSpinEdit(Obj).DecimalPlaces;
+end;
+
+procedure TCustomFloatSpinEdit_SetDecimalPlaces(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomFloatSpinEdit(Obj).DecimalPlaces := Value;
+end;
+
+function TSpinEdit_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TSpinEdit.Create(TComponent(Owner)));
+end;
+
+function TCustomSpinEdit_GetValue(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomSpinEdit(Obj).Value;
+end;
+
+procedure TCustomSpinEdit_SetValue(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomSpinEdit(Obj).Value := Value;
+end;
+
+function TCustomSpinEdit_GetMinValue(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomSpinEdit(Obj).MinValue;
+end;
+
+procedure TCustomSpinEdit_SetMinValue(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomSpinEdit(Obj).MinValue := Value;
+end;
+
+function TCustomSpinEdit_GetMaxValue(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomSpinEdit(Obj).MaxValue;
+end;
+
+procedure TCustomSpinEdit_SetMaxValue(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomSpinEdit(Obj).MaxValue := Value;
+end;
+
+function TCustomSpinEdit_GetIncrement(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomSpinEdit(Obj).Increment;
+end;
+
+procedure TCustomSpinEdit_SetIncrement(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomSpinEdit(Obj).Increment := Value;
+end;
+
+{ TMaskEdit: EditMask は TCustomMaskEdit では protected だが、唯一の具象クラス TMaskEdit が
+  published にしているため、TMaskEdit(Obj) で直接アクセスする(TUpDown と同じ形)。 }
+
+function TMaskEdit_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TMaskEdit.Create(TComponent(Owner)));
+end;
+
+function TMaskEdit_GetEditMask(Obj: Pointer): PChar; NO_VCL_CALL;
+begin
+  Result := ReturnStr(TMaskEdit(Obj).EditMask);
+end;
+
+procedure TMaskEdit_SetEditMask(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+begin
+  TMaskEdit(Obj).EditMask := Value;
+end;
+
 exports
   FreeNotify_SetCallback,
 
@@ -1790,7 +1915,33 @@ exports
 
   TBitBtn_Create,
   TCustomBitBtn_GetKind,
-  TCustomBitBtn_SetKind;
+  TCustomBitBtn_SetKind,
+
+  TFloatSpinEdit_Create,
+  TCustomFloatSpinEdit_GetValue,
+  TCustomFloatSpinEdit_SetValue,
+  TCustomFloatSpinEdit_GetMinValue,
+  TCustomFloatSpinEdit_SetMinValue,
+  TCustomFloatSpinEdit_GetMaxValue,
+  TCustomFloatSpinEdit_SetMaxValue,
+  TCustomFloatSpinEdit_GetIncrement,
+  TCustomFloatSpinEdit_SetIncrement,
+  TCustomFloatSpinEdit_GetDecimalPlaces,
+  TCustomFloatSpinEdit_SetDecimalPlaces,
+
+  TSpinEdit_Create,
+  TCustomSpinEdit_GetValue,
+  TCustomSpinEdit_SetValue,
+  TCustomSpinEdit_GetMinValue,
+  TCustomSpinEdit_SetMinValue,
+  TCustomSpinEdit_GetMaxValue,
+  TCustomSpinEdit_SetMaxValue,
+  TCustomSpinEdit_GetIncrement,
+  TCustomSpinEdit_SetIncrement,
+
+  TMaskEdit_Create,
+  TMaskEdit_GetEditMask,
+  TMaskEdit_SetEditMask;
 
 begin
   RequireDerivedFormResource := False;

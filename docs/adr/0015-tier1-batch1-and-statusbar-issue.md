@@ -122,6 +122,23 @@ TBitBtn(buttons.pp、TCustomBitBtn → TCustomButton、既存の TButton と同�
 (BM_CLICK メッセージの送信)では操作できない点に注意(値の設定・読み出しと `OnClick` の配線自体は
 正常に動作することを確認済み)。
 
+## 追記: Tier 1 の 5 バッチ目(数値・書式付き Edit)
+
+続けて、TFloatSpinEdit・TSpinEdit(いずれも spin.pp)・TMaskEdit(maskedit.pp、TCustomMaskEdit → TCustomEdit)
+を追加した。
+
+- **TFloatSpinEdit**(TCustomFloatSpinEdit): `Value`・`MinValue`・`MaxValue`・`Increment`(いずれも Double)・
+  `DecimalPlaces`。C API に `no_vcl_float_t`(`double`)を新たに追加した。
+- **TSpinEdit**(TCustomSpinEdit): LCL では `TCustomFloatSpinEdit` の派生で、`Value`・`MinValue`・
+  `MaxValue`・`Increment` を **Integer で再宣言して Double 版を隠す**。C++ 側でも同じ隠蔽を再現するため、
+  `TCustomSpinEdit` に同名の `Property<int>` を宣言し、C++ の名前隠蔽(派生クラスの同名メンバが基底の
+  ものを隠す)で `TCustomFloatSpinEdit` の `Property<double>` を隠した。関数名は宣言元のクラスごとに
+  分けている(`no_vcl_TCustomFloatSpinEdit_*` は double、`no_vcl_TCustomSpinEdit_*` は int)。
+  テストで `SpinEdit1->Value` が int 版として振る舞うことを確認した。
+- **TMaskEdit**(TCustomMaskEdit): `EditMask` のみ対応。`EditMask` は `TCustomMaskEdit` では protected だが、
+  唯一の具象クラス `TMaskEdit` が published にしているため、`TUpDown` と同じ形で `TMaskEdit` に直接置いた。
+  `EditText`・`SpaceChar`・`ValidationErrorMode` 等は見送った。
+
 ## 影響(3 バッチ目の追記分)
 
 - インデックス付きプロパティ(TCheckGroup・TCheckListBox の Checked)は `Property<T>` ではなく、

@@ -982,6 +982,59 @@ TEdit::TEdit(TComponent* AOwner)
     : TCustomEdit(no_vcl_TEdit_Create(HandleOf(AOwner)))
 {}
 
+TCustomFloatSpinEdit::TCustomFloatSpinEdit(no_vcl_obj_t handle)
+    : TCustomEdit(handle)
+    , Value(this, &TCustomFloatSpinEdit::GetValueImpl, &TCustomFloatSpinEdit::SetValueImpl)
+    , MinValue(this, &TCustomFloatSpinEdit::GetMinValueImpl, &TCustomFloatSpinEdit::SetMinValueImpl)
+    , MaxValue(this, &TCustomFloatSpinEdit::GetMaxValueImpl, &TCustomFloatSpinEdit::SetMaxValueImpl)
+    , Increment(this, &TCustomFloatSpinEdit::GetIncrementImpl, &TCustomFloatSpinEdit::SetIncrementImpl)
+    , DecimalPlaces(this, &TCustomFloatSpinEdit::GetDecimalPlacesImpl, &TCustomFloatSpinEdit::SetDecimalPlacesImpl)
+{}
+
+double TCustomFloatSpinEdit::GetValueImpl(TObject* owner)     { return no_vcl_TCustomFloatSpinEdit_GetValue(owner->Handle()); }
+void   TCustomFloatSpinEdit::SetValueImpl(TObject* owner, const double& value)     { no_vcl_TCustomFloatSpinEdit_SetValue(owner->Handle(), value); }
+double TCustomFloatSpinEdit::GetMinValueImpl(TObject* owner)  { return no_vcl_TCustomFloatSpinEdit_GetMinValue(owner->Handle()); }
+void   TCustomFloatSpinEdit::SetMinValueImpl(TObject* owner, const double& value)  { no_vcl_TCustomFloatSpinEdit_SetMinValue(owner->Handle(), value); }
+double TCustomFloatSpinEdit::GetMaxValueImpl(TObject* owner)  { return no_vcl_TCustomFloatSpinEdit_GetMaxValue(owner->Handle()); }
+void   TCustomFloatSpinEdit::SetMaxValueImpl(TObject* owner, const double& value)  { no_vcl_TCustomFloatSpinEdit_SetMaxValue(owner->Handle(), value); }
+double TCustomFloatSpinEdit::GetIncrementImpl(TObject* owner) { return no_vcl_TCustomFloatSpinEdit_GetIncrement(owner->Handle()); }
+void   TCustomFloatSpinEdit::SetIncrementImpl(TObject* owner, const double& value) { no_vcl_TCustomFloatSpinEdit_SetIncrement(owner->Handle(), value); }
+int    TCustomFloatSpinEdit::GetDecimalPlacesImpl(TObject* owner) { return no_vcl_TCustomFloatSpinEdit_GetDecimalPlaces(owner->Handle()); }
+void   TCustomFloatSpinEdit::SetDecimalPlacesImpl(TObject* owner, const int& value) { no_vcl_TCustomFloatSpinEdit_SetDecimalPlaces(owner->Handle(), value); }
+
+TFloatSpinEdit::TFloatSpinEdit(TComponent* AOwner)
+    : TCustomFloatSpinEdit(no_vcl_TFloatSpinEdit_Create(HandleOf(AOwner)))
+{}
+
+TCustomSpinEdit::TCustomSpinEdit(no_vcl_obj_t handle)
+    : TCustomFloatSpinEdit(handle)
+    , Value(this, &TCustomSpinEdit::GetValueImpl, &TCustomSpinEdit::SetValueImpl)
+    , MinValue(this, &TCustomSpinEdit::GetMinValueImpl, &TCustomSpinEdit::SetMinValueImpl)
+    , MaxValue(this, &TCustomSpinEdit::GetMaxValueImpl, &TCustomSpinEdit::SetMaxValueImpl)
+    , Increment(this, &TCustomSpinEdit::GetIncrementImpl, &TCustomSpinEdit::SetIncrementImpl)
+{}
+
+int  TCustomSpinEdit::GetValueImpl(TObject* owner)     { return no_vcl_TCustomSpinEdit_GetValue(owner->Handle()); }
+void TCustomSpinEdit::SetValueImpl(TObject* owner, const int& value)     { no_vcl_TCustomSpinEdit_SetValue(owner->Handle(), value); }
+int  TCustomSpinEdit::GetMinValueImpl(TObject* owner)  { return no_vcl_TCustomSpinEdit_GetMinValue(owner->Handle()); }
+void TCustomSpinEdit::SetMinValueImpl(TObject* owner, const int& value)  { no_vcl_TCustomSpinEdit_SetMinValue(owner->Handle(), value); }
+int  TCustomSpinEdit::GetMaxValueImpl(TObject* owner)  { return no_vcl_TCustomSpinEdit_GetMaxValue(owner->Handle()); }
+void TCustomSpinEdit::SetMaxValueImpl(TObject* owner, const int& value)  { no_vcl_TCustomSpinEdit_SetMaxValue(owner->Handle(), value); }
+int  TCustomSpinEdit::GetIncrementImpl(TObject* owner) { return no_vcl_TCustomSpinEdit_GetIncrement(owner->Handle()); }
+void TCustomSpinEdit::SetIncrementImpl(TObject* owner, const int& value) { no_vcl_TCustomSpinEdit_SetIncrement(owner->Handle(), value); }
+
+TSpinEdit::TSpinEdit(TComponent* AOwner)
+    : TCustomSpinEdit(no_vcl_TSpinEdit_Create(HandleOf(AOwner)))
+{}
+
+TMaskEdit::TMaskEdit(TComponent* AOwner)
+    : TCustomEdit(no_vcl_TMaskEdit_Create(HandleOf(AOwner)))
+    , EditMask(this, &TMaskEdit::GetEditMaskImpl, &TMaskEdit::SetEditMaskImpl)
+{}
+
+std::string TMaskEdit::GetEditMaskImpl(TObject* owner) { return std::string(no_vcl_TMaskEdit_GetEditMask(owner->Handle())); }
+void TMaskEdit::SetEditMaskImpl(TObject* owner, const std::string& value) { no_vcl_TMaskEdit_SetEditMask(owner->Handle(), value.c_str()); }
+
 TCustomMemo::TCustomMemo(no_vcl_obj_t handle)
     : TCustomEdit(handle)
     , ScrollBars(this, &TCustomMemo::GetScrollBarsImpl, &TCustomMemo::SetScrollBarsImpl)

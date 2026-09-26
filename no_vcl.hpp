@@ -985,6 +985,94 @@ protected:
     ~TEdit() override = default;
 };
 
+// 実数のスピンエディット。OnChange は基底 TCustomEdit のものをそのまま使う。
+class TCustomFloatSpinEdit : public TCustomEdit
+{
+public:
+    Property<double> Value;
+    Property<double> MinValue;
+    Property<double> MaxValue;
+    Property<double> Increment;
+    Property<int>    DecimalPlaces;
+
+protected:
+    explicit TCustomFloatSpinEdit(no_vcl_obj_t handle);
+    ~TCustomFloatSpinEdit() override = default;
+
+private:
+    static double GetValueImpl(TObject* owner);
+    static void   SetValueImpl(TObject* owner, const double& value);
+    static double GetMinValueImpl(TObject* owner);
+    static void   SetMinValueImpl(TObject* owner, const double& value);
+    static double GetMaxValueImpl(TObject* owner);
+    static void   SetMaxValueImpl(TObject* owner, const double& value);
+    static double GetIncrementImpl(TObject* owner);
+    static void   SetIncrementImpl(TObject* owner, const double& value);
+    static int    GetDecimalPlacesImpl(TObject* owner);
+    static void   SetDecimalPlacesImpl(TObject* owner, const int& value);
+};
+
+class TFloatSpinEdit : public TCustomFloatSpinEdit
+{
+public:
+    explicit TFloatSpinEdit(TComponent* AOwner);
+
+protected:
+    ~TFloatSpinEdit() override = default;
+};
+
+// 整数のスピンエディット。LCL では TCustomFloatSpinEdit の派生で、Value/MinValue/MaxValue/Increment を
+// Integer で再宣言して Double 版を隠す。C++ でも同じ名前の Property<int> で基底の Property<double> を隠す
+// (C++ の名前隠蔽により、TCustomSpinEdit* 経由では int 版だけが見える)。
+class TCustomSpinEdit : public TCustomFloatSpinEdit
+{
+public:
+    Property<int> Value;
+    Property<int> MinValue;
+    Property<int> MaxValue;
+    Property<int> Increment;
+
+protected:
+    explicit TCustomSpinEdit(no_vcl_obj_t handle);
+    ~TCustomSpinEdit() override = default;
+
+private:
+    static int  GetValueImpl(TObject* owner);
+    static void SetValueImpl(TObject* owner, const int& value);
+    static int  GetMinValueImpl(TObject* owner);
+    static void SetMinValueImpl(TObject* owner, const int& value);
+    static int  GetMaxValueImpl(TObject* owner);
+    static void SetMaxValueImpl(TObject* owner, const int& value);
+    static int  GetIncrementImpl(TObject* owner);
+    static void SetIncrementImpl(TObject* owner, const int& value);
+};
+
+class TSpinEdit : public TCustomSpinEdit
+{
+public:
+    explicit TSpinEdit(TComponent* AOwner);
+
+protected:
+    ~TSpinEdit() override = default;
+};
+
+// 書式付き入力(郵便番号・電話番号等)。EditMask は TCustomMaskEdit では protected だが、
+// 唯一の具象クラス TMaskEdit が published にしているため、TMaskEdit に直接置く(TUpDown と同じ形)。
+class TMaskEdit : public TCustomEdit
+{
+public:
+    explicit TMaskEdit(TComponent* AOwner);
+
+    Property<std::string> EditMask;
+
+protected:
+    ~TMaskEdit() override = default;
+
+private:
+    static std::string GetEditMaskImpl(TObject* owner);
+    static void         SetEditMaskImpl(TObject* owner, const std::string& value);
+};
+
 class TCustomMemo : public TCustomEdit
 {
 public:

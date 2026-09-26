@@ -263,6 +263,9 @@ int main(void)
     no_vcl_obj_t checkListBox;
     no_vcl_obj_t speedButton;
     no_vcl_obj_t bitBtn;
+    no_vcl_obj_t floatSpinEdit;
+    no_vcl_obj_t spinEdit;
+    no_vcl_obj_t maskEdit;
 
     no_vcl_FreeNotify_SetCallback(OnComponentFreed, &freedCount);
 
@@ -283,7 +286,7 @@ int main(void)
 
     no_vcl_TControl_SetCaption(form, "Hello from FPC DLL");
     no_vcl_TControl_SetWidth(form, 640);
-    no_vcl_TControl_SetHeight(form, 790);
+    no_vcl_TControl_SetHeight(form, 860);
     printf("Caption: %s\n", no_vcl_TControl_GetCaption(form));
 
     button = Place(no_vcl_TButton_Create(form), form, 20, 20);
@@ -491,6 +494,29 @@ int main(void)
     printf("BitBtn Kind=%d (expected bkOK=1), Caption=%s\n",
            no_vcl_TCustomBitBtn_GetKind(bitBtn), no_vcl_TControl_GetCaption(bitBtn));
 
+    /* Tier 1、6 バッチ目(数値・書式付き Edit)。 */
+    floatSpinEdit = Place(no_vcl_TFloatSpinEdit_Create(form), form, 20, 690);
+    no_vcl_TControl_SetWidth(floatSpinEdit, 100);
+    no_vcl_TCustomFloatSpinEdit_SetMinValue(floatSpinEdit, 0.0);
+    no_vcl_TCustomFloatSpinEdit_SetMaxValue(floatSpinEdit, 10.0);
+    no_vcl_TCustomFloatSpinEdit_SetIncrement(floatSpinEdit, 0.5);
+    no_vcl_TCustomFloatSpinEdit_SetDecimalPlaces(floatSpinEdit, 1);
+    no_vcl_TCustomFloatSpinEdit_SetValue(floatSpinEdit, 2.5);
+
+    spinEdit = Place(no_vcl_TSpinEdit_Create(form), form, 130, 690);
+    no_vcl_TControl_SetWidth(spinEdit, 100);
+    no_vcl_TCustomSpinEdit_SetMinValue(spinEdit, 0);
+    no_vcl_TCustomSpinEdit_SetMaxValue(spinEdit, 100);
+    no_vcl_TCustomSpinEdit_SetIncrement(spinEdit, 5);
+    no_vcl_TCustomSpinEdit_SetValue(spinEdit, 42);
+
+    maskEdit = Place(no_vcl_TMaskEdit_Create(form), form, 240, 690);
+    no_vcl_TControl_SetWidth(maskEdit, 100);
+    no_vcl_TMaskEdit_SetEditMask(maskEdit, "000-0000;1;_");
+    printf("FloatSpinEdit Value=%.1f, SpinEdit Value=%d, MaskEdit EditMask=%s\n",
+           no_vcl_TCustomFloatSpinEdit_GetValue(floatSpinEdit), no_vcl_TCustomSpinEdit_GetValue(spinEdit),
+           no_vcl_TMaskEdit_GetEditMask(maskEdit));
+
     /* 既知の問題: TStatusBar は Application->Run() のメッセージループが始まる前にウィンドウハンドルを
        作らせると「トップレベルの子ウィンドウを作成できません」(Win32 エラー 1406)で失敗する。
        標準の Lazarus 実行ファイルでは起きず、DLL としてホストされる no_vcl 特有の現象と見られる
@@ -510,7 +536,7 @@ int main(void)
     /* Application が所有するフォーム(と、フォームが所有するコントロール)をまとめて破棄する。
        呼ばなくても DLL の切り離し時に LCL が破棄するが、そのときは破棄通知が呼ばれない。 */
     no_vcl_TComponent_DestroyComponents(app);
-    printf("Clicks: %d, Freed components: %d (expected 34: form + 33 owned)\n", clickCount, freedCount);
+    printf("Clicks: %d, Freed components: %d (expected 37: form + 36 owned)\n", clickCount, freedCount);
 
     printf("OK\n");
     return 0;

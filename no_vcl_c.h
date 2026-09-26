@@ -17,6 +17,7 @@ typedef void*       no_vcl_obj_t;
 typedef const char* no_vcl_str_t;
 typedef int         no_vcl_int_t;
 typedef int         no_vcl_bool_t;
+typedef double      no_vcl_float_t;
 /* sender はイベントを発生させたオブジェクト、data はコールバック登録時に渡した利用者データ。
    イベントの登録関数(no_vcl_*_SetOnXxx)は同じイベントに何度呼んでもよく、最後に登録したものだけが呼ばれる。
    コールバックに NULL を渡すとハンドラを解除する(コールバックの実行中に解除してもよい)。 */
@@ -430,6 +431,41 @@ enum { no_vcl_bkCustom = 0, no_vcl_bkOK, no_vcl_bkCancel, no_vcl_bkHelp, no_vcl_
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TBitBtn_Create(no_vcl_obj_t Owner);
 no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomBitBtn_GetKind(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TCustomBitBtn_SetKind(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+/* docs/component-coverage.md の Tier 1、6 バッチ目(数値・書式付き Edit)。
+ * TCustomSpinEdit(整数)は TCustomFloatSpinEdit(実数)の派生で、Value/MinValue/MaxValue/Increment を
+ * Integer で再宣言して Double 版を隠す。そのため関数名を宣言元のクラスごとに分けている
+ * (no_vcl_TCustomFloatSpinEdit_* は double、no_vcl_TCustomSpinEdit_* は int)。 */
+
+/* TFloatSpinEdit */
+no_vcl_obj_t   NO_VCL_CALL no_vcl_TFloatSpinEdit_Create(no_vcl_obj_t Owner);
+no_vcl_float_t NO_VCL_CALL no_vcl_TCustomFloatSpinEdit_GetValue(no_vcl_obj_t Obj);
+void           NO_VCL_CALL no_vcl_TCustomFloatSpinEdit_SetValue(no_vcl_obj_t Obj, no_vcl_float_t Value);
+no_vcl_float_t NO_VCL_CALL no_vcl_TCustomFloatSpinEdit_GetMinValue(no_vcl_obj_t Obj);
+void           NO_VCL_CALL no_vcl_TCustomFloatSpinEdit_SetMinValue(no_vcl_obj_t Obj, no_vcl_float_t Value);
+no_vcl_float_t NO_VCL_CALL no_vcl_TCustomFloatSpinEdit_GetMaxValue(no_vcl_obj_t Obj);
+void           NO_VCL_CALL no_vcl_TCustomFloatSpinEdit_SetMaxValue(no_vcl_obj_t Obj, no_vcl_float_t Value);
+no_vcl_float_t NO_VCL_CALL no_vcl_TCustomFloatSpinEdit_GetIncrement(no_vcl_obj_t Obj);
+void           NO_VCL_CALL no_vcl_TCustomFloatSpinEdit_SetIncrement(no_vcl_obj_t Obj, no_vcl_float_t Value);
+no_vcl_int_t   NO_VCL_CALL no_vcl_TCustomFloatSpinEdit_GetDecimalPlaces(no_vcl_obj_t Obj);
+void           NO_VCL_CALL no_vcl_TCustomFloatSpinEdit_SetDecimalPlaces(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+/* TSpinEdit */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TSpinEdit_Create(no_vcl_obj_t Owner);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomSpinEdit_GetValue(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomSpinEdit_SetValue(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomSpinEdit_GetMinValue(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomSpinEdit_SetMinValue(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomSpinEdit_GetMaxValue(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomSpinEdit_SetMaxValue(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomSpinEdit_GetIncrement(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomSpinEdit_SetIncrement(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+/* TMaskEdit。EditMask は TCustomMaskEdit では protected だが、唯一の具象クラス TMaskEdit が
+ * published にしているため、関数名は no_vcl_TMaskEdit_* にする。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TMaskEdit_Create(no_vcl_obj_t Owner);
+no_vcl_str_t  NO_VCL_CALL no_vcl_TMaskEdit_GetEditMask(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TMaskEdit_SetEditMask(no_vcl_obj_t Obj, no_vcl_str_t Value);
 
 #ifdef __cplusplus
 }
