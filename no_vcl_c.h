@@ -410,6 +410,27 @@ no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomCheckListBox_GetChecked(no_vcl_obj_t Obj
 void          NO_VCL_CALL no_vcl_TCustomCheckListBox_SetChecked(no_vcl_obj_t Obj, no_vcl_int_t Index, no_vcl_bool_t Value);
 void          NO_VCL_CALL no_vcl_TCustomCheckListBox_SetOnClickCheck(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
 
+/* docs/component-coverage.md の Tier 1、5 バッチ目(ボタンの派生)。Glyph(ビットマップ)は未対応。 */
+
+/* TSpeedButton */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TSpeedButton_Create(no_vcl_obj_t Owner);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomSpeedButton_GetDown(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomSpeedButton_SetDown(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomSpeedButton_GetGroupIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomSpeedButton_SetGroupIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomSpeedButton_GetFlat(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomSpeedButton_SetFlat(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomSpeedButton_GetAllowAllUp(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomSpeedButton_SetAllowAllUp(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+
+/* TBitBtn。Kind は bkOK/bkCancel 等の定型ボタン(既定の Caption を LCL が設定する)。 */
+enum { no_vcl_bkCustom = 0, no_vcl_bkOK, no_vcl_bkCancel, no_vcl_bkHelp, no_vcl_bkYes, no_vcl_bkNo,
+       no_vcl_bkClose, no_vcl_bkAbort, no_vcl_bkRetry, no_vcl_bkIgnore, no_vcl_bkAll,
+       no_vcl_bkNoToAll, no_vcl_bkYesToAll };
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TBitBtn_Create(no_vcl_obj_t Owner);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomBitBtn_GetKind(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomBitBtn_SetKind(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
 #ifdef __cplusplus
 }
 #endif

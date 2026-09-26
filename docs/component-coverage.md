@@ -44,8 +44,8 @@ TScrollingWinControl のいずれかで、いずれも実装済み。既存パ�
 | ✅ TCheckGroup | extctrls.pp(TCustomCheckGroup) | TCustomGroupBox(実装済み) | Items + インデックス付き Checked(ADR 0015 の 3 バッチ目) |
 | ✅ TCheckListBox | checklst.pas(TCustomCheckListBox) | TCustomListBox(実装済み) | 基底の Items をそのまま使い、インデックス付き Checked と OnClickCheck を追加(ADR 0015 の 3 バッチ目) |
 | TLabeledEdit | extctrls.pp(TCustomLabeledEdit) | TCustomEdit(実装済み) | EditLabel は LCL が内部で生成する子コンポーネントで、no_vcl の `*_Create` を経由しないため C++ ラッパーが無い。下記「cross-cutting な既知の課題」を解決してから着手する |
-| TSpeedButton | buttons.pp(TCustomSpeedButton) | TGraphicControl(実装済み) | Down/GroupIndex/Flat。Glyph(ビットマップ)は当面 Caption のみで妥協可 |
-| TBitBtn | buttons.pp(TCustomBitBtn) | TCustomButton(実装済み) | Kind(bkOK 等)のみ先行実装し、Glyph は Tier 3 まで保留 |
+| ✅ TSpeedButton | buttons.pp(TCustomSpeedButton) | TGraphicControl(実装済み) | Down/GroupIndex/Flat/AllowAllUp(ADR 0015 の 4 バッチ目)。Glyph(ビットマップ)は未対応 |
+| ✅ TBitBtn | buttons.pp(TCustomBitBtn) | TCustomButton(実装済み) | Kind(bkOK 等)のみ実装(ADR 0015 の 4 バッチ目)。Kind を設定すると LCL が既定の Caption を自動設定する。Glyph は Tier 3 まで保留 |
 | TSpinEdit / TFloatSpinEdit | spin.pp | TCustomEdit(実装済み) | TCustomSpinEdit が Value 等を Integer で再宣言(TCustomFloatSpinEdit の Double 版を隠す)。C++ でも同じ隠蔽を再現する |
 | TMaskEdit | maskedit.pp(TCustomMaskEdit) | TCustomEdit(実装済み) | EditMask/Text |
 | ✅ TTrackBar | comctrls.pp(TCustomTrackBar) | TWinControl(実装済み) | Min/Max/Position/OnChange。Application->Run() 開始前の生成でも問題が無いことを確認済み(ADR 0015 の 2 バッチ目) |

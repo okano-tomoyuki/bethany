@@ -873,6 +873,27 @@ TShape::TShape(TComponent* AOwner)
     : TCustomShape(no_vcl_TShape_Create(HandleOf(AOwner)))
 {}
 
+TCustomSpeedButton::TCustomSpeedButton(no_vcl_obj_t handle)
+    : TGraphicControl(handle)
+    , Down(this, &TCustomSpeedButton::GetDownImpl, &TCustomSpeedButton::SetDownImpl)
+    , GroupIndex(this, &TCustomSpeedButton::GetGroupIndexImpl, &TCustomSpeedButton::SetGroupIndexImpl)
+    , Flat(this, &TCustomSpeedButton::GetFlatImpl, &TCustomSpeedButton::SetFlatImpl)
+    , AllowAllUp(this, &TCustomSpeedButton::GetAllowAllUpImpl, &TCustomSpeedButton::SetAllowAllUpImpl)
+{}
+
+bool TCustomSpeedButton::GetDownImpl(TObject* owner)       { return no_vcl_TCustomSpeedButton_GetDown(owner->Handle()) != 0; }
+void TCustomSpeedButton::SetDownImpl(TObject* owner, const bool& value)       { no_vcl_TCustomSpeedButton_SetDown(owner->Handle(), value ? 1 : 0); }
+int  TCustomSpeedButton::GetGroupIndexImpl(TObject* owner) { return no_vcl_TCustomSpeedButton_GetGroupIndex(owner->Handle()); }
+void TCustomSpeedButton::SetGroupIndexImpl(TObject* owner, const int& value) { no_vcl_TCustomSpeedButton_SetGroupIndex(owner->Handle(), value); }
+bool TCustomSpeedButton::GetFlatImpl(TObject* owner)       { return no_vcl_TCustomSpeedButton_GetFlat(owner->Handle()) != 0; }
+void TCustomSpeedButton::SetFlatImpl(TObject* owner, const bool& value)       { no_vcl_TCustomSpeedButton_SetFlat(owner->Handle(), value ? 1 : 0); }
+bool TCustomSpeedButton::GetAllowAllUpImpl(TObject* owner) { return no_vcl_TCustomSpeedButton_GetAllowAllUp(owner->Handle()) != 0; }
+void TCustomSpeedButton::SetAllowAllUpImpl(TObject* owner, const bool& value) { no_vcl_TCustomSpeedButton_SetAllowAllUp(owner->Handle(), value ? 1 : 0); }
+
+TSpeedButton::TSpeedButton(TComponent* AOwner)
+    : TCustomSpeedButton(no_vcl_TSpeedButton_Create(HandleOf(AOwner)))
+{}
+
 /* ---------------- Button / CheckBox / RadioButton ---------------- */
 
 TButtonControl::TButtonControl(no_vcl_obj_t handle)
@@ -892,6 +913,18 @@ void TButtonControl::SetCheckedImpl(TObject* owner, const bool& value)
 
 TButton::TButton(TComponent* AOwner)
     : TCustomButton(no_vcl_TButton_Create(HandleOf(AOwner)))
+{}
+
+TCustomBitBtn::TCustomBitBtn(no_vcl_obj_t handle)
+    : TCustomButton(handle)
+    , Kind(this, &TCustomBitBtn::GetKindImpl, &TCustomBitBtn::SetKindImpl)
+{}
+
+TBitBtnKind TCustomBitBtn::GetKindImpl(TObject* owner) { return static_cast<TBitBtnKind>(no_vcl_TCustomBitBtn_GetKind(owner->Handle())); }
+void TCustomBitBtn::SetKindImpl(TObject* owner, const TBitBtnKind& value) { no_vcl_TCustomBitBtn_SetKind(owner->Handle(), value); }
+
+TBitBtn::TBitBtn(TComponent* AOwner)
+    : TCustomBitBtn(no_vcl_TBitBtn_Create(HandleOf(AOwner)))
 {}
 
 TCheckBox::TCheckBox(TComponent* AOwner)

@@ -877,6 +877,37 @@ protected:
     ~TButton() override = default;
 };
 
+// bkOK/bkCancel 等の定型ボタン(既定の Caption を LCL が設定する)。Glyph(ビットマップ)は未対応。
+enum TBitBtnKind
+{
+    bkCustom, bkOK, bkCancel, bkHelp, bkYes, bkNo,
+    bkClose, bkAbort, bkRetry, bkIgnore, bkAll,
+    bkNoToAll, bkYesToAll
+};
+
+class TCustomBitBtn : public TCustomButton
+{
+public:
+    Property<TBitBtnKind> Kind;
+
+protected:
+    explicit TCustomBitBtn(no_vcl_obj_t handle);
+    ~TCustomBitBtn() override = default;
+
+private:
+    static TBitBtnKind GetKindImpl(TObject* owner);
+    static void        SetKindImpl(TObject* owner, const TBitBtnKind& value);
+};
+
+class TBitBtn : public TCustomBitBtn
+{
+public:
+    explicit TBitBtn(TComponent* AOwner);
+
+protected:
+    ~TBitBtn() override = default;
+};
+
 class TCustomCheckBox : public TButtonControl
 {
 protected:
@@ -1242,6 +1273,41 @@ public:
 
 protected:
     ~TShape() override = default;
+};
+
+// クリックで押し込まれた状態を保つ(GroupIndex でラジオボタン風のグループも作れる)グラフィックボタン。
+// Down/GroupIndex/Flat/AllowAllUp はいずれも LCL では public。Caption/OnClick は TControl から共有する。
+// Glyph(ビットマップ)は未対応。
+class TCustomSpeedButton : public TGraphicControl
+{
+public:
+    Property<bool> Down;
+    Property<int>  GroupIndex;
+    Property<bool> Flat;
+    Property<bool> AllowAllUp;
+
+protected:
+    explicit TCustomSpeedButton(no_vcl_obj_t handle);
+    ~TCustomSpeedButton() override = default;
+
+private:
+    static bool GetDownImpl(TObject* owner);
+    static void SetDownImpl(TObject* owner, const bool& value);
+    static int  GetGroupIndexImpl(TObject* owner);
+    static void SetGroupIndexImpl(TObject* owner, const int& value);
+    static bool GetFlatImpl(TObject* owner);
+    static void SetFlatImpl(TObject* owner, const bool& value);
+    static bool GetAllowAllUpImpl(TObject* owner);
+    static void SetAllowAllUpImpl(TObject* owner, const bool& value);
+};
+
+class TSpeedButton : public TCustomSpeedButton
+{
+public:
+    explicit TSpeedButton(TComponent* AOwner);
+
+protected:
+    ~TSpeedButton() override = default;
 };
 
 class TPaintBox : public TGraphicControl

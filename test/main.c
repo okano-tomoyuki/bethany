@@ -64,6 +64,13 @@ static void NO_VCL_CALL OnCheckListBoxClickCheck(no_vcl_obj_t sender, void* data
     fflush(stdout);
 }
 
+static void NO_VCL_CALL OnSpeedButtonClick(no_vcl_obj_t sender, void* data)
+{
+    (void)data;
+    printf("SpeedButton clicked! Down=%d\n", no_vcl_TCustomSpeedButton_GetDown(sender));
+    fflush(stdout);
+}
+
 static void NO_VCL_CALL OnCheckBoxClick(no_vcl_obj_t sender, void* data)
 {
     (void)data;
@@ -254,6 +261,8 @@ int main(void)
     no_vcl_obj_t radioGroup;
     no_vcl_obj_t checkGroup;
     no_vcl_obj_t checkListBox;
+    no_vcl_obj_t speedButton;
+    no_vcl_obj_t bitBtn;
 
     no_vcl_FreeNotify_SetCallback(OnComponentFreed, &freedCount);
 
@@ -274,7 +283,7 @@ int main(void)
 
     no_vcl_TControl_SetCaption(form, "Hello from FPC DLL");
     no_vcl_TControl_SetWidth(form, 640);
-    no_vcl_TControl_SetHeight(form, 720);
+    no_vcl_TControl_SetHeight(form, 790);
     printf("Caption: %s\n", no_vcl_TControl_GetCaption(form));
 
     button = Place(no_vcl_TButton_Create(form), form, 20, 20);
@@ -470,6 +479,18 @@ int main(void)
            no_vcl_TCustomCheckGroup_GetChecked(checkGroup, 0), no_vcl_TCustomCheckGroup_GetChecked(checkGroup, 1),
            no_vcl_TCustomCheckGroup_GetChecked(checkGroup, 2), no_vcl_TCustomCheckListBox_GetChecked(checkListBox, 1));
 
+    /* Tier 1、5 バッチ目(ボタンの派生)。 */
+    speedButton = Place(no_vcl_TSpeedButton_Create(form), form, 20, 650);
+    no_vcl_TControl_SetCaption(speedButton, "Speed");
+    no_vcl_TControl_SetWidth(speedButton, 80);
+    no_vcl_TCustomSpeedButton_SetGroupIndex(speedButton, 1);
+    no_vcl_TControl_SetOnClick(speedButton, OnSpeedButtonClick, NULL);
+
+    bitBtn = Place(no_vcl_TBitBtn_Create(form), form, 120, 650);
+    no_vcl_TCustomBitBtn_SetKind(bitBtn, no_vcl_bkOK);
+    printf("BitBtn Kind=%d (expected bkOK=1), Caption=%s\n",
+           no_vcl_TCustomBitBtn_GetKind(bitBtn), no_vcl_TControl_GetCaption(bitBtn));
+
     /* 既知の問題: TStatusBar は Application->Run() のメッセージループが始まる前にウィンドウハンドルを
        作らせると「トップレベルの子ウィンドウを作成できません」(Win32 エラー 1406)で失敗する。
        標準の Lazarus 実行ファイルでは起きず、DLL としてホストされる no_vcl 特有の現象と見られる
@@ -489,7 +510,7 @@ int main(void)
     /* Application が所有するフォーム(と、フォームが所有するコントロール)をまとめて破棄する。
        呼ばなくても DLL の切り離し時に LCL が破棄するが、そのときは破棄通知が呼ばれない。 */
     no_vcl_TComponent_DestroyComponents(app);
-    printf("Clicks: %d, Freed components: %d (expected 32: form + 31 owned)\n", clickCount, freedCount);
+    printf("Clicks: %d, Freed components: %d (expected 34: form + 33 owned)\n", clickCount, freedCount);
 
     printf("OK\n");
     return 0;

@@ -120,13 +120,15 @@ public:
     TRadioGroup*  RadioGroup1;
     TCheckGroup*  CheckGroup1;
     TCheckListBox* CheckListBox1;
+    TSpeedButton* SpeedButton1;
+    TBitBtn*      BitBtn1;
 
     // C++Builder と同じく Owner を受け取り、TForm に渡す(Application->CreateForm が Application を渡す)。
     explicit TMainForm(TComponent* AOwner) : TForm(AOwner)
     {
         Caption = "no_vcl C++ wrapper";
         Width = 640;
-        Height = 720;
+        Height = 790;
 
         Button1 = new TButton(this);
         Button1->Parent = this;
@@ -404,6 +406,22 @@ public:
         CheckListBox1->SetChecked(1, true);
         CheckListBox1->OnClickCheck = [this](TObject* Sender) { CheckListBox1ClickCheck(Sender); };
 
+        // Tier 1、5 バッチ目(ボタンの派生)。
+        SpeedButton1 = new TSpeedButton(this);
+        SpeedButton1->Parent = this;
+        SpeedButton1->Caption = "Speed";
+        SpeedButton1->Left = 20;
+        SpeedButton1->Top = 650;
+        SpeedButton1->Width = 80;
+        SpeedButton1->GroupIndex = 1;
+        SpeedButton1->OnClick = [this](TObject* Sender) { SpeedButton1Click(Sender); };
+
+        BitBtn1 = new TBitBtn(this);
+        BitBtn1->Parent = this;
+        BitBtn1->Left = 120;
+        BitBtn1->Top = 650;
+        BitBtn1->Kind = bkOK;
+
         // 既知の問題: TStatusBar は、Application->Run() のメッセージループが始まる前に
         // ウィンドウハンドルを作らせると(コンストラクタの中で Parent を設定する等)、
         // 「トップレベルの子ウィンドウを作成できません」(Win32 エラー 1406)で失敗する。
@@ -583,6 +601,12 @@ private:
         std::fflush(stdout);
     }
 
+    void SpeedButton1Click(TObject* Sender)
+    {
+        std::printf("SpeedButton1Click: Down=%d\n", (bool)static_cast<TSpeedButton*>(Sender)->Down);
+        std::fflush(stdout);
+    }
+
     void CheckBox1Click(TObject* Sender)
     {
         std::printf("CheckBox1Click: Checked=%d\n", (bool)static_cast<TCheckBox*>(Sender)->Checked);
@@ -687,6 +711,8 @@ int main()
                 Form1->CheckGroup1->GetChecked(0), Form1->CheckGroup1->GetChecked(1), Form1->CheckGroup1->GetChecked(2));
     std::printf("CheckListBox1 ItemsCount/Checked[1]: %d/%d (expected 3/1)\n",
                 Form1->CheckListBox1->ItemsCount(), Form1->CheckListBox1->GetChecked(1));
+    std::printf("BitBtn1 Kind: %d (expected bkOK=1), Caption: %s\n",
+                (int)Form1->BitBtn1->Kind, std::string(Form1->BitBtn1->Caption).c_str());
     // StatusBar1 は Run() の開始後に生成されるため、ここではまだ存在しない(StatusBarInitTimer 参照)。
 
     // 2 つ目以降に生成したフォームは MainForm にならない。

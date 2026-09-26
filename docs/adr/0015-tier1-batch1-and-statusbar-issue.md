@@ -106,6 +106,22 @@ TStatusBar のような問題の心配は無い。
 - **TCheckListBox**(TCustomCheckListBox): `Items` は基底 `TCustomListBox` のものをそのまま使い、
   インデックス付きの `Checked[Index]` と `OnClickCheck`(`TNotifyEvent`)を追加した。
 
+## 追記: Tier 1 の 4 バッチ目(ボタンの派生)
+
+続けて、TSpeedButton(buttons.pp、TCustomSpeedButton → TGraphicControl)・
+TBitBtn(buttons.pp、TCustomBitBtn → TCustomButton、既存の TButton と同じ基底)を追加した。
+
+- **TSpeedButton**: `Down`・`GroupIndex`・`Flat`・`AllowAllUp`。いずれも LCL では public のため
+  protected hack は不要。`Caption`・`OnClick` は `TControl` のものをそのまま共有する
+  (`TCustomSpeedButton` 自身は `OnClick` を再宣言していない)。
+- **TBitBtn**: `Kind`(`TBitBtnKind`: bkOK・bkCancel 等の定型ボタン)。`Kind` を設定すると、
+  LCL が既定の `Caption`(例: `bkOK` → `"&OK"`)を自動的に設定することをテストで確認した。
+
+いずれもグラフィックス基盤(TBitmap/TPicture)に依存しない範囲(`Glyph` を除く)のみを実装した。
+`TSpeedButton` は `TGraphicControl` のためウィンドウハンドルを持たず、実機のクリックシミュレーション
+(BM_CLICK メッセージの送信)では操作できない点に注意(値の設定・読み出しと `OnClick` の配線自体は
+正常に動作することを確認済み)。
+
 ## 影響(3 バッチ目の追記分)
 
 - インデックス付きプロパティ(TCheckGroup・TCheckListBox の Checked)は `Property<T>` ではなく、

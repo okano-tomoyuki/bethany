@@ -234,7 +234,21 @@
     X(no_vcl_obj_t,  TCheckListBox_Create,                   (no_vcl_obj_t owner),                                 (owner)) \
     X(no_vcl_bool_t, TCustomCheckListBox_GetChecked,         (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
     X(void,          TCustomCheckListBox_SetChecked,         (no_vcl_obj_t o, no_vcl_int_t i, no_vcl_bool_t v),    (o, i, v)) \
-    X(void,          TCustomCheckListBox_SetOnClickCheck,    (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d))
+    X(void,          TCustomCheckListBox_SetOnClickCheck,    (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d)) \
+    \
+    X(no_vcl_obj_t,  TSpeedButton_Create,                    (no_vcl_obj_t owner),                                 (owner)) \
+    X(no_vcl_bool_t, TCustomSpeedButton_GetDown,              (no_vcl_obj_t o),                                    (o)) \
+    X(void,          TCustomSpeedButton_SetDown,              (no_vcl_obj_t o, no_vcl_bool_t v),                   (o, v)) \
+    X(no_vcl_int_t,  TCustomSpeedButton_GetGroupIndex,        (no_vcl_obj_t o),                                    (o)) \
+    X(void,          TCustomSpeedButton_SetGroupIndex,        (no_vcl_obj_t o, no_vcl_int_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TCustomSpeedButton_GetFlat,               (no_vcl_obj_t o),                                    (o)) \
+    X(void,          TCustomSpeedButton_SetFlat,               (no_vcl_obj_t o, no_vcl_bool_t v),                   (o, v)) \
+    X(no_vcl_bool_t, TCustomSpeedButton_GetAllowAllUp,         (no_vcl_obj_t o),                                    (o)) \
+    X(void,          TCustomSpeedButton_SetAllowAllUp,         (no_vcl_obj_t o, no_vcl_bool_t v),                   (o, v)) \
+    \
+    X(no_vcl_obj_t,  TBitBtn_Create,                          (no_vcl_obj_t owner),                                 (owner)) \
+    X(no_vcl_int_t,  TCustomBitBtn_GetKind,                    (no_vcl_obj_t o),                                    (o)) \
+    X(void,          TCustomBitBtn_SetKind,                    (no_vcl_obj_t o, no_vcl_int_t v),                    (o, v))
 
 namespace
 {

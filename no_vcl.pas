@@ -21,6 +21,7 @@ uses
   ExtCtrls,
   ComCtrls,
   CheckLst,
+  Buttons,
   Graphics,
   CustomTimer;
 
@@ -1483,6 +1484,70 @@ begin
   TCustomCheckListBox(Obj).OnClickCheck := @BridgeFor(TCustomCheckListBox(Obj), MethodData(TCustomCheckListBox(Obj).OnClickCheck), Cb, Data).DoClick;
 end;
 
+{ docs/component-coverage.md の Tier 1、5 バッチ目(ボタンの派生)。
+  Down/GroupIndex/Flat/AllowAllUp(TCustomSpeedButton)、Kind(TCustomBitBtn)はいずれも public のため
+  protected hack は不要。Caption/OnClick は TControl から共有する。Glyph(ビットマップ)は未対応。 }
+
+function TSpeedButton_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TSpeedButton.Create(TComponent(Owner)));
+end;
+
+function TCustomSpeedButton_GetDown(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomSpeedButton(Obj).Down;
+end;
+
+procedure TCustomSpeedButton_SetDown(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomSpeedButton(Obj).Down := Value;
+end;
+
+function TCustomSpeedButton_GetGroupIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomSpeedButton(Obj).GroupIndex;
+end;
+
+procedure TCustomSpeedButton_SetGroupIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomSpeedButton(Obj).GroupIndex := Value;
+end;
+
+function TCustomSpeedButton_GetFlat(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomSpeedButton(Obj).Flat;
+end;
+
+procedure TCustomSpeedButton_SetFlat(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomSpeedButton(Obj).Flat := Value;
+end;
+
+function TCustomSpeedButton_GetAllowAllUp(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomSpeedButton(Obj).AllowAllUp;
+end;
+
+procedure TCustomSpeedButton_SetAllowAllUp(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomSpeedButton(Obj).AllowAllUp := Value;
+end;
+
+function TBitBtn_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TBitBtn.Create(TComponent(Owner)));
+end;
+
+function TCustomBitBtn_GetKind(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TCustomBitBtn(Obj).Kind);
+end;
+
+procedure TCustomBitBtn_SetKind(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomBitBtn(Obj).Kind := TBitBtnKind(Value);
+end;
+
 exports
   FreeNotify_SetCallback,
 
@@ -1711,7 +1776,21 @@ exports
   TCheckListBox_Create,
   TCustomCheckListBox_GetChecked,
   TCustomCheckListBox_SetChecked,
-  TCustomCheckListBox_SetOnClickCheck;
+  TCustomCheckListBox_SetOnClickCheck,
+
+  TSpeedButton_Create,
+  TCustomSpeedButton_GetDown,
+  TCustomSpeedButton_SetDown,
+  TCustomSpeedButton_GetGroupIndex,
+  TCustomSpeedButton_SetGroupIndex,
+  TCustomSpeedButton_GetFlat,
+  TCustomSpeedButton_SetFlat,
+  TCustomSpeedButton_GetAllowAllUp,
+  TCustomSpeedButton_SetAllowAllUp,
+
+  TBitBtn_Create,
+  TCustomBitBtn_GetKind,
+  TCustomBitBtn_SetKind;
 
 begin
   RequireDerivedFormResource := False;
