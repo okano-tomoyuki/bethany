@@ -280,6 +280,55 @@ void          NO_VCL_CALL no_vcl_TFont_SetSize(no_vcl_obj_t Obj, no_vcl_int_t Va
 no_vcl_int_t  NO_VCL_CALL no_vcl_TFont_GetColor(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TFont_SetColor(no_vcl_obj_t Obj, no_vcl_int_t Value);
 
+/* docs/component-coverage.md の Tier 1 で挙げたコントロール。 */
+
+/* TScrollBox: TScrollingWinControl の直接の派生で、追加の関数は無い。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TScrollBox_Create(no_vcl_obj_t Owner);
+
+/* TToggleBox: TCustomCheckBox の直接の派生で、Checked は no_vcl_TButtonControl_* を共有する。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TToggleBox_Create(no_vcl_obj_t Owner);
+
+/* TBevel */
+enum { no_vcl_bsBox = 0, no_vcl_bsFrame, no_vcl_bsTopLine, no_vcl_bsBottomLine, no_vcl_bsLeftLine, no_vcl_bsRightLine, no_vcl_bsSpacer };
+enum { no_vcl_bsLowered = 0, no_vcl_bsRaised };
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TBevel_Create(no_vcl_obj_t Owner);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TBevel_GetShape(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TBevel_SetShape(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TBevel_GetStyle(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TBevel_SetStyle(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+/* TShape。Pen/Brush は no_vcl_TCanvas_GetPen 等と同じく、コントロールが所有する非所有のハンドルを返す。 */
+enum { no_vcl_stRectangle = 0, no_vcl_stSquare, no_vcl_stRoundRect, no_vcl_stRoundSquare,
+       no_vcl_stEllipse, no_vcl_stCircle, no_vcl_stSquaredDiamond, no_vcl_stDiamond,
+       no_vcl_stTriangle, no_vcl_stTriangleLeft, no_vcl_stTriangleRight, no_vcl_stTriangleDown,
+       no_vcl_stStar, no_vcl_stStarDown, no_vcl_stPolygon };
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TShape_Create(no_vcl_obj_t Owner);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomShape_GetShape(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomShape_SetShape(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomShape_GetPen(no_vcl_obj_t Obj);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomShape_GetBrush(no_vcl_obj_t Obj);
+
+/* TStaticText */
+enum { no_vcl_sbsNone = 0, no_vcl_sbsSingle, no_vcl_sbsSunken };
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TStaticText_Create(no_vcl_obj_t Owner);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomStaticText_GetBorderStyle(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomStaticText_SetBorderStyle(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+/* TStatusBar。Panels(複数区画)は今回未対応で、SimpleText/SimplePanel のみ。
+ *
+ * 既知の問題: Application の Run() がメッセージループを始める前に(例えばフォームの生成中に
+ * Parent を設定して)ウィンドウハンドルを作らせると、Win32 エラー 1406
+ * (「トップレベルの子ウィンドウを作成できません」)で失敗する。標準の Lazarus 実行ファイルでは
+ * 起きず、LCL が DLL としてホストされる no_vcl 特有の現象と見られる(詳細は
+ * docs/component-coverage.md の TStatusBar の項、docs/adr/0015-... を参照)。
+ * 回避策: Interval=1 の使い捨てタイマーの OnTimer など、Run() が始まった後に呼ばれる
+ * ハンドラの中で生成する(test/main.c・test/main.cpp も参照)。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TStatusBar_Create(no_vcl_obj_t Owner);
+no_vcl_str_t  NO_VCL_CALL no_vcl_TStatusBar_GetSimpleText(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TStatusBar_SetSimpleText(no_vcl_obj_t Obj, no_vcl_str_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TStatusBar_GetSimplePanel(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TStatusBar_SetSimplePanel(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+
 #ifdef __cplusplus
 }
 #endif

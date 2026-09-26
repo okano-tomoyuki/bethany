@@ -104,13 +104,21 @@ public:
     TTracedLabel* TickLabel;
     TTimer*       Timer1;
     TPaintBox*    PaintBox1;
+    TScrollBox*   ScrollBox1;
+    TButton*      ScrolledButton;
+    TToggleBox*   ToggleBox1;
+    TBevel*       Bevel1;
+    TShape*       Shape1;
+    TStaticText*  StaticText1;
+    TStatusBar*   StatusBar1 = nullptr;
+    TTimer*       StatusBarInitTimer;
 
     // C++Builder と同じく Owner を受け取り、TForm に渡す(Application->CreateForm が Application を渡す)。
     explicit TMainForm(TComponent* AOwner) : TForm(AOwner)
     {
         Caption = "no_vcl C++ wrapper";
         Width = 640;
-        Height = 420;
+        Height = 520;
 
         Button1 = new TButton(this);
         Button1->Parent = this;
@@ -251,6 +259,74 @@ public:
         OpenSubButton->Top = 170;
         OpenSubButton->OnClick = [this](TObject* Sender) { OpenSubButtonClick(Sender); };
 
+        // docs/component-coverage.md の Tier 1 で追加したコントロール(1 バッチ目)。
+        ScrollBox1 = new TScrollBox(this);
+        ScrollBox1->Parent = this;
+        ScrollBox1->Left = 20;
+        ScrollBox1->Top = 380;
+        ScrollBox1->Width = 180;
+        ScrollBox1->Height = 50;
+
+        // TScrollBox もウィンドウを持つコントロールなので、Parent として子を配置できる。
+        ScrolledButton = new TButton(this);
+        ScrolledButton->Parent = ScrollBox1;
+        ScrolledButton->Caption = "Inside ScrollBox";
+        ScrolledButton->Left = 10;
+        ScrolledButton->Top = 10;
+        ScrolledButton->Width = 140;
+
+        ToggleBox1 = new TToggleBox(this);
+        ToggleBox1->Parent = this;
+        ToggleBox1->Caption = "Toggle me";
+        ToggleBox1->Left = 220;
+        ToggleBox1->Top = 380;
+        ToggleBox1->OnClick = [this](TObject* Sender) { ToggleBox1Click(Sender); };
+
+        Bevel1 = new TBevel(this);
+        Bevel1->Parent = this;
+        Bevel1->Left = 340;
+        Bevel1->Top = 380;
+        Bevel1->Width = 100;
+        Bevel1->Height = 50;
+        Bevel1->Shape = bsFrame;
+        Bevel1->Style = bsRaised;
+
+        Shape1 = new TShape(this);
+        Shape1->Parent = this;
+        Shape1->Left = 460;
+        Shape1->Top = 380;
+        Shape1->Width = 60;
+        Shape1->Height = 50;
+        Shape1->Shape = stEllipse;
+        Shape1->Brush.Color = clYellow;
+        Shape1->Pen.Color = clBlue;
+
+        StaticText1 = new TStaticText(this);
+        StaticText1->Parent = this;
+        StaticText1->Caption = "Static text";
+        StaticText1->Left = 20;
+        StaticText1->Top = 440;
+        StaticText1->Width = 150;
+        StaticText1->BorderStyle = sbsSunken;
+
+        // 既知の問題: TStatusBar は、Application->Run() のメッセージループが始まる前に
+        // ウィンドウハンドルを作らせると(コンストラクタの中で Parent を設定する等)、
+        // 「トップレベルの子ウィンドウを作成できません」(Win32 エラー 1406)で失敗する。
+        // 標準の Lazarus 実行ファイルでは起きず、DLL としてホストされる no_vcl 特有の現象と見られる
+        // (docs/component-coverage.md の TStatusBar の項を参照)。
+        // 回避策として、1 回だけ発火するタイマーでメッセージループが始まった後に生成する。
+        StatusBarInitTimer = new TTimer(this);
+        StatusBarInitTimer->Interval = 1;
+        StatusBarInitTimer->OnTimer = [this](TObject* Sender) {
+            static_cast<TTimer*>(Sender)->Enabled = false;
+            StatusBar1 = new TStatusBar(this);
+            StatusBar1->Parent = this;
+            StatusBar1->SimpleText = "Ready";
+            std::printf("StatusBar1 created after Run() started (workaround for a known issue)\n");
+            std::fflush(stdout);
+        };
+        StatusBarInitTimer->Enabled = true;
+
         OnCreate = [this](TObject* Sender) { FormCreate(Sender); };
         OnShow = [this](TObject* Sender) { FormShow(Sender); };
         OnResize = [this](TObject* Sender) { FormResize(Sender); };
@@ -378,6 +454,14 @@ private:
         std::fflush(stdout);
     }
 
+    void ToggleBox1Click(TObject* Sender)
+    {
+        std::printf("ToggleBox1Click: Checked=%d\n", (bool)static_cast<TToggleBox*>(Sender)->Checked);
+        if (StatusBar1)
+            StatusBar1->SimpleText = std::string("Toggle: ") + (ToggleBox1->Checked ? "on" : "off");
+        std::fflush(stdout);
+    }
+
     void CheckBox1Click(TObject* Sender)
     {
         std::printf("CheckBox1Click: Checked=%d\n", (bool)static_cast<TCheckBox*>(Sender)->Checked);
@@ -466,6 +550,12 @@ int main()
     std::printf("Application->MainForm is Form1: %s\n", Application->MainForm == Form1 ? "yes" : "no");
     std::printf("MainForm caption: %s\n", std::string(Application->MainForm->Caption).c_str());
     std::printf("Button1->Parent->Caption: %s\n", std::string(Form1->Button1->Parent->Caption).c_str());
+    std::printf("ScrolledButton->Parent is ScrollBox1: %s\n", Form1->ScrolledButton->Parent == Form1->ScrollBox1 ? "yes" : "no");
+    std::printf("Bevel1 Shape/Style: %d/%d (expected bsFrame=1/bsRaised=1)\n", (int)Form1->Bevel1->Shape, (int)Form1->Bevel1->Style);
+    std::printf("Shape1 Shape/Brush.Color/Pen.Color: %d/%06x/%06x\n",
+                (int)Form1->Shape1->Shape, (unsigned)(int)Form1->Shape1->Brush.Color, (unsigned)(int)Form1->Shape1->Pen.Color);
+    std::printf("StaticText1 BorderStyle: %d (expected sbsSunken=2)\n", (int)Form1->StaticText1->BorderStyle);
+    // StatusBar1 は Run() の開始後に生成されるため、ここではまだ存在しない(StatusBarInitTimer 参照)。
 
     // 2 つ目以降に生成したフォームは MainForm にならない。
     TForm* subForm = new TForm(Application);

@@ -152,6 +152,19 @@ static void NO_VCL_CALL OnPaintBoxPaint(no_vcl_obj_t sender, void* data)
     no_vcl_TCanvas_TextOut(canvas, 10, 100, "Canvas drawing test");
 }
 
+/* data にはフォームのハンドルを渡す。1 回だけ発火してから自分自身を無効にする。 */
+static void NO_VCL_CALL OnStatusBarInitTick(no_vcl_obj_t sender, void* data)
+{
+    no_vcl_obj_t statusBar;
+    no_vcl_TCustomTimer_SetEnabled(sender, 0);
+    statusBar = no_vcl_TStatusBar_Create((no_vcl_obj_t)data);
+    no_vcl_TControl_SetParent(statusBar, (no_vcl_obj_t)data);
+    no_vcl_TStatusBar_SetSimpleText(statusBar, "Ready");
+    printf("StatusBar created after Run() started (workaround for a known issue). SimpleText: %s\n",
+           no_vcl_TStatusBar_GetSimpleText(statusBar));
+    fflush(stdout);
+}
+
 /* data にはカウントを表示するラベルのハンドルを渡す。 */
 static void NO_VCL_CALL OnTimerTick(no_vcl_obj_t sender, void* data)
 {
@@ -196,6 +209,13 @@ int main(void)
     no_vcl_obj_t tickLabel;
     no_vcl_obj_t timer;
     no_vcl_obj_t paintBox;
+    no_vcl_obj_t scrollBox;
+    no_vcl_obj_t scrolledButton;
+    no_vcl_obj_t toggleBox;
+    no_vcl_obj_t bevel;
+    no_vcl_obj_t shape;
+    no_vcl_obj_t staticText;
+    no_vcl_obj_t statusBarInitTimer;
 
     no_vcl_FreeNotify_SetCallback(OnComponentFreed, &freedCount);
 
@@ -216,7 +236,7 @@ int main(void)
 
     no_vcl_TControl_SetCaption(form, "Hello from FPC DLL");
     no_vcl_TControl_SetWidth(form, 640);
-    no_vcl_TControl_SetHeight(form, 420);
+    no_vcl_TControl_SetHeight(form, 520);
     printf("Caption: %s\n", no_vcl_TControl_GetCaption(form));
 
     button = Place(no_vcl_TButton_Create(form), form, 20, 20);
@@ -308,6 +328,48 @@ int main(void)
     no_vcl_TControl_SetHeight(paintBox, 130);
     no_vcl_TPaintBox_SetOnPaint(paintBox, OnPaintBoxPaint, NULL);
 
+    /* docs/component-coverage.md の Tier 1 で追加したコントロール(1 バッチ目)。 */
+    scrollBox = Place(no_vcl_TScrollBox_Create(form), form, 20, 380);
+    no_vcl_TControl_SetWidth(scrollBox, 180);
+    no_vcl_TControl_SetHeight(scrollBox, 50);
+
+    scrolledButton = Place(no_vcl_TButton_Create(form), scrollBox, 10, 10);
+    no_vcl_TControl_SetCaption(scrolledButton, "Inside ScrollBox");
+    no_vcl_TControl_SetWidth(scrolledButton, 140);
+    printf("ScrolledButton parent is scrollBox: %s\n", no_vcl_TControl_GetParent(scrolledButton) == scrollBox ? "yes" : "no");
+
+    toggleBox = Place(no_vcl_TToggleBox_Create(form), form, 220, 380);
+    no_vcl_TControl_SetCaption(toggleBox, "Toggle me");
+    no_vcl_TControl_SetOnClick(toggleBox, OnCheckBoxClick, NULL);
+
+    bevel = Place(no_vcl_TBevel_Create(form), form, 340, 380);
+    no_vcl_TControl_SetWidth(bevel, 100);
+    no_vcl_TControl_SetHeight(bevel, 50);
+    no_vcl_TBevel_SetShape(bevel, no_vcl_bsFrame);
+    no_vcl_TBevel_SetStyle(bevel, no_vcl_bsRaised);
+
+    shape = Place(no_vcl_TShape_Create(form), form, 460, 380);
+    no_vcl_TControl_SetWidth(shape, 60);
+    no_vcl_TControl_SetHeight(shape, 50);
+    no_vcl_TCustomShape_SetShape(shape, no_vcl_stEllipse);
+    no_vcl_TBrush_SetColor(no_vcl_TCustomShape_GetBrush(shape), CL_YELLOW);
+    no_vcl_TPen_SetColor(no_vcl_TCustomShape_GetPen(shape), CL_BLUE);
+
+    staticText = Place(no_vcl_TStaticText_Create(form), form, 20, 440);
+    no_vcl_TControl_SetCaption(staticText, "Static text");
+    no_vcl_TControl_SetWidth(staticText, 150);
+    no_vcl_TCustomStaticText_SetBorderStyle(staticText, no_vcl_sbsSunken);
+
+    /* 既知の問題: TStatusBar は Application->Run() のメッセージループが始まる前にウィンドウハンドルを
+       作らせると「トップレベルの子ウィンドウを作成できません」(Win32 エラー 1406)で失敗する。
+       標準の Lazarus 実行ファイルでは起きず、DLL としてホストされる no_vcl 特有の現象と見られる
+       (docs/component-coverage.md の TStatusBar の項を参照)。回避策として、1 回だけ発火する
+       タイマーでメッセージループが始まった後に生成する。 */
+    statusBarInitTimer = no_vcl_TTimer_Create(form);
+    no_vcl_TCustomTimer_SetInterval(statusBarInitTimer, 1);
+    no_vcl_TCustomTimer_SetOnTimer(statusBarInitTimer, OnStatusBarInitTick, form);
+    no_vcl_TCustomTimer_SetEnabled(statusBarInitTimer, 1);
+
     printf("Running (click the button, then close the window twice: the first close is blocked)...\n");
     fflush(stdout);
     /* MainForm を表示してメッセージループに入り、MainForm が閉じられると戻る。 */
@@ -317,7 +379,7 @@ int main(void)
     /* Application が所有するフォーム(と、フォームが所有するコントロール)をまとめて破棄する。
        呼ばなくても DLL の切り離し時に LCL が破棄するが、そのときは破棄通知が呼ばれない。 */
     no_vcl_TComponent_DestroyComponents(app);
-    printf("Clicks: %d, Freed components: %d (expected 16: form + 15 owned)\n", clickCount, freedCount);
+    printf("Clicks: %d, Freed components: %d (expected 24: form + 23 owned)\n", clickCount, freedCount);
 
     printf("OK\n");
     return 0;

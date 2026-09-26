@@ -390,6 +390,16 @@ protected:
     ~TScrollingWinControl() override = default;
 };
 
+// スクロール可能な汎用コンテナ。TScrollingWinControl の直接の派生で、追加のメンバは無い。
+class TScrollBox : public TScrollingWinControl
+{
+public:
+    explicit TScrollBox(TComponent* AOwner);
+
+protected:
+    ~TScrollBox() override = default;
+};
+
 class TCustomForm : public TScrollingWinControl
 {
 public:
@@ -608,6 +618,28 @@ protected:
     ~TLabel() override = default;
 };
 
+// 枠線や凹凸の表現に使う、単純な表示専用コントロール(TGraphicControl の直接の派生)。
+enum TBevelShape { bsBox, bsFrame, bsTopLine, bsBottomLine, bsLeftLine, bsRightLine, bsSpacer };
+enum TBevelStyle { bsLowered, bsRaised };
+
+class TBevel : public TGraphicControl
+{
+public:
+    explicit TBevel(TComponent* AOwner);
+
+    Property<TBevelShape> Shape;
+    Property<TBevelStyle> Style;
+
+protected:
+    ~TBevel() override = default;
+
+private:
+    static TBevelShape GetShapeImpl(TObject* owner);
+    static void        SetShapeImpl(TObject* owner, const TBevelShape& value);
+    static TBevelStyle GetStyleImpl(TObject* owner);
+    static void        SetStyleImpl(TObject* owner, const TBevelStyle& value);
+};
+
 /* ---------------- Button / CheckBox / RadioButton ---------------- */
 
 class TButtonControl : public TWinControl
@@ -667,6 +699,18 @@ public:
 
 protected:
     ~TRadioButton() override = default;
+};
+
+// オン/オフの状態をボタン風の見た目で表す。TCustomCheckBox の直接の派生で、Checked を共有する。
+class TToggleBox : public TCustomCheckBox
+{
+public:
+    using TButtonControl::Checked;
+
+    explicit TToggleBox(TComponent* AOwner);
+
+protected:
+    ~TToggleBox() override = default;
 };
 
 /* ---------------- Edit / Memo ---------------- */
@@ -804,6 +848,59 @@ protected:
     ~TListBox() override = default;
 };
 
+// 枠線付きの表示専用テキスト(TLabel と異なりウィンドウを持つ)。
+enum TStaticBorderStyle { sbsNone, sbsSingle, sbsSunken };
+
+class TCustomStaticText : public TWinControl
+{
+public:
+    Property<TStaticBorderStyle> BorderStyle;
+
+protected:
+    explicit TCustomStaticText(no_vcl_obj_t handle);
+    ~TCustomStaticText() override = default;
+
+private:
+    static TStaticBorderStyle GetBorderStyleImpl(TObject* owner);
+    static void                SetBorderStyleImpl(TObject* owner, const TStaticBorderStyle& value);
+};
+
+class TStaticText : public TCustomStaticText
+{
+public:
+    explicit TStaticText(TComponent* AOwner);
+
+protected:
+    ~TStaticText() override = default;
+};
+
+// ステータス行。LCL では中間の TCustomStatusBar が無く、TWinControl の直接の派生。
+// Panels(複数区画のコレクション)は今回未対応で、SimpleText/SimplePanel のみ。
+//
+// 既知の問題: Application->Run() がメッセージループを始める前にウィンドウハンドルを作らせると
+// (例えばフォームのコンストラクタの中で Parent を設定すると)、Win32 エラー 1406 で失敗する。
+// 標準の Lazarus 実行ファイルでは起きず、LCL が DLL としてホストされる no_vcl 特有の現象と見られる
+// (docs/component-coverage.md の TStatusBar の項を参照)。回避策として、Interval=1 の使い捨て
+// タイマーの OnTimer など、Run() が始まった後に呼ばれるハンドラの中で生成すること
+// (test/main.cpp の StatusBarInitTimer を参照)。
+class TStatusBar : public TWinControl
+{
+public:
+    explicit TStatusBar(TComponent* AOwner);
+
+    Property<std::string> SimpleText;
+    Property<bool>         SimplePanel;
+
+protected:
+    ~TStatusBar() override = default;
+
+private:
+    static std::string GetSimpleTextImpl(TObject* owner);
+    static void         SetSimpleTextImpl(TObject* owner, const std::string& value);
+    static bool         GetSimplePanelImpl(TObject* owner);
+    static void          SetSimplePanelImpl(TObject* owner, const bool& value);
+};
+
 /* ---------------- Canvas ---------------- */
 
 // TPen/TBrush/TFont/TCanvas は LCL でも TComponent ではなく TPersistent の派生であり、
@@ -874,6 +971,41 @@ public:
     void Rectangle(int x1, int y1, int x2, int y2);
     void Ellipse(int x1, int y1, int x2, int y2);
     void TextOut(int x, int y, const std::string& text);
+};
+
+// 矩形・楕円等の図形を描画する表示専用コントロール。Pen/Brush は TCanvas と同じく、
+// コントロールが所有する実体への非所有のビュー(コントロールと寿命が一致する)。
+enum TShapeType
+{
+    stRectangle, stSquare, stRoundRect, stRoundSquare,
+    stEllipse, stCircle, stSquaredDiamond, stDiamond,
+    stTriangle, stTriangleLeft, stTriangleRight, stTriangleDown,
+    stStar, stStarDown, stPolygon
+};
+
+class TCustomShape : public TGraphicControl
+{
+public:
+    TPen   Pen;
+    TBrush Brush;
+    Property<TShapeType> Shape;
+
+protected:
+    explicit TCustomShape(no_vcl_obj_t handle);
+    ~TCustomShape() override = default;
+
+private:
+    static TShapeType GetShapeImpl(TObject* owner);
+    static void        SetShapeImpl(TObject* owner, const TShapeType& value);
+};
+
+class TShape : public TCustomShape
+{
+public:
+    explicit TShape(TComponent* AOwner);
+
+protected:
+    ~TShape() override = default;
 };
 
 class TPaintBox : public TGraphicControl

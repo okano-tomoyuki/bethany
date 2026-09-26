@@ -413,6 +413,10 @@ void NO_VCL_CALL TWinControl::KeyPressTrampoline(no_vcl_obj_t sender, no_vcl_int
     *key = static_cast<unsigned char>(keyValue);
 }
 
+TScrollBox::TScrollBox(TComponent* AOwner)
+    : TScrollingWinControl(no_vcl_TScrollBox_Create(HandleOf(AOwner)))
+{}
+
 /* ---------------- Form ---------------- */
 
 void TCustomForm::Show()      { no_vcl_TCustomForm_Show(handle_); }
@@ -674,6 +678,31 @@ TLabel::TLabel(TComponent* AOwner)
     : TCustomLabel(no_vcl_TLabel_Create(HandleOf(AOwner)))
 {}
 
+TBevel::TBevel(TComponent* AOwner)
+    : TGraphicControl(no_vcl_TBevel_Create(HandleOf(AOwner)))
+    , Shape(this, &TBevel::GetShapeImpl, &TBevel::SetShapeImpl)
+    , Style(this, &TBevel::GetStyleImpl, &TBevel::SetStyleImpl)
+{}
+
+TBevelShape TBevel::GetShapeImpl(TObject* owner) { return static_cast<TBevelShape>(no_vcl_TBevel_GetShape(owner->Handle())); }
+void TBevel::SetShapeImpl(TObject* owner, const TBevelShape& value) { no_vcl_TBevel_SetShape(owner->Handle(), value); }
+TBevelStyle TBevel::GetStyleImpl(TObject* owner) { return static_cast<TBevelStyle>(no_vcl_TBevel_GetStyle(owner->Handle())); }
+void TBevel::SetStyleImpl(TObject* owner, const TBevelStyle& value) { no_vcl_TBevel_SetStyle(owner->Handle(), value); }
+
+TCustomShape::TCustomShape(no_vcl_obj_t handle)
+    : TGraphicControl(handle)
+    , Pen(no_vcl_TCustomShape_GetPen(handle))
+    , Brush(no_vcl_TCustomShape_GetBrush(handle))
+    , Shape(this, &TCustomShape::GetShapeImpl, &TCustomShape::SetShapeImpl)
+{}
+
+TShapeType TCustomShape::GetShapeImpl(TObject* owner) { return static_cast<TShapeType>(no_vcl_TCustomShape_GetShape(owner->Handle())); }
+void TCustomShape::SetShapeImpl(TObject* owner, const TShapeType& value) { no_vcl_TCustomShape_SetShape(owner->Handle(), value); }
+
+TShape::TShape(TComponent* AOwner)
+    : TCustomShape(no_vcl_TShape_Create(HandleOf(AOwner)))
+{}
+
 /* ---------------- Button / CheckBox / RadioButton ---------------- */
 
 TButtonControl::TButtonControl(no_vcl_obj_t handle)
@@ -701,6 +730,10 @@ TCheckBox::TCheckBox(TComponent* AOwner)
 
 TRadioButton::TRadioButton(TComponent* AOwner)
     : TCustomCheckBox(no_vcl_TRadioButton_Create(HandleOf(AOwner)))
+{}
+
+TToggleBox::TToggleBox(TComponent* AOwner)
+    : TCustomCheckBox(no_vcl_TToggleBox_Create(HandleOf(AOwner)))
 {}
 
 /* ---------------- Edit / Memo ---------------- */
@@ -836,6 +869,44 @@ void TCustomListBox::SetItemIndexImpl(TObject* owner, const int& value) { no_vcl
 TListBox::TListBox(TComponent* AOwner)
     : TCustomListBox(no_vcl_TListBox_Create(HandleOf(AOwner)))
 {}
+
+TCustomStaticText::TCustomStaticText(no_vcl_obj_t handle)
+    : TWinControl(handle)
+    , BorderStyle(this, &TCustomStaticText::GetBorderStyleImpl, &TCustomStaticText::SetBorderStyleImpl)
+{}
+
+TStaticBorderStyle TCustomStaticText::GetBorderStyleImpl(TObject* owner)
+{
+    return static_cast<TStaticBorderStyle>(no_vcl_TCustomStaticText_GetBorderStyle(owner->Handle()));
+}
+
+void TCustomStaticText::SetBorderStyleImpl(TObject* owner, const TStaticBorderStyle& value)
+{
+    no_vcl_TCustomStaticText_SetBorderStyle(owner->Handle(), value);
+}
+
+TStaticText::TStaticText(TComponent* AOwner)
+    : TCustomStaticText(no_vcl_TStaticText_Create(HandleOf(AOwner)))
+{}
+
+TStatusBar::TStatusBar(TComponent* AOwner)
+    : TWinControl(no_vcl_TStatusBar_Create(HandleOf(AOwner)))
+    , SimpleText(this, &TStatusBar::GetSimpleTextImpl, &TStatusBar::SetSimpleTextImpl)
+    , SimplePanel(this, &TStatusBar::GetSimplePanelImpl, &TStatusBar::SetSimplePanelImpl)
+{}
+
+std::string TStatusBar::GetSimpleTextImpl(TObject* owner)
+{
+    return std::string(no_vcl_TStatusBar_GetSimpleText(owner->Handle()));
+}
+
+void TStatusBar::SetSimpleTextImpl(TObject* owner, const std::string& value)
+{
+    no_vcl_TStatusBar_SetSimpleText(owner->Handle(), value.c_str());
+}
+
+bool TStatusBar::GetSimplePanelImpl(TObject* owner) { return no_vcl_TStatusBar_GetSimplePanel(owner->Handle()) != 0; }
+void TStatusBar::SetSimplePanelImpl(TObject* owner, const bool& value) { no_vcl_TStatusBar_SetSimplePanel(owner->Handle(), value ? 1 : 0); }
 
 /* ---------------- Canvas ---------------- */
 

@@ -19,6 +19,7 @@ uses
   Controls,
   StdCtrls,
   ExtCtrls,
+  ComCtrls,
   Graphics,
   CustomTimer;
 
@@ -1055,6 +1056,119 @@ begin
   TFont(Obj).Color := TColor(Value);
 end;
 
+{ docs/component-coverage.md の Tier 1 で挙げたコントロール。既存クラスの部分列として追加する。 }
+
+{ TScrollBox: TScrollingWinControl(実装済み)の直接の派生で、追加のメンバは無い。 }
+function TScrollBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TScrollBox.Create(TComponent(Owner)));
+end;
+
+{ TToggleBox: TCustomCheckBox(実装済み)の直接の派生で、追加のメンバは無い(Checked を共有)。 }
+function TToggleBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TToggleBox.Create(TComponent(Owner)));
+end;
+
+{ TBevel }
+
+function TBevel_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TBevel.Create(TComponent(Owner)));
+end;
+
+function TBevel_GetShape(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TBevel(Obj).Shape);
+end;
+
+procedure TBevel_SetShape(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TBevel(Obj).Shape := TBevelShape(Value);
+end;
+
+function TBevel_GetStyle(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TBevel(Obj).Style);
+end;
+
+procedure TBevel_SetStyle(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TBevel(Obj).Style := TBevelStyle(Value);
+end;
+
+{ TShape: Pen/Brush は TCustomShape が所有する実体で、TCanvas の Pen/Brush と同じく非所有のハンドルとして返す。 }
+
+function TShape_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TShape.Create(TComponent(Owner)));
+end;
+
+function TCustomShape_GetShape(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TCustomShape(Obj).Shape);
+end;
+
+procedure TCustomShape_SetShape(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomShape(Obj).Shape := TShapeType(Value);
+end;
+
+function TCustomShape_GetPen(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomShape(Obj).Pen);
+end;
+
+function TCustomShape_GetBrush(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomShape(Obj).Brush);
+end;
+
+{ TStaticText }
+
+function TStaticText_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TStaticText.Create(TComponent(Owner)));
+end;
+
+function TCustomStaticText_GetBorderStyle(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TCustomStaticText(Obj).BorderStyle);
+end;
+
+procedure TCustomStaticText_SetBorderStyle(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomStaticText(Obj).BorderStyle := TStaticBorderStyle(Value);
+end;
+
+{ TStatusBar: LCL に中間の TCustomStatusBar は無く、TWinControl の直接の派生。
+  Panels(TCollection)は今回未対応。SimpleText/SimplePanel のみ。 }
+
+function TStatusBar_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TStatusBar.Create(TComponent(Owner)));
+end;
+
+function TStatusBar_GetSimpleText(Obj: Pointer): PChar; NO_VCL_CALL;
+begin
+  Result := ReturnStr(TStatusBar(Obj).SimpleText);
+end;
+
+procedure TStatusBar_SetSimpleText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+begin
+  TStatusBar(Obj).SimpleText := Value;
+end;
+
+function TStatusBar_GetSimplePanel(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TStatusBar(Obj).SimplePanel;
+end;
+
+procedure TStatusBar_SetSimplePanel(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TStatusBar(Obj).SimplePanel := Value;
+end;
+
 exports
   FreeNotify_SetCallback,
 
@@ -1194,7 +1308,32 @@ exports
   TFont_GetSize,
   TFont_SetSize,
   TFont_GetColor,
-  TFont_SetColor;
+  TFont_SetColor,
+
+  TScrollBox_Create,
+  TToggleBox_Create,
+
+  TBevel_Create,
+  TBevel_GetShape,
+  TBevel_SetShape,
+  TBevel_GetStyle,
+  TBevel_SetStyle,
+
+  TShape_Create,
+  TCustomShape_GetShape,
+  TCustomShape_SetShape,
+  TCustomShape_GetPen,
+  TCustomShape_GetBrush,
+
+  TStaticText_Create,
+  TCustomStaticText_GetBorderStyle,
+  TCustomStaticText_SetBorderStyle,
+
+  TStatusBar_Create,
+  TStatusBar_GetSimpleText,
+  TStatusBar_SetSimpleText,
+  TStatusBar_GetSimplePanel,
+  TStatusBar_SetSimplePanel;
 
 begin
   RequireDerivedFormResource := False;

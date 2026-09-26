@@ -1,0 +1,72 @@
+# 0015. Tier 1 の 1 バッチ目(TScrollBox・TToggleBox・TBevel・TShape・TStaticText・TStatusBar)を追加し、TStatusBar の既知の問題を記録する
+
+- 状態: 承認
+- 日付: 2026-09-26
+
+## 背景
+
+[docs/component-coverage.md](../component-coverage.md) で棚卸しした Tier 1(低コスト・高価値)のコントロールに、
+1 バッチ目として着手した。いずれも基底が実装済みの TScrollingWinControl・TGraphicControl・TWinControl のいずれかで、
+既存のパターン(`Property<T>`・protected hack・BridgeFor)の延長で追加できるものを選んだ。
+
+- **TScrollBox**(forms.pp): TScrollingWinControl の直接の派生で、追加のメンバは無い。
+- **TToggleBox**(stdctrls.pp): TCustomCheckBox の直接の派生で、Checked を共有する。追加のメンバは無い。
+- **TBevel**(extctrls.pp): Shape(TBevelShape)・Style(TBevelStyle)。
+- **TShape**(extctrls.pp の TCustomShape): Shape(TShapeType)・Pen/Brush(TCanvas と同じく、コントロールが
+  所有する実体への非所有のビュー)。
+- **TStaticText**(stdctrls.pp の TCustomStaticText): BorderStyle(TStaticBorderStyle)。
+- **TStatusBar**(comctrls.pp): LCL に中間の TCustomStatusBar は無く、TWinControl の直接の派生。
+  SimpleText/SimplePanel のみ対応し、Panels(複数区画のコレクション)は見送った。
+
+列挙型(TBevelShape 等)は Pascal の `Ord`/型キャストで整数として C API・C++ の enum に渡す、
+既存の TCloseAction 等と同じ方式にした。
+
+## TStatusBar の既知の問題(重要)
+
+実装後のテストで、**TStatusBar は Application->Run() がメッセージループを始める前にウィンドウハンドルを
+作らせると、Win32 エラー 1406(「トップレベルの子ウィンドウを作成できません」)で失敗する**ことが分かった。
+no_vcl の通常の使い方(`Application->CreateForm(&Form1); Application->Run();` で、フォームのコンストラクタの中で
+子コントロールを生成し Parent を設定する)は、まさにこのタイミングでウィンドウハンドルを要求するため、
+**素朴に実装すると実用上ほぼ確実にこの問題を踏む**。
+
+### 調査で分かったこと
+
+- 標準の Lazarus 実行ファイル(.lpr を fpc で直接コンパイルしたもの)では同じコードで問題が起きない。
+  LCL の DLL を、LCL を使わない C/C++ の実行ファイルから `LoadLibrary` でホストする no_vcl 特有の現象と見られる。
+- no_vcl の Pascal コード(`Watch` や `TStatusBar_Create` 自体)には依存しない。no_vcl を一切使わない、
+  最小限の DLL(`TStatusBar.Create` して `Parent` を設定し `Show` するだけ)でも同じ Win32 エラーで再現した。
+- **TStatusBar に固有の問題であり、ComCtrls の共通コントロール全般の問題ではない。** 同じ条件で
+  TProgressBar(同じく comctl32 のネイティブコントロール)は問題なく生成・表示できた。`Align := alBottom`
+  を明示的に設定しても TProgressBar では再現しなかったため、Align も原因ではない。
+- 次はいずれも改善しなかった: ホスト側での `InitCommonControlsEx` の事前呼び出し、ホスト実行ファイルへの
+  comctl32 v6 マニフェストの埋め込み、フォームのウィンドウハンドルを先に確保すること
+  (`F.HandleNeeded`)、生成前に `Application.ProcessMessages` を 1 回呼ぶこと、`OnShow` イベントハンドラの
+  中で生成すること(`OnShow` は `Show` の内部で、まだ `Application.Run` に入る前に呼ばれるため)。
+- **`Application->Run()` がメッセージループに入った後(タイマーの `OnTimer` 等)で生成すると、問題なく成功する。**
+  これが唯一確認できた回避策。
+
+根本原因(comctl32 のスレッド・プロセス状態が、ホストプロセスのメッセージループが実際に走り出すまで
+何らかの形で未完了になっている等)は特定できていない。LCL 自体のバグか、DLL ホスティングという
+使用方法自体が LCL の想定外である可能性がある。
+
+### 決定
+
+1. TStatusBar の実装(Pascal・C API・C++)はそのまま採用する。問題は生成のタイミングに起因し、
+   実装そのものは他のコントロールと同じ形で正しいため。
+2. **既知の問題として、C API ヘッダ(no_vcl_c.h)と C++ ヘッダ(no_vcl.hpp)の TStatusBar の宣言に
+   直接コメントで警告し、回避策(Interval=1 の使い捨てタイマーで Run() 開始後に生成する)を明記する。**
+   利用者がこのコメントを読まずに素朴な使い方をすると確実にクラッシュするため、ドキュメントの中でも
+   最も目につく場所(型の宣言そのもの)に書く。
+3. test/main.c・test/main.cpp では、この回避策(1 回だけ発火するタイマーの中で生成し、発火後に
+   タイマー自身を無効化する)を実装として示す。
+4. 将来的に、TTrackBar・TUpDown・TTabControl 等の他の ComCtrls 系コントロールを追加する際は、
+   同じ問題が起きないか都度確認する(TProgressBar は問題なかったため、全ての ComCtrls コントロールが
+   影響を受けるわけではないと分かっているが、コントロールごとに確認が要る)。
+
+## 影響
+
+- TStatusBar を使うコードは、フォームのコンストラクタの中で直接 `Parent` を設定するのではなく、
+  Interval=1 のタイマー等で Run() 開始後まで生成を遅らせる必要がある(C++Builder/Delphi の通常の
+  書き方とは異なる、no_vcl 固有の制約)。
+- 今回追加した他の 5 クラス(TScrollBox・TToggleBox・TBevel・TShape・TStaticText)にはこの問題は無く、
+  通常どおりコンストラクタの中で生成・配置できる。

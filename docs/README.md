@@ -8,6 +8,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 |---|---|---|
 | [vision.md](vision.md) | 目的・市場調査・想定ユーザー・スコープ | 初版 |
 | [class-hierarchy.md](class-hierarchy.md) | LCL の継承関係(ソースで確認済み)・no_vcl の階層・メンバの配置 | 初版 |
+| [component-coverage.md](component-coverage.md) | VCL 移行を見据えたコントロールの棚卸し(未実装クラスの一覧と優先度) | 初版 |
 | [adr/](adr/) | 設計判断の記録（1判断1ファイル） | 随時追加 |
 | [../todo.md](../todo.md) | 実装タスクの進捗・実装パターン・既知の課題(Phase 単位) | 継続更新 |
 
@@ -32,6 +33,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0012](adr/0012-remaining-form-events.md) | フォームの残りのイベント(OnCloseQuery・OnHide・OnActivate・OnDeactivate・OnDestroy)を追加し、DLL の切り離し中はイベントを送らない | 承認 |
 | [0013](adr/0013-string-return-bridge-reuse-ctor-exception.md) | 文字列はスレッドローカルバッファ経由で返し、イベントのブリッジは再利用し、コンストラクタが例外を投げたら LCL オブジェクトを破棄する | 承認 |
 | [0014](adr/0014-control-key-mouse-events.md) | TControl / TWinControl のキー入力・マウス操作イベントを追加し、TForm もこれを継承する | 承認 |
+| [0015](adr/0015-tier1-batch1-and-statusbar-issue.md) | Tier 1 の 1 バッチ目(TScrollBox・TToggleBox・TBevel・TShape・TStaticText・TStatusBar)を追加し、TStatusBar の既知の問題を記録する | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。

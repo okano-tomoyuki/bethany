@@ -145,7 +145,32 @@
     X(no_vcl_int_t,  TFont_GetSize,                 (no_vcl_obj_t o),                                         (o)) \
     X(void,          TFont_SetSize,                 (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
     X(no_vcl_int_t,  TFont_GetColor,                (no_vcl_obj_t o),                                         (o)) \
-    X(void,          TFont_SetColor,                (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v))
+    X(void,          TFont_SetColor,                (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    \
+    X(no_vcl_obj_t,  TScrollBox_Create,              (no_vcl_obj_t owner),                                     (owner)) \
+    X(no_vcl_obj_t,  TToggleBox_Create,              (no_vcl_obj_t owner),                                     (owner)) \
+    \
+    X(no_vcl_obj_t,  TBevel_Create,                  (no_vcl_obj_t owner),                                     (owner)) \
+    X(no_vcl_int_t,  TBevel_GetShape,                (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TBevel_SetShape,                (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TBevel_GetStyle,                (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TBevel_SetStyle,                (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    \
+    X(no_vcl_obj_t,  TShape_Create,                  (no_vcl_obj_t owner),                                     (owner)) \
+    X(no_vcl_int_t,  TCustomShape_GetShape,          (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomShape_SetShape,          (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_obj_t,  TCustomShape_GetPen,            (no_vcl_obj_t o),                                         (o)) \
+    X(no_vcl_obj_t,  TCustomShape_GetBrush,          (no_vcl_obj_t o),                                         (o)) \
+    \
+    X(no_vcl_obj_t,  TStaticText_Create,             (no_vcl_obj_t owner),                                     (owner)) \
+    X(no_vcl_int_t,  TCustomStaticText_GetBorderStyle, (no_vcl_obj_t o),                                       (o)) \
+    X(void,          TCustomStaticText_SetBorderStyle, (no_vcl_obj_t o, no_vcl_int_t v),                       (o, v)) \
+    \
+    X(no_vcl_obj_t,  TStatusBar_Create,              (no_vcl_obj_t owner),                                     (owner)) \
+    X(no_vcl_str_t,  TStatusBar_GetSimpleText,       (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TStatusBar_SetSimpleText,       (no_vcl_obj_t o, no_vcl_str_t v),                         (o, v)) \
+    X(no_vcl_bool_t, TStatusBar_GetSimplePanel,      (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TStatusBar_SetSimplePanel,      (no_vcl_obj_t o, no_vcl_bool_t v),                        (o, v))
 
 namespace
 {
