@@ -4,7 +4,8 @@
 #if defined(_WIN32) || defined(_WIN64)
     #define NO_VCL_CALL __stdcall
 #else
-    #define NO_VCL_CALL __cdecl
+    /* x86_64 Linux では呼び出し規約は1種類しかなく、__cdecl はキーワードとして存在しない。 */
+    #define NO_VCL_CALL
 #endif
 
 #ifdef __cplusplus

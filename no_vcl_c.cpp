@@ -3,8 +3,10 @@
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
+using no_vcl_module_t = HMODULE;
 #else
 #include <dlfcn.h>
+using no_vcl_module_t = void*;
 #endif
 
 #include "no_vcl_c.h"
@@ -302,7 +304,7 @@ NO_VCL_FUNCS(NO_VCL_DECLARE)
 
 /* 関数ポインタマッピング */
 template<typename Func>
-void no_vcl_map(Func& f, HMODULE m, const char* n)
+void no_vcl_map(Func& f, no_vcl_module_t m, const char* n)
 {
 #if defined(_WIN32) || defined(_WIN64)
     void* p = reinterpret_cast<void*>(::GetProcAddress(m, n));
@@ -314,7 +316,7 @@ void no_vcl_map(Func& f, HMODULE m, const char* n)
 
 void no_vcl_init(void)
 {
-    static HMODULE m = nullptr;
+    static no_vcl_module_t m = nullptr;
     static std::once_flag once;
 
     if (!m)

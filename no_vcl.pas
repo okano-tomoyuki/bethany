@@ -2001,5 +2001,9 @@ begin
   RequireDerivedFormResource := False;
   Application.Initialize;
   GFreeNotifier := TFreeNotifier.Create(nil);
+  { Dll_Process_Detach_Hook は Windows の DLL_PROCESS_DETACH 通知専用のフックで、
+    Linux の共有ライブラリ(.so)には存在しない。 }
+  {$ifdef WINDOWS}
   Dll_Process_Detach_Hook := @DetachHook;
+  {$endif}
 end.

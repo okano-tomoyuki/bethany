@@ -107,7 +107,7 @@ VCL アプリらしい UI に必須だが、TMenuItem がツリー構造の TCom
 | クラス | LCL 宣言ユニット | 備考 |
 |---|---|---|
 | TCalendar | calendar.pp | TWinControl 直下で単純だが、実用では日付選択に TDateTimePicker を使うことが多い |
-| TDateTimePicker / 月表示カレンダー | `components/datetimectrls`(別パッケージ) | 現在の build.sh の `-Fu` に無い別パッケージ。パス追加が前提 |
+| TDateTimePicker / 月表示カレンダー | `components/datetimectrls`(別パッケージ) | 現在の build-windows.sh / build-linux.sh の `-Fu` に無い別パッケージ。パス追加が前提 |
 | TTrayIcon | extctrls.pp(TCustomTrayIcon) | 非ビジュアル。タスクトレイ常駐アプリ向け |
 | TControlBar | extctrls.pp | 現代の UI ではほぼ使われない |
 | TFlowPanel | extctrls.pp | TPanel で代替できることが多い |
