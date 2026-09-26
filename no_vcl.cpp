@@ -792,6 +792,58 @@ TGroupBox::TGroupBox(TComponent* AOwner)
     : TCustomGroupBox(no_vcl_TGroupBox_Create(HandleOf(AOwner)))
 {}
 
+TCustomRadioGroup::TCustomRadioGroup(no_vcl_obj_t handle)
+    : TCustomGroupBox(handle)
+    , ItemIndex(this, &TCustomRadioGroup::GetItemIndexImpl, &TCustomRadioGroup::SetItemIndexImpl)
+    , OnClick(this, &TCustomRadioGroup::GetOnClickImpl, &TCustomRadioGroup::SetOnClickImpl)
+{}
+
+void TCustomRadioGroup::ItemsAdd(const std::string& text) { no_vcl_TCustomRadioGroup_Items_Add(handle_, text.c_str()); }
+void TCustomRadioGroup::ItemsClear()                      { no_vcl_TCustomRadioGroup_Items_Clear(handle_); }
+int  TCustomRadioGroup::ItemsCount() const                { return no_vcl_TCustomRadioGroup_Items_Count(handle_); }
+
+std::string TCustomRadioGroup::ItemsGetText(int index) const
+{
+    return std::string(no_vcl_TCustomRadioGroup_Items_GetText(handle_, index));
+}
+
+int  TCustomRadioGroup::GetItemIndexImpl(TObject* owner)                   { return no_vcl_TCustomRadioGroup_GetItemIndex(owner->Handle()); }
+void TCustomRadioGroup::SetItemIndexImpl(TObject* owner, const int& value) { no_vcl_TCustomRadioGroup_SetItemIndex(owner->Handle(), value); }
+TNotifyEvent TCustomRadioGroup::GetOnClickImpl(TObject* owner) { return static_cast<TCustomRadioGroup*>(owner)->onClick_; }
+
+void TCustomRadioGroup::SetOnClickImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCustomRadioGroup* self = static_cast<TCustomRadioGroup*>(owner);
+    SetSimpleEvent(self->handle_, self->onClick_, self->onClickHooked_, value,
+                   &no_vcl_TCustomRadioGroup_SetOnClick, &TCustomRadioGroup::ClickTrampoline);
+}
+
+void NO_VCL_CALL TCustomRadioGroup::ClickTrampoline(no_vcl_obj_t sender, void*)
+{
+    if (TCustomRadioGroup* self = static_cast<TCustomRadioGroup*>(FromHandle(sender)))
+        CallNotify(self->onClick_, self);
+}
+
+TRadioGroup::TRadioGroup(TComponent* AOwner)
+    : TCustomRadioGroup(no_vcl_TRadioGroup_Create(HandleOf(AOwner)))
+{}
+
+void TCustomCheckGroup::ItemsAdd(const std::string& text) { no_vcl_TCustomCheckGroup_Items_Add(handle_, text.c_str()); }
+void TCustomCheckGroup::ItemsClear()                      { no_vcl_TCustomCheckGroup_Items_Clear(handle_); }
+int  TCustomCheckGroup::ItemsCount() const                { return no_vcl_TCustomCheckGroup_Items_Count(handle_); }
+
+std::string TCustomCheckGroup::ItemsGetText(int index) const
+{
+    return std::string(no_vcl_TCustomCheckGroup_Items_GetText(handle_, index));
+}
+
+bool TCustomCheckGroup::GetChecked(int index) const { return no_vcl_TCustomCheckGroup_GetChecked(handle_, index) != 0; }
+void TCustomCheckGroup::SetChecked(int index, bool value) { no_vcl_TCustomCheckGroup_SetChecked(handle_, index, value ? 1 : 0); }
+
+TCheckGroup::TCheckGroup(TComponent* AOwner)
+    : TCustomCheckGroup(no_vcl_TCheckGroup_Create(HandleOf(AOwner)))
+{}
+
 TLabel::TLabel(TComponent* AOwner)
     : TCustomLabel(no_vcl_TLabel_Create(HandleOf(AOwner)))
 {}
@@ -986,6 +1038,33 @@ void TCustomListBox::SetItemIndexImpl(TObject* owner, const int& value) { no_vcl
 
 TListBox::TListBox(TComponent* AOwner)
     : TCustomListBox(no_vcl_TListBox_Create(HandleOf(AOwner)))
+{}
+
+TCustomCheckListBox::TCustomCheckListBox(no_vcl_obj_t handle)
+    : TCustomListBox(handle)
+    , OnClickCheck(this, &TCustomCheckListBox::GetOnClickCheckImpl, &TCustomCheckListBox::SetOnClickCheckImpl)
+{}
+
+bool TCustomCheckListBox::GetChecked(int index) const { return no_vcl_TCustomCheckListBox_GetChecked(handle_, index) != 0; }
+void TCustomCheckListBox::SetChecked(int index, bool value) { no_vcl_TCustomCheckListBox_SetChecked(handle_, index, value ? 1 : 0); }
+
+TNotifyEvent TCustomCheckListBox::GetOnClickCheckImpl(TObject* owner) { return static_cast<TCustomCheckListBox*>(owner)->onClickCheck_; }
+
+void TCustomCheckListBox::SetOnClickCheckImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCustomCheckListBox* self = static_cast<TCustomCheckListBox*>(owner);
+    SetSimpleEvent(self->handle_, self->onClickCheck_, self->onClickCheckHooked_, value,
+                   &no_vcl_TCustomCheckListBox_SetOnClickCheck, &TCustomCheckListBox::ClickCheckTrampoline);
+}
+
+void NO_VCL_CALL TCustomCheckListBox::ClickCheckTrampoline(no_vcl_obj_t sender, void*)
+{
+    if (TCustomCheckListBox* self = static_cast<TCustomCheckListBox*>(FromHandle(sender)))
+        CallNotify(self->onClickCheck_, self);
+}
+
+TCheckListBox::TCheckListBox(TComponent* AOwner)
+    : TCustomCheckListBox(no_vcl_TCheckListBox_Create(HandleOf(AOwner)))
 {}
 
 TCustomStaticText::TCustomStaticText(no_vcl_obj_t handle)

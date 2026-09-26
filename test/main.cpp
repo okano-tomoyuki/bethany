@@ -117,13 +117,16 @@ public:
     TProgressBar* ProgressBar1;
     TEdit*        UpDownEdit;
     TUpDown*      UpDown1;
+    TRadioGroup*  RadioGroup1;
+    TCheckGroup*  CheckGroup1;
+    TCheckListBox* CheckListBox1;
 
     // C++Builder と同じく Owner を受け取り、TForm に渡す(Application->CreateForm が Application を渡す)。
     explicit TMainForm(TComponent* AOwner) : TForm(AOwner)
     {
         Caption = "no_vcl C++ wrapper";
         Width = 640;
-        Height = 620;
+        Height = 720;
 
         Button1 = new TButton(this);
         Button1->Parent = this;
@@ -362,6 +365,45 @@ public:
         UpDown1->Increment = 1;
         UpDown1->Associate = UpDownEdit;
 
+        // Tier 1、4 バッチ目(Items を持つグループ・リスト系のコントロール)。
+        RadioGroup1 = new TRadioGroup(this);
+        RadioGroup1->Parent = this;
+        RadioGroup1->Caption = "RadioGroup1";
+        RadioGroup1->Left = 20;
+        RadioGroup1->Top = 550;
+        RadioGroup1->Width = 180;
+        RadioGroup1->Height = 90;
+        RadioGroup1->ItemsAdd("Option A");
+        RadioGroup1->ItemsAdd("Option B");
+        RadioGroup1->ItemsAdd("Option C");
+        RadioGroup1->ItemIndex = 1;
+        RadioGroup1->OnClick = [this](TObject* Sender) { RadioGroup1Click(Sender); };
+
+        CheckGroup1 = new TCheckGroup(this);
+        CheckGroup1->Parent = this;
+        CheckGroup1->Caption = "CheckGroup1";
+        CheckGroup1->Left = 210;
+        CheckGroup1->Top = 550;
+        CheckGroup1->Width = 180;
+        CheckGroup1->Height = 90;
+        CheckGroup1->ItemsAdd("Feature X");
+        CheckGroup1->ItemsAdd("Feature Y");
+        CheckGroup1->ItemsAdd("Feature Z");
+        CheckGroup1->SetChecked(0, true);
+        CheckGroup1->SetChecked(2, true);
+
+        CheckListBox1 = new TCheckListBox(this);
+        CheckListBox1->Parent = this;
+        CheckListBox1->Left = 400;
+        CheckListBox1->Top = 550;
+        CheckListBox1->Width = 180;
+        CheckListBox1->Height = 90;
+        CheckListBox1->ItemsAdd("Item 1");
+        CheckListBox1->ItemsAdd("Item 2");
+        CheckListBox1->ItemsAdd("Item 3");
+        CheckListBox1->SetChecked(1, true);
+        CheckListBox1->OnClickCheck = [this](TObject* Sender) { CheckListBox1ClickCheck(Sender); };
+
         // 既知の問題: TStatusBar は、Application->Run() のメッセージループが始まる前に
         // ウィンドウハンドルを作らせると(コンストラクタの中で Parent を設定する等)、
         // 「トップレベルの子ウィンドウを作成できません」(Win32 エラー 1406)で失敗する。
@@ -527,6 +569,20 @@ private:
         std::fflush(stdout);
     }
 
+    void RadioGroup1Click(TObject* Sender)
+    {
+        std::printf("RadioGroup1Click: ItemIndex=%d\n", (int)static_cast<TRadioGroup*>(Sender)->ItemIndex);
+        std::fflush(stdout);
+    }
+
+    void CheckListBox1ClickCheck(TObject* Sender)
+    {
+        TCheckListBox* box = static_cast<TCheckListBox*>(Sender);
+        std::printf("CheckListBox1ClickCheck: Checked[0]=%d Checked[1]=%d Checked[2]=%d\n",
+                    box->GetChecked(0), box->GetChecked(1), box->GetChecked(2));
+        std::fflush(stdout);
+    }
+
     void CheckBox1Click(TObject* Sender)
     {
         std::printf("CheckBox1Click: Checked=%d\n", (bool)static_cast<TCheckBox*>(Sender)->Checked);
@@ -625,6 +681,12 @@ int main()
     std::printf("ProgressBar1 Position: %d (expected 42)\n", (int)Form1->ProgressBar1->Position);
     std::printf("UpDown1 Position: %d, Associate is UpDownEdit: %s\n",
                 (int)Form1->UpDown1->Position, Form1->UpDown1->Associate == Form1->UpDownEdit ? "yes" : "no");
+    std::printf("RadioGroup1 ItemsCount/ItemIndex: %d/%d (expected 3/1)\n",
+                Form1->RadioGroup1->ItemsCount(), (int)Form1->RadioGroup1->ItemIndex);
+    std::printf("CheckGroup1 Checked[0]/[1]/[2]: %d/%d/%d (expected 1/0/1)\n",
+                Form1->CheckGroup1->GetChecked(0), Form1->CheckGroup1->GetChecked(1), Form1->CheckGroup1->GetChecked(2));
+    std::printf("CheckListBox1 ItemsCount/Checked[1]: %d/%d (expected 3/1)\n",
+                Form1->CheckListBox1->ItemsCount(), Form1->CheckListBox1->GetChecked(1));
     // StatusBar1 は Run() の開始後に生成されるため、ここではまだ存在しない(StatusBarInitTimer 参照)。
 
     // 2 つ目以降に生成したフォームは MainForm にならない。

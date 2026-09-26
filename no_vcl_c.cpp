@@ -212,7 +212,29 @@
     X(no_vcl_int_t,  TUpDown_GetIncrement,            (no_vcl_obj_t o),                                        (o)) \
     X(void,          TUpDown_SetIncrement,            (no_vcl_obj_t o, no_vcl_int_t v),                        (o, v)) \
     X(no_vcl_obj_t,  TUpDown_GetAssociate,            (no_vcl_obj_t o),                                        (o)) \
-    X(void,          TUpDown_SetAssociate,            (no_vcl_obj_t o, no_vcl_obj_t v),                        (o, v))
+    X(void,          TUpDown_SetAssociate,            (no_vcl_obj_t o, no_vcl_obj_t v),                        (o, v)) \
+    \
+    X(no_vcl_obj_t,  TRadioGroup_Create,                     (no_vcl_obj_t owner),                                 (owner)) \
+    X(void,          TCustomRadioGroup_Items_Add,            (no_vcl_obj_t o, no_vcl_str_t t),                     (o, t)) \
+    X(void,          TCustomRadioGroup_Items_Clear,          (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_int_t,  TCustomRadioGroup_Items_Count,          (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_str_t,  TCustomRadioGroup_Items_GetText,        (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(no_vcl_int_t,  TCustomRadioGroup_GetItemIndex,         (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomRadioGroup_SetItemIndex,         (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(void,          TCustomRadioGroup_SetOnClick,           (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d)) \
+    \
+    X(no_vcl_obj_t,  TCheckGroup_Create,                     (no_vcl_obj_t owner),                                 (owner)) \
+    X(void,          TCustomCheckGroup_Items_Add,            (no_vcl_obj_t o, no_vcl_str_t t),                     (o, t)) \
+    X(void,          TCustomCheckGroup_Items_Clear,          (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_int_t,  TCustomCheckGroup_Items_Count,          (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_str_t,  TCustomCheckGroup_Items_GetText,        (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(no_vcl_bool_t, TCustomCheckGroup_GetChecked,           (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(void,          TCustomCheckGroup_SetChecked,           (no_vcl_obj_t o, no_vcl_int_t i, no_vcl_bool_t v),    (o, i, v)) \
+    \
+    X(no_vcl_obj_t,  TCheckListBox_Create,                   (no_vcl_obj_t owner),                                 (owner)) \
+    X(no_vcl_bool_t, TCustomCheckListBox_GetChecked,         (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(void,          TCustomCheckListBox_SetChecked,         (no_vcl_obj_t o, no_vcl_int_t i, no_vcl_bool_t v),    (o, i, v)) \
+    X(void,          TCustomCheckListBox_SetOnClickCheck,    (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d))
 
 namespace
 {

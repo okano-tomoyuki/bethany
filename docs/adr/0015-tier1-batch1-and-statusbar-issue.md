@@ -89,3 +89,25 @@ no_vcl の通常の使い方(`Application->CreateForm(&Form1); Application->Run(
 通常どおり Application->Run() より前(フォームのコンストラクタの中)で生成・配置できることを確認した
 (最小限の再現コードで、Application->Run() 呼び出し前に 4 クラスすべてを生成・`Show()` して問題が
 起きないことを確認済み)。TStatusBar の問題は ComCtrls 全般ではなく、TStatusBar 固有と改めて裏付けられた。
+
+## 追記: Tier 1 の 3 バッチ目(Items を持つグループ・リスト系のコントロール)
+
+続けて、TRadioGroup・TCheckGroup(いずれも extctrls.pp)・TCheckListBox(checklst.pas)を追加した。
+基底はすべて実装済みの TCustomGroupBox・TCustomListBox で、ComCtrls のネイティブコントロールではないため
+TStatusBar のような問題の心配は無い。
+
+- **TRadioGroup**(TCustomRadioGroup): `Items`(TComboBox 等と同じ ItemsAdd/Clear/Count/GetText の形)・
+  `ItemIndex`・`OnClick`。**`OnClick` は `TCustomRadioGroup` 自身が持つ独自のフィールドで、
+  `TControl.OnClick` とは別物**(LCL の宣言で再宣言されて隠れている)。そのため `TComboBox.OnChange` と
+  同じ理由で専用のブリッジ(`no_vcl_TCustomRadioGroup_SetOnClick`)を用意した。
+- **TCheckGroup**(TCustomCheckGroup): `Items` + インデックス付きの `Checked[Index]`。
+  インデックス付きプロパティは C++ では `GetChecked(int)`/`SetChecked(int, bool)` という素朴なメソッドの
+  組として表す(`Property<T>` は単一の値しか表せないため)。
+- **TCheckListBox**(TCustomCheckListBox): `Items` は基底 `TCustomListBox` のものをそのまま使い、
+  インデックス付きの `Checked[Index]` と `OnClickCheck`(`TNotifyEvent`)を追加した。
+
+## 影響(3 バッチ目の追記分)
+
+- インデックス付きプロパティ(TCheckGroup・TCheckListBox の Checked)は `Property<T>` ではなく、
+  素朴な `Get`/`Set` メソッドの組として C++ に表す前例ができた。今後、同様のインデックス付き
+  プロパティ(TListView の選択状態等)にもこの形を踏襲できる。

@@ -745,6 +745,68 @@ protected:
     ~TGroupBox() override = default;
 };
 
+// ラジオボタンの一覧を項目文字列から自動生成するグループ。OnClick は TControl のものとは別の、
+// このクラス自身のイベント(いずれかのボタンが押されたときに呼ばれる)。
+class TCustomRadioGroup : public TCustomGroupBox
+{
+public:
+    Property<int>          ItemIndex;
+    Property<TNotifyEvent> OnClick;
+
+    void        ItemsAdd(const std::string& text);
+    void        ItemsClear();
+    int         ItemsCount() const;
+    std::string ItemsGetText(int index) const;
+
+protected:
+    explicit TCustomRadioGroup(no_vcl_obj_t handle);
+    ~TCustomRadioGroup() override = default;
+
+private:
+    TNotifyEvent onClick_;
+    bool         onClickHooked_ = false;
+    static void NO_VCL_CALL ClickTrampoline(no_vcl_obj_t sender, void* data);
+
+    static int           GetItemIndexImpl(TObject* owner);
+    static void          SetItemIndexImpl(TObject* owner, const int& value);
+    static TNotifyEvent  GetOnClickImpl(TObject* owner);
+    static void          SetOnClickImpl(TObject* owner, const TNotifyEvent& value);
+};
+
+class TRadioGroup : public TCustomRadioGroup
+{
+public:
+    explicit TRadioGroup(TComponent* AOwner);
+
+protected:
+    ~TRadioGroup() override = default;
+};
+
+// チェックボックスの一覧を項目文字列から自動生成するグループ。
+class TCustomCheckGroup : public TCustomGroupBox
+{
+public:
+    void        ItemsAdd(const std::string& text);
+    void        ItemsClear();
+    int         ItemsCount() const;
+    std::string ItemsGetText(int index) const;
+    bool        GetChecked(int index) const;
+    void        SetChecked(int index, bool value);
+
+protected:
+    explicit TCustomCheckGroup(no_vcl_obj_t handle) : TCustomGroupBox(handle) {}
+    ~TCustomCheckGroup() override = default;
+};
+
+class TCheckGroup : public TCustomCheckGroup
+{
+public:
+    explicit TCheckGroup(TComponent* AOwner);
+
+protected:
+    ~TCheckGroup() override = default;
+};
+
 class TCustomLabel : public TGraphicControl
 {
 protected:
@@ -989,6 +1051,37 @@ public:
 
 protected:
     ~TListBox() override = default;
+};
+
+// 各項目にチェックボックスを持つリストボックス。Items は基底 TCustomListBox のものをそのまま使う。
+class TCustomCheckListBox : public TCustomListBox
+{
+public:
+    Property<TNotifyEvent> OnClickCheck;
+
+    bool GetChecked(int index) const;
+    void SetChecked(int index, bool value);
+
+protected:
+    explicit TCustomCheckListBox(no_vcl_obj_t handle);
+    ~TCustomCheckListBox() override = default;
+
+private:
+    TNotifyEvent onClickCheck_;
+    bool         onClickCheckHooked_ = false;
+    static void NO_VCL_CALL ClickCheckTrampoline(no_vcl_obj_t sender, void* data);
+
+    static TNotifyEvent GetOnClickCheckImpl(TObject* owner);
+    static void         SetOnClickCheckImpl(TObject* owner, const TNotifyEvent& value);
+};
+
+class TCheckListBox : public TCustomCheckListBox
+{
+public:
+    explicit TCheckListBox(TComponent* AOwner);
+
+protected:
+    ~TCheckListBox() override = default;
 };
 
 // 枠線付きの表示専用テキスト(TLabel と異なりウィンドウを持つ)。

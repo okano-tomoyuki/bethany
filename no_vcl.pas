@@ -20,6 +20,7 @@ uses
   StdCtrls,
   ExtCtrls,
   ComCtrls,
+  CheckLst,
   Graphics,
   CustomTimer;
 
@@ -1376,6 +1377,112 @@ begin
   TUpDown(Obj).Associate := TWinControl(Value);
 end;
 
+{ docs/component-coverage.md の Tier 1、4 バッチ目(Items を持つグループ・リスト系のコントロール)。 }
+
+{ TRadioGroup: OnClick は TCustomRadioGroup 自身のフィールド(TControl.OnClick とは別)なので、
+  専用のブリッジで登録する(TComboBox の OnChange と同じ理由)。 }
+
+function TRadioGroup_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TRadioGroup.Create(TComponent(Owner)));
+end;
+
+procedure TCustomRadioGroup_Items_Add(Obj: Pointer; Text: PChar); NO_VCL_CALL;
+begin
+  TCustomRadioGroup(Obj).Items.Add(Text);
+end;
+
+procedure TCustomRadioGroup_Items_Clear(Obj: Pointer); NO_VCL_CALL;
+begin
+  TCustomRadioGroup(Obj).Items.Clear;
+end;
+
+function TCustomRadioGroup_Items_Count(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomRadioGroup(Obj).Items.Count;
+end;
+
+function TCustomRadioGroup_Items_GetText(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
+begin
+  Result := ReturnStr(TCustomRadioGroup(Obj).Items[Index]);
+end;
+
+function TCustomRadioGroup_GetItemIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomRadioGroup(Obj).ItemIndex;
+end;
+
+procedure TCustomRadioGroup_SetItemIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomRadioGroup(Obj).ItemIndex := Value;
+end;
+
+procedure TCustomRadioGroup_SetOnClick(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TCustomRadioGroup(Obj).OnClick := @BridgeFor(TCustomRadioGroup(Obj), MethodData(TCustomRadioGroup(Obj).OnClick), Cb, Data).DoClick;
+end;
+
+{ TCheckGroup: Checked はインデックス付きプロパティ。値は他のインデックス付きアクセスと同様、
+  引数に Index を追加して表す(TCustomMemo_Lines_GetText 等と同じ形)。 }
+
+function TCheckGroup_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TCheckGroup.Create(TComponent(Owner)));
+end;
+
+procedure TCustomCheckGroup_Items_Add(Obj: Pointer; Text: PChar); NO_VCL_CALL;
+begin
+  TCustomCheckGroup(Obj).Items.Add(Text);
+end;
+
+procedure TCustomCheckGroup_Items_Clear(Obj: Pointer); NO_VCL_CALL;
+begin
+  TCustomCheckGroup(Obj).Items.Clear;
+end;
+
+function TCustomCheckGroup_Items_Count(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomCheckGroup(Obj).Items.Count;
+end;
+
+function TCustomCheckGroup_Items_GetText(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
+begin
+  Result := ReturnStr(TCustomCheckGroup(Obj).Items[Index]);
+end;
+
+function TCustomCheckGroup_GetChecked(Obj: Pointer; Index: Integer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomCheckGroup(Obj).Checked[Index];
+end;
+
+procedure TCustomCheckGroup_SetChecked(Obj: Pointer; Index: Integer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomCheckGroup(Obj).Checked[Index] := Value;
+end;
+
+{ TCheckListBox: Items は基底 TCustomListBox のものをそのまま使う(no_vcl_TCustomListBox_Items_* で
+  共通)。Checked はインデックス付き。OnClickCheck は Sender のみの TNotifyEvent。 }
+
+function TCheckListBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TCheckListBox.Create(TComponent(Owner)));
+end;
+
+function TCustomCheckListBox_GetChecked(Obj: Pointer; Index: Integer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomCheckListBox(Obj).Checked[Index];
+end;
+
+procedure TCustomCheckListBox_SetChecked(Obj: Pointer; Index: Integer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomCheckListBox(Obj).Checked[Index] := Value;
+end;
+
+procedure TCustomCheckListBox_SetOnClickCheck(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TCustomCheckListBox(Obj).OnClickCheck := @BridgeFor(TCustomCheckListBox(Obj), MethodData(TCustomCheckListBox(Obj).OnClickCheck), Cb, Data).DoClick;
+end;
+
 exports
   FreeNotify_SetCallback,
 
@@ -1582,7 +1689,29 @@ exports
   TUpDown_GetIncrement,
   TUpDown_SetIncrement,
   TUpDown_GetAssociate,
-  TUpDown_SetAssociate;
+  TUpDown_SetAssociate,
+
+  TRadioGroup_Create,
+  TCustomRadioGroup_Items_Add,
+  TCustomRadioGroup_Items_Clear,
+  TCustomRadioGroup_Items_Count,
+  TCustomRadioGroup_Items_GetText,
+  TCustomRadioGroup_GetItemIndex,
+  TCustomRadioGroup_SetItemIndex,
+  TCustomRadioGroup_SetOnClick,
+
+  TCheckGroup_Create,
+  TCustomCheckGroup_Items_Add,
+  TCustomCheckGroup_Items_Clear,
+  TCustomCheckGroup_Items_Count,
+  TCustomCheckGroup_Items_GetText,
+  TCustomCheckGroup_GetChecked,
+  TCustomCheckGroup_SetChecked,
+
+  TCheckListBox_Create,
+  TCustomCheckListBox_GetChecked,
+  TCustomCheckListBox_SetChecked,
+  TCustomCheckListBox_SetOnClickCheck;
 
 begin
   RequireDerivedFormResource := False;

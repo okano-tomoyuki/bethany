@@ -48,6 +48,22 @@ static void NO_VCL_CALL OnTrackBarChange(no_vcl_obj_t sender, void* data)
     fflush(stdout);
 }
 
+static void NO_VCL_CALL OnRadioGroupClick(no_vcl_obj_t sender, void* data)
+{
+    (void)data;
+    printf("RadioGroup clicked! ItemIndex=%d\n", no_vcl_TCustomRadioGroup_GetItemIndex(sender));
+    fflush(stdout);
+}
+
+static void NO_VCL_CALL OnCheckListBoxClickCheck(no_vcl_obj_t sender, void* data)
+{
+    (void)data;
+    printf("CheckListBox check clicked! Checked[0]/[1]/[2]=%d/%d/%d\n",
+           no_vcl_TCustomCheckListBox_GetChecked(sender, 0), no_vcl_TCustomCheckListBox_GetChecked(sender, 1),
+           no_vcl_TCustomCheckListBox_GetChecked(sender, 2));
+    fflush(stdout);
+}
+
 static void NO_VCL_CALL OnCheckBoxClick(no_vcl_obj_t sender, void* data)
 {
     (void)data;
@@ -235,6 +251,9 @@ int main(void)
     no_vcl_obj_t progressBar;
     no_vcl_obj_t upDownEdit;
     no_vcl_obj_t upDown;
+    no_vcl_obj_t radioGroup;
+    no_vcl_obj_t checkGroup;
+    no_vcl_obj_t checkListBox;
 
     no_vcl_FreeNotify_SetCallback(OnComponentFreed, &freedCount);
 
@@ -255,7 +274,7 @@ int main(void)
 
     no_vcl_TControl_SetCaption(form, "Hello from FPC DLL");
     no_vcl_TControl_SetWidth(form, 640);
-    no_vcl_TControl_SetHeight(form, 620);
+    no_vcl_TControl_SetHeight(form, 720);
     printf("Caption: %s\n", no_vcl_TControl_GetCaption(form));
 
     button = Place(no_vcl_TButton_Create(form), form, 20, 20);
@@ -417,6 +436,40 @@ int main(void)
     printf("UpDown Position: %d, Associate is upDownEdit: %s\n",
            no_vcl_TUpDown_GetPosition(upDown), no_vcl_TUpDown_GetAssociate(upDown) == upDownEdit ? "yes" : "no");
 
+    /* Tier 1、4 バッチ目(Items を持つグループ・リスト系のコントロール)。 */
+    radioGroup = Place(no_vcl_TRadioGroup_Create(form), form, 20, 550);
+    no_vcl_TControl_SetCaption(radioGroup, "RadioGroup1");
+    no_vcl_TControl_SetWidth(radioGroup, 180);
+    no_vcl_TControl_SetHeight(radioGroup, 90);
+    no_vcl_TCustomRadioGroup_Items_Add(radioGroup, "Option A");
+    no_vcl_TCustomRadioGroup_Items_Add(radioGroup, "Option B");
+    no_vcl_TCustomRadioGroup_Items_Add(radioGroup, "Option C");
+    no_vcl_TCustomRadioGroup_SetItemIndex(radioGroup, 1);
+    no_vcl_TCustomRadioGroup_SetOnClick(radioGroup, OnRadioGroupClick, NULL);
+
+    checkGroup = Place(no_vcl_TCheckGroup_Create(form), form, 210, 550);
+    no_vcl_TControl_SetCaption(checkGroup, "CheckGroup1");
+    no_vcl_TControl_SetWidth(checkGroup, 180);
+    no_vcl_TControl_SetHeight(checkGroup, 90);
+    no_vcl_TCustomCheckGroup_Items_Add(checkGroup, "Feature X");
+    no_vcl_TCustomCheckGroup_Items_Add(checkGroup, "Feature Y");
+    no_vcl_TCustomCheckGroup_Items_Add(checkGroup, "Feature Z");
+    no_vcl_TCustomCheckGroup_SetChecked(checkGroup, 0, 1);
+    no_vcl_TCustomCheckGroup_SetChecked(checkGroup, 2, 1);
+
+    checkListBox = Place(no_vcl_TCheckListBox_Create(form), form, 400, 550);
+    no_vcl_TControl_SetWidth(checkListBox, 180);
+    no_vcl_TControl_SetHeight(checkListBox, 90);
+    no_vcl_TCustomListBox_Items_Add(checkListBox, "Item 1");
+    no_vcl_TCustomListBox_Items_Add(checkListBox, "Item 2");
+    no_vcl_TCustomListBox_Items_Add(checkListBox, "Item 3");
+    no_vcl_TCustomCheckListBox_SetChecked(checkListBox, 1, 1);
+    no_vcl_TCustomCheckListBox_SetOnClickCheck(checkListBox, OnCheckListBoxClickCheck, NULL);
+    printf("RadioGroup ItemIndex=%d, CheckGroup Checked[0]/[1]/[2]=%d/%d/%d, CheckListBox Checked[1]=%d\n",
+           no_vcl_TCustomRadioGroup_GetItemIndex(radioGroup),
+           no_vcl_TCustomCheckGroup_GetChecked(checkGroup, 0), no_vcl_TCustomCheckGroup_GetChecked(checkGroup, 1),
+           no_vcl_TCustomCheckGroup_GetChecked(checkGroup, 2), no_vcl_TCustomCheckListBox_GetChecked(checkListBox, 1));
+
     /* 既知の問題: TStatusBar は Application->Run() のメッセージループが始まる前にウィンドウハンドルを
        作らせると「トップレベルの子ウィンドウを作成できません」(Win32 エラー 1406)で失敗する。
        標準の Lazarus 実行ファイルでは起きず、DLL としてホストされる no_vcl 特有の現象と見られる
@@ -436,7 +489,7 @@ int main(void)
     /* Application が所有するフォーム(と、フォームが所有するコントロール)をまとめて破棄する。
        呼ばなくても DLL の切り離し時に LCL が破棄するが、そのときは破棄通知が呼ばれない。 */
     no_vcl_TComponent_DestroyComponents(app);
-    printf("Clicks: %d, Freed components: %d (expected 29: form + 28 owned)\n", clickCount, freedCount);
+    printf("Clicks: %d, Freed components: %d (expected 32: form + 31 owned)\n", clickCount, freedCount);
 
     printf("OK\n");
     return 0;

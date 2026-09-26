@@ -382,6 +382,34 @@ void          NO_VCL_CALL no_vcl_TUpDown_SetIncrement(no_vcl_obj_t Obj, no_vcl_i
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TUpDown_GetAssociate(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TUpDown_SetAssociate(no_vcl_obj_t Obj, no_vcl_obj_t Value);
 
+/* docs/component-coverage.md の Tier 1、4 バッチ目(Items を持つグループ・リスト系のコントロール)。 */
+
+/* TRadioGroup */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TRadioGroup_Create(no_vcl_obj_t Owner);
+void          NO_VCL_CALL no_vcl_TCustomRadioGroup_Items_Add(no_vcl_obj_t Obj, no_vcl_str_t Text);
+void          NO_VCL_CALL no_vcl_TCustomRadioGroup_Items_Clear(no_vcl_obj_t Obj);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomRadioGroup_Items_Count(no_vcl_obj_t Obj);
+no_vcl_str_t  NO_VCL_CALL no_vcl_TCustomRadioGroup_Items_GetText(no_vcl_obj_t Obj, no_vcl_int_t Index);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomRadioGroup_GetItemIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomRadioGroup_SetItemIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+/* OnClick は TCustomRadioGroup 自身のフィールドで、no_vcl_TControl_SetOnClick とは別物。 */
+void          NO_VCL_CALL no_vcl_TCustomRadioGroup_SetOnClick(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+
+/* TCheckGroup */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCheckGroup_Create(no_vcl_obj_t Owner);
+void          NO_VCL_CALL no_vcl_TCustomCheckGroup_Items_Add(no_vcl_obj_t Obj, no_vcl_str_t Text);
+void          NO_VCL_CALL no_vcl_TCustomCheckGroup_Items_Clear(no_vcl_obj_t Obj);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomCheckGroup_Items_Count(no_vcl_obj_t Obj);
+no_vcl_str_t  NO_VCL_CALL no_vcl_TCustomCheckGroup_Items_GetText(no_vcl_obj_t Obj, no_vcl_int_t Index);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomCheckGroup_GetChecked(no_vcl_obj_t Obj, no_vcl_int_t Index);
+void          NO_VCL_CALL no_vcl_TCustomCheckGroup_SetChecked(no_vcl_obj_t Obj, no_vcl_int_t Index, no_vcl_bool_t Value);
+
+/* TCheckListBox。Items は no_vcl_TCustomListBox_Items_* を共有する(TCustomListBox の派生のため)。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCheckListBox_Create(no_vcl_obj_t Owner);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomCheckListBox_GetChecked(no_vcl_obj_t Obj, no_vcl_int_t Index);
+void          NO_VCL_CALL no_vcl_TCustomCheckListBox_SetChecked(no_vcl_obj_t Obj, no_vcl_int_t Index, no_vcl_bool_t Value);
+void          NO_VCL_CALL no_vcl_TCustomCheckListBox_SetOnClickCheck(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+
 #ifdef __cplusplus
 }
 #endif

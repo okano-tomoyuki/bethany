@@ -40,9 +40,9 @@ TScrollingWinControl のいずれかで、いずれも実装済み。既存パ�
 | ✅ TStatusBar | comctrls.pp | TWinControl(実装済み) | SimpleText/SimplePanel のみ(Panels は未対応)。**既知の問題:** Application->Run() 開始前に生成すると Win32 エラー 1406 で失敗する。回避策と詳細は [ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.md) |
 | TSplitter | extctrls.pp(TCustomSplitter) | TCustomControl(実装済み) | `TControl.Align` が no_vcl に無いと実用にならないため保留(下記「cross-cutting な既知の課題」参照) |
 | ✅ TScrollBar | stdctrls.pp(TCustomScrollBar) | TWinControl(実装済み) | Kind/Min/Max/Position/PageSize/OnChange(ADR 0015 の 2 バッチ目) |
-| TRadioGroup | extctrls.pp(TCustomRadioGroup) | TCustomGroupBox(実装済み) | Items(TStrings)/ItemIndex。ComboBox の Items 実装を流用できる |
-| TCheckGroup | extctrls.pp(TCustomCheckGroup) | TCustomGroupBox(実装済み) | RadioGroup と同型 + 項目ごとの Checked |
-| TCheckListBox | checklst.pas(TCustomCheckListBox) | TCustomListBox(実装済み) | ListBox の Items 実装 + 項目ごとの Checked |
+| ✅ TRadioGroup | extctrls.pp(TCustomRadioGroup) | TCustomGroupBox(実装済み) | Items/ItemIndex/OnClick(ADR 0015 の 3 バッチ目)。OnClick は TControl のものとは別の独自フィールド |
+| ✅ TCheckGroup | extctrls.pp(TCustomCheckGroup) | TCustomGroupBox(実装済み) | Items + インデックス付き Checked(ADR 0015 の 3 バッチ目) |
+| ✅ TCheckListBox | checklst.pas(TCustomCheckListBox) | TCustomListBox(実装済み) | 基底の Items をそのまま使い、インデックス付き Checked と OnClickCheck を追加(ADR 0015 の 3 バッチ目) |
 | TLabeledEdit | extctrls.pp(TCustomLabeledEdit) | TCustomEdit(実装済み) | EditLabel は LCL が内部で生成する子コンポーネントで、no_vcl の `*_Create` を経由しないため C++ ラッパーが無い。下記「cross-cutting な既知の課題」を解決してから着手する |
 | TSpeedButton | buttons.pp(TCustomSpeedButton) | TGraphicControl(実装済み) | Down/GroupIndex/Flat。Glyph(ビットマップ)は当面 Caption のみで妥協可 |
 | TBitBtn | buttons.pp(TCustomBitBtn) | TCustomButton(実装済み) | Kind(bkOK 等)のみ先行実装し、Glyph は Tier 3 まで保留 |
