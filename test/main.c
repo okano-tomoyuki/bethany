@@ -3,6 +3,13 @@
 #include "no_vcl_c.h"
 
 static int g_clickCount = 0;
+static int g_freedCount = 0;
+
+static void NO_VCL_CALL OnComponentFreed(no_vcl_obj_t obj)
+{
+    (void)obj;
+    ++g_freedCount;
+}
 
 static void NO_VCL_CALL OnButtonClick(no_vcl_obj_t sender)
 {
@@ -107,7 +114,7 @@ static no_vcl_obj_t Place(no_vcl_obj_t control, no_vcl_obj_t parent, int left, i
 
 int main(void)
 {
-    no_vcl_obj_t form = no_vcl_TForm_Create(NULL);
+    no_vcl_obj_t form;
     no_vcl_obj_t button;
     no_vcl_obj_t label;
     no_vcl_obj_t edit;
@@ -122,6 +129,9 @@ int main(void)
     no_vcl_obj_t timer;
     no_vcl_obj_t paintBox;
 
+    no_vcl_FreeNotify_SetCallback(OnComponentFreed);
+
+    form = no_vcl_TForm_Create(NULL);
     if (!form)
     {
         printf("TForm_Create failed\n");
@@ -214,6 +224,7 @@ int main(void)
 
     /* Owner である form を破棄すると、form が所有するコントロールも LCL 側で破棄される。 */
     no_vcl_TComponent_Destroy(form);
+    printf("Freed components: %d (expected 15: form + 14 owned)\n", g_freedCount);
 
     printf("OK\n");
     return 0;

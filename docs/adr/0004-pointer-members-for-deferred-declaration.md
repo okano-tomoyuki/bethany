@@ -4,8 +4,11 @@
 - 日付: 2026-09-26
 - 置換: [0003](0003-two-phase-initialization.md)
 
-> [0007](0007-lcl-faithful-hierarchy.md) で Owner と Parent を分離したため、現在の書き方は
-> `button1.reset(new no_vcl::TButton(this)); button1->Parent = this;` のように Parent の設定が 1 行加わる。
+> [0007](0007-lcl-faithful-hierarchy.md) で Owner と Parent を分離し、[0008](0008-wrapper-lifetime-follows-lcl.md) で
+> コンポーネントのデストラクタを protected にしたため、`std::unique_ptr` メンバは使えなくなった。
+> 「宣言は順不同のポインタメンバ、生成はコンストラクタ本体」という本 ADR の考え方は維持しつつ、現在の書き方は
+> C++Builder と同じく生ポインタメンバで `Button1 = new no_vcl::TButton(this); Button1->Parent = this;` とし、
+> 破棄は Owner に任せる。
 
 ## 背景
 

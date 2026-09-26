@@ -9,6 +9,7 @@
 // extern "C" のラッパー(no_vcl_<名前>)がまとめて生成される。
 // 宣言は no_vcl_c.h にも手で書く(型が食い違えばコンパイルエラーになる)。
 #define NO_VCL_FUNCS(X) \
+    X(void,          FreeNotify_SetCallback,        (no_vcl_callback_t cb),                                   (cb)) \
     X(void,          TComponent_Destroy,            (no_vcl_obj_t o),                                         (o)) \
     \
     X(no_vcl_obj_t,  TControl_GetParent,            (no_vcl_obj_t o),                                         (o)) \

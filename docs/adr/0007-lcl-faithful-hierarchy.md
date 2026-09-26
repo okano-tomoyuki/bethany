@@ -66,7 +66,6 @@ LCL のクラス階層を調べると、コントロールはかなり整然と�
   [ADR 0004](0004-pointer-members-for-deferred-declaration.md) の生成コードの例も、生成の後に `Parent` の設定が 1 行加わる。
 - TMemo は TCustomEdit の派生になったため、TEdit と同じく Text・MaxLength・ReadOnly・SetOnChange を持つ。
   TLabel・TPanel・TPaintBox 等も LCL と同じく OnClick を持つようになった。
-- **既知の課題**: C++ ラッパーより先に LCL の Owner が破棄されると、Owner が所有するコントロールは LCL 側で破棄済みになり、
-  その後ラッパーのデストラクタが `TComponent_Destroy` を呼ぶと二重解放になる(本 ADR 以前からある問題)。
-  宣言順どおりに破棄される通常の使い方(フォームを先に宣言し、コントロールを後に宣言する/フォームのメンバとして持つ)では起きない。
-  対策(LCL の FreeNotification で破棄を検知しハンドルを無効化する等)は [todo.md](../../todo.md) に記録した。
+- **既知の課題**(→ [0008](0008-wrapper-lifetime-follows-lcl.md) で解決): C++ ラッパーより先に LCL の Owner が破棄されると、
+  Owner が所有するコントロールは LCL 側で破棄済みになり、その後ラッパーのデストラクタが `TComponent_Destroy` を呼ぶと
+  二重解放になる(本 ADR 以前からある問題)。

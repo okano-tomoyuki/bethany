@@ -111,4 +111,13 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 | Canvas / OnPaint | TPaintBox(public/published) | TPaintBox | TPaintBox(public) | `TPaintBox_*` |
 | Interval / Enabled / OnTimer | TCustomTimer(public) | TCustomTimer | TCustomTimer(public) | `TCustomTimer_*` |
 
-破棄は種類によらず `TComponent_Destroy`(C++ では `TComponent` のデストラクタ)で行う。
+破棄は種類によらず `TComponent_Destroy`(C++ では `TComponent::Free()`)で行う。
+
+## 4. 生存期間([ADR 0008](adr/0008-wrapper-lifetime-follows-lcl.md))
+
+- C++ ラッパーの寿命は LCL オブジェクトの寿命と一致する。LCL オブジェクトが破棄されると
+  (`Free()` でも Owner による連鎖破棄でも)、破棄通知を受けてラッパーも delete される。
+- コンポーネントは `new` で生成し、`delete` ではなく `Free()` で破棄する。Owner を持つものは Owner に任せてよい。
+- `TObject` から具象クラスまで、コンポーネント系の全クラスのデストラクタは protected
+  (スタック生成・`delete`・`unique_ptr` はコンパイルエラー)。派生クラスを作る場合もデストラクタを protected で宣言する。
+- 非所有の `TCanvas`/`TPen`/`TBrush`/`TFont` は値メンバとして持つため、デストラクタは public。

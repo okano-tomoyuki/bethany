@@ -30,8 +30,6 @@ const TColor clYellow = 0x00FFFF;
 class TObject
 {
 public:
-    virtual ~TObject() = default;
-
     TObject(const TObject&) = delete;
     TObject& operator=(const TObject&) = delete;
     TObject(TObject&&) = delete;
@@ -44,6 +42,9 @@ protected:
     // これにより、派生クラスのメンバ(Property や TPaintBox::Canvas)を構築する時点で
     // handle_ が有効であることが保証される。
     explicit TObject(no_vcl_obj_t handle) : handle_(handle) {}
+
+    // TObject* 経由の delete でコンポーネントの寿命管理(TComponent 参照)を迂回できないよう protected にする。
+    virtual ~TObject() = default;
 
     no_vcl_obj_t handle_;
 };
@@ -88,23 +89,35 @@ class TPersistent : public TObject
 {
 protected:
     explicit TPersistent(no_vcl_obj_t handle) : TObject(handle) {}
+    ~TPersistent() override = default;
 };
 
 // LCL のコンポーネント(Create/Destroy を持つオブジェクト)。
 // ハンドルと C++ ラッパーの対応を共通のレジストリで管理し、
 // コールバックのトランポリンや Parent の Getter から C++ ラッパーを引けるようにする。
+//
+// C++ ラッパーの寿命は LCL オブジェクトの寿命と一致する。LCL オブジェクトが破棄されると
+// (Free() でも、Owner による連鎖破棄でも)破棄通知を受けてラッパーも delete される。
+// このため、コンポーネントは必ず new で生成し、delete ではなく Free() で破棄する
+// (Owner を持つものは Owner に任せてよい)。スタック上に置いたり delete したりできないよう、
+// コンポーネント系の全クラスでデストラクタを protected にしている
+// (派生クラスを作る場合も、デストラクタを protected で宣言すること)。
 class TComponent : public TPersistent
 {
 public:
-    ~TComponent() override;
+    // LCL オブジェクトを破棄する。破棄通知によってこのラッパーも delete されるため、
+    // 呼び出し後にこのオブジェクトへ触れてはならない。
+    void Free();
 
 protected:
     explicit TComponent(no_vcl_obj_t handle);
+    ~TComponent() override;
 
     static no_vcl_obj_t HandleOf(const TObject* obj) { return obj ? obj->Handle() : nullptr; }
     static TComponent*  FromHandle(no_vcl_obj_t handle);
 
 private:
+    static void NO_VCL_CALL FreeNotifyTrampoline(no_vcl_obj_t handle);
     static std::unordered_map<no_vcl_obj_t, TComponent*>& Registry();
 };
 
@@ -129,6 +142,7 @@ public:
 
 protected:
     explicit TControl(no_vcl_obj_t handle);
+    ~TControl() override = default;
 
     // LCL では TControl の protected。TCustomEdit / TCustomComboBox が公開する。
     Property<std::string>  Text;
@@ -162,18 +176,21 @@ class TWinControl : public TControl
 {
 protected:
     explicit TWinControl(no_vcl_obj_t handle) : TControl(handle) {}
+    ~TWinControl() override = default;
 };
 
 class TGraphicControl : public TControl
 {
 protected:
     explicit TGraphicControl(no_vcl_obj_t handle) : TControl(handle) {}
+    ~TGraphicControl() override = default;
 };
 
 class TCustomControl : public TWinControl
 {
 protected:
     explicit TCustomControl(no_vcl_obj_t handle) : TWinControl(handle) {}
+    ~TCustomControl() override = default;
 };
 
 /* ---------------- Form ---------------- */
@@ -182,6 +199,7 @@ class TScrollingWinControl : public TCustomControl
 {
 protected:
     explicit TScrollingWinControl(no_vcl_obj_t handle) : TCustomControl(handle) {}
+    ~TScrollingWinControl() override = default;
 };
 
 class TCustomForm : public TScrollingWinControl
@@ -195,12 +213,16 @@ public:
 
 protected:
     explicit TCustomForm(no_vcl_obj_t handle) : TScrollingWinControl(handle) {}
+    ~TCustomForm() override = default;
 };
 
 class TForm : public TCustomForm
 {
 public:
     explicit TForm(TComponent* AOwner);
+
+protected:
+    ~TForm() override = default;
 };
 
 /* ---------------- Panel / GroupBox / Label ---------------- */
@@ -209,36 +231,48 @@ class TCustomPanel : public TCustomControl
 {
 protected:
     explicit TCustomPanel(no_vcl_obj_t handle) : TCustomControl(handle) {}
+    ~TCustomPanel() override = default;
 };
 
 class TPanel : public TCustomPanel
 {
 public:
     explicit TPanel(TComponent* AOwner);
+
+protected:
+    ~TPanel() override = default;
 };
 
 class TCustomGroupBox : public TWinControl
 {
 protected:
     explicit TCustomGroupBox(no_vcl_obj_t handle) : TWinControl(handle) {}
+    ~TCustomGroupBox() override = default;
 };
 
 class TGroupBox : public TCustomGroupBox
 {
 public:
     explicit TGroupBox(TComponent* AOwner);
+
+protected:
+    ~TGroupBox() override = default;
 };
 
 class TCustomLabel : public TGraphicControl
 {
 protected:
     explicit TCustomLabel(no_vcl_obj_t handle) : TGraphicControl(handle) {}
+    ~TCustomLabel() override = default;
 };
 
 class TLabel : public TCustomLabel
 {
 public:
     explicit TLabel(TComponent* AOwner);
+
+protected:
+    ~TLabel() override = default;
 };
 
 /* ---------------- Button / CheckBox / RadioButton ---------------- */
@@ -247,6 +281,7 @@ class TButtonControl : public TWinControl
 {
 protected:
     explicit TButtonControl(no_vcl_obj_t handle);
+    ~TButtonControl() override = default;
 
     // LCL では TButtonControl の protected。TCheckBox / TRadioButton が公開する。
     Property<bool> Checked;
@@ -260,18 +295,23 @@ class TCustomButton : public TButtonControl
 {
 protected:
     explicit TCustomButton(no_vcl_obj_t handle) : TButtonControl(handle) {}
+    ~TCustomButton() override = default;
 };
 
 class TButton : public TCustomButton
 {
 public:
     explicit TButton(TComponent* AOwner);
+
+protected:
+    ~TButton() override = default;
 };
 
 class TCustomCheckBox : public TButtonControl
 {
 protected:
     explicit TCustomCheckBox(no_vcl_obj_t handle) : TButtonControl(handle) {}
+    ~TCustomCheckBox() override = default;
 };
 
 class TCheckBox : public TCustomCheckBox
@@ -280,6 +320,9 @@ public:
     using TButtonControl::Checked;
 
     explicit TCheckBox(TComponent* AOwner);
+
+protected:
+    ~TCheckBox() override = default;
 };
 
 class TRadioButton : public TCustomCheckBox
@@ -288,6 +331,9 @@ public:
     using TButtonControl::Checked;
 
     explicit TRadioButton(TComponent* AOwner);
+
+protected:
+    ~TRadioButton() override = default;
 };
 
 /* ---------------- Edit / Memo ---------------- */
@@ -303,6 +349,7 @@ public:
 
 protected:
     explicit TCustomEdit(no_vcl_obj_t handle);
+    ~TCustomEdit() override = default;
 
 private:
     std::function<void()> onChange_;
@@ -319,6 +366,9 @@ class TEdit : public TCustomEdit
 {
 public:
     explicit TEdit(TComponent* AOwner);
+
+protected:
+    ~TEdit() override = default;
 };
 
 class TCustomMemo : public TCustomEdit
@@ -333,6 +383,7 @@ public:
 
 protected:
     explicit TCustomMemo(no_vcl_obj_t handle);
+    ~TCustomMemo() override = default;
 
 private:
     static int  GetScrollBarsImpl(TObject* owner);
@@ -343,6 +394,9 @@ class TMemo : public TCustomMemo
 {
 public:
     explicit TMemo(TComponent* AOwner);
+
+protected:
+    ~TMemo() override = default;
 };
 
 /* ---------------- ComboBox / ListBox ---------------- */
@@ -360,6 +414,7 @@ public:
 
 protected:
     explicit TCustomComboBox(no_vcl_obj_t handle);
+    ~TCustomComboBox() override = default;
 
 private:
     static int  GetItemIndexImpl(TObject* owner);
@@ -373,6 +428,9 @@ public:
 
     // LCL では TCustomComboBox の protected で、公開しているのは TComboBox だけ。
     void SetOnChange(std::function<void()> handler);
+
+protected:
+    ~TComboBox() override = default;
 
 private:
     std::function<void()> onChange_;
@@ -392,6 +450,7 @@ public:
 
 protected:
     explicit TCustomListBox(no_vcl_obj_t handle);
+    ~TCustomListBox() override = default;
 
 private:
     static int  GetItemIndexImpl(TObject* owner);
@@ -402,6 +461,9 @@ class TListBox : public TCustomListBox
 {
 public:
     explicit TListBox(TComponent* AOwner);
+
+protected:
+    ~TListBox() override = default;
 };
 
 /* ---------------- Canvas ---------------- */
@@ -409,6 +471,7 @@ public:
 // TPen/TBrush/TFont/TCanvas は LCL でも TComponent ではなく TPersistent の派生であり、
 // Canvas を持つコントロールが内部で保持するオブジェクトへの非所有(non-owning)ラッパー。
 // 自前で Create/Destroy は行わない(取得元のコントロールが破棄されれば一緒に破棄される)。
+// TPaintBox::Canvas のように値メンバとして持つため、これらのデストラクタは public にしている。
 
 class TPen : public TPersistent
 {
@@ -417,6 +480,7 @@ public:
     Property<int>    Width;
 
     explicit TPen(no_vcl_obj_t handle);
+    ~TPen() override = default;
 
 private:
     static TColor GetColorImpl(TObject* owner);
@@ -431,6 +495,7 @@ public:
     Property<TColor> Color;
 
     explicit TBrush(no_vcl_obj_t handle);
+    ~TBrush() override = default;
 
 private:
     static TColor GetColorImpl(TObject* owner);
@@ -445,6 +510,7 @@ public:
     Property<TColor>      Color;
 
     explicit TFont(no_vcl_obj_t handle);
+    ~TFont() override = default;
 
 private:
     static std::string GetNameImpl(TObject* owner);
@@ -463,6 +529,7 @@ public:
     TFont  Font;
 
     explicit TCanvas(no_vcl_obj_t handle);
+    ~TCanvas() override = default;
 
     void MoveTo(int x, int y);
     void LineTo(int x, int y);
@@ -479,6 +546,9 @@ public:
     explicit TPaintBox(TComponent* AOwner);
 
     void SetOnPaint(std::function<void()> handler);
+
+protected:
+    ~TPaintBox() override = default;
 
 private:
     std::function<void()> onPaint_;
@@ -498,6 +568,7 @@ public:
 
 protected:
     explicit TCustomTimer(no_vcl_obj_t handle);
+    ~TCustomTimer() override = default;
 
 private:
     std::function<void()> onTimer_;
@@ -514,6 +585,9 @@ class TTimer : public TCustomTimer
 {
 public:
     explicit TTimer(TComponent* AOwner);
+
+protected:
+    ~TTimer() override = default;
 };
 
 } // namespace no_vcl

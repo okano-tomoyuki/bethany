@@ -40,16 +40,48 @@ type
   TControlAccess = class(TControl);
   TButtonControlAccess = class(TButtonControl);
 
+  { *_Create で生成したすべてのコンポーネントの破棄を受け取り、C/C++ 側へ通知する。
+    Owner による連鎖破棄など、呼び出し側が知らないところで起きる破棄も検知できる。 }
+  TFreeNotifier = class(TComponent)
+  protected
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+  end;
+
+var
+  GFreeNotifier: TFreeNotifier;
+  GFreeCallback: TNoVclCallback = nil;
+
 procedure TCallbackBridge.DoClick(Sender: TObject);
 begin
   if Assigned(FCallback) then
     FCallback(Pointer(Sender));
 end;
 
+procedure TFreeNotifier.Notification(AComponent: TComponent; Operation: TOperation);
+begin
+  inherited Notification(AComponent, Operation);
+  if (Operation = opRemove) and Assigned(GFreeCallback) then
+    GFreeCallback(Pointer(AComponent));
+end;
+
 function NewBridge(Owner: TComponent; Cb: TNoVclCallback): TCallbackBridge;
 begin
   Result := TCallbackBridge.Create(Owner);
   Result.Callback := Cb;
+end;
+
+{ 生成したコンポーネントを破棄通知の対象に登録して返す。*_Create は必ずこれを通す。 }
+function Watch(C: TComponent): Pointer;
+begin
+  C.FreeNotification(GFreeNotifier);
+  Result := Pointer(C);
+end;
+
+{ FreeNotify }
+
+procedure FreeNotify_SetCallback(Cb: TNoVclCallback); NO_VCL_CALL;
+begin
+  GFreeCallback := Cb;
 end;
 
 { TComponent }
@@ -171,7 +203,7 @@ end;
 
 function TForm_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TForm.Create(TComponent(Owner)));
+  Result := Watch(TForm.Create(TComponent(Owner)));
 end;
 
 procedure TCustomForm_Show(Obj: Pointer); NO_VCL_CALL;
@@ -210,17 +242,17 @@ end;
 
 function TPanel_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TPanel.Create(TComponent(Owner)));
+  Result := Watch(TPanel.Create(TComponent(Owner)));
 end;
 
 function TGroupBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TGroupBox.Create(TComponent(Owner)));
+  Result := Watch(TGroupBox.Create(TComponent(Owner)));
 end;
 
 function TLabel_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TLabel.Create(TComponent(Owner)));
+  Result := Watch(TLabel.Create(TComponent(Owner)));
 end;
 
 { TButtonControl / TButton / TCheckBox / TRadioButton }
@@ -238,17 +270,17 @@ end;
 
 function TButton_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TButton.Create(TComponent(Owner)));
+  Result := Watch(TButton.Create(TComponent(Owner)));
 end;
 
 function TCheckBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCheckBox.Create(TComponent(Owner)));
+  Result := Watch(TCheckBox.Create(TComponent(Owner)));
 end;
 
 function TRadioButton_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TRadioButton.Create(TComponent(Owner)));
+  Result := Watch(TRadioButton.Create(TComponent(Owner)));
 end;
 
 { TCustomEdit / TEdit }
@@ -280,7 +312,7 @@ end;
 
 function TEdit_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TEdit.Create(TComponent(Owner)));
+  Result := Watch(TEdit.Create(TComponent(Owner)));
 end;
 
 { TCustomMemo / TMemo }
@@ -317,7 +349,7 @@ end;
 
 function TMemo_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TMemo.Create(TComponent(Owner)));
+  Result := Watch(TMemo.Create(TComponent(Owner)));
 end;
 
 { TCustomComboBox / TComboBox }
@@ -354,7 +386,7 @@ end;
 
 function TComboBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TComboBox.Create(TComponent(Owner)));
+  Result := Watch(TComboBox.Create(TComponent(Owner)));
 end;
 
 { OnChange は TCustomComboBox では protected で、公開しているのは TComboBox だけ。 }
@@ -397,7 +429,7 @@ end;
 
 function TListBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TListBox.Create(TComponent(Owner)));
+  Result := Watch(TListBox.Create(TComponent(Owner)));
 end;
 
 { TCustomTimer / TTimer }
@@ -429,14 +461,14 @@ end;
 
 function TTimer_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TTimer.Create(TComponent(Owner)));
+  Result := Watch(TTimer.Create(TComponent(Owner)));
 end;
 
 { TPaintBox }
 
 function TPaintBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TPaintBox.Create(TComponent(Owner)));
+  Result := Watch(TPaintBox.Create(TComponent(Owner)));
 end;
 
 function TPaintBox_GetCanvas(Obj: Pointer): Pointer; NO_VCL_CALL;
@@ -557,6 +589,8 @@ begin
 end;
 
 exports
+  FreeNotify_SetCallback,
+
   TComponent_Destroy,
 
   TControl_GetParent,
@@ -668,4 +702,5 @@ exports
 begin
   RequireDerivedFormResource := False;
   Application.Initialize;
+  GFreeNotifier := TFreeNotifier.Create(nil);
 end.

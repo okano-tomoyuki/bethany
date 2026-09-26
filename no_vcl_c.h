@@ -27,6 +27,15 @@ typedef void (NO_VCL_CALL *no_vcl_callback_t)(no_vcl_obj_t sender);
  * 画面上の親(Parent)は no_vcl_TControl_SetParent で別途設定する。
  */
 
+/*
+ * 破棄通知: *_Create で生成したコンポーネントが破棄されると、原因(no_vcl_TComponent_Destroy・
+ * Owner による連鎖破棄など)にかかわらず、登録したコールバックが破棄されるオブジェクトを引数に呼ばれる。
+ * Owner が破棄されると所有されているコンポーネントも破棄されるため、保持しているハンドルが
+ * 無効になったことを知る手段として使う。コールバックは 1 つだけ登録でき、C++ ラッパー(no_vcl.hpp)を
+ * 使う場合はラッパーが登録するため上書きしないこと。
+ */
+void          NO_VCL_CALL no_vcl_FreeNotify_SetCallback(no_vcl_callback_t Cb);
+
 /* TComponent */
 void          NO_VCL_CALL no_vcl_TComponent_Destroy(no_vcl_obj_t Obj);
 

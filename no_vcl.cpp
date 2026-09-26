@@ -8,17 +8,39 @@ namespace no_vcl
 TComponent::TComponent(no_vcl_obj_t handle)
     : TPersistent(handle)
 {
+    static bool callbackInstalled = false;
+    if (!callbackInstalled)
+    {
+        no_vcl_FreeNotify_SetCallback(&TComponent::FreeNotifyTrampoline);
+        callbackInstalled = true;
+    }
+
     if (handle_)
         Registry()[handle_] = this;
 }
 
+// ラッパーは LCL オブジェクトの破棄通知(FreeNotifyTrampoline)からしか delete されないため、
+// ここで LCL オブジェクトを破棄することはない(LCL オブジェクトは既に破棄の途中にある)。
 TComponent::~TComponent()
 {
-    if (handle_)
-    {
-        Registry().erase(handle_);
-        no_vcl_TComponent_Destroy(handle_);
-    }
+    Registry().erase(handle_);
+}
+
+void TComponent::Free()
+{
+    no_vcl_TComponent_Destroy(handle_);
+}
+
+void NO_VCL_CALL TComponent::FreeNotifyTrampoline(no_vcl_obj_t handle)
+{
+    std::unordered_map<no_vcl_obj_t, TComponent*>& registry = Registry();
+    auto it = registry.find(handle);
+    if (it == registry.end())
+        return;
+
+    TComponent* self = it->second;
+    registry.erase(it);
+    delete self;
 }
 
 std::unordered_map<no_vcl_obj_t, TComponent*>& TComponent::Registry()
