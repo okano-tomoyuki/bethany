@@ -766,6 +766,9 @@ protected:
 
 class TCustomBitBtn;
 class TCustomSpeedButton;
+class TMenuItem;
+class TCoolBand;
+class TCustomCoolBar;
 
 // ビットマップ(.bmp)。new TBitmap で生成して delete で破棄する(VCL と同じ)。
 class TBitmap : public TCustomBitmap
@@ -777,6 +780,9 @@ private:
     friend class TPicture;
     friend class TCustomBitBtn;
     friend class TCustomSpeedButton;
+    friend class TMenuItem;
+    friend class TCoolBand;
+    friend class TCustomCoolBar;
     TBitmap(TObject* owner, Accessor accessor) : TCustomBitmap(owner, accessor) {}
 };
 
@@ -920,6 +926,82 @@ TShortCut   ShortCut(unsigned short Key, TShiftState Shift);
 TShortCut   TextToShortCut(const std::string& Text);
 std::string ShortCutToText(TShortCut ShortCut);
 
+/* ---------------- ImageList(docs/adr/0030) ---------------- */
+
+// 画像リストの描き方(LCL の TDrawingStyle と同じ値)。
+enum TDrawingStyle { dsFocus, dsSelected, dsNormal, dsTransparent };
+
+// 同じ大きさの画像の一覧(LCL の TCustomImageList)。TComponent なので、他のコンポーネントと同じく new で生成し、
+// Owner に任せるか Free() で破棄する。ツリービュー・ツールバー等の Images に設定し、項目の ImageIndex で画像を選ぶ。
+// 画像を受け取るメソッドは、画像を写して加える(渡したグラフィックは呼び出し側の持ち物のまま)。
+// Add・Insert 等は、画像を Width・Height の大きさに伸縮して 1 つとして加える(VCL と違い、幅が Width の倍数でも分けない)。
+// 横に並んだ複数の画像を分けて加えるのは AddSliced。
+class TCustomImageList : public TComponent
+{
+public:
+    // 画像の大きさ(既定は 16x16)。
+    Property<int>           Width;
+    Property<int>           Height;
+    ReadOnlyProperty<int>   Count;
+    Property<bool>          Masked;
+    Property<TColor>        BkColor;
+    Property<TDrawingStyle> DrawingStyle;
+    // Clear・Delete・Move・BkColor の変更で呼ばれる(LCL の仕様で、Add・Insert 等では呼ばれない。
+    // BeginUpdate の間は EndUpdate まで遅れる)。
+    Property<TNotifyEvent>  OnChange;
+
+    // Mask は nullptr でよい。
+    int  Add(const TCustomBitmap* Image, const TCustomBitmap* Mask);
+    // Image を横 AHorizontalCount・縦 AVerticalCount に分けて、それぞれを画像として加える。加えた最初の画像の位置を返す。
+    int  AddSliced(const TCustomBitmap* Image, int AHorizontalCount, int AVerticalCount);
+    // MaskColor の画素を透明として加える。
+    int  AddMasked(const TBitmap* Image, TColor MaskColor);
+    void Insert(int Index, const TCustomBitmap* Image, const TCustomBitmap* Mask);
+    void Replace(int Index, const TCustomBitmap* Image, const TCustomBitmap* Mask);
+    void Delete(int Index);
+    void Clear();
+    void Move(int CurIndex, int NewIndex);
+    // Index 番目の画像を Image に写す。
+    void GetBitmap(int Index, TCustomBitmap* Image) const;
+    // Canvas の (X, Y) に Index 番目の画像を描く。Enabled が false なら無効の見た目で描く。
+    void Draw(TCanvas* Canvas, int X, int Y, int Index, bool Enabled = true) const;
+    void BeginUpdate();
+    void EndUpdate();
+
+protected:
+    explicit TCustomImageList(no_vcl_obj_t handle);
+    ~TCustomImageList() override = default;
+
+private:
+    TNotifyEvent onChange_;
+    bool         onChangeHooked_ = false;
+
+    static int           GetWidthImpl(TObject* owner);
+    static void          SetWidthImpl(TObject* owner, const int& value);
+    static int           GetHeightImpl(TObject* owner);
+    static void          SetHeightImpl(TObject* owner, const int& value);
+    static int           GetCountImpl(TObject* owner);
+    static bool          GetMaskedImpl(TObject* owner);
+    static void          SetMaskedImpl(TObject* owner, const bool& value);
+    static TColor        GetBkColorImpl(TObject* owner);
+    static void          SetBkColorImpl(TObject* owner, const TColor& value);
+    static TDrawingStyle GetDrawingStyleImpl(TObject* owner);
+    static void          SetDrawingStyleImpl(TObject* owner, const TDrawingStyle& value);
+    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender, void* data);
+    static TNotifyEvent  GetOnChangeImpl(TObject* owner);
+    static void          SetOnChangeImpl(TObject* owner, const TNotifyEvent& value);
+};
+
+// LCL の TImageList は TDragImageList(ドラッグ中の画像の表示)の派生だが、その機能は公開していないため省いた。
+class TImageList : public TCustomImageList
+{
+public:
+    explicit TImageList(TComponent* AOwner);
+
+protected:
+    ~TImageList() override = default;
+};
+
 class TMenu;
 
 // メニューの項目。TControl ではない(Parent/Left 等は無く、画面上の親子関係は Add/Insert で組む)。
@@ -950,6 +1032,12 @@ public:
 
     // 子の項目(MenuItem->Items[i]->Caption のように使う)。
     ReadOnlyIndexedProperty<TMenuItem*> Items;
+    // 画像の、メニューの Images(または親の項目の SubMenuImages)での位置(-1 なら無し。docs/adr/0030)。
+    Property<int> ImageIndex;
+    // 子の項目の画像リスト(設定すると、子の項目は TMenu::Images の代わりにこれを使う)。
+    Property<TCustomImageList*> SubMenuImages;
+    // 項目の画像(ImageIndex を使わない場合)。項目が所有する TBitmap のビューで、初めて参照したときに作られる。代入は内容のコピー。
+    Property<TBitmap*> Bitmap;
 
     void Add(TMenuItem* Item);
     void Insert(int Index, TMenuItem* Item);
@@ -1000,6 +1088,14 @@ private:
     static void         SetOnClickImpl(TObject* owner, const TNotifyEvent& value);
     static int          GetCountImpl(TObject* owner);
     static TMenuItem*   GetParentImpl(TObject* owner);
+
+    TBitmap bitmap_;
+    static int GetImageIndexImpl(TObject* owner);
+    static void SetImageIndexImpl(TObject* owner, const int& value);
+    static TCustomImageList* GetSubMenuImagesImpl(TObject* owner);
+    static void SetSubMenuImagesImpl(TObject* owner, TCustomImageList* const& value);
+    static TBitmap* GetBitmapImpl(TObject* owner);
+    static void SetBitmapImpl(TObject* owner, TBitmap* const& value);
 };
 
 // TMainMenu・TPopupMenu の共通の基底。Items はメニューのルートの項目で、メニュー自身が(LCL の内部で)生成・所有する。
@@ -1008,6 +1104,8 @@ class TMenu : public TComponent
 {
 public:
     ReadOnlyProperty<TMenuItem*> Items;
+    // 項目の画像リスト(docs/adr/0030)。各項目の画像は TMenuItem::ImageIndex。
+    Property<TCustomImageList*> Images;
 
 protected:
     explicit TMenu(no_vcl_obj_t handle);
@@ -1015,6 +1113,9 @@ protected:
 
 private:
     static TMenuItem* GetItemsImpl(TObject* owner);
+
+    static TCustomImageList* GetImagesImpl(TObject* owner);
+    static void SetImagesImpl(TObject* owner, TCustomImageList* const& value);
 };
 
 // フォームのメニューバー。TForm::Menu に割り当てると表示される。
@@ -1774,6 +1875,9 @@ public:
     Property<int>           Margin;
     // 画像と文字列の間隔。
     Property<int>           Spacing;
+    // 画像リスト(docs/adr/0030)。設定すると、Glyph の代わりに Images の ImageIndex 番目の画像を表示する。
+    Property<TCustomImageList*> Images;
+    Property<int> ImageIndex;
 
 protected:
     explicit TCustomBitBtn(no_vcl_obj_t handle);
@@ -1794,6 +1898,11 @@ private:
     static void          SetMarginImpl(TObject* owner, const int& value);
     static int           GetSpacingImpl(TObject* owner);
     static void          SetSpacingImpl(TObject* owner, const int& value);
+
+    static TCustomImageList* GetImagesImpl(TObject* owner);
+    static void SetImagesImpl(TObject* owner, TCustomImageList* const& value);
+    static int GetImageIndexImpl(TObject* owner);
+    static void SetImageIndexImpl(TObject* owner, const int& value);
 };
 
 class TBitBtn : public TCustomBitBtn
@@ -2022,6 +2131,8 @@ public:
     Property<TTabPosition>      TabPosition;
     // 利用者の操作でページが切り替わる前に呼ばれる。
     Property<TTabChangingEvent> OnChanging;
+    // タブの画像リスト(docs/adr/0030)。各ページの画像は TCustomPage::ImageIndex。
+    Property<TCustomImageList*> Images;
 
 protected:
     explicit TCustomTabControl(no_vcl_obj_t handle);
@@ -2041,6 +2152,9 @@ private:
     static void              SetTabPositionImpl(TObject* owner, const TTabPosition& value);
     static TTabChangingEvent GetOnChangingImpl(TObject* owner);
     static void              SetOnChangingImpl(TObject* owner, const TTabChangingEvent& value);
+
+    static TCustomImageList* GetImagesImpl(TObject* owner);
+    static void SetImagesImpl(TObject* owner, TCustomImageList* const& value);
 };
 
 // 単純なタブの切り替え UI(ページはコントロール自身では管理しない)。Tabs/TabIndex/OnChange は
@@ -2130,6 +2244,8 @@ public:
     // ページが表示された/隠されたときに呼ばれる。
     Property<TNotifyEvent> OnShow;
     Property<TNotifyEvent> OnHide;
+    // タブに表示する画像の、PageControl の Images での位置(-1 なら無し。docs/adr/0030)。
+    Property<int> ImageIndex;
 
 protected:
     explicit TCustomPage(no_vcl_obj_t handle);
@@ -2151,6 +2267,9 @@ private:
     static void         SetOnShowImpl(TObject* owner, const TNotifyEvent& value);
     static TNotifyEvent GetOnHideImpl(TObject* owner);
     static void         SetOnHideImpl(TObject* owner, const TNotifyEvent& value);
+
+    static int GetImageIndexImpl(TObject* owner);
+    static void SetImageIndexImpl(TObject* owner, const int& value);
 };
 
 // TPageControl のページ。タブの文字列は Caption。
@@ -2210,6 +2329,12 @@ public:
     ReadOnlyProperty<TCustomTreeView*> TreeView;
     // 直下の子(Node->Items[i])。
     ReadOnlyIndexedProperty<TTreeNode*> Items;
+    // 画像の、ツリービューの Images での位置(-1 なら無し。docs/adr/0030)。SelectedIndex は選択中の画像(-1 なら ImageIndex と同じ)。
+    Property<int> ImageIndex;
+    Property<int> SelectedIndex;
+    // StateImages での位置。OverlayIndex は重ねて描く画像の、Images での位置。
+    Property<int> StateIndex;
+    Property<int> OverlayIndex;
 
     // 以下のノードを返すメンバは、該当するノードが無ければ nullptr を返す。
     TTreeNode* GetFirstChild() const;
@@ -2259,6 +2384,15 @@ private:
     static int              GetAbsoluteIndexImpl(TObject* owner);
     static TTreeNode*       GetParentImpl(TObject* owner);
     static TCustomTreeView* GetTreeViewImpl(TObject* owner);
+
+    static int GetImageIndexImpl(TObject* owner);
+    static void SetImageIndexImpl(TObject* owner, const int& value);
+    static int GetSelectedIndexImpl(TObject* owner);
+    static void SetSelectedIndexImpl(TObject* owner, const int& value);
+    static int GetStateIndexImpl(TObject* owner);
+    static void SetStateIndexImpl(TObject* owner, const int& value);
+    static int GetOverlayIndexImpl(TObject* owner);
+    static void SetOverlayIndexImpl(TObject* owner, const int& value);
 };
 
 // ツリービューのノードの一覧(LCL の TTreeNodes)。ツリービューが所有する実体への非所有のビューで、
@@ -2308,6 +2442,10 @@ public:
     ReadOnlyProperty<TTreeNodes*> Items;
     // 選択されているノード(無ければ nullptr)。
     Property<TTreeNode*>          Selected;
+    // ノードの画像リスト(docs/adr/0030)。各ノードの画像は TTreeNode::ImageIndex・SelectedIndex。
+    Property<TCustomImageList*> Images;
+    // 状態(チェック等)の画像リスト。各ノードの画像は TTreeNode::StateIndex。
+    Property<TCustomImageList*> StateImages;
 
     void       FullExpand();
     void       FullCollapse();
@@ -2328,6 +2466,11 @@ private:
     static TTreeNodes* GetItemsImpl(TObject* owner);
     static TTreeNode*  GetSelectedImpl(TObject* owner);
     static void        SetSelectedImpl(TObject* owner, TTreeNode* const& value);
+
+    static TCustomImageList* GetImagesImpl(TObject* owner);
+    static void SetImagesImpl(TObject* owner, TCustomImageList* const& value);
+    static TCustomImageList* GetStateImagesImpl(TObject* owner);
+    static void SetStateImagesImpl(TObject* owner, TCustomImageList* const& value);
 };
 
 // 以下のメンバは LCL では TCustomTreeView の protected で、TTreeView が published にしている。
@@ -2450,6 +2593,9 @@ public:
 
     // 文字列の一覧(TStrings。Item->SubItems->Add("x") のように使う)。
     ReadOnlyProperty<TStrings*> SubItems;
+    // 画像の、リストビューの SmallImages・LargeImages での位置(-1 なら無し。docs/adr/0030)。StateIndex は StateImages での位置。
+    Property<int> ImageIndex;
+    Property<int> StateIndex;
 
     // この項目を削除する。このラッパーも delete されるため、呼び出し後に触れてはならない。
     void Delete();
@@ -2479,6 +2625,11 @@ private:
     static void             SetDataImpl(TObject* owner, void* const& value);
     static int              GetIndexImpl(TObject* owner);
     static TCustomListView* GetListViewImpl(TObject* owner);
+
+    static int GetImageIndexImpl(TObject* owner);
+    static void SetImageIndexImpl(TObject* owner, const int& value);
+    static int GetStateIndexImpl(TObject* owner);
+    static void SetStateIndexImpl(TObject* owner, const int& value);
 };
 
 // リストビューの項目の一覧(LCL の TListItems)。TTreeNodes と同じく、リストビューの値メンバとして持つ非所有のビュー。
@@ -2523,6 +2674,8 @@ public:
     Property<bool>        Visible;
     // 列の並び順。書き換えると列が移動する。
     Property<int>         Index;
+    // 見出しの画像の、SmallImages での位置(-1 なら無し。docs/adr/0030)。
+    Property<int> ImageIndex;
 
 private:
     friend class ItemRegistry;
@@ -2545,6 +2698,9 @@ private:
     static void        SetVisibleImpl(TObject* owner, const bool& value);
     static int         GetIndexImpl(TObject* owner);
     static void        SetIndexImpl(TObject* owner, const int& value);
+
+    static int GetImageIndexImpl(TObject* owner);
+    static void SetImageIndexImpl(TObject* owner, const int& value);
 };
 
 // リストビューの列の一覧(LCL の TListColumns)。リストビューの値メンバとして持つ非所有のビュー。Items[Index] で列を参照する。
@@ -2653,6 +2809,10 @@ public:
     Property<TLVCheckedItemEvent> OnItemChecked;
     // 列見出しがクリックされたとき。
     Property<TLVColumnClickEvent> OnColumnClick;
+    // 画像リスト(docs/adr/0030)。LCL では TCustomListView の protected で、TListView が公開する。LargeImages は vsIcon、SmallImages はそれ以外の表示形式で使う。
+    Property<TCustomImageList*> LargeImages;
+    Property<TCustomImageList*> SmallImages;
+    Property<TCustomImageList*> StateImages;
 
 protected:
     ~TListView() override = default;
@@ -2699,6 +2859,13 @@ private:
     static void                SetOnItemCheckedImpl(TObject* owner, const TLVCheckedItemEvent& value);
     static TLVColumnClickEvent GetOnColumnClickImpl(TObject* owner);
     static void                SetOnColumnClickImpl(TObject* owner, const TLVColumnClickEvent& value);
+
+    static TCustomImageList* GetLargeImagesImpl(TObject* owner);
+    static void SetLargeImagesImpl(TObject* owner, TCustomImageList* const& value);
+    static TCustomImageList* GetSmallImagesImpl(TObject* owner);
+    static void SetSmallImagesImpl(TObject* owner, TCustomImageList* const& value);
+    static TCustomImageList* GetStateImagesImpl(TObject* owner);
+    static void SetStateImagesImpl(TObject* owner, TCustomImageList* const& value);
 };
 
 // Splitter が寄せる辺(LCL の TAnchorKind と同じ値。VCL には無い)と、ドラッグ中の表示のしかた。
@@ -2988,6 +3155,9 @@ public:
     Property<TButtonLayout> Layout;
     Property<int>           Margin;
     Property<int>           Spacing;
+    // 画像リスト(docs/adr/0030)。意味は TCustomBitBtn と同じ。
+    Property<TCustomImageList*> Images;
+    Property<int> ImageIndex;
 
 protected:
     explicit TCustomSpeedButton(no_vcl_obj_t handle);
@@ -3015,6 +3185,11 @@ private:
     static void          SetMarginImpl(TObject* owner, const int& value);
     static int           GetSpacingImpl(TObject* owner);
     static void          SetSpacingImpl(TObject* owner, const int& value);
+
+    static TCustomImageList* GetImagesImpl(TObject* owner);
+    static void SetImagesImpl(TObject* owner, TCustomImageList* const& value);
+    static int GetImageIndexImpl(TObject* owner);
+    static void SetImageIndexImpl(TObject* owner, const int& value);
 };
 
 class TSpeedButton : public TCustomSpeedButton
@@ -3065,6 +3240,9 @@ public:
     Property<bool>             Transparent;
     // Picture(またはその中身)が変わったときに呼ばれる。
     Property<TNotifyEvent>     OnPictureChanged;
+    // 画像リスト(docs/adr/0030)。設定すると、Picture が空のとき Images の ImageIndex 番目の画像を表示する。
+    Property<TCustomImageList*> Images;
+    Property<int> ImageIndex;
 
 protected:
     explicit TCustomImage(no_vcl_obj_t handle);
@@ -3095,6 +3273,11 @@ private:
     static void NO_VCL_CALL PictureChangedTrampoline(no_vcl_obj_t sender, void* data);
     static TNotifyEvent GetOnPictureChangedImpl(TObject* owner);
     static void         SetOnPictureChangedImpl(TObject* owner, const TNotifyEvent& value);
+
+    static TCustomImageList* GetImagesImpl(TObject* owner);
+    static void SetImagesImpl(TObject* owner, TCustomImageList* const& value);
+    static int GetImageIndexImpl(TObject* owner);
+    static void SetImageIndexImpl(TObject* owner, const int& value);
 };
 
 class TImage : public TCustomImage
@@ -3358,6 +3541,8 @@ public:
     ReadOnlyProperty<int> Right;
     // 並べ替えても変わらない位置。
     ReadOnlyProperty<int> OriginalIndex;
+    // 画像の、ヘッダーの Images での位置(-1 なら無し。docs/adr/0030)。
+    Property<int> ImageIndex;
 
 private:
     friend class ItemRegistry;
@@ -3385,6 +3570,9 @@ private:
     static int         GetLeftImpl(TObject* owner);
     static int         GetRightImpl(TObject* owner);
     static int         GetOriginalIndexImpl(TObject* owner);
+
+    static int GetImageIndexImpl(TObject* owner);
+    static void SetImageIndexImpl(TObject* owner, const int& value);
 };
 
 // セクションの一覧(LCL の THeaderSections。TCollection)。ヘッダーコントロールの値メンバとして持つ非所有のビュー。
@@ -3449,6 +3637,8 @@ public:
     Property<TSectionDragEvent>         OnSectionDrag;
     // ドラッグでの並べ替えが終わったとき。
     Property<TNotifyEvent>              OnSectionEndDrag;
+    // セクションの画像リスト(docs/adr/0030)。各セクションの画像は THeaderSection::ImageIndex。
+    Property<TCustomImageList*> Images;
 
     // クライアント座標 P にあるセクションの位置。無ければ -1。
     int GetSectionAt(const TPoint& P) const;
@@ -3496,6 +3686,9 @@ private:
     static void                      SetOnSectionDragImpl(TObject* owner, const TSectionDragEvent& value);
     static TNotifyEvent              GetOnSectionEndDragImpl(TObject* owner);
     static void                      SetOnSectionEndDragImpl(TObject* owner, const TNotifyEvent& value);
+
+    static TCustomImageList* GetImagesImpl(TObject* owner);
+    static void SetImagesImpl(TObject* owner, TCustomImageList* const& value);
 };
 
 // 列の見出しを並べたコントロール。
@@ -3587,6 +3780,10 @@ public:
     Property<bool>                       Transparent;
     // true なら、幅に収まらないボタンを次の行へ折り返す(既定は true)。
     Property<bool>                       Wrapable;
+    // ボタンの画像リスト(docs/adr/0030)。HotImages はマウスが上にあるとき、DisabledImages は無効のときに使う(設定しなければ Images から LCL が作る)。各ボタンの画像は TToolButton::ImageIndex。
+    Property<TCustomImageList*> Images;
+    Property<TCustomImageList*> HotImages;
+    Property<TCustomImageList*> DisabledImages;
 
     void SetButtonSize(int NewButtonWidth, int NewButtonHeight);
 
@@ -3615,6 +3812,13 @@ private:
     static void         SetTransparentImpl(TObject* owner, const bool& value);
     static bool         GetWrapableImpl(TObject* owner);
     static void         SetWrapableImpl(TObject* owner, const bool& value);
+
+    static TCustomImageList* GetImagesImpl(TObject* owner);
+    static void SetImagesImpl(TObject* owner, TCustomImageList* const& value);
+    static TCustomImageList* GetHotImagesImpl(TObject* owner);
+    static void SetHotImagesImpl(TObject* owner, TCustomImageList* const& value);
+    static TCustomImageList* GetDisabledImagesImpl(TObject* owner);
+    static void SetDisabledImagesImpl(TObject* owner, TCustomImageList* const& value);
 };
 
 // ツールバーのボタン。Caption・OnClick は TControl のものを使う。
@@ -3643,6 +3847,8 @@ public:
     Property<TNotifyEvent>     OnArrowClick;
     // ツールバーの中での位置(ツールバーに置かれていなければ -1)。
     ReadOnlyProperty<int>      Index;
+    // 画像の、ツールバーの Images での位置(-1 なら無し。docs/adr/0030)。
+    Property<int> ImageIndex;
 
     // OnClick を呼ぶ(tbsCheck の Down は変えない。Down の切り替えはマウスを離したときに LCL が行う)。
     void Click();
@@ -3682,6 +3888,9 @@ private:
     static TNotifyEvent     GetOnArrowClickImpl(TObject* owner);
     static void             SetOnArrowClickImpl(TObject* owner, const TNotifyEvent& value);
     static int              GetIndexImpl(TObject* owner);
+
+    static int GetImageIndexImpl(TObject* owner);
+    static void SetImageIndexImpl(TObject* owner, const int& value);
 };
 
 /* ---------------- CoolBar ---------------- */
@@ -3724,6 +3933,10 @@ public:
     ReadOnlyProperty<int> Top;
     ReadOnlyProperty<int> Right;
     ReadOnlyProperty<int> Height;
+    // 画像の、クールバーの Images での位置(-1 なら無し。docs/adr/0030)。
+    Property<int> ImageIndex;
+    // 背景の画像。バンドが所有する TBitmap のビューで、代入は内容のコピー。
+    Property<TBitmap*> Bitmap;
 
     // 幅を、置いているコントロールに合わせる。
     void AutosizeWidth();
@@ -3766,6 +3979,12 @@ private:
     static int         GetTopImpl(TObject* owner);
     static int         GetRightImpl(TObject* owner);
     static int         GetHeightImpl(TObject* owner);
+
+    TBitmap bitmap_;
+    static int GetImageIndexImpl(TObject* owner);
+    static void SetImageIndexImpl(TObject* owner, const int& value);
+    static TBitmap* GetBitmapImpl(TObject* owner);
+    static void SetBitmapImpl(TObject* owner, TBitmap* const& value);
 };
 
 // バンドの一覧(LCL の TCoolBands。TCollection)。クールバーの値メンバとして持つ非所有のビュー。
@@ -3815,6 +4034,10 @@ public:
     Property<bool>                Vertical;
     // ドラッグでバンドを動かす・幅を変えて、マウスを離したとき。
     Property<TNotifyEvent>        OnChange;
+    // バンドの画像リスト(docs/adr/0030)。各バンドの画像は TCoolBand::ImageIndex。
+    Property<TCustomImageList*> Images;
+    // 背景の画像。クールバーが所有する TBitmap のビューで、代入は内容のコピー。
+    Property<TBitmap*> Bitmap;
 
     // すべてのバンドの幅を、置いているコントロールに合わせる。
     void AutosizeBands();
@@ -3852,6 +4075,12 @@ private:
     static void         SetVerticalImpl(TObject* owner, const bool& value);
     static TNotifyEvent GetOnChangeImpl(TObject* owner);
     static void         SetOnChangeImpl(TObject* owner, const TNotifyEvent& value);
+
+    TBitmap bitmap_;
+    static TCustomImageList* GetImagesImpl(TObject* owner);
+    static void SetImagesImpl(TObject* owner, TCustomImageList* const& value);
+    static TBitmap* GetBitmapImpl(TObject* owner);
+    static void SetBitmapImpl(TObject* owner, TBitmap* const& value);
 };
 
 // 並べ替え・幅の変更ができるバンドに、コントロールを置くバー。

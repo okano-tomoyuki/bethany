@@ -182,6 +182,8 @@ public:
     TImage*         Image2;
     TBitBtn*        BitBtn2;
     int             pictureChanges_ = 0;
+    TImageList*     ImageList1;
+    int             imageListChanges_ = 0;
 
     // C++Builder と同じく Owner を受け取り、TForm に渡す(Application->CreateForm が Application を渡す)。
     explicit TMainForm(TComponent* AOwner) : TForm(AOwner)
@@ -1048,6 +1050,120 @@ public:
                     (int)SpeedButton1->Glyph->Width, (int)SpeedButton1->NumGlyphs);
         BitBtn2->Glyph = nullptr;
         std::printf("BitBtn2 Glyph = nullptr: Glyph->Empty=%d (expected 1)\n", (bool)BitBtn2->Glyph->Empty);
+
+        // Tier 3、2 バッチ目(TImageList と各コントロールの Images・ImageIndex。docs/adr/0030)。
+        ImageList1 = new TImageList(this);
+        ImageList1->OnChange = [this](TObject*) { ++imageListChanges_; };
+        {
+            // 横に 2 つ並んだ画像を、AddSliced で 2 つの画像として加える(LCL の Add は分けずに 16x16 に縮める)。
+            TBitmap* strip = new TBitmap;
+            strip->SetSize(32, 16);
+            strip->Canvas->Brush.Color = clRed;
+            strip->Canvas->FillRect(TRect{0, 0, 16, 16});
+            strip->Canvas->Brush.Color = clBlue;
+            strip->Canvas->FillRect(TRect{16, 0, 32, 16});
+            int first = ImageList1->AddSliced(strip, 2, 1);
+            TBitmap* green = new TBitmap;
+            green->SetSize(16, 16);
+            green->Canvas->Brush.Color = clGreen;
+            green->Canvas->FillRect(TRect{0, 0, 16, 16});
+            int masked = ImageList1->AddMasked(green, clWhite);
+            std::printf("ImageList1 AddSliced(32x16, 2, 1): first=%d (expected 0), Count=%d (expected 3), AddMasked=%d (expected 2), "
+                        "Width/Height=%d/%d (expected 16/16), OnChange called by Add: %s (expected no)\n",
+                        first, (int)ImageList1->Count, masked, (int)ImageList1->Width, (int)ImageList1->Height,
+                        imageListChanges_ > 0 ? "yes" : "no");
+            // Add は画像を 16x16 に縮めて 1 つとして加える。OnChange は Delete 等で呼ばれる。
+            int scaled = ImageList1->Add(strip, nullptr);
+            TBitmap* check = new TBitmap;
+            ImageList1->GetBitmap(scaled, check);
+            std::printf("ImageList1 Add(32x16): index=%d (expected 3), Count=%d (expected 4), image %dx%d (expected 16x16)\n",
+                        scaled, (int)ImageList1->Count, (int)check->Width, (int)check->Height);
+            delete check;
+            ImageList1->Delete(scaled);
+            std::printf("ImageList1 Delete: Count=%d (expected 3), OnChange called: %s (expected yes)\n",
+                        (int)ImageList1->Count, imageListChanges_ > 0 ? "yes" : "no");
+            // GetBitmap で画像を取り出し、Draw で Canvas に描く。
+            TBitmap* out = new TBitmap;
+            ImageList1->GetBitmap(1, out);
+            std::printf("ImageList1 GetBitmap(1): %dx%d (expected 16x16), Pixels[8][8]=%06X (expected FF0000)\n",
+                        (int)out->Width, (int)out->Height, (unsigned)(TColor)out->Canvas->Pixels[8][8]);
+            out->SetSize(20, 20);
+            out->Canvas->Brush.Color = clWhite;
+            out->Canvas->FillRect(TRect{0, 0, 20, 20});
+            ImageList1->Draw(out->Canvas, 2, 2, 2);
+            std::printf("ImageList1 Draw(2) at (2,2): Pixels[10][10]=%06X (expected 008000), Pixels[0][0]=%06X (expected FFFFFF)\n",
+                        (unsigned)(TColor)out->Canvas->Pixels[10][10], (unsigned)(TColor)out->Canvas->Pixels[0][0]);
+            ImageList1->Move(2, 0);
+            ImageList1->GetBitmap(0, out);
+            std::printf("ImageList1 Move(2, 0): image 0 Pixels[8][8]=%06X (expected 008000)\n", (unsigned)(TColor)out->Canvas->Pixels[8][8]);
+            ImageList1->Move(0, 2);
+            delete out;
+            delete green;
+            delete strip;
+        }
+
+        // 各コントロールの Images と、項目の ImageIndex。
+        TreeView1->Images = ImageList1;
+        RootNode->ImageIndex = 0;
+        RootNode->SelectedIndex = 1;
+        ListView1->SmallImages = ImageList1;
+        ListView1->Items->Item[0]->ImageIndex = 1;
+        ToolBar1->Images = ImageList1;
+        NewToolButton->ImageIndex = 0;
+        BoldToolButton->ImageIndex = 1;
+        PageControl1->Images = ImageList1;
+        TabSheet1->ImageIndex = 2;
+        HeaderControl1->Images = ImageList1;
+        HeaderControl1->Sections->Items[0]->ImageIndex = 0;
+        CoolBar1->Images = ImageList1;
+        CoolBar1->Bands->Items[0]->ImageIndex = 1;
+        MainMenu1->Images = ImageList1;
+        FileNewItem->ImageIndex = 0;
+        BitBtn2->Images = ImageList1;
+        BitBtn2->ImageIndex = 2;
+        std::printf("Images set: TreeView=%s ListView.Small=%s ToolBar=%s PageControl=%s Header=%s CoolBar=%s MainMenu=%s BitBtn2=%s\n",
+                    (TCustomImageList*)TreeView1->Images == ImageList1 ? "yes" : "no",
+                    (TCustomImageList*)ListView1->SmallImages == ImageList1 ? "yes" : "no",
+                    (TCustomImageList*)ToolBar1->Images == ImageList1 ? "yes" : "no",
+                    (TCustomImageList*)PageControl1->Images == ImageList1 ? "yes" : "no",
+                    (TCustomImageList*)HeaderControl1->Images == ImageList1 ? "yes" : "no",
+                    (TCustomImageList*)CoolBar1->Images == ImageList1 ? "yes" : "no",
+                    (TCustomImageList*)MainMenu1->Images == ImageList1 ? "yes" : "no",
+                    (TCustomImageList*)BitBtn2->Images == ImageList1 ? "yes" : "no");
+        std::printf("ImageIndex: RootNode=%d/%d (expected 0/1), ListItem=%d (expected 1), NewToolButton=%d (expected 0), "
+                    "TabSheet1=%d (expected 2), Section=%d (expected 0), Band=%d (expected 1), FileNewItem=%d (expected 0), "
+                    "BitBtn2=%d (expected 2), Child1Node=%d (expected -1)\n",
+                    (int)RootNode->ImageIndex, (int)RootNode->SelectedIndex, (int)ListView1->Items->Item[0]->ImageIndex,
+                    (int)NewToolButton->ImageIndex, (int)TabSheet1->ImageIndex,
+                    (int)HeaderControl1->Sections->Items[0]->ImageIndex, (int)CoolBar1->Bands->Items[0]->ImageIndex,
+                    (int)FileNewItem->ImageIndex, (int)BitBtn2->ImageIndex, (int)Child1Node->ImageIndex);
+
+        // 画像リストを破棄すると、LCL がコントロールの Images を外す(C++ でも nullptr になる)。
+        {
+            TImageList* temp = new TImageList(this);
+            Image2->Images = temp;
+            ToolBar1->HotImages = temp;
+            std::printf("Before temp->Free(): Image2->Images is temp: %s, ToolBar1->HotImages is temp: %s\n",
+                        (TCustomImageList*)Image2->Images == temp ? "yes" : "no",
+                        (TCustomImageList*)ToolBar1->HotImages == temp ? "yes" : "no");
+            temp->Free();
+            std::printf("After temp->Free(): Image2->Images is null: %s, ToolBar1->HotImages is null: %s\n",
+                        (TCustomImageList*)Image2->Images == nullptr ? "yes" : "no",
+                        (TCustomImageList*)ToolBar1->HotImages == nullptr ? "yes" : "no");
+        }
+
+        // メニュー項目・クールバーの Bitmap(所有者が持つ TBitmap のビュー。代入は内容のコピー)。
+        {
+            TBitmap* icon = new TBitmap;
+            icon->SetSize(12, 12);
+            FileExitItem->Bitmap = icon;
+            CoolBar1->Bitmap = icon;
+            delete icon;
+            std::printf("FileExitItem->Bitmap %dx%d (expected 12x12), CoolBar1->Bitmap Width=%d (expected 12)\n",
+                        (int)FileExitItem->Bitmap->Width, (int)FileExitItem->Bitmap->Height, (int)CoolBar1->Bitmap->Width);
+            CoolBar1->Bitmap = nullptr;
+            std::printf("CoolBar1->Bitmap = nullptr: Empty=%d (expected 1)\n", (bool)CoolBar1->Bitmap->Empty);
+        }
 
         OnCreate = [this](TObject* Sender) { FormCreate(Sender); };
         OnShow = [this](TObject* Sender) { FormShow(Sender); };

@@ -887,7 +887,100 @@ using no_vcl_module_t = void*;
     X(no_vcl_int_t,  TCustomSpeedButton_GetMargin,  (no_vcl_obj_t o),                                         (o)) \
     X(void,          TCustomSpeedButton_SetMargin,  (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
     X(no_vcl_int_t,  TCustomSpeedButton_GetSpacing, (no_vcl_obj_t o),                                         (o)) \
-    X(void,          TCustomSpeedButton_SetSpacing, (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v))
+    X(void,          TCustomSpeedButton_SetSpacing, (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_obj_t,  TImageList_Create,             (no_vcl_obj_t owner),                                     (owner)) \
+    X(no_vcl_int_t,  TCustomImageList_GetWidth,     (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomImageList_SetWidth,     (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TCustomImageList_GetHeight,    (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomImageList_SetHeight,    (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TCustomImageList_GetCount,     (no_vcl_obj_t o),                                         (o)) \
+    X(no_vcl_bool_t, TCustomImageList_GetMasked,    (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomImageList_SetMasked,    (no_vcl_obj_t o, no_vcl_bool_t v),                        (o, v)) \
+    X(no_vcl_int_t,  TCustomImageList_GetBkColor,   (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomImageList_SetBkColor,   (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TCustomImageList_GetDrawingStyle,(no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomImageList_SetDrawingStyle,(no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TCustomImageList_Add,          (no_vcl_obj_t o, no_vcl_obj_t image, no_vcl_obj_t mask),  (o, image, mask)) \
+    X(no_vcl_int_t,  TCustomImageList_AddSliced,    (no_vcl_obj_t o, no_vcl_obj_t image, no_vcl_int_t h, no_vcl_int_t v), (o, image, h, v)) \
+    X(no_vcl_int_t,  TCustomImageList_AddMasked,    (no_vcl_obj_t o, no_vcl_obj_t image, no_vcl_int_t maskcolor),(o, image, maskcolor)) \
+    X(void,          TCustomImageList_Insert,       (no_vcl_obj_t o, no_vcl_int_t index, no_vcl_obj_t image, no_vcl_obj_t mask),(o, index, image, mask)) \
+    X(void,          TCustomImageList_Replace,      (no_vcl_obj_t o, no_vcl_int_t index, no_vcl_obj_t image, no_vcl_obj_t mask),(o, index, image, mask)) \
+    X(void,          TCustomImageList_Delete,       (no_vcl_obj_t o, no_vcl_int_t index),                     (o, index)) \
+    X(void,          TCustomImageList_Clear,        (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomImageList_Move,         (no_vcl_obj_t o, no_vcl_int_t curindex, no_vcl_int_t newindex),(o, curindex, newindex)) \
+    X(void,          TCustomImageList_GetBitmap,    (no_vcl_obj_t o, no_vcl_int_t index, no_vcl_obj_t image), (o, index, image)) \
+    X(void,          TCustomImageList_Draw,         (no_vcl_obj_t o, no_vcl_obj_t canvas, no_vcl_int_t x, no_vcl_int_t y, no_vcl_int_t index, no_vcl_bool_t enabled),(o, canvas, x, y, index, enabled)) \
+    X(void,          TCustomImageList_BeginUpdate,  (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomImageList_EndUpdate,    (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomImageList_SetOnChange,  (no_vcl_obj_t o, no_vcl_callback_t cb, void* data),       (o, cb, data)) \
+    X(no_vcl_obj_t,  TCustomImage_GetImages,        (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomImage_SetImages,        (no_vcl_obj_t o, no_vcl_obj_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TCustomImage_GetImageIndex,    (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomImage_SetImageIndex,    (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_obj_t,  TCustomBitBtn_GetImages,       (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomBitBtn_SetImages,       (no_vcl_obj_t o, no_vcl_obj_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TCustomBitBtn_GetImageIndex,   (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomBitBtn_SetImageIndex,   (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_obj_t,  TCustomSpeedButton_GetImages,  (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomSpeedButton_SetImages,  (no_vcl_obj_t o, no_vcl_obj_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TCustomSpeedButton_GetImageIndex, (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomSpeedButton_SetImageIndex, (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_obj_t,  TCustomTabControl_GetImages,   (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomTabControl_SetImages,   (no_vcl_obj_t o, no_vcl_obj_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TCustomPage_GetImageIndex,     (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomPage_SetImageIndex,     (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_obj_t,  TCustomTreeView_GetImages,     (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomTreeView_SetImages,     (no_vcl_obj_t o, no_vcl_obj_t v),                         (o, v)) \
+    X(no_vcl_obj_t,  TCustomTreeView_GetStateImages, (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomTreeView_SetStateImages, (no_vcl_obj_t o, no_vcl_obj_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TTreeNode_GetImageIndex,       (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TTreeNode_SetImageIndex,       (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TTreeNode_GetSelectedIndex,    (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TTreeNode_SetSelectedIndex,    (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TTreeNode_GetStateIndex,       (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TTreeNode_SetStateIndex,       (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TTreeNode_GetOverlayIndex,     (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TTreeNode_SetOverlayIndex,     (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_obj_t,  TListView_GetLargeImages,      (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TListView_SetLargeImages,      (no_vcl_obj_t o, no_vcl_obj_t v),                         (o, v)) \
+    X(no_vcl_obj_t,  TListView_GetSmallImages,      (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TListView_SetSmallImages,      (no_vcl_obj_t o, no_vcl_obj_t v),                         (o, v)) \
+    X(no_vcl_obj_t,  TListView_GetStateImages,      (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TListView_SetStateImages,      (no_vcl_obj_t o, no_vcl_obj_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TListItem_GetImageIndex,       (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TListItem_SetImageIndex,       (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TListItem_GetStateIndex,       (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TListItem_SetStateIndex,       (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TListColumn_GetImageIndex,     (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TListColumn_SetImageIndex,     (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_obj_t,  TToolBar_GetImages,            (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TToolBar_SetImages,            (no_vcl_obj_t o, no_vcl_obj_t v),                         (o, v)) \
+    X(no_vcl_obj_t,  TToolBar_GetHotImages,         (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TToolBar_SetHotImages,         (no_vcl_obj_t o, no_vcl_obj_t v),                         (o, v)) \
+    X(no_vcl_obj_t,  TToolBar_GetDisabledImages,    (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TToolBar_SetDisabledImages,    (no_vcl_obj_t o, no_vcl_obj_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TToolButton_GetImageIndex,     (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TToolButton_SetImageIndex,     (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_obj_t,  TCustomHeaderControl_GetImages, (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomHeaderControl_SetImages, (no_vcl_obj_t o, no_vcl_obj_t v),                         (o, v)) \
+    X(no_vcl_int_t,  THeaderSection_GetImageIndex,  (no_vcl_obj_t o),                                         (o)) \
+    X(void,          THeaderSection_SetImageIndex,  (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_obj_t,  TCustomCoolBar_GetImages,      (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomCoolBar_SetImages,      (no_vcl_obj_t o, no_vcl_obj_t v),                         (o, v)) \
+    X(no_vcl_obj_t,  TCustomCoolBar_GetBitmap,      (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomCoolBar_SetBitmap,      (no_vcl_obj_t o, no_vcl_obj_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TCoolBand_GetImageIndex,       (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCoolBand_SetImageIndex,       (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_obj_t,  TCoolBand_GetBitmap,           (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCoolBand_SetBitmap,           (no_vcl_obj_t o, no_vcl_obj_t v),                         (o, v)) \
+    X(no_vcl_obj_t,  TMenu_GetImages,               (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TMenu_SetImages,               (no_vcl_obj_t o, no_vcl_obj_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TMenuItem_GetImageIndex,       (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TMenuItem_SetImageIndex,       (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_obj_t,  TMenuItem_GetSubMenuImages,    (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TMenuItem_SetSubMenuImages,    (no_vcl_obj_t o, no_vcl_obj_t v),                         (o, v)) \
+    X(no_vcl_obj_t,  TMenuItem_GetBitmap,           (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TMenuItem_SetBitmap,           (no_vcl_obj_t o, no_vcl_obj_t v),                         (o, v))
 
 namespace
 {

@@ -30,6 +30,7 @@ uses
   Menus,
   LCLProc,
   Graphics,
+  ImgList,
   CustomTimer
   {$ifdef LCLwin32}
   , Windows, InterfaceBase, WSControls
@@ -5381,6 +5382,489 @@ begin
   TCustomSpeedButton(Obj).Spacing := Value;
 end;
 
+{ ---------------- TImageList(docs/adr/0030) ----------------
+  TCustomImageList は TComponent(TLCLComponent)なので、生成・破棄は他のコンポーネントと同じ(Watch して返し、Owner に任せてよい)。
+  画像を受け取る関数は、画像を写して加える(渡したグラフィックは呼び出し側の持ち物のまま)。
+  Add・Insert 等は、画像を Width・Height の大きさに伸縮して 1 つとして加える(VCL と違い、幅が Width の倍数でも分けない)。
+  横に並んだ複数の画像を分けて加えるのは AddSliced。 }
+
+function TImageList_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TImageList.Create(TComponent(Owner)));
+end;
+
+function TCustomImageList_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomImageList(Obj).Width;
+end;
+
+procedure TCustomImageList_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomImageList(Obj).Width := Value;
+end;
+
+function TCustomImageList_GetHeight(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomImageList(Obj).Height;
+end;
+
+procedure TCustomImageList_SetHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomImageList(Obj).Height := Value;
+end;
+
+function TCustomImageList_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomImageList(Obj).Count;
+end;
+
+function TCustomImageList_GetMasked(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomImageList(Obj).Masked;
+end;
+
+procedure TCustomImageList_SetMasked(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomImageList(Obj).Masked := Value;
+end;
+
+function TCustomImageList_GetBkColor(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Integer(TCustomImageList(Obj).BkColor);
+end;
+
+procedure TCustomImageList_SetBkColor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomImageList(Obj).BkColor := TColor(Value);
+end;
+
+{ TDrawingStyle の序数(dsFocus=0, dsSelected, dsNormal, dsTransparent)。 }
+function TCustomImageList_GetDrawingStyle(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TCustomImageList(Obj).DrawingStyle);
+end;
+
+procedure TCustomImageList_SetDrawingStyle(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomImageList(Obj).DrawingStyle := TDrawingStyle(Value);
+end;
+
+{ Image・Mask は TCustomBitmap の派生(TBitmap・TPortableNetworkGraphic・TJPEGImage)のハンドル。Mask は nil でよい。
+  加えた最初の画像の位置を返す。 }
+function TCustomImageList_Add(Obj: Pointer; Image, Mask: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomImageList(Obj).Add(TCustomBitmap(Image), TCustomBitmap(Mask));
+end;
+
+{ Image を横 AHorizontalCount・縦 AVerticalCount に分けて、それぞれを画像として加える。加えた最初の画像の位置を返す。 }
+function TCustomImageList_AddSliced(Obj: Pointer; Image: Pointer; AHorizontalCount, AVerticalCount: Integer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomImageList(Obj).AddSliced(TCustomBitmap(Image), AHorizontalCount, AVerticalCount);
+end;
+
+{ MaskColor の画素を透明として加える。Image は TBitmap のハンドル。 }
+function TCustomImageList_AddMasked(Obj: Pointer; Image: Pointer; MaskColor: Integer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomImageList(Obj).AddMasked(Graphics.TBitmap(Image), TColor(MaskColor));
+end;
+
+procedure TCustomImageList_Insert(Obj: Pointer; Index: Integer; Image, Mask: Pointer); NO_VCL_CALL;
+begin
+  TCustomImageList(Obj).Insert(Index, TCustomBitmap(Image), TCustomBitmap(Mask));
+end;
+
+procedure TCustomImageList_Replace(Obj: Pointer; Index: Integer; Image, Mask: Pointer); NO_VCL_CALL;
+begin
+  TCustomImageList(Obj).Replace(Index, TCustomBitmap(Image), TCustomBitmap(Mask));
+end;
+
+procedure TCustomImageList_Delete(Obj: Pointer; Index: Integer); NO_VCL_CALL;
+begin
+  TCustomImageList(Obj).Delete(Index);
+end;
+
+procedure TCustomImageList_Clear(Obj: Pointer); NO_VCL_CALL;
+begin
+  TCustomImageList(Obj).Clear;
+end;
+
+procedure TCustomImageList_Move(Obj: Pointer; CurIndex, NewIndex: Integer); NO_VCL_CALL;
+begin
+  TCustomImageList(Obj).Move(CurIndex, NewIndex);
+end;
+
+{ Index 番目の画像を Image(TCustomBitmap の派生)に写す。 }
+procedure TCustomImageList_GetBitmap(Obj: Pointer; Index: Integer; Image: Pointer); NO_VCL_CALL;
+begin
+  TCustomImageList(Obj).GetBitmap(Index, TCustomBitmap(Image));
+end;
+
+procedure TCustomImageList_Draw(Obj: Pointer; Canvas: Pointer; X, Y, Index: Integer; Enabled: LongBool); NO_VCL_CALL;
+begin
+  TCustomImageList(Obj).Draw(TCanvas(Canvas), X, Y, Index, Boolean(Enabled));
+end;
+
+procedure TCustomImageList_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
+begin
+  TCustomImageList(Obj).BeginUpdate;
+end;
+
+procedure TCustomImageList_EndUpdate(Obj: Pointer); NO_VCL_CALL;
+begin
+  TCustomImageList(Obj).EndUpdate;
+end;
+
+{ Clear・Delete・Move・BkColor の変更で呼ばれる(LCL の仕様で、Add・Insert 等では呼ばれない。BeginUpdate の間は EndUpdate まで遅れる)。 }
+procedure TCustomImageList_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TCustomImageList(Obj).OnChange := @BridgeFor(TCustomImageList(Obj), MethodData(TCustomImageList(Obj).OnChange), Cb, Data).DoClick;
+end;
+
+{ 各コントロール・項目の Images・ImageIndex・Bitmap(docs/adr/0030)。
+  Images は TCustomImageList のハンドル(nil なら画像リストを外す)。LCL は画像リストの破棄を FreeNotification で受け、
+  コントロールの Images を nil に戻す。ImageIndex は画像リストでの位置(-1 なら無し)。
+  Bitmap は所有者が持つ TBitmap(差し替わらない)を返し、Set は内容を写す。 }
+
+function TCustomImage_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomImage(Obj).Images);
+end;
+
+procedure TCustomImage_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TCustomImage(Obj).Images := TCustomImageList(Value);
+end;
+
+function TCustomImage_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomImage(Obj).ImageIndex;
+end;
+
+procedure TCustomImage_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomImage(Obj).ImageIndex := Value;
+end;
+
+function TCustomBitBtn_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomBitBtn(Obj).Images);
+end;
+
+procedure TCustomBitBtn_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TCustomBitBtn(Obj).Images := TCustomImageList(Value);
+end;
+
+function TCustomBitBtn_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomBitBtn(Obj).ImageIndex;
+end;
+
+procedure TCustomBitBtn_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomBitBtn(Obj).ImageIndex := Value;
+end;
+
+function TCustomSpeedButton_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomSpeedButton(Obj).Images);
+end;
+
+procedure TCustomSpeedButton_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TCustomSpeedButton(Obj).Images := TCustomImageList(Value);
+end;
+
+function TCustomSpeedButton_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomSpeedButton(Obj).ImageIndex;
+end;
+
+procedure TCustomSpeedButton_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomSpeedButton(Obj).ImageIndex := Value;
+end;
+
+function TCustomTabControl_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomTabControl(Obj).Images);
+end;
+
+procedure TCustomTabControl_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TCustomTabControl(Obj).Images := TCustomImageList(Value);
+end;
+
+function TCustomPage_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomPage(Obj).ImageIndex;
+end;
+
+procedure TCustomPage_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomPage(Obj).ImageIndex := Value;
+end;
+
+function TCustomTreeView_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomTreeView(Obj).Images);
+end;
+
+procedure TCustomTreeView_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TCustomTreeView(Obj).Images := TCustomImageList(Value);
+end;
+
+function TCustomTreeView_GetStateImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomTreeView(Obj).StateImages);
+end;
+
+procedure TCustomTreeView_SetStateImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TCustomTreeView(Obj).StateImages := TCustomImageList(Value);
+end;
+
+function TTreeNode_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TTreeNode(Obj).ImageIndex;
+end;
+
+procedure TTreeNode_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TTreeNode(Obj).ImageIndex := Value;
+end;
+
+function TTreeNode_GetSelectedIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TTreeNode(Obj).SelectedIndex;
+end;
+
+procedure TTreeNode_SetSelectedIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TTreeNode(Obj).SelectedIndex := Value;
+end;
+
+function TTreeNode_GetStateIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TTreeNode(Obj).StateIndex;
+end;
+
+procedure TTreeNode_SetStateIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TTreeNode(Obj).StateIndex := Value;
+end;
+
+function TTreeNode_GetOverlayIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TTreeNode(Obj).OverlayIndex;
+end;
+
+procedure TTreeNode_SetOverlayIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TTreeNode(Obj).OverlayIndex := Value;
+end;
+
+function TListView_GetLargeImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TListView(Obj).LargeImages);
+end;
+
+procedure TListView_SetLargeImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TListView(Obj).LargeImages := TCustomImageList(Value);
+end;
+
+function TListView_GetSmallImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TListView(Obj).SmallImages);
+end;
+
+procedure TListView_SetSmallImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TListView(Obj).SmallImages := TCustomImageList(Value);
+end;
+
+function TListView_GetStateImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TListView(Obj).StateImages);
+end;
+
+procedure TListView_SetStateImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TListView(Obj).StateImages := TCustomImageList(Value);
+end;
+
+function TListItem_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TListItem(Obj).ImageIndex;
+end;
+
+procedure TListItem_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TListItem(Obj).ImageIndex := Value;
+end;
+
+function TListItem_GetStateIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TListItem(Obj).StateIndex;
+end;
+
+procedure TListItem_SetStateIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TListItem(Obj).StateIndex := Value;
+end;
+
+function TListColumn_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TListColumn(Obj).ImageIndex;
+end;
+
+procedure TListColumn_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TListColumn(Obj).ImageIndex := Value;
+end;
+
+function TToolBar_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TToolBar(Obj).Images);
+end;
+
+procedure TToolBar_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TToolBar(Obj).Images := TCustomImageList(Value);
+end;
+
+function TToolBar_GetHotImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TToolBar(Obj).HotImages);
+end;
+
+procedure TToolBar_SetHotImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TToolBar(Obj).HotImages := TCustomImageList(Value);
+end;
+
+function TToolBar_GetDisabledImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TToolBar(Obj).DisabledImages);
+end;
+
+procedure TToolBar_SetDisabledImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TToolBar(Obj).DisabledImages := TCustomImageList(Value);
+end;
+
+function TToolButton_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TToolButton(Obj).ImageIndex;
+end;
+
+procedure TToolButton_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TToolButton(Obj).ImageIndex := Value;
+end;
+
+function TCustomHeaderControl_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomHeaderControl(Obj).Images);
+end;
+
+procedure TCustomHeaderControl_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TCustomHeaderControl(Obj).Images := TCustomImageList(Value);
+end;
+
+function THeaderSection_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := THeaderSection(Obj).ImageIndex;
+end;
+
+procedure THeaderSection_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  THeaderSection(Obj).ImageIndex := Value;
+end;
+
+function TCustomCoolBar_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomCoolBar(Obj).Images);
+end;
+
+procedure TCustomCoolBar_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TCustomCoolBar(Obj).Images := TCustomImageList(Value);
+end;
+
+function TCustomCoolBar_GetBitmap(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomCoolBar(Obj).Bitmap);
+end;
+
+procedure TCustomCoolBar_SetBitmap(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TCustomCoolBar(Obj).Bitmap := Graphics.TBitmap(Value);
+end;
+
+function TCoolBand_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCoolBand(Obj).ImageIndex;
+end;
+
+procedure TCoolBand_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCoolBand(Obj).ImageIndex := Value;
+end;
+
+function TCoolBand_GetBitmap(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCoolBand(Obj).Bitmap);
+end;
+
+procedure TCoolBand_SetBitmap(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TCoolBand(Obj).Bitmap := Graphics.TBitmap(Value);
+end;
+
+function TMenu_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TMenu(Obj).Images);
+end;
+
+procedure TMenu_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TMenu(Obj).Images := TCustomImageList(Value);
+end;
+
+function TMenuItem_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TMenuItem(Obj).ImageIndex;
+end;
+
+procedure TMenuItem_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TMenuItem(Obj).ImageIndex := Value;
+end;
+
+function TMenuItem_GetSubMenuImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TMenuItem(Obj).SubMenuImages);
+end;
+
+procedure TMenuItem_SetSubMenuImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TMenuItem(Obj).SubMenuImages := TCustomImageList(Value);
+end;
+
+function TMenuItem_GetBitmap(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TMenuItem(Obj).Bitmap);
+end;
+
+procedure TMenuItem_SetBitmap(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TMenuItem(Obj).Bitmap := Graphics.TBitmap(Value);
+end;
+
 exports
   FreeNotify_SetCallback,
 
@@ -6255,7 +6739,100 @@ exports
   TCustomSpeedButton_GetMargin,
   TCustomSpeedButton_SetMargin,
   TCustomSpeedButton_GetSpacing,
-  TCustomSpeedButton_SetSpacing;
+  TCustomSpeedButton_SetSpacing,
+  TImageList_Create,
+  TCustomImageList_GetWidth,
+  TCustomImageList_SetWidth,
+  TCustomImageList_GetHeight,
+  TCustomImageList_SetHeight,
+  TCustomImageList_GetCount,
+  TCustomImageList_GetMasked,
+  TCustomImageList_SetMasked,
+  TCustomImageList_GetBkColor,
+  TCustomImageList_SetBkColor,
+  TCustomImageList_GetDrawingStyle,
+  TCustomImageList_SetDrawingStyle,
+  TCustomImageList_Add,
+  TCustomImageList_AddSliced,
+  TCustomImageList_AddMasked,
+  TCustomImageList_Insert,
+  TCustomImageList_Replace,
+  TCustomImageList_Delete,
+  TCustomImageList_Clear,
+  TCustomImageList_Move,
+  TCustomImageList_GetBitmap,
+  TCustomImageList_Draw,
+  TCustomImageList_BeginUpdate,
+  TCustomImageList_EndUpdate,
+  TCustomImageList_SetOnChange,
+  TCustomImage_GetImages,
+  TCustomImage_SetImages,
+  TCustomImage_GetImageIndex,
+  TCustomImage_SetImageIndex,
+  TCustomBitBtn_GetImages,
+  TCustomBitBtn_SetImages,
+  TCustomBitBtn_GetImageIndex,
+  TCustomBitBtn_SetImageIndex,
+  TCustomSpeedButton_GetImages,
+  TCustomSpeedButton_SetImages,
+  TCustomSpeedButton_GetImageIndex,
+  TCustomSpeedButton_SetImageIndex,
+  TCustomTabControl_GetImages,
+  TCustomTabControl_SetImages,
+  TCustomPage_GetImageIndex,
+  TCustomPage_SetImageIndex,
+  TCustomTreeView_GetImages,
+  TCustomTreeView_SetImages,
+  TCustomTreeView_GetStateImages,
+  TCustomTreeView_SetStateImages,
+  TTreeNode_GetImageIndex,
+  TTreeNode_SetImageIndex,
+  TTreeNode_GetSelectedIndex,
+  TTreeNode_SetSelectedIndex,
+  TTreeNode_GetStateIndex,
+  TTreeNode_SetStateIndex,
+  TTreeNode_GetOverlayIndex,
+  TTreeNode_SetOverlayIndex,
+  TListView_GetLargeImages,
+  TListView_SetLargeImages,
+  TListView_GetSmallImages,
+  TListView_SetSmallImages,
+  TListView_GetStateImages,
+  TListView_SetStateImages,
+  TListItem_GetImageIndex,
+  TListItem_SetImageIndex,
+  TListItem_GetStateIndex,
+  TListItem_SetStateIndex,
+  TListColumn_GetImageIndex,
+  TListColumn_SetImageIndex,
+  TToolBar_GetImages,
+  TToolBar_SetImages,
+  TToolBar_GetHotImages,
+  TToolBar_SetHotImages,
+  TToolBar_GetDisabledImages,
+  TToolBar_SetDisabledImages,
+  TToolButton_GetImageIndex,
+  TToolButton_SetImageIndex,
+  TCustomHeaderControl_GetImages,
+  TCustomHeaderControl_SetImages,
+  THeaderSection_GetImageIndex,
+  THeaderSection_SetImageIndex,
+  TCustomCoolBar_GetImages,
+  TCustomCoolBar_SetImages,
+  TCustomCoolBar_GetBitmap,
+  TCustomCoolBar_SetBitmap,
+  TCoolBand_GetImageIndex,
+  TCoolBand_SetImageIndex,
+  TCoolBand_GetBitmap,
+  TCoolBand_SetBitmap,
+  TMenu_GetImages,
+  TMenu_SetImages,
+  TMenuItem_GetImageIndex,
+  TMenuItem_SetImageIndex,
+  TMenuItem_GetSubMenuImages,
+  TMenuItem_SetSubMenuImages,
+  TMenuItem_GetBitmap,
+  TMenuItem_SetBitmap;
 
 begin
   RequireDerivedFormResource := False;

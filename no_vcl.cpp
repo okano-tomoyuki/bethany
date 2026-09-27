@@ -1033,6 +1033,8 @@ TCustomSpeedButton::TCustomSpeedButton(no_vcl_obj_t handle)
     , Layout(this, &TCustomSpeedButton::GetLayoutImpl, &TCustomSpeedButton::SetLayoutImpl)
     , Margin(this, &TCustomSpeedButton::GetMarginImpl, &TCustomSpeedButton::SetMarginImpl)
     , Spacing(this, &TCustomSpeedButton::GetSpacingImpl, &TCustomSpeedButton::SetSpacingImpl)
+    , Images(this, &TCustomSpeedButton::GetImagesImpl, &TCustomSpeedButton::SetImagesImpl)
+    , ImageIndex(this, &TCustomSpeedButton::GetImageIndexImpl, &TCustomSpeedButton::SetImageIndexImpl)
     , glyph_(this, &no_vcl_TCustomSpeedButton_GetGlyph)
 {}
 
@@ -1095,6 +1097,8 @@ TCustomBitBtn::TCustomBitBtn(no_vcl_obj_t handle)
     , Layout(this, &TCustomBitBtn::GetLayoutImpl, &TCustomBitBtn::SetLayoutImpl)
     , Margin(this, &TCustomBitBtn::GetMarginImpl, &TCustomBitBtn::SetMarginImpl)
     , Spacing(this, &TCustomBitBtn::GetSpacingImpl, &TCustomBitBtn::SetSpacingImpl)
+    , Images(this, &TCustomBitBtn::GetImagesImpl, &TCustomBitBtn::SetImagesImpl)
+    , ImageIndex(this, &TCustomBitBtn::GetImageIndexImpl, &TCustomBitBtn::SetImageIndexImpl)
     , glyph_(this, &no_vcl_TCustomBitBtn_GetGlyph)
 {}
 
@@ -1286,6 +1290,7 @@ TCustomTabControl::TCustomTabControl(no_vcl_obj_t handle)
     , ShowTabs(this, &TCustomTabControl::GetShowTabsImpl, &TCustomTabControl::SetShowTabsImpl)
     , TabPosition(this, &TCustomTabControl::GetTabPositionImpl, &TCustomTabControl::SetTabPositionImpl)
     , OnChanging(this, &TCustomTabControl::GetOnChangingImpl, &TCustomTabControl::SetOnChangingImpl)
+    , Images(this, &TCustomTabControl::GetImagesImpl, &TCustomTabControl::SetImagesImpl)
 {}
 
 int  TCustomTabControl::GetPageCountImpl(TObject* owner)                 { return no_vcl_TCustomTabControl_GetPageCount(owner->Handle()); }
@@ -1358,6 +1363,7 @@ TCustomPage::TCustomPage(no_vcl_obj_t handle)
     , TabVisible(this, &TCustomPage::GetTabVisibleImpl, &TCustomPage::SetTabVisibleImpl)
     , OnShow(this, &TCustomPage::GetOnShowImpl, &TCustomPage::SetOnShowImpl)
     , OnHide(this, &TCustomPage::GetOnHideImpl, &TCustomPage::SetOnHideImpl)
+    , ImageIndex(this, &TCustomPage::GetImageIndexImpl, &TCustomPage::SetImageIndexImpl)
 {}
 
 int  TCustomPage::GetPageIndexImpl(TObject* owner)                   { return no_vcl_TCustomPage_GetPageIndex(owner->Handle()); }
@@ -1465,6 +1471,10 @@ TTreeNode::TTreeNode(no_vcl_obj_t handle)
     , Parent(this, &TTreeNode::GetParentImpl)
     , TreeView(this, &TTreeNode::GetTreeViewImpl)
     , Items(this, &TTreeNode::GetItemsImpl)
+    , ImageIndex(this, &TTreeNode::GetImageIndexImpl, &TTreeNode::SetImageIndexImpl)
+    , SelectedIndex(this, &TTreeNode::GetSelectedIndexImpl, &TTreeNode::SetSelectedIndexImpl)
+    , StateIndex(this, &TTreeNode::GetStateIndexImpl, &TTreeNode::SetStateIndexImpl)
+    , OverlayIndex(this, &TTreeNode::GetOverlayIndexImpl, &TTreeNode::SetOverlayIndexImpl)
 {}
 
 TTreeNode* TTreeNode::GetItemsImpl(TObject* owner, int Index) { return Wrap(no_vcl_TTreeNode_GetItem(owner->Handle(), Index)); }
@@ -1562,6 +1572,8 @@ TCustomTreeView::TCustomTreeView(no_vcl_obj_t handle)
     : TCustomControl(handle)
     , Items(this, &TCustomTreeView::GetItemsImpl)
     , Selected(this, &TCustomTreeView::GetSelectedImpl, &TCustomTreeView::SetSelectedImpl)
+    , Images(this, &TCustomTreeView::GetImagesImpl, &TCustomTreeView::SetImagesImpl)
+    , StateImages(this, &TCustomTreeView::GetStateImagesImpl, &TCustomTreeView::SetStateImagesImpl)
     , items_(no_vcl_TCustomTreeView_GetItems(handle))
 {}
 
@@ -1732,6 +1744,8 @@ TListItem::TListItem(no_vcl_obj_t handle)
     , Index(this, &TListItem::GetIndexImpl)
     , ListView(this, &TListItem::GetListViewImpl)
     , SubItems(this, &TListItem::GetSubItemsImpl)
+    , ImageIndex(this, &TListItem::GetImageIndexImpl, &TListItem::SetImageIndexImpl)
+    , StateIndex(this, &TListItem::GetStateIndexImpl, &TListItem::SetStateIndexImpl)
     , subItems_(this, &no_vcl_TListItem_GetSubItems)
 {}
 
@@ -1789,6 +1803,7 @@ TListColumn::TListColumn(no_vcl_obj_t handle)
     , AutoSize(this, &TListColumn::GetAutoSizeImpl, &TListColumn::SetAutoSizeImpl)
     , Visible(this, &TListColumn::GetVisibleImpl, &TListColumn::SetVisibleImpl)
     , Index(this, &TListColumn::GetIndexImpl, &TListColumn::SetIndexImpl)
+    , ImageIndex(this, &TListColumn::GetImageIndexImpl, &TListColumn::SetImageIndexImpl)
 {}
 
 std::string TListColumn::GetCaptionImpl(TObject* owner) { return std::string(no_vcl_TListColumn_GetCaption(owner->Handle())); }
@@ -1871,6 +1886,9 @@ TListView::TListView(TComponent* AOwner)
     , OnDeletion(this, &TListView::GetOnDeletionImpl, &TListView::SetOnDeletionImpl)
     , OnItemChecked(this, &TListView::GetOnItemCheckedImpl, &TListView::SetOnItemCheckedImpl)
     , OnColumnClick(this, &TListView::GetOnColumnClickImpl, &TListView::SetOnColumnClickImpl)
+    , LargeImages(this, &TListView::GetLargeImagesImpl, &TListView::SetLargeImagesImpl)
+    , SmallImages(this, &TListView::GetSmallImagesImpl, &TListView::SetSmallImagesImpl)
+    , StateImages(this, &TListView::GetStateImagesImpl, &TListView::SetStateImagesImpl)
     , columns_(no_vcl_TListView_GetColumns(handle_))
 {}
 
@@ -2462,6 +2480,8 @@ TCustomImage::TCustomImage(no_vcl_obj_t handle)
     , Proportional(this, &TCustomImage::GetProportionalImpl, &TCustomImage::SetProportionalImpl)
     , Transparent(this, &TCustomImage::GetTransparentImpl, &TCustomImage::SetTransparentImpl)
     , OnPictureChanged(this, &TCustomImage::GetOnPictureChangedImpl, &TCustomImage::SetOnPictureChangedImpl)
+    , Images(this, &TCustomImage::GetImagesImpl, &TCustomImage::SetImagesImpl)
+    , ImageIndex(this, &TCustomImage::GetImageIndexImpl, &TCustomImage::SetImageIndexImpl)
     , picture_(no_vcl_TCustomImage_GetPicture(handle), false)
 {}
 
@@ -2557,6 +2577,92 @@ TTimer::TTimer(TComponent* AOwner)
     : TCustomTimer(no_vcl_TTimer_Create(HandleOf(AOwner)))
 {}
 
+/* ---------------- ImageList ---------------- */
+
+TCustomImageList::TCustomImageList(no_vcl_obj_t handle)
+    : TComponent(handle)
+    , Width(this, &TCustomImageList::GetWidthImpl, &TCustomImageList::SetWidthImpl)
+    , Height(this, &TCustomImageList::GetHeightImpl, &TCustomImageList::SetHeightImpl)
+    , Count(this, &TCustomImageList::GetCountImpl)
+    , Masked(this, &TCustomImageList::GetMaskedImpl, &TCustomImageList::SetMaskedImpl)
+    , BkColor(this, &TCustomImageList::GetBkColorImpl, &TCustomImageList::SetBkColorImpl)
+    , DrawingStyle(this, &TCustomImageList::GetDrawingStyleImpl, &TCustomImageList::SetDrawingStyleImpl)
+    , OnChange(this, &TCustomImageList::GetOnChangeImpl, &TCustomImageList::SetOnChangeImpl)
+{}
+
+int TCustomImageList::Add(const TCustomBitmap* Image, const TCustomBitmap* Mask)
+{
+    return no_vcl_TCustomImageList_Add(handle_, Image ? Image->Current() : nullptr, Mask ? Mask->Current() : nullptr);
+}
+int TCustomImageList::AddSliced(const TCustomBitmap* Image, int AHorizontalCount, int AVerticalCount)
+{
+    return no_vcl_TCustomImageList_AddSliced(handle_, Image ? Image->Current() : nullptr, AHorizontalCount, AVerticalCount);
+}
+int TCustomImageList::AddMasked(const TBitmap* Image, TColor MaskColor)
+{
+    return no_vcl_TCustomImageList_AddMasked(handle_, Image ? Image->Current() : nullptr, MaskColor);
+}
+void TCustomImageList::Insert(int Index, const TCustomBitmap* Image, const TCustomBitmap* Mask)
+{
+    no_vcl_TCustomImageList_Insert(handle_, Index, Image ? Image->Current() : nullptr, Mask ? Mask->Current() : nullptr);
+}
+void TCustomImageList::Replace(int Index, const TCustomBitmap* Image, const TCustomBitmap* Mask)
+{
+    no_vcl_TCustomImageList_Replace(handle_, Index, Image ? Image->Current() : nullptr, Mask ? Mask->Current() : nullptr);
+}
+void TCustomImageList::Delete(int Index)                  { no_vcl_TCustomImageList_Delete(handle_, Index); }
+void TCustomImageList::Clear()                            { no_vcl_TCustomImageList_Clear(handle_); }
+void TCustomImageList::Move(int CurIndex, int NewIndex)   { no_vcl_TCustomImageList_Move(handle_, CurIndex, NewIndex); }
+void TCustomImageList::GetBitmap(int Index, TCustomBitmap* Image) const
+{
+    if (Image)
+        no_vcl_TCustomImageList_GetBitmap(handle_, Index, Image->Current());
+}
+void TCustomImageList::Draw(TCanvas* Canvas, int X, int Y, int Index, bool Enabled) const
+{
+    if (Canvas)
+        no_vcl_TCustomImageList_Draw(handle_, Canvas->Handle(), X, Y, Index, Enabled ? 1 : 0);
+}
+void TCustomImageList::BeginUpdate() { no_vcl_TCustomImageList_BeginUpdate(handle_); }
+void TCustomImageList::EndUpdate()   { no_vcl_TCustomImageList_EndUpdate(handle_); }
+
+int    TCustomImageList::GetWidthImpl(TObject* owner)                   { return no_vcl_TCustomImageList_GetWidth(owner->Handle()); }
+void   TCustomImageList::SetWidthImpl(TObject* owner, const int& value) { no_vcl_TCustomImageList_SetWidth(owner->Handle(), value); }
+int    TCustomImageList::GetHeightImpl(TObject* owner)                  { return no_vcl_TCustomImageList_GetHeight(owner->Handle()); }
+void   TCustomImageList::SetHeightImpl(TObject* owner, const int& value) { no_vcl_TCustomImageList_SetHeight(owner->Handle(), value); }
+int    TCustomImageList::GetCountImpl(TObject* owner)                   { return no_vcl_TCustomImageList_GetCount(owner->Handle()); }
+bool   TCustomImageList::GetMaskedImpl(TObject* owner)                  { return no_vcl_TCustomImageList_GetMasked(owner->Handle()) != 0; }
+void   TCustomImageList::SetMaskedImpl(TObject* owner, const bool& value) { no_vcl_TCustomImageList_SetMasked(owner->Handle(), value ? 1 : 0); }
+TColor TCustomImageList::GetBkColorImpl(TObject* owner)                 { return static_cast<TColor>(no_vcl_TCustomImageList_GetBkColor(owner->Handle())); }
+void   TCustomImageList::SetBkColorImpl(TObject* owner, const TColor& value) { no_vcl_TCustomImageList_SetBkColor(owner->Handle(), value); }
+TDrawingStyle TCustomImageList::GetDrawingStyleImpl(TObject* owner)
+{
+    return static_cast<TDrawingStyle>(no_vcl_TCustomImageList_GetDrawingStyle(owner->Handle()));
+}
+void TCustomImageList::SetDrawingStyleImpl(TObject* owner, const TDrawingStyle& value)
+{
+    no_vcl_TCustomImageList_SetDrawingStyle(owner->Handle(), value);
+}
+
+void NO_VCL_CALL TCustomImageList::ChangeTrampoline(no_vcl_obj_t sender, void*)
+{
+    if (TCustomImageList* self = static_cast<TCustomImageList*>(FromHandle(sender)))
+        CallNotify(self->onChange_, self);
+}
+
+TNotifyEvent TCustomImageList::GetOnChangeImpl(TObject* owner) { return static_cast<TCustomImageList*>(owner)->onChange_; }
+
+void TCustomImageList::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCustomImageList* self = static_cast<TCustomImageList*>(owner);
+    SetSimpleEvent(self->handle_, self->onChange_, self->onChangeHooked_, value,
+                   &no_vcl_TCustomImageList_SetOnChange, &TCustomImageList::ChangeTrampoline);
+}
+
+TImageList::TImageList(TComponent* AOwner)
+    : TCustomImageList(no_vcl_TImageList_Create(HandleOf(AOwner)))
+{}
+
 /* ---------------- メニュー ---------------- */
 
 TShortCut ShortCut(unsigned short Key, TShiftState Shift)
@@ -2594,6 +2700,10 @@ TMenuItem::TMenuItem(no_vcl_obj_t handle)
     , Count(this, &TMenuItem::GetCountImpl)
     , Parent(this, &TMenuItem::GetParentImpl)
     , Items(this, &TMenuItem::GetItemsImpl)
+    , ImageIndex(this, &TMenuItem::GetImageIndexImpl, &TMenuItem::SetImageIndexImpl)
+    , SubMenuImages(this, &TMenuItem::GetSubMenuImagesImpl, &TMenuItem::SetSubMenuImagesImpl)
+    , Bitmap(this, &TMenuItem::GetBitmapImpl, &TMenuItem::SetBitmapImpl)
+    , bitmap_(this, &no_vcl_TMenuItem_GetBitmap)
 {}
 
 TMenuItem* TMenuItem::GetItemsImpl(TObject* owner, int Index) { return WrapExisting<TMenuItem>(no_vcl_TMenuItem_GetItem(owner->Handle(), Index)); }
@@ -2648,6 +2758,7 @@ void NO_VCL_CALL TMenuItem::ClickTrampoline(no_vcl_obj_t sender, void*)
 TMenu::TMenu(no_vcl_obj_t handle)
     : TComponent(handle)
     , Items(this, &TMenu::GetItemsImpl)
+    , Images(this, &TMenu::GetImagesImpl, &TMenu::SetImagesImpl)
 {}
 
 TMenuItem* TMenu::GetItemsImpl(TObject* owner) { return WrapExisting<TMenuItem>(no_vcl_TMenu_GetItems(owner->Handle())); }
@@ -2913,6 +3024,7 @@ THeaderSection::THeaderSection(no_vcl_obj_t handle)
     , Left(this, &THeaderSection::GetLeftImpl)
     , Right(this, &THeaderSection::GetRightImpl)
     , OriginalIndex(this, &THeaderSection::GetOriginalIndexImpl)
+    , ImageIndex(this, &THeaderSection::GetImageIndexImpl, &THeaderSection::SetImageIndexImpl)
 {}
 
 std::string THeaderSection::GetTextImpl(TObject* owner) { return std::string(no_vcl_THeaderSection_GetText(owner->Handle())); }
@@ -2959,6 +3071,7 @@ TCustomHeaderControl::TCustomHeaderControl(no_vcl_obj_t handle)
     , OnSectionTrack(this, &TCustomHeaderControl::GetOnSectionTrackImpl, &TCustomHeaderControl::SetOnSectionTrackImpl)
     , OnSectionDrag(this, &TCustomHeaderControl::GetOnSectionDragImpl, &TCustomHeaderControl::SetOnSectionDragImpl)
     , OnSectionEndDrag(this, &TCustomHeaderControl::GetOnSectionEndDragImpl, &TCustomHeaderControl::SetOnSectionEndDragImpl)
+    , Images(this, &TCustomHeaderControl::GetImagesImpl, &TCustomHeaderControl::SetImagesImpl)
     , sections_(no_vcl_TCustomHeaderControl_GetSections(handle_))
 {}
 
@@ -3118,6 +3231,9 @@ TToolBar::TToolBar(TComponent* AOwner)
     , ShowCaptions(this, &TToolBar::GetShowCaptionsImpl, &TToolBar::SetShowCaptionsImpl)
     , Transparent(this, &TToolBar::GetTransparentImpl, &TToolBar::SetTransparentImpl)
     , Wrapable(this, &TToolBar::GetWrapableImpl, &TToolBar::SetWrapableImpl)
+    , Images(this, &TToolBar::GetImagesImpl, &TToolBar::SetImagesImpl)
+    , HotImages(this, &TToolBar::GetHotImagesImpl, &TToolBar::SetHotImagesImpl)
+    , DisabledImages(this, &TToolBar::GetDisabledImagesImpl, &TToolBar::SetDisabledImagesImpl)
 {}
 
 void TToolBar::SetButtonSize(int NewButtonWidth, int NewButtonHeight)
@@ -3165,6 +3281,7 @@ TToolButton::TToolButton(TComponent* AOwner)
     , MenuItem(this, &TToolButton::GetMenuItemImpl, &TToolButton::SetMenuItemImpl)
     , OnArrowClick(this, &TToolButton::GetOnArrowClickImpl, &TToolButton::SetOnArrowClickImpl)
     , Index(this, &TToolButton::GetIndexImpl)
+    , ImageIndex(this, &TToolButton::GetImageIndexImpl, &TToolButton::SetImageIndexImpl)
 {}
 
 void TToolButton::Click()      { no_vcl_TToolButton_Click(handle_); }
@@ -3233,6 +3350,9 @@ TCoolBand::TCoolBand(no_vcl_obj_t handle)
     , Top(this, &TCoolBand::GetTopImpl)
     , Right(this, &TCoolBand::GetRightImpl)
     , Height(this, &TCoolBand::GetHeightImpl)
+    , ImageIndex(this, &TCoolBand::GetImageIndexImpl, &TCoolBand::SetImageIndexImpl)
+    , Bitmap(this, &TCoolBand::GetBitmapImpl, &TCoolBand::SetBitmapImpl)
+    , bitmap_(this, &no_vcl_TCoolBand_GetBitmap)
 {}
 
 void TCoolBand::AutosizeWidth() { no_vcl_TCoolBand_AutosizeWidth(handle_); }
@@ -3301,7 +3421,10 @@ TCustomCoolBar::TCustomCoolBar(no_vcl_obj_t handle)
     , Themed(this, &TCustomCoolBar::GetThemedImpl, &TCustomCoolBar::SetThemedImpl)
     , Vertical(this, &TCustomCoolBar::GetVerticalImpl, &TCustomCoolBar::SetVerticalImpl)
     , OnChange(this, &TCustomCoolBar::GetOnChangeImpl, &TCustomCoolBar::SetOnChangeImpl)
+    , Images(this, &TCustomCoolBar::GetImagesImpl, &TCustomCoolBar::SetImagesImpl)
+    , Bitmap(this, &TCustomCoolBar::GetBitmapImpl, &TCustomCoolBar::SetBitmapImpl)
     , bands_(no_vcl_TCustomCoolBar_GetBands(handle_))
+    , bitmap_(this, &no_vcl_TCustomCoolBar_GetBitmap)
 {}
 
 void TCustomCoolBar::AutosizeBands() { no_vcl_TCustomCoolBar_AutosizeBands(handle_); }
@@ -3353,5 +3476,103 @@ void TCustomCoolBar::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value)
 TCoolBar::TCoolBar(TComponent* AOwner)
     : TCustomCoolBar(no_vcl_TCoolBar_Create(HandleOf(AOwner)))
 {}
+
+
+/* ---------------- Images・ImageIndex・Bitmap(docs/adr/0030) ---------------- */
+
+TCustomImageList* TCustomImage::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TCustomImage_GetImages(owner->Handle()))); }
+void TCustomImage::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TCustomImage_SetImages(owner->Handle(), HandleOf(value)); }
+int  TCustomImage::GetImageIndexImpl(TObject* owner) { return no_vcl_TCustomImage_GetImageIndex(owner->Handle()); }
+void TCustomImage::SetImageIndexImpl(TObject* owner, const int& value) { no_vcl_TCustomImage_SetImageIndex(owner->Handle(), value); }
+
+TCustomImageList* TCustomBitBtn::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TCustomBitBtn_GetImages(owner->Handle()))); }
+void TCustomBitBtn::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TCustomBitBtn_SetImages(owner->Handle(), HandleOf(value)); }
+int  TCustomBitBtn::GetImageIndexImpl(TObject* owner) { return no_vcl_TCustomBitBtn_GetImageIndex(owner->Handle()); }
+void TCustomBitBtn::SetImageIndexImpl(TObject* owner, const int& value) { no_vcl_TCustomBitBtn_SetImageIndex(owner->Handle(), value); }
+
+TCustomImageList* TCustomSpeedButton::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TCustomSpeedButton_GetImages(owner->Handle()))); }
+void TCustomSpeedButton::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TCustomSpeedButton_SetImages(owner->Handle(), HandleOf(value)); }
+int  TCustomSpeedButton::GetImageIndexImpl(TObject* owner) { return no_vcl_TCustomSpeedButton_GetImageIndex(owner->Handle()); }
+void TCustomSpeedButton::SetImageIndexImpl(TObject* owner, const int& value) { no_vcl_TCustomSpeedButton_SetImageIndex(owner->Handle(), value); }
+
+TCustomImageList* TCustomTabControl::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TCustomTabControl_GetImages(owner->Handle()))); }
+void TCustomTabControl::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TCustomTabControl_SetImages(owner->Handle(), HandleOf(value)); }
+
+int  TCustomPage::GetImageIndexImpl(TObject* owner) { return no_vcl_TCustomPage_GetImageIndex(owner->Handle()); }
+void TCustomPage::SetImageIndexImpl(TObject* owner, const int& value) { no_vcl_TCustomPage_SetImageIndex(owner->Handle(), value); }
+
+TCustomImageList* TCustomTreeView::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TCustomTreeView_GetImages(owner->Handle()))); }
+void TCustomTreeView::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TCustomTreeView_SetImages(owner->Handle(), HandleOf(value)); }
+TCustomImageList* TCustomTreeView::GetStateImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TCustomTreeView_GetStateImages(owner->Handle()))); }
+void TCustomTreeView::SetStateImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TCustomTreeView_SetStateImages(owner->Handle(), HandleOf(value)); }
+
+int  TTreeNode::GetImageIndexImpl(TObject* owner) { return no_vcl_TTreeNode_GetImageIndex(owner->Handle()); }
+void TTreeNode::SetImageIndexImpl(TObject* owner, const int& value) { no_vcl_TTreeNode_SetImageIndex(owner->Handle(), value); }
+int  TTreeNode::GetSelectedIndexImpl(TObject* owner) { return no_vcl_TTreeNode_GetSelectedIndex(owner->Handle()); }
+void TTreeNode::SetSelectedIndexImpl(TObject* owner, const int& value) { no_vcl_TTreeNode_SetSelectedIndex(owner->Handle(), value); }
+int  TTreeNode::GetStateIndexImpl(TObject* owner) { return no_vcl_TTreeNode_GetStateIndex(owner->Handle()); }
+void TTreeNode::SetStateIndexImpl(TObject* owner, const int& value) { no_vcl_TTreeNode_SetStateIndex(owner->Handle(), value); }
+int  TTreeNode::GetOverlayIndexImpl(TObject* owner) { return no_vcl_TTreeNode_GetOverlayIndex(owner->Handle()); }
+void TTreeNode::SetOverlayIndexImpl(TObject* owner, const int& value) { no_vcl_TTreeNode_SetOverlayIndex(owner->Handle(), value); }
+
+TCustomImageList* TListView::GetLargeImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TListView_GetLargeImages(owner->Handle()))); }
+void TListView::SetLargeImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TListView_SetLargeImages(owner->Handle(), HandleOf(value)); }
+TCustomImageList* TListView::GetSmallImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TListView_GetSmallImages(owner->Handle()))); }
+void TListView::SetSmallImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TListView_SetSmallImages(owner->Handle(), HandleOf(value)); }
+TCustomImageList* TListView::GetStateImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TListView_GetStateImages(owner->Handle()))); }
+void TListView::SetStateImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TListView_SetStateImages(owner->Handle(), HandleOf(value)); }
+
+int  TListItem::GetImageIndexImpl(TObject* owner) { return no_vcl_TListItem_GetImageIndex(owner->Handle()); }
+void TListItem::SetImageIndexImpl(TObject* owner, const int& value) { no_vcl_TListItem_SetImageIndex(owner->Handle(), value); }
+int  TListItem::GetStateIndexImpl(TObject* owner) { return no_vcl_TListItem_GetStateIndex(owner->Handle()); }
+void TListItem::SetStateIndexImpl(TObject* owner, const int& value) { no_vcl_TListItem_SetStateIndex(owner->Handle(), value); }
+
+int  TListColumn::GetImageIndexImpl(TObject* owner) { return no_vcl_TListColumn_GetImageIndex(owner->Handle()); }
+void TListColumn::SetImageIndexImpl(TObject* owner, const int& value) { no_vcl_TListColumn_SetImageIndex(owner->Handle(), value); }
+
+TCustomImageList* TToolBar::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TToolBar_GetImages(owner->Handle()))); }
+void TToolBar::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TToolBar_SetImages(owner->Handle(), HandleOf(value)); }
+TCustomImageList* TToolBar::GetHotImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TToolBar_GetHotImages(owner->Handle()))); }
+void TToolBar::SetHotImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TToolBar_SetHotImages(owner->Handle(), HandleOf(value)); }
+TCustomImageList* TToolBar::GetDisabledImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TToolBar_GetDisabledImages(owner->Handle()))); }
+void TToolBar::SetDisabledImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TToolBar_SetDisabledImages(owner->Handle(), HandleOf(value)); }
+
+int  TToolButton::GetImageIndexImpl(TObject* owner) { return no_vcl_TToolButton_GetImageIndex(owner->Handle()); }
+void TToolButton::SetImageIndexImpl(TObject* owner, const int& value) { no_vcl_TToolButton_SetImageIndex(owner->Handle(), value); }
+
+TCustomImageList* TCustomHeaderControl::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TCustomHeaderControl_GetImages(owner->Handle()))); }
+void TCustomHeaderControl::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TCustomHeaderControl_SetImages(owner->Handle(), HandleOf(value)); }
+
+int  THeaderSection::GetImageIndexImpl(TObject* owner) { return no_vcl_THeaderSection_GetImageIndex(owner->Handle()); }
+void THeaderSection::SetImageIndexImpl(TObject* owner, const int& value) { no_vcl_THeaderSection_SetImageIndex(owner->Handle(), value); }
+
+TCustomImageList* TCustomCoolBar::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TCustomCoolBar_GetImages(owner->Handle()))); }
+void TCustomCoolBar::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TCustomCoolBar_SetImages(owner->Handle(), HandleOf(value)); }
+TBitmap* TCustomCoolBar::GetBitmapImpl(TObject* owner) { return &static_cast<TCustomCoolBar*>(owner)->bitmap_; }
+void TCustomCoolBar::SetBitmapImpl(TObject* owner, TBitmap* const& value)
+{
+    no_vcl_TCustomCoolBar_SetBitmap(owner->Handle(), value ? value->Current() : nullptr);
+}
+
+int  TCoolBand::GetImageIndexImpl(TObject* owner) { return no_vcl_TCoolBand_GetImageIndex(owner->Handle()); }
+void TCoolBand::SetImageIndexImpl(TObject* owner, const int& value) { no_vcl_TCoolBand_SetImageIndex(owner->Handle(), value); }
+TBitmap* TCoolBand::GetBitmapImpl(TObject* owner) { return &static_cast<TCoolBand*>(owner)->bitmap_; }
+void TCoolBand::SetBitmapImpl(TObject* owner, TBitmap* const& value)
+{
+    no_vcl_TCoolBand_SetBitmap(owner->Handle(), value ? value->Current() : nullptr);
+}
+
+TCustomImageList* TMenu::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TMenu_GetImages(owner->Handle()))); }
+void TMenu::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TMenu_SetImages(owner->Handle(), HandleOf(value)); }
+
+int  TMenuItem::GetImageIndexImpl(TObject* owner) { return no_vcl_TMenuItem_GetImageIndex(owner->Handle()); }
+void TMenuItem::SetImageIndexImpl(TObject* owner, const int& value) { no_vcl_TMenuItem_SetImageIndex(owner->Handle(), value); }
+TCustomImageList* TMenuItem::GetSubMenuImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TMenuItem_GetSubMenuImages(owner->Handle()))); }
+void TMenuItem::SetSubMenuImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TMenuItem_SetSubMenuImages(owner->Handle(), HandleOf(value)); }
+TBitmap* TMenuItem::GetBitmapImpl(TObject* owner) { return &static_cast<TMenuItem*>(owner)->bitmap_; }
+void TMenuItem::SetBitmapImpl(TObject* owner, TBitmap* const& value)
+{
+    no_vcl_TMenuItem_SetBitmap(owner->Handle(), value ? value->Current() : nullptr);
+}
 
 } // namespace no_vcl

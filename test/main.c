@@ -737,6 +737,21 @@ int main(void)
                no_vcl_TCustomImage_GetHasGraphic(image) != 0, no_vcl_TControl_GetAutoSize(image) != 0,
                no_vcl_TPicture_GetGraphic(pic) == NULL ? "yes" : "no");
 
+        /* TImageList(docs/adr/0030)。TComponent なので Owner(フォーム)に破棄を任せる。
+           20x10 の画像を AddSliced で 10x10 の 2 つに分けて加え、TImage の Images・ImageIndex に設定する。 */
+        {
+            no_vcl_obj_t imageList = no_vcl_TImageList_Create(form);
+            int first;
+            no_vcl_TCustomImageList_SetWidth(imageList, 10);
+            no_vcl_TCustomImageList_SetHeight(imageList, 10);
+            first = no_vcl_TCustomImageList_AddSliced(imageList, bmp, 2, 1);
+            no_vcl_TCustomImage_SetImages(image, imageList);
+            no_vcl_TCustomImage_SetImageIndex(image, 1);
+            printf("C TImageList AddSliced: first=%d (expected 0), Count=%d (expected 2), TImage Images is the list: %s, ImageIndex=%d (expected 1)\n",
+                   first, no_vcl_TCustomImageList_GetCount(imageList),
+                   no_vcl_TCustomImage_GetImages(image) == imageList ? "yes" : "no", no_vcl_TCustomImage_GetImageIndex(image));
+        }
+
         no_vcl_TPicture_Destroy(pic);
         no_vcl_TGraphic_Destroy(png);
         no_vcl_TGraphic_Destroy(bmp);
@@ -1087,7 +1102,7 @@ int main(void)
     /* Application が所有するフォーム(と、フォームが所有するコントロール)をまとめて破棄する。
        呼ばなくても DLL の切り離し時に LCL が破棄するが、そのときは破棄通知が呼ばれない。 */
     no_vcl_TComponent_DestroyComponents(app);
-    printf("Clicks: %d, Freed components: %d (expected 74: form + 66 owned + 7 created inside LCL: 2 menu roots, a separator, 3 AddTabSheet pages and an EditLabel)\n", clickCount, freedCount);
+    printf("Clicks: %d, Freed components: %d (expected 75: form + 67 owned + 7 created inside LCL: 2 menu roots, a separator, 3 AddTabSheet pages and an EditLabel)\n", clickCount, freedCount);
     /* ツリービュー・リストビュー・ヘッダーコントロールの破棄に伴って、残りのノード(4 つ)・リストビューの項目(2 つ)と列(2 つ)・
        セクション(2 つ)・バンド(1 つ)も破棄通知が届く。 */
     printf("Items freed: %d (expected 17: tree 2 deleted + 4 with the tree view, list 1 item + 1 column deleted "

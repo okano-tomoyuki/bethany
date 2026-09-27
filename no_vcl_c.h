@@ -1504,6 +1504,137 @@ void          NO_VCL_CALL no_vcl_TCustomSpeedButton_SetMargin(no_vcl_obj_t Obj, 
 no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomSpeedButton_GetSpacing(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TCustomSpeedButton_SetSpacing(no_vcl_obj_t Obj, no_vcl_int_t Value);
 
+/* ---------------- TImageList(docs/adr/0030) ----------------
+ * 画像リスト。TComponent なので、他のコンポーネントと同じく Owner に任せるか no_vcl_TComponent_Destroy で破棄する。
+ * 画像を受け取る関数は、画像を写して加える(渡したグラフィックは呼び出し側の持ち物のまま)。Image・Mask は
+ * TBitmap・TPortableNetworkGraphic・TJPEGImage のハンドルで、Mask は NULL でよい。
+ * Add・Insert 等は、画像を Width・Height の大きさに伸縮して 1 つとして加える(VCL と違い、幅が Width の倍数でも分けない)。
+ * 横に並んだ複数の画像を分けて加えるのは no_vcl_TCustomImageList_AddSliced。 */
+enum { no_vcl_dsFocus = 0, no_vcl_dsSelected, no_vcl_dsNormal, no_vcl_dsTransparent };
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TImageList_Create(no_vcl_obj_t Owner);
+/* 画像の大きさ(既定は 16x16)。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomImageList_GetWidth(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomImageList_SetWidth(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomImageList_GetHeight(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomImageList_SetHeight(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomImageList_GetCount(no_vcl_obj_t Obj);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomImageList_GetMasked(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomImageList_SetMasked(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomImageList_GetBkColor(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomImageList_SetBkColor(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomImageList_GetDrawingStyle(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomImageList_SetDrawingStyle(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomImageList_Add(no_vcl_obj_t Obj, no_vcl_obj_t Image, no_vcl_obj_t Mask);
+/* Image を横 AHorizontalCount・縦 AVerticalCount に分けて、それぞれを画像として加える。加えた最初の画像の位置を返す。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomImageList_AddSliced(no_vcl_obj_t Obj, no_vcl_obj_t Image, no_vcl_int_t AHorizontalCount, no_vcl_int_t AVerticalCount);
+/* MaskColor の画素を透明として加える。Image は TBitmap のハンドル。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomImageList_AddMasked(no_vcl_obj_t Obj, no_vcl_obj_t Image, no_vcl_int_t MaskColor);
+void          NO_VCL_CALL no_vcl_TCustomImageList_Insert(no_vcl_obj_t Obj, no_vcl_int_t Index, no_vcl_obj_t Image, no_vcl_obj_t Mask);
+void          NO_VCL_CALL no_vcl_TCustomImageList_Replace(no_vcl_obj_t Obj, no_vcl_int_t Index, no_vcl_obj_t Image, no_vcl_obj_t Mask);
+void          NO_VCL_CALL no_vcl_TCustomImageList_Delete(no_vcl_obj_t Obj, no_vcl_int_t Index);
+void          NO_VCL_CALL no_vcl_TCustomImageList_Clear(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomImageList_Move(no_vcl_obj_t Obj, no_vcl_int_t CurIndex, no_vcl_int_t NewIndex);
+/* Index 番目の画像を Image(TBitmap 等)に写す。 */
+void          NO_VCL_CALL no_vcl_TCustomImageList_GetBitmap(no_vcl_obj_t Obj, no_vcl_int_t Index, no_vcl_obj_t Image);
+/* Canvas(no_vcl_TCanvas_* のハンドル)の (X, Y) に Index 番目の画像を描く。Enabled が偽なら無効の見た目で描く。 */
+void          NO_VCL_CALL no_vcl_TCustomImageList_Draw(no_vcl_obj_t Obj, no_vcl_obj_t Canvas, no_vcl_int_t X, no_vcl_int_t Y, no_vcl_int_t Index, no_vcl_bool_t Enabled);
+void          NO_VCL_CALL no_vcl_TCustomImageList_BeginUpdate(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomImageList_EndUpdate(no_vcl_obj_t Obj);
+/* Clear・Delete・Move・BkColor の変更で呼ばれる(LCL の仕様で、Add・Insert 等では呼ばれない。BeginUpdate の間は EndUpdate まで遅れる)。 */
+void          NO_VCL_CALL no_vcl_TCustomImageList_SetOnChange(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+
+/* 各コントロール・項目の Images・ImageIndex・Bitmap(docs/adr/0030)。
+ * Images は TImageList のハンドル(NULL なら画像リストを外す)。画像リストを破棄すると、LCL がコントロールの Images を NULL に戻す。
+ * ImageIndex 等は画像リストでの位置(-1 なら無し)。TListView の LargeImages は vsIcon、SmallImages はそれ以外の表示形式で使う。
+ * TToolBar の HotImages・DisabledImages は、設定しなければ Images から LCL が作る。
+ * TMenuItem の SubMenuImages を設定すると、子の項目は TMenu の Images の代わりにそれを使う。
+ * Bitmap は所有者が持つ TBitmap(差し替わらない。TMenuItem は初めて取得したときに作られる)を返し、設定は内容を写す。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomImage_GetImages(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomImage_SetImages(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomImage_GetImageIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomImage_SetImageIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomBitBtn_GetImages(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomBitBtn_SetImages(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomBitBtn_GetImageIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomBitBtn_SetImageIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomSpeedButton_GetImages(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomSpeedButton_SetImages(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomSpeedButton_GetImageIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomSpeedButton_SetImageIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomTabControl_GetImages(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomTabControl_SetImages(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomPage_GetImageIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomPage_SetImageIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomTreeView_GetImages(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomTreeView_SetImages(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomTreeView_GetStateImages(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomTreeView_SetStateImages(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+
+no_vcl_int_t  NO_VCL_CALL no_vcl_TTreeNode_GetImageIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TTreeNode_SetImageIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TTreeNode_GetSelectedIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TTreeNode_SetSelectedIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TTreeNode_GetStateIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TTreeNode_SetStateIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TTreeNode_GetOverlayIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TTreeNode_SetOverlayIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TListView_GetLargeImages(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListView_SetLargeImages(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TListView_GetSmallImages(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListView_SetSmallImages(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TListView_GetStateImages(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListView_SetStateImages(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+
+no_vcl_int_t  NO_VCL_CALL no_vcl_TListItem_GetImageIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListItem_SetImageIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TListItem_GetStateIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListItem_SetStateIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+no_vcl_int_t  NO_VCL_CALL no_vcl_TListColumn_GetImageIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListColumn_SetImageIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TToolBar_GetImages(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolBar_SetImages(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TToolBar_GetHotImages(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolBar_SetHotImages(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TToolBar_GetDisabledImages(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolBar_SetDisabledImages(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+
+no_vcl_int_t  NO_VCL_CALL no_vcl_TToolButton_GetImageIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolButton_SetImageIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomHeaderControl_GetImages(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomHeaderControl_SetImages(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+
+no_vcl_int_t  NO_VCL_CALL no_vcl_THeaderSection_GetImageIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_THeaderSection_SetImageIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomCoolBar_GetImages(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomCoolBar_SetImages(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomCoolBar_GetBitmap(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomCoolBar_SetBitmap(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCoolBand_GetImageIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCoolBand_SetImageIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCoolBand_GetBitmap(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCoolBand_SetBitmap(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TMenu_GetImages(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TMenu_SetImages(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+
+no_vcl_int_t  NO_VCL_CALL no_vcl_TMenuItem_GetImageIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TMenuItem_SetImageIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TMenuItem_GetSubMenuImages(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TMenuItem_SetSubMenuImages(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TMenuItem_GetBitmap(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TMenuItem_SetBitmap(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+
 #ifdef __cplusplus
 }
 #endif

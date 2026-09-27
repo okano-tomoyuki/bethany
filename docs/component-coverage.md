@@ -58,13 +58,13 @@ TScrollingWinControl のいずれかで、いずれも実装済み。既存パ�
 
 | クラス | LCL 宣言ユニット | LCL での基底 | 必要になる補助 |
 |---|---|---|---|
-| ✅ TPageControl + TTabSheet | comctrls.pp(TCustomTabControl 系) | TWinControl | Tier 2 の 1 バッチ目([ADR 0018](adr/0018-pagecontrol-and-tabsheet.md))。AddTabSheet のページは `WrapExisting` でラップ。Clear は LCL の遅延破棄。Images/Style/Options は未対応 |
-| ✅ TTreeView | comctrls.pp(TCustomTreeView) | TCustomControl(実装済み) | Tier 2 の 2 バッチ目([ADR 0019](adr/0019-treeview-and-non-component-items.md))。TTreeNode(TPersistent)は `TTreeNode*` で扱い、削除通知(TCustomTreeView.Delete の上書き)でラッパーの寿命を管理。画像・複数選択・ラベルの編集は未対応 |
-| ✅ TListView | comctrls.pp(TCustomListView) | TWinControl(実装済み) | Tier 2 の 3 バッチ目([ADR 0020](adr/0020-listview-and-shared-item-registry.md))。TListItem・TListColumn は TTreeNode と同じく削除通知で寿命を管理(`ItemRegistry` に共通化)。表示前の Selected は DLL 側で補正。画像・OwnerData・ラベルの編集は未対応 |
+| ✅ TPageControl + TTabSheet | comctrls.pp(TCustomTabControl 系) | TWinControl | Tier 2 の 1 バッチ目([ADR 0018](adr/0018-pagecontrol-and-tabsheet.md))。AddTabSheet のページは `WrapExisting` でラップ。Clear は LCL の遅延破棄。Images/ImageIndex は Tier 3 の 2 バッチ目で追加(ADR 0030)。Style/Options は未対応 |
+| ✅ TTreeView | comctrls.pp(TCustomTreeView) | TCustomControl(実装済み) | Tier 2 の 2 バッチ目([ADR 0019](adr/0019-treeview-and-non-component-items.md))。TTreeNode(TPersistent)は `TTreeNode*` で扱い、削除通知(TCustomTreeView.Delete の上書き)でラッパーの寿命を管理。Images/StateImages とノードの ImageIndex/SelectedIndex/StateIndex/OverlayIndex は Tier 3 の 2 バッチ目で追加(ADR 0030)。複数選択・ラベルの編集は未対応 |
+| ✅ TListView | comctrls.pp(TCustomListView) | TWinControl(実装済み) | Tier 2 の 3 バッチ目([ADR 0020](adr/0020-listview-and-shared-item-registry.md))。TListItem・TListColumn は TTreeNode と同じく削除通知で寿命を管理(`ItemRegistry` に共通化)。表示前の Selected は DLL 側で補正。LargeImages/SmallImages/StateImages と項目・列の ImageIndex は Tier 3 の 2 バッチ目で追加(ADR 0030)。OwnerData・ラベルの編集は未対応 |
 | ✅ TStringGrid / TDrawGrid | grids.pas(TCustomGrid → TCustomDrawGrid) | TCustomControl(実装済み) | Tier 2 の 4 バッチ目([ADR 0021](adr/0021-drawgrid-and-stringgrid.md))。Cells[c][r]・ColWidths[i] は添字で書ける([ADR 0022](adr/0022-indexed-property-proxy.md))、Options はビット集合、OnDrawCell/OnSelectCell/OnSelection/OnHeaderClick。Objects・Cols/Rows・OnGetEditText/OnSetEditText・Columns は未対応 |
-| ✅ THeaderControl | comctrls.pp(TCustomHeaderControl) | TCustomControl(実装済み) | Tier 2 の 5 バッチ目([ADR 0024](adr/0024-headercontrol.md))。Sections(Items[i]・Add・Insert・Delete・Clear)、DragReorder、OnSectionClick/Resize/Track/Drag/EndDrag/SeparatorDblClick。セクションの破棄は CreateSection を差し替えた派生セクションのデストラクタで通知。Images/ImageIndex は Tier 3 待ち |
-| ✅ TToolBar / TToolButton | comctrls.pp | TToolWindow(TCustomControl 系。実質は TCustomControl) | Tier 2 の 6 バッチ目([ADR 0025](adr/0025-toolbar-and-toolbutton.md))。ボタンは Parent をツールバーにして追加(TComponent なので寿命は既存の仕組み)。Style/Down/Grouped/DropdownMenu/MenuItem/OnArrowClick、Buttons[i]、EdgeBorders 等。Images/ImageIndex は Tier 3 待ち、OnPaint/OnPaintButton は未対応 |
-| ✅ TCoolBar | comctrls.pp(TCustomCoolBar) | TToolWindow(実装済み) | Tier 2 の 7 バッチ目([ADR 0026](adr/0026-coolbar-and-item-free-observer.md))。Bands(Items[i]・Add・Delete・Clear・FindBand)、バンドの Text/Width/Break/Control 等、GrabStyle・Vertical・OnChange。コントロールの Parent をクールバーにすると LCL がバンドを自動で追加する。Bitmap/Images は Tier 3 待ち |
+| ✅ THeaderControl | comctrls.pp(TCustomHeaderControl) | TCustomControl(実装済み) | Tier 2 の 5 バッチ目([ADR 0024](adr/0024-headercontrol.md))。Sections(Items[i]・Add・Insert・Delete・Clear)、DragReorder、OnSectionClick/Resize/Track/Drag/EndDrag/SeparatorDblClick。セクションの破棄は CreateSection を差し替えた派生セクションのデストラクタで通知。Images/ImageIndex は Tier 3 の 2 バッチ目で追加(ADR 0030) |
+| ✅ TToolBar / TToolButton | comctrls.pp | TToolWindow(TCustomControl 系。実質は TCustomControl) | Tier 2 の 6 バッチ目([ADR 0025](adr/0025-toolbar-and-toolbutton.md))。ボタンは Parent をツールバーにして追加(TComponent なので寿命は既存の仕組み)。Style/Down/Grouped/DropdownMenu/MenuItem/OnArrowClick、Buttons[i]、EdgeBorders 等。Images/HotImages/DisabledImages/ImageIndex は Tier 3 の 2 バッチ目で追加(ADR 0030)、OnPaint/OnPaintButton は未対応 |
+| ✅ TCoolBar | comctrls.pp(TCustomCoolBar) | TToolWindow(実装済み) | Tier 2 の 7 バッチ目([ADR 0026](adr/0026-coolbar-and-item-free-observer.md))。Bands(Items[i]・Add・Delete・Clear・FindBand)、バンドの Text/Width/Break/Control 等、GrabStyle・Vertical・OnChange。コントロールの Parent をクールバーにすると LCL がバンドを自動で追加する。Bitmap/Images とバンドの Bitmap/ImageIndex は Tier 3 の 2 バッチ目で追加(ADR 0030) |
 
 ### Tier 3 — グラフィックス基盤が前提
 
@@ -76,9 +76,9 @@ TGraphic → TRasterImage → TCustomBitmap → TBitmap / TPortableNetworkGraphi
 | クラス | LCL 宣言ユニット | 必要な基盤 |
 |---|---|---|
 | ✅ TBitmap / TPortableNetworkGraphic / TJPEGImage / TPicture | graphics.pp | Tier 3 の 1 バッチ目(ADR 0029)。Width/Height/Empty/Transparent/LoadFromFile/SaveToFile/Assign/Clear、Canvas/PixelFormat/TransparentColor/TransparentMode/SetSize、TPicture の Graphic/Bitmap/PNG/Jpeg。あわせて TCanvas の Pixels/FillRect/Draw/StretchDraw と TControl.AutoSize を追加。TIcon・ストリーム・ScanLine は未対応 |
-| ✅ TImage | extctrls.pp(TCustomImage) | Tier 3 の 1 バッチ目(ADR 0029)。Picture/Canvas/HasGraphic/Center/Stretch/StretchOutEnabled/StretchInEnabled/Proportional/Transparent/OnPictureChanged。Images/ImageIndex は 2 バッチ目 |
+| ✅ TImage | extctrls.pp(TCustomImage) | Tier 3 の 1 バッチ目(ADR 0029)。Picture/Canvas/HasGraphic/Center/Stretch/StretchOutEnabled/StretchInEnabled/Proportional/Transparent/OnPictureChanged。Images/ImageIndex は 2 バッチ目で追加(ADR 0030) |
 | ✅ TBitBtn の Glyph / TSpeedButton の Glyph | buttons.pp | Tier 3 の 1 バッチ目(ADR 0029)。Glyph/NumGlyphs/Layout/Margin/Spacing |
-| TImageList | comctrls.pp や ImgList ユニット | 2 バッチ目で着手する。TBitmap 一覧。TreeView・ListView・ToolBar のアイコン表示に使うが、アイコン無しでも各コントロール自体は動く |
+| ✅ TImageList | ImgList ユニット(TCustomImageList)・controls.pp(TImageList) | Tier 3 の 2 バッチ目([ADR 0030](adr/0030-imagelist-and-images.md))。Width/Height/Count/Masked/BkColor/DrawingStyle/OnChange、Add/AddSliced/AddMasked/Insert/Replace/Delete/Clear/Move/GetBitmap/Draw。あわせて各コントロール・項目の Images/ImageIndex(TImage・TBitBtn・TSpeedButton・TPageControl・TTabControl・TTreeView・TListView・TToolBar・THeaderControl・TCoolBar・TMainMenu/TPopupMenu)と、TMenuItem・TCoolBar・TCoolBand の Bitmap を追加した。LCL の Add は VCL と違い、幅が Width の倍数でも画像を分けない(分けるのは AddSliced)。ImagesWidth 等の高 DPI 向けのものは未対応 |
 
 ### Tier 4 — ダイアログ(非ビジュアル、Execute 呼び出しパターン)
 
@@ -101,7 +101,7 @@ VCL アプリらしい UI に必須だが、TMenuItem がツリー構造の TCom
 
 | クラス | LCL 宣言ユニット | LCL での基底 | 備考 |
 |---|---|---|---|
-| ✅ TMenuItem | menus.pp | TLCLComponent(no_vcl では TComponent 直下に置く) | Caption/Checked/Enabled/Visible/AutoCheck/RadioItem/GroupIndex/Default/ShortCut/Hint/OnClick と、子の項目の操作(Items[i]/Count/Add/Insert/Delete/Remove/Clear/IndexOf/AddSeparator)([ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md))。Bitmap/ImageIndex は Tier 3 待ち |
+| ✅ TMenuItem | menus.pp | TLCLComponent(no_vcl では TComponent 直下に置く) | Caption/Checked/Enabled/Visible/AutoCheck/RadioItem/GroupIndex/Default/ShortCut/Hint/OnClick と、子の項目の操作(Items[i]/Count/Add/Insert/Delete/Remove/Clear/IndexOf/AddSeparator)([ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md))。Bitmap/ImageIndex/SubMenuImages と TMenu.Images は Tier 3 の 2 バッチ目で追加(ADR 0030) |
 | ✅ TMainMenu | menus.pp(TMenu) | TLCLComponent → TComponent | フォームに割り当てる(TForm.Menu)。Items(ルート項目)は LCL が内部で生成するため、`WrapExisting` でラップする(ADR 0017)。Merge は未対応 |
 | ✅ TPopupMenu | menus.pp(TMenu) | TLCLComponent → TComponent | コントロールに割り当てる(TControl.PopupMenu)。AutoPopup/PopupComponent/OnPopup/OnClose/Popup(X, Y)(ADR 0017) |
 
@@ -166,7 +166,7 @@ Tier 1 の 1 バッチ目([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.m
    あわせて、横断的な課題だったインデックス付きプロパティの添字の書き方([ADR 0022](adr/0022-indexed-property-proxy.md)・[0023](adr/0023-remaining-indexed-properties.md))と、
    TStrings(`Items->Add`・`Lines->Text` 等。[ADR 0027](adr/0027-tstrings.md))も VCL と同じ形にした。
 5. **Tier 3(TBitmap/TPicture)** は、1 バッチ目でグラフィックス基盤・TImage・Glyph を入れた([ADR 0029](adr/0029-graphics-picture-image-glyph.md))。
-   残りは 2 バッチ目の TImageList と、各コントロールの Images/ImageIndex。以下は当初の記述。
+   2 バッチ目で TImageList と各コントロールの Images/ImageIndex を入れ([ADR 0030](adr/0030-imagelist-and-images.md))、Tier 3 は完了した。以下は当初の記述。
    TImage 単体のためというより、Tier 1/2 のいくつか(Glyph・ImageList)の
    完成度を上げるために必要になる。着手するタイミングで独立した ADR を書く。
 6. **Tier 4(ダイアログ)** は他とほぼ独立して進められるので、隙間で着手しやすい。

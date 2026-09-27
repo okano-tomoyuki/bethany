@@ -147,6 +147,13 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 | CompressionQuality | TJPEGImage(public) | TJPEGImage | TJPEGImage(public) | `TJPEGImage_*`(ADR 0029) |
 | Graphic / Bitmap / PNG / Jpeg / Width / Height / LoadFromFile / SaveToFile / Assign / Clear | TPicture(public。TPersistent) | TPicture | TPicture(public。Graphic・Bitmap 等は代入で内容を写す `Property<T*>`) | `TPicture_*`(ADR 0029) |
 | Picture / Canvas / HasGraphic / Center / Stretch / StretchOutEnabled / StretchInEnabled / Proportional / Transparent / OnPictureChanged | TCustomImage(public) | TCustomImage | TCustomImage(public) | `TCustomImage_*`(ADR 0029) |
+| Width / Height / Count / Masked / BkColor / DrawingStyle / OnChange / Add / AddSliced / AddMasked / Insert / Replace / Delete / Clear / Move / GetBitmap / Draw / BeginUpdate / EndUpdate | TCustomImageList(public。TLCLComponent) | TCustomImageList | TCustomImageList(public。TImageList は TDragImageList を省いてその直下) | `TCustomImageList_*`・`TImageList_Create`([ADR 0030](adr/0030-imagelist-and-images.md)) |
+| Images / ImageIndex | TCustomImage・TCustomBitBtn・TCustomSpeedButton(public) | 同左 | 同左(public。Images は `Property<TCustomImageList*>`) | `TCustomImage_*` 等(ADR 0030) |
+| Images | TCustomTabControl・TCustomTreeView・TCustomHeaderControl・TCustomCoolBar・TToolBar・TMenu(public/published) | 同左 | 同左(public) | `TCustomTabControl_GetImages` 等(ADR 0030) |
+| StateImages / HotImages / DisabledImages / SubMenuImages | TCustomTreeView / TToolBar / TMenuItem(public/published) | 同左 | 同左(public) | ADR 0030 |
+| LargeImages / SmallImages / StateImages | TCustomListView(protected) | TListView | TListView(public) | `TListView_*Images`(ADR 0030) |
+| ImageIndex(項目・ページ) / SelectedIndex / StateIndex / OverlayIndex | TCustomPage・TTreeNode・TListItem・TListColumn・TToolButton・THeaderSection・TCoolBand・TMenuItem(public/published) | 同左 | 同左(public) | ADR 0030 |
+| Bitmap | TMenuItem・TCustomCoolBar・TCoolBand(public/published) | 同左 | 同左(public。代入で内容を写す `Property<TBitmap*>`) | ADR 0030 |
 | Glyph / NumGlyphs / Layout / Margin / Spacing | TCustomBitBtn・TCustomSpeedButton(public) | TCustomBitBtn・TCustomSpeedButton | 同左(public。Glyph は代入で内容を写す `Property<TBitmap*>`) | `TCustomBitBtn_*` / `TCustomSpeedButton_*`(ADR 0029) |
 | AutoSnap / Beveled / MinSize / ResizeAnchor / ResizeStyle / OnMoved / Get・SetSplitterPosition | TCustomSplitter(public) | TCustomSplitter | TCustomSplitter(public) | `TCustomSplitter_*`([ADR 0016](adr/0016-control-align-and-splitter.md)) |
 | PopupMenu | TControl(public) | TControl | TControl(public) | `TControl_GetPopupMenu` / `SetPopupMenu`([ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md)) |
