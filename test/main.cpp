@@ -740,16 +740,16 @@ public:
         StringGrid1->FixedCols = 0;
         StringGrid1->DefaultRowHeight = 18;
         StringGrid1->Options = (TGridOptions)StringGrid1->Options | goEditing;
-        StringGrid1->SetCells(0, 0, "Name");
-        StringGrid1->SetCells(1, 0, "Qty");
-        StringGrid1->SetCells(2, 0, "Locked");
+        StringGrid1->Cells[0][0] = "Name";
+        StringGrid1->Cells[1][0] = "Qty";
+        StringGrid1->Cells[2][0] = "Locked";
         const char* names[] = { "Cherry", "Apple", "Banana" };
         const char* qtys[]  = { "3", "1", "2" };
         for (int r = 1; r <= 3; ++r)
         {
-            StringGrid1->SetCells(0, r, names[r - 1]);
-            StringGrid1->SetCells(1, r, qtys[r - 1]);
-            StringGrid1->SetCells(2, r, "-");
+            StringGrid1->Cells[0][r] = names[r - 1];
+            StringGrid1->Cells[1][r] = qtys[r - 1];
+            StringGrid1->Cells[2][r] = "-";
         }
         // 3 列目("Locked")のセルは選択させない。
         StringGrid1->OnSelectCell = [](TObject*, int ACol, int ARow, bool& CanSelect) {
@@ -761,7 +761,7 @@ public:
             }
         };
         StringGrid1->OnSelection = [this](TObject*, int ACol, int ARow) {
-            std::printf("StringGrid1Selection: (%d,%d) = %s\n", ACol, ARow, StringGrid1->GetCells(ACol, ARow).c_str());
+            std::printf("StringGrid1Selection: (%d,%d) = %s\n", ACol, ARow, std::string(StringGrid1->Cells[ACol][ARow]).c_str());
             std::fflush(stdout);
         };
         // 列見出しのクリックで、その列の値で行を並べ替える。
@@ -1316,23 +1316,43 @@ int main()
         std::printf("StringGrid1 ColCount/RowCount=%d/%d (expected 3/4), FixedCols/FixedRows=%d/%d (expected 0/1), "
                     "Cells[0][1]=%s, goEditing in Options: %s\n",
                     (int)sg->ColCount, (int)sg->RowCount, (int)sg->FixedCols, (int)sg->FixedRows,
-                    sg->GetCells(0, 1).c_str(), ((TGridOptions)sg->Options & goEditing) ? "yes" : "no");
-        sg->SetColWidths(0, 80);
-        std::printf("ColWidths[0]=%d (expected 80)\n", sg->GetColWidths(0));
+                    std::string(sg->Cells[0][1]).c_str(), ((TGridOptions)sg->Options & goEditing) ? "yes" : "no");
+
+        // ColWidths / RowHeights: 添字で読み書きする。要素同士の代入は値のコピー。
+        sg->ColWidths[0] = 80;
+        sg->ColWidths[1] = sg->ColWidths[0];
+        sg->RowHeights[2] = 25;
+        std::printf("ColWidths[0]/[1]=%d/%d (expected 80/80), RowHeights[2]=%d (expected 25)\n",
+                    (int)sg->ColWidths[0], (int)sg->ColWidths[1], (int)sg->RowHeights[2]);
+        sg->ColWidths[1] = 64;
+        sg->RowHeights[2] = 18;
+
+        // Cells: 要素同士の代入、Property<std::string> との間の代入、std::string への変換。
+        sg->Cells[2][1] = sg->Cells[1][1];
+        std::string savedCaption = Form1->Caption;
+        Form1->Caption = sg->Cells[0][1];
+        sg->Cells[2][2] = Form1->Caption;
+        Form1->Caption = savedCaption;
+        std::string cell = sg->Cells[2][1];
+        std::printf("Cells[2][1]=%s (expected 3), Cells[2][2]=%s (expected Cherry), same as Cells[1][1]: %s\n",
+                    cell.c_str(), std::string(sg->Cells[2][2]).c_str(), cell == std::string(sg->Cells[1][1]) ? "yes" : "no");
+        sg->Cells[2][1] = "-";
+        sg->Cells[2][2] = "-";
 
         // 列 0 の値で行を並べ替える(固定行は除く)。
         sg->SortColRow(true, 0);
         std::printf("After SortColRow(true, 0): %s/%s/%s (expected Apple/Banana/Cherry), Qty of Apple=%s (expected 1)\n",
-                    sg->GetCells(0, 1).c_str(), sg->GetCells(0, 2).c_str(), sg->GetCells(0, 3).c_str(), sg->GetCells(1, 1).c_str());
+                    std::string(sg->Cells[0][1]).c_str(), std::string(sg->Cells[0][2]).c_str(),
+                    std::string(sg->Cells[0][3]).c_str(), std::string(sg->Cells[1][1]).c_str());
 
         // 行の挿入・削除・移動。
         sg->InsertColRow(false, 1);
         std::printf("After InsertColRow(false, 1): RowCount=%d (expected 5), Cells[0][1]='%s' (expected ''), Cells[0][2]=%s (expected Apple)\n",
-                    (int)sg->RowCount, sg->GetCells(0, 1).c_str(), sg->GetCells(0, 2).c_str());
+                    (int)sg->RowCount, std::string(sg->Cells[0][1]).c_str(), std::string(sg->Cells[0][2]).c_str());
         sg->DeleteColRow(false, 1);
         sg->MoveColRow(false, 3, 1);
         std::printf("After DeleteColRow and MoveColRow(false, 3, 1): RowCount=%d (expected 4), Cells[0][1]=%s (expected Cherry)\n",
-                    (int)sg->RowCount, sg->GetCells(0, 1).c_str());
+                    (int)sg->RowCount, std::string(sg->Cells[0][1]).c_str());
         sg->MoveColRow(false, 1, 3);
 
         // 選択範囲。
@@ -1348,10 +1368,10 @@ int main()
 
         // Clean は文字列だけを消し、Clear は行・列を削除する。
         TStringGrid* temp = new TStringGrid(Form1);
-        temp->SetCells(1, 1, "x");
+        temp->Cells[1][1] = "x";
         temp->Clean();
         std::printf("temp after Clean: Cells[1][1]='%s' (expected ''), ColCount=%d (expected 5)\n",
-                    temp->GetCells(1, 1).c_str(), (int)temp->ColCount);
+                    std::string(temp->Cells[1][1]).c_str(), (int)temp->ColCount);
         temp->Clear();
         std::printf("temp after Clear: ColCount/RowCount=%d/%d (expected 0/0)\n", (int)temp->ColCount, (int)temp->RowCount);
         temp->Free();

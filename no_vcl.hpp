@@ -130,6 +130,166 @@ private:
     Getter   getter_;
 };
 
+// インデックス付きのプロパティ(VCL の ColWidths[ACol] 等)。Grid->ColWidths[0] = 80; のように添字で読み書きできる。
+// 添字は所有者・添字・Getter/Setter を持つ要素のプロキシ(Reference)を返し、読み書きはその時点で所有者に委ねる。
+template<typename T>
+class IndexedProperty
+{
+public:
+    using Getter = T    (*)(TObject*, int);
+    using Setter = void (*)(TObject*, int, const T&);
+
+    // 1 つの要素へのプロキシ。代入は値の書き込み、T への変換は値の読み出しになる
+    // (auto で受けるとプロキシのままになるので、値が必要なら型を明示する)。
+    class Reference
+    {
+    public:
+        Reference(TObject* owner, int index, Getter getter, Setter setter)
+            : owner_(owner), index_(index), getter_(getter), setter_(setter)
+        {}
+
+        // 値で返すためにコピー構築はできる(同じ要素を指す)。
+        Reference(const Reference&) = default;
+
+        // 要素同士の代入(Grid->ColWidths[1] = Grid->ColWidths[0];)は値のコピーとして扱う。
+        Reference& operator=(const Reference& other)
+        {
+            setter_(owner_, index_, other.getter_(other.owner_, other.index_));
+            return *this;
+        }
+
+        Reference& operator=(const T& value)
+        {
+            setter_(owner_, index_, value);
+            return *this;
+        }
+
+        operator T() const
+        {
+            return getter_(owner_, index_);
+        }
+
+        T operator->() const
+        {
+            return getter_(owner_, index_);
+        }
+
+    private:
+        TObject* owner_;
+        int      index_;
+        Getter   getter_;
+        Setter   setter_;
+    };
+
+    IndexedProperty(TObject* owner, Getter getter, Setter setter)
+        : owner_(owner)
+        , getter_(getter)
+        , setter_(setter)
+    {}
+
+    IndexedProperty(const IndexedProperty&) = delete;
+    IndexedProperty& operator=(const IndexedProperty&) = delete;
+
+    Reference operator[](int index) const
+    {
+        return Reference(owner_, index, getter_, setter_);
+    }
+
+private:
+    TObject* owner_;
+    Getter   getter_;
+    Setter   setter_;
+};
+
+// 添字が 2 つのインデックス付きのプロパティ(VCL の TStringGrid::Cells[ACol][ARow])。
+// Delphi の Cells[ACol, ARow] は、C++Builder と同じく Cells[ACol][ARow] と書く(1 つ目が列、2 つ目が行)。
+template<typename T>
+class IndexedProperty2
+{
+public:
+    using Getter = T    (*)(TObject*, int, int);
+    using Setter = void (*)(TObject*, int, int, const T&);
+
+    // 1 つの要素へのプロキシ(IndexedProperty::Reference と同じ振る舞い)。
+    class Reference
+    {
+    public:
+        Reference(TObject* owner, int index1, int index2, Getter getter, Setter setter)
+            : owner_(owner), index1_(index1), index2_(index2), getter_(getter), setter_(setter)
+        {}
+
+        Reference(const Reference&) = default;
+
+        Reference& operator=(const Reference& other)
+        {
+            setter_(owner_, index1_, index2_, other.getter_(other.owner_, other.index1_, other.index2_));
+            return *this;
+        }
+
+        Reference& operator=(const T& value)
+        {
+            setter_(owner_, index1_, index2_, value);
+            return *this;
+        }
+
+        operator T() const
+        {
+            return getter_(owner_, index1_, index2_);
+        }
+
+        T operator->() const
+        {
+            return getter_(owner_, index1_, index2_);
+        }
+
+    private:
+        TObject* owner_;
+        int      index1_;
+        int      index2_;
+        Getter   getter_;
+        Setter   setter_;
+    };
+
+    // 1 つ目の添字だけを指定した途中の段階。2 つ目の添字で Reference を返す。
+    class Slice
+    {
+    public:
+        Slice(TObject* owner, int index1, Getter getter, Setter setter)
+            : owner_(owner), index1_(index1), getter_(getter), setter_(setter)
+        {}
+
+        Reference operator[](int index2) const
+        {
+            return Reference(owner_, index1_, index2, getter_, setter_);
+        }
+
+    private:
+        TObject* owner_;
+        int      index1_;
+        Getter   getter_;
+        Setter   setter_;
+    };
+
+    IndexedProperty2(TObject* owner, Getter getter, Setter setter)
+        : owner_(owner)
+        , getter_(getter)
+        , setter_(setter)
+    {}
+
+    IndexedProperty2(const IndexedProperty2&) = delete;
+    IndexedProperty2& operator=(const IndexedProperty2&) = delete;
+
+    Slice operator[](int index1) const
+    {
+        return Slice(owner_, index1, getter_, setter_);
+    }
+
+private:
+    TObject* owner_;
+    Getter   getter_;
+    Setter   setter_;
+};
+
 // イベントハンドラの型。C++Builder の TNotifyEvent に合わせ、イベントを発生させたオブジェクトを
 // Sender として受け取る(static_cast / dynamic_cast で具体的な型に戻して使う)。
 // 本家の __closure は標準 C++ に無いため、メンバ関数は [this](TObject* Sender) { Button1Click(Sender); }
@@ -2456,7 +2616,6 @@ protected:
 };
 
 // 以下のメンバは LCL では TCustomGrid の protected で、TCustomDrawGrid が public にしている。
-// ColWidths[Col] / RowHeights[Row] は GetColWidths(Col) / SetColWidths(Col, Value) 等(インデックス付きプロパティは Get/Set メソッドで表す)。
 class TCustomDrawGrid : public TCustomGrid
 {
 public:
@@ -2490,10 +2649,9 @@ public:
     Property<TOnSelectEvent>     OnSelection;
     Property<THdrEvent>          OnHeaderClick;
 
-    int  GetColWidths(int ACol) const;
-    void SetColWidths(int ACol, int Value);
-    int  GetRowHeights(int ARow) const;
-    void SetRowHeights(int ARow, int Value);
+    // 列ごとの幅・行ごとの高さ(Grid->ColWidths[0] = 80;)。
+    IndexedProperty<int> ColWidths;
+    IndexedProperty<int> RowHeights;
 
     void InsertColRow(bool IsColumn, int Index);
     void DeleteColRow(bool IsColumn, int Index);
@@ -2552,6 +2710,10 @@ private:
     static void         SetFixedColorImpl(TObject* owner, const TColor& value);
     static bool         GetEditorModeImpl(TObject* owner);
     static void         SetEditorModeImpl(TObject* owner, const bool& value);
+    static int          GetColWidthsImpl(TObject* owner, int ACol);
+    static void         SetColWidthsImpl(TObject* owner, int ACol, const int& value);
+    static int          GetRowHeightsImpl(TObject* owner, int ARow);
+    static void         SetRowHeightsImpl(TObject* owner, int ARow, const int& value);
 
     static TOnDrawCell        GetOnDrawCellImpl(TObject* owner);
     static void               SetOnDrawCellImpl(TObject* owner, const TOnDrawCell& value);
@@ -2573,12 +2735,13 @@ protected:
     ~TDrawGrid() override = default;
 };
 
-// 以下のメンバは LCL の TCustomStringGrid の public。Cells[ACol][ARow] は GetCells(ACol, ARow) / SetCells(ACol, ARow, Value)。
+// 以下のメンバは LCL の TCustomStringGrid の public。
 class TCustomStringGrid : public TCustomDrawGrid
 {
 public:
-    std::string GetCells(int ACol, int ARow) const;
-    void        SetCells(int ACol, int ARow, const std::string& Value);
+    // セルの文字列。C++Builder と同じく StringGrid1->Cells[ACol][ARow] = "x"; と書く(1 つ目が列、2 つ目が行)。
+    IndexedProperty2<std::string> Cells;
+
     // すべてのセルの文字列を消す(行・列の数は変わらない)。
     void        Clean();
     // 列の幅を文字列に合わせる。
@@ -2586,8 +2749,12 @@ public:
     void        AutoSizeColumn(int ACol);
 
 protected:
-    explicit TCustomStringGrid(no_vcl_obj_t handle) : TCustomDrawGrid(handle) {}
+    explicit TCustomStringGrid(no_vcl_obj_t handle);
     ~TCustomStringGrid() override = default;
+
+private:
+    static std::string GetCellsImpl(TObject* owner, int ACol, int ARow);
+    static void        SetCellsImpl(TObject* owner, int ACol, int ARow, const std::string& value);
 };
 
 // セルごとに文字列を持つグリッド。
