@@ -37,13 +37,14 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0016](adr/0016-control-align-and-splitter.md) | TControl.Align を追加し、それを前提とする TSplitter を追加する | 承認 |
 | [0017](adr/0017-menus-and-wrapping-lcl-created-components.md) | メニュー(TMenuItem・TMainMenu・TPopupMenu)を追加し、LCL が内部で生成したコンポーネントを後からラップする仕組みを入れる | 承認(一部置換→0023) |
 | [0018](adr/0018-pagecontrol-and-tabsheet.md) | Tier 2 の 1 バッチ目として TPageControl と TTabSheet を追加する | 承認(一部置換→0023) |
-| [0019](adr/0019-treeview-and-non-component-items.md) | Tier 2 の 2 バッチ目として TTreeView を追加し、TComponent ではない項目(TTreeNode)の寿命を削除通知で管理する | 承認(一部置換→0020・0023) |
-| [0020](adr/0020-listview-and-shared-item-registry.md) | Tier 2 の 3 バッチ目として TListView を追加し、TComponent ではない項目の寿命管理を共通化する | 承認 |
+| [0019](adr/0019-treeview-and-non-component-items.md) | Tier 2 の 2 バッチ目として TTreeView を追加し、TComponent ではない項目(TTreeNode)の寿命を削除通知で管理する | 承認(一部置換→0020・0023・0026) |
+| [0020](adr/0020-listview-and-shared-item-registry.md) | Tier 2 の 3 バッチ目として TListView を追加し、TComponent ではない項目の寿命管理を共通化する | 承認(一部置換→0026) |
 | [0021](adr/0021-drawgrid-and-stringgrid.md) | Tier 2 の 4 バッチ目として TDrawGrid と TStringGrid を追加する | 承認(一部置換→0022) |
 | [0022](adr/0022-indexed-property-proxy.md) | インデックス付きプロパティを添字で書ける共通のプロキシを入れ、グリッドの Cells・ColWidths・RowHeights に使う | 承認 |
 | [0023](adr/0023-remaining-indexed-properties.md) | 残りのインデックス付きプロパティも添字で書けるようにし、読み取り専用のものは値を直接返す | 承認 |
-| [0024](adr/0024-headercontrol.md) | Tier 2 の 5 バッチ目として THeaderControl を追加し、セクションの破棄を派生クラスのデストラクタで通知する | 承認 |
+| [0024](adr/0024-headercontrol.md) | Tier 2 の 5 バッチ目として THeaderControl を追加し、セクションの破棄を派生クラスのデストラクタで通知する | 承認(一部置換→0026) |
 | [0025](adr/0025-toolbar-and-toolbutton.md) | Tier 2 の 6 バッチ目として TToolBar と TToolButton を追加する | 承認 |
+| [0026](adr/0026-coolbar-and-item-free-observer.md) | Tier 2 の 7 バッチ目として TCoolBar を追加し、項目の破棄の通知を TPersistent の観察者にそろえる | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。

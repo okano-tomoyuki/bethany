@@ -651,13 +651,17 @@ void          NO_VCL_CALL no_vcl_TCustomPage_SetOnHide(no_vcl_obj_t Obj, no_vcl_
  * ノード(TTreeNode)とノードの一覧(TTreeNodes)は TComponent ではない。
  * - TTreeNodes(no_vcl_TCustomTreeView_GetItems)はツリービューが所有する非所有のハンドルで、ツリービューと寿命が一致する。
  * - ノードは no_vcl_TTreeNodes_Add 等で追加し、no_vcl_TTreeNode_Delete 等で削除する(破棄は LCL が行う)。
- *   ノードが削除されると(ツリービューの破棄に伴う削除も含め)、OnDeletion の後に項目の破棄通知が呼ばれる。 */
+ *   ノードが削除されると(ツリービューの破棄に伴う削除も含め)、OnDeletion などの削除の処理がすべて終わった後に
+ *   項目の破棄通知が呼ばれる。 */
 
 /*
- * 項目の破棄通知: TComponent ではない項目(ツリービューのノード・リストビューの項目・リストビューの列・ヘッダーコントロールのセクション)が破棄されると、
- * 登録したコールバックが破棄される項目を引数に呼ばれる(no_vcl_FreeNotify_SetCallback の項目版)。
+ * 項目の破棄通知: TComponent ではない項目(ツリービューのノード・リストビューの項目と列・ヘッダーコントロールのセクション・
+ * クールバーのバンド)が破棄されると、登録したコールバックが破棄される項目を引数に呼ばれる(no_vcl_FreeNotify_SetCallback の項目版)。
+ * - 対象は、一度でもこの API から返された(関数の戻り値・イベントの引数として渡された)項目。返されたことの無い項目には
+ *   C 側のラッパーが無いため通知しない。
+ * - 通知は項目の破棄の最後(LCL の削除の処理とイベントがすべて終わった後)に、どの経路で破棄されても(Delete・Clear・
+ *   親のコントロールの破棄・LCL の内部の処理)必ず届く(docs/adr/0026)。
  * コールバックは 1 つだけ登録でき、C++ ラッパー(no_vcl.hpp)を使う場合はラッパーが登録するため上書きしないこと。
- * 通知される経路はクラスごとに異なる(ノード・項目は LCL の削除処理から、列は no_vcl の関数から、セクションはデストラクタから。各節を参照)。
  */
 void          NO_VCL_CALL no_vcl_ItemFree_SetCallback(no_vcl_callback_t Cb, void* Data);
 
@@ -769,10 +773,9 @@ void          NO_VCL_CALL no_vcl_TTreeNode_MoveTo(no_vcl_obj_t Obj, no_vcl_obj_t
  * 項目(TListItem)・項目の一覧(TListItems)・列(TListColumn)・列の一覧(TListColumns)は TComponent ではない。
  * - TListItems(no_vcl_TCustomListView_GetItems)・TListColumns(no_vcl_TListView_GetColumns)はリストビューが所有する
  *   非所有のハンドルで、リストビューと寿命が一致する。
- * - 項目が削除されると(リストビューの破棄に伴う削除も含め)、OnDeletion の後に項目の破棄通知が呼ばれる。
+ * - 項目・列が削除されると(リストビューの破棄に伴う削除も含め)、OnDeletion などの削除の処理の後に項目の破棄通知が呼ばれる。
  *   リストビューの破棄では、リストビュー自身の破棄通知(no_vcl_FreeNotify_SetCallback)の後に項目が破棄される(LCL の順序)。
- *   そのときの OnDeletion の sender は、破棄通知を受け取った後のリストビューになる点に注意。
- * - 列の破棄通知は、no_vcl_TListColumns_Delete・Clear で削除する直前と、リストビューの破棄の最初に呼ばれる。 */
+ *   そのときの OnDeletion の sender は、破棄通知を受け取った後のリストビューになる点に注意。 */
 enum { no_vcl_vsIcon = 0, no_vcl_vsSmallIcon, no_vcl_vsList, no_vcl_vsReport };
 enum { no_vcl_stNone = 0, no_vcl_stData, no_vcl_stText, no_vcl_stBoth };
 enum { no_vcl_sdAscending = 0, no_vcl_sdDescending };
@@ -876,7 +879,7 @@ void          NO_VCL_CALL no_vcl_TListItem_MakeVisible(no_vcl_obj_t Obj, no_vcl_
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TListColumns_Add(no_vcl_obj_t Obj);
 no_vcl_int_t  NO_VCL_CALL no_vcl_TListColumns_GetCount(no_vcl_obj_t Obj);
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TListColumns_GetItem(no_vcl_obj_t Obj, no_vcl_int_t Index);
-/* 列を削除する(削除する直前に項目の破棄通知が呼ばれる)。 */
+/* 列を削除する(項目の破棄通知が呼ばれる)。 */
 void          NO_VCL_CALL no_vcl_TListColumns_Delete(no_vcl_obj_t Obj, no_vcl_int_t Index);
 void          NO_VCL_CALL no_vcl_TListColumns_Clear(no_vcl_obj_t Obj);
 no_vcl_str_t  NO_VCL_CALL no_vcl_TListColumn_GetCaption(no_vcl_obj_t Obj);
@@ -1041,7 +1044,7 @@ void          NO_VCL_CALL no_vcl_TCustomStringGrid_AutoSizeColumn(no_vcl_obj_t O
 /* ---------------- THeaderControl(Tier 2、5 バッチ目。docs/adr/0024) ----------------
  * セクション(THeaderSection)は TComponent ではない項目で、ハンドルはヘッダーコントロールが所有する。
  * 破棄の通知(no_vcl_ItemFree_SetCallback)は、セクションが破棄されるとき(THeaderSections_Delete・Clear、
- * ヘッダーコントロールの破棄)に必ず呼ばれる。 */
+ * ヘッダーコントロールの破棄)に呼ばれる。 */
 
 /* TSectionTrackState(OnSectionTrack の State)。 */
 enum { no_vcl_tsTrackBegin = 0, no_vcl_tsTrackMove, no_vcl_tsTrackEnd };
@@ -1201,6 +1204,100 @@ void          NO_VCL_CALL no_vcl_TToolButton_ArrowClick(no_vcl_obj_t Obj);
 no_vcl_bool_t NO_VCL_CALL no_vcl_TToolButton_PointInArrow(no_vcl_obj_t Obj, no_vcl_int_t X, no_vcl_int_t Y);
 /* tbsDropDown・tbsButtonDrop の矢印がクリックされたとき(DropdownMenu を表示する前)。 */
 void          NO_VCL_CALL no_vcl_TToolButton_SetOnArrowClick(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+
+/* ---------------- TCoolBar(Tier 2、7 バッチ目。docs/adr/0026) ----------------
+ * バンド(TCoolBand)は TComponent ではない項目で、ハンドルはクールバーが所有する。
+ * ウィンドウを持つコントロールの Parent をクールバーにすると、LCL がそのコントロールのバンドを自動で追加し、
+ * コントロールを外す(Parent を変える・破棄する)とそのバンドを削除する。
+ * 破棄の通知(no_vcl_ItemFree_SetCallback)は、他の項目と同じく、LCL の内部で削除されたときにも呼ばれる。 */
+
+/* TGrabStyle。 */
+enum { no_vcl_gsSimple = 0, no_vcl_gsDouble, no_vcl_gsHorLines, no_vcl_gsVerLines, no_vcl_gsGripper, no_vcl_gsButton };
+
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCoolBar_Create(no_vcl_obj_t Owner);
+
+/* TCustomCoolBar の public。Bands は no_vcl_TCoolBands_* で操作する非所有のハンドル。
+ * Align は no_vcl_TControl_SetAlign で設定する(alLeft/alRight にすると Vertical も 0 以外になる)。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomCoolBar_GetBands(no_vcl_obj_t Obj);
+/* すべてのバンドの幅を、置いているコントロールに合わせる。 */
+void          NO_VCL_CALL no_vcl_TCustomCoolBar_AutosizeBands(no_vcl_obj_t Obj);
+/* クライアント座標 X, Y にあるバンドの表示上の位置(*Band。無ければ負)と、つまみの上か(*Grabber)。 */
+void          NO_VCL_CALL no_vcl_TCustomCoolBar_MouseToBandPos(no_vcl_obj_t Obj, no_vcl_int_t X, no_vcl_int_t Y,
+                                                             no_vcl_int_t* Band, no_vcl_bool_t* Grabber);
+/* 0 以外なら、ドラッグでバンドの幅を変えられない。 */
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomCoolBar_GetFixedSize(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomCoolBar_SetFixedSize(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* 0 以外なら、ドラッグでバンドを並べ替えられない。 */
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomCoolBar_GetFixedOrder(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomCoolBar_SetFixedOrder(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* no_vcl_gs*(バンドの左端のつまみの描き方)。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomCoolBar_GetGrabStyle(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomCoolBar_SetGrabStyle(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomCoolBar_GetGrabWidth(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomCoolBar_SetGrabWidth(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomCoolBar_GetHorizontalSpacing(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomCoolBar_SetHorizontalSpacing(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomCoolBar_GetVerticalSpacing(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomCoolBar_SetVerticalSpacing(no_vcl_obj_t Obj, no_vcl_int_t Value);
+/* 0 以外なら、バンドの Text を表示する(既定は 0 以外)。 */
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomCoolBar_GetShowText(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomCoolBar_SetShowText(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomCoolBar_GetThemed(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomCoolBar_SetThemed(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomCoolBar_GetVertical(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomCoolBar_SetVertical(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* ドラッグでバンドを動かす・幅を変えて、マウスを離したとき。 */
+void          NO_VCL_CALL no_vcl_TCustomCoolBar_SetOnChange(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+
+/* TCoolBands。Add は空のバンドを追加して返す(Text・Control 等はその後で設定する)。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCoolBands_Add(no_vcl_obj_t Obj);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCoolBands_GetCount(no_vcl_obj_t Obj);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCoolBands_GetItem(no_vcl_obj_t Obj, no_vcl_int_t Index);
+void          NO_VCL_CALL no_vcl_TCoolBands_Delete(no_vcl_obj_t Obj, no_vcl_int_t Index);
+void          NO_VCL_CALL no_vcl_TCoolBands_Clear(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCoolBands_BeginUpdate(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCoolBands_EndUpdate(no_vcl_obj_t Obj);
+/* Control がそのコントロールのバンド(無ければ NULL・-1)。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCoolBands_FindBand(no_vcl_obj_t Obj, no_vcl_obj_t Control);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCoolBands_FindBandIndex(no_vcl_obj_t Obj, no_vcl_obj_t Control);
+
+/* TCoolBand。 */
+no_vcl_str_t  NO_VCL_CALL no_vcl_TCoolBand_GetText(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCoolBand_SetText(no_vcl_obj_t Obj, no_vcl_str_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCoolBand_GetWidth(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCoolBand_SetWidth(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCoolBand_GetMinWidth(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCoolBand_SetMinWidth(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCoolBand_GetMinHeight(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCoolBand_SetMinHeight(no_vcl_obj_t Obj, no_vcl_int_t Value);
+/* 0 以外なら、このバンドから新しい行を始める(既定は 0 以外)。 */
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCoolBand_GetBreak(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCoolBand_SetBreak(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCoolBand_GetVisible(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCoolBand_SetVisible(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCoolBand_GetFixedSize(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCoolBand_SetFixedSize(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCoolBand_GetFixedBackground(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCoolBand_SetFixedBackground(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCoolBand_GetHorizontalOnly(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCoolBand_SetHorizontalOnly(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCoolBand_GetColor(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCoolBand_SetColor(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCoolBand_GetParentColor(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCoolBand_SetParentColor(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* 並び順。書き換えるとバンドが移動する。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCoolBand_GetIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCoolBand_SetIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+/* バンドに置くコントロール。設定するとそのコントロールの Parent がクールバーになり、Align は alNone になる。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCoolBand_GetControl(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCoolBand_SetControl(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+/* クールバーのクライアント座標での位置(配置の計算の後で決まる)。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCoolBand_GetLeft(no_vcl_obj_t Obj);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCoolBand_GetTop(no_vcl_obj_t Obj);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCoolBand_GetRight(no_vcl_obj_t Obj);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCoolBand_GetHeight(no_vcl_obj_t Obj);
+/* 幅を、置いているコントロールに合わせる。 */
+void          NO_VCL_CALL no_vcl_TCoolBand_AutosizeWidth(no_vcl_obj_t Obj);
 
 #ifdef __cplusplus
 }

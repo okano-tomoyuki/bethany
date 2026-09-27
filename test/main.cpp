@@ -170,6 +170,10 @@ public:
     TToolButton*    LeftToolButton;
     TToolButton*    RightToolButton;
     TToolButton*    DropToolButton;
+    TTabSheet*      CoolSheet;
+    TCoolBar*       CoolBar1;
+    TEdit*          CoolEdit;
+    TComboBox*      CoolCombo;
 
     // C++Builder と同じく Owner を受け取り、TForm に渡す(Application->CreateForm が Application を渡す)。
     explicit TMainForm(TComponent* AOwner) : TForm(AOwner)
@@ -917,6 +921,40 @@ public:
             std::fflush(stdout);
         };
 
+        // Tier 2、7 バッチ目(TCoolBar)。"Cool" ページの上端に置く(TCoolBar の既定の Align は alTop)。
+        // ウィンドウを持つコントロールの Parent をクールバーにすると、LCL がバンドを自動で追加する。
+        CoolSheet = new TTabSheet(this);
+        CoolSheet->PageControl = PageControl1;
+        CoolSheet->Caption = "Cool";
+        CoolBar1 = new TCoolBar(this);
+        CoolBar1->Parent = CoolSheet;
+        CoolEdit = new TEdit(this);
+        CoolEdit->Width = 80;
+        CoolEdit->Parent = CoolBar1;
+        CoolCombo = new TComboBox(this);
+        CoolCombo->Width = 80;
+        CoolCombo->Parent = CoolBar1;
+        CoolBar1->Bands->Items[0]->Text = "Edit";
+        CoolBar1->Bands->Items[1]->Text = "Combo";
+        CoolBar1->OnChange = [this](TObject*) {
+            TCoolBands* bands = CoolBar1->Bands;
+            std::printf("CoolBar1Change: Bands[0]=%s Width=%d Break=%d, Bands[1]=%s Width=%d Break=%d\n",
+                        std::string(bands->Items[0]->Text).c_str(), (int)bands->Items[0]->Width, (bool)bands->Items[0]->Break,
+                        std::string(bands->Items[1]->Text).c_str(), (int)bands->Items[1]->Width, (bool)bands->Items[1]->Break);
+            std::fflush(stdout);
+        };
+        CoolSheet->OnShow = [this](TObject*) {
+            TCoolBands* bands = CoolBar1->Bands;
+            std::printf("CoolSheetShow: CoolBar1 Height=%d, bands (Left,Top,Right,Height):", (int)CoolBar1->Height);
+            for (int i = 0; i < bands->Count; ++i)
+            {
+                TCoolBand* b = bands->Items[i];
+                std::printf(" %d,%d,%d,%d", (int)b->Left, (int)b->Top, (int)b->Right, (int)b->Height);
+            }
+            std::printf("\n");
+            std::fflush(stdout);
+        };
+
         HeaderSheet->OnShow = [this](TObject*) {
             std::printf("HeaderSheetShow: HeaderControl1 Width/Height=%d/%d, GetSectionAt(100, 5)=%d (expected 1)\n",
                         (int)HeaderControl1->Width, (int)HeaderControl1->Height, HeaderControl1->GetSectionAt(TPoint{100, 5}));
@@ -1565,6 +1603,47 @@ int main()
                     temp->MenuItem == f->FileNewItem ? "yes" : "no", std::string(temp->Caption).c_str(), (int)tb->ButtonCount);
         temp->Free();
         std::printf("After temp->Free(): ButtonCount=%d (expected 6)\n", (int)tb->ButtonCount);
+    }
+
+    // Tier 2、7 バッチ目(TCoolBar)。
+    {
+        TMainForm* f = Form1;
+        TCoolBar* cb = f->CoolBar1;
+        TCoolBands* bands = cb->Bands;
+        TCoolBand* editBand = bands->Items[0];
+        std::printf("CoolBar1 Bands->Count=%d (expected 2), Items[0]->Control is CoolEdit: %s, FindBand(CoolCombo) is Items[1]: %s, "
+                    "FindBandIndex(CoolCombo)=%d (expected 1), Items[0]->Text=%s, same wrapper: %s, Align=%d (expected alTop=%d)\n",
+                    (int)bands->Count, editBand->Control == f->CoolEdit ? "yes" : "no",
+                    bands->FindBand(f->CoolCombo) == bands->Items[1] ? "yes" : "no", bands->FindBandIndex(f->CoolCombo),
+                    std::string(editBand->Text).c_str(), bands->Items[0] == editBand ? "yes" : "no",
+                    (int)(TAlign)cb->Align, (int)alTop);
+
+        // コントロールを置かないバンドを Add で追加し、Index で移動する。
+        TCoolBand* empty = bands->Add();
+        empty->Text = "Empty";
+        empty->Index = 0;
+        std::printf("After Add and Index = 0: Count=%d (expected 3), Items[0] is the new band: %s, Items[1] is editBand: %s, Control is null: %s\n",
+                    (int)bands->Count, bands->Items[0] == empty ? "yes" : "no", bands->Items[1] == editBand ? "yes" : "no",
+                    empty->Control == nullptr ? "yes" : "no");
+        bands->Delete(0);
+        std::printf("After Delete(0): Count=%d (expected 2), Items[0] is editBand: %s\n",
+                    (int)bands->Count, bands->Items[0] == editBand ? "yes" : "no");
+
+        // コントロールを破棄すると、そのバンドも LCL が削除する(バンドのラッパーも delete される)。
+        TEdit* tempEdit = new TEdit(f);
+        tempEdit->Parent = cb;
+        TCoolBand* tempBand = bands->FindBand(tempEdit);
+        std::printf("tempEdit band: Count=%d (expected 3), FindBand is Items[2]: %s\n",
+                    (int)bands->Count, tempBand == bands->Items[2] ? "yes" : "no");
+        tempEdit->Free();
+        std::printf("After tempEdit->Free(): Count=%d (expected 2)\n", (int)bands->Count);
+
+        // Align を alLeft にすると Vertical も true になる(TCustomCoolBar が Align の Setter を差し替えている)。
+        TCoolBar* temp = new TCoolBar(f);
+        temp->Align = alLeft;
+        std::printf("temp CoolBar Align = alLeft: Vertical=%d (expected 1), GrabStyle=%d (expected gsDouble=%d), ShowText=%d (expected 1)\n",
+                    (bool)temp->Vertical, (int)(TGrabStyle)temp->GrabStyle, (int)gsDouble, (bool)temp->ShowText);
+        temp->Free();
     }
 
     // 2 つ目以降に生成したフォームは MainForm にならない。

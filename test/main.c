@@ -413,6 +413,8 @@ int main(void)
     no_vcl_obj_t toolBar;
     no_vcl_obj_t leftButton;
     no_vcl_obj_t rightButton;
+    no_vcl_obj_t coolBar;
+    no_vcl_obj_t coolBands;
 
     no_vcl_FreeNotify_SetCallback(OnComponentFreed, &freedCount);
 
@@ -973,6 +975,32 @@ int main(void)
            no_vcl_TToolButton_GetDown(leftButton) != 0, no_vcl_TToolButton_GetDown(rightButton) != 0,
            no_vcl_TControl_GetAlign(toolBar), no_vcl_alTop, no_vcl_TToolWindow_GetEdgeBorders(toolBar), no_vcl_ebTop);
 
+    /* Tier 2、7 バッチ目(TCoolBar)。"Tools" ページのツールバーの下に置く。
+       ウィンドウを持つコントロールの Parent をクールバーにすると LCL がバンドを追加し、コントロールを破棄すると LCL がバンドを削除する
+       (この API を通らない削除でも、一度返したバンドには破棄通知が届く)。 */
+    coolBar = no_vcl_TCoolBar_Create(form);
+    no_vcl_TControl_SetParent(coolBar, toolsSheet);
+    coolBands = no_vcl_TCustomCoolBar_GetBands(coolBar);
+    {
+        no_vcl_obj_t edit = no_vcl_TEdit_Create(form);
+        no_vcl_obj_t autoBand;
+        no_vcl_obj_t textBand;
+        int freedBefore;
+        no_vcl_TControl_SetParent(edit, coolBar);
+        autoBand = no_vcl_TCoolBands_GetItem(coolBands, 0);
+        no_vcl_TCoolBand_SetText(autoBand, "Edit");
+        textBand = no_vcl_TCoolBands_Add(coolBands);
+        no_vcl_TCoolBand_SetText(textBand, "Text");
+        printf("CoolBar Bands Count=%d (expected 2), band 0 Control is edit: %s, FindBandIndex(edit)=%d (expected 0), Vertical=%d (expected 0)\n",
+               no_vcl_TCoolBands_GetCount(coolBands), no_vcl_TCoolBand_GetControl(autoBand) == edit ? "yes" : "no",
+               no_vcl_TCoolBands_FindBandIndex(coolBands, edit), no_vcl_TCustomCoolBar_GetVertical(coolBar) != 0);
+        freedBefore = itemsFreed;
+        no_vcl_TComponent_Destroy(edit);
+        printf("After destroying edit: Bands Count=%d (expected 1), band 0 is textBand: %s, items freed: %d (expected 1)\n",
+               no_vcl_TCoolBands_GetCount(coolBands), no_vcl_TCoolBands_GetItem(coolBands, 0) == textBand ? "yes" : "no",
+               itemsFreed - freedBefore);
+    }
+
     printf("Running (click the button, then close the window twice: the first close is blocked)...\n");
     fflush(stdout);
     /* MainForm を表示してメッセージループに入り、MainForm が閉じられると戻る。 */
@@ -982,11 +1010,11 @@ int main(void)
     /* Application が所有するフォーム(と、フォームが所有するコントロール)をまとめて破棄する。
        呼ばなくても DLL の切り離し時に LCL が破棄するが、そのときは破棄通知が呼ばれない。 */
     no_vcl_TComponent_DestroyComponents(app);
-    printf("Clicks: %d, Freed components: %d (expected 69: form + 62 owned + 6 created inside LCL: 2 menu roots, a separator and 3 AddTabSheet pages)\n", clickCount, freedCount);
+    printf("Clicks: %d, Freed components: %d (expected 71: form + 64 owned + 6 created inside LCL: 2 menu roots, a separator and 3 AddTabSheet pages)\n", clickCount, freedCount);
     /* ツリービュー・リストビュー・ヘッダーコントロールの破棄に伴って、残りのノード(4 つ)・リストビューの項目(2 つ)と列(2 つ)・
-       セクション(2 つ)も破棄通知が届く。 */
-    printf("Items freed: %d (expected 15: tree 2 deleted + 4 with the tree view, list 1 item + 1 column deleted "
-           "+ 2 items + 2 columns with the list view, header 1 section deleted + 2 with the header control)\n", itemsFreed);
+       セクション(2 つ)・バンド(1 つ)も破棄通知が届く。 */
+    printf("Items freed: %d (expected 17: tree 2 deleted + 4 with the tree view, list 1 item + 1 column deleted "
+           "+ 2 items + 2 columns with the list view, header 1 section deleted + 2 with the header control, cool bar 1 band deleted + 1 with the cool bar)\n", itemsFreed);
 
     printf("OK\n");
     return 0;

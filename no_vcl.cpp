@@ -1238,7 +1238,7 @@ int TTabSheet::GetTabIndexImpl(TObject* owner) { return no_vcl_TTabSheet_GetTabI
 
 /* ---------------- ItemRegistry ---------------- */
 
-// 項目の削除は Pascal 側(TNoVclTreeView.Delete・TNoVclListView.DoDeletion・列を削除する関数)から通知される。
+// 項目の破棄は Pascal 側で、ハンドルを渡すときに付けた観察者(TPersistent.Destroy の ooFree)から通知される。
 // 意図的に破棄しない(new したまま)。関数内 static の値にすると、初回の呼び出し(フォームの生成中)より前に
 // 登録された TApplication::Shutdown(atexit)よりも先に破棄されてしまい、Shutdown でフォームを破棄する際の
 // 項目の削除通知(FreeTrampoline)が、破棄済みのレジストリに触れることになる(未定義動作。実際に終了が数秒遅れた。ADR 0019)。
@@ -2781,5 +2781,147 @@ void TToolButton::SetOnArrowClickImpl(TObject* owner, const TNotifyEvent& value)
     SetSimpleEvent(self->handle_, self->onArrowClick_, self->onArrowClickHooked_, value,
                    &no_vcl_TToolButton_SetOnArrowClick, &TToolButton::ArrowClickTrampoline);
 }
+
+/* ---------------- CoolBar ---------------- */
+
+TCoolBand::TCoolBand(no_vcl_obj_t handle)
+    : TPersistent(handle)
+    , Text(this, &TCoolBand::GetTextImpl, &TCoolBand::SetTextImpl)
+    , Width(this, &TCoolBand::GetWidthImpl, &TCoolBand::SetWidthImpl)
+    , MinWidth(this, &TCoolBand::GetMinWidthImpl, &TCoolBand::SetMinWidthImpl)
+    , MinHeight(this, &TCoolBand::GetMinHeightImpl, &TCoolBand::SetMinHeightImpl)
+    , Break(this, &TCoolBand::GetBreakImpl, &TCoolBand::SetBreakImpl)
+    , Visible(this, &TCoolBand::GetVisibleImpl, &TCoolBand::SetVisibleImpl)
+    , FixedSize(this, &TCoolBand::GetFixedSizeImpl, &TCoolBand::SetFixedSizeImpl)
+    , FixedBackground(this, &TCoolBand::GetFixedBackgroundImpl, &TCoolBand::SetFixedBackgroundImpl)
+    , HorizontalOnly(this, &TCoolBand::GetHorizontalOnlyImpl, &TCoolBand::SetHorizontalOnlyImpl)
+    , Color(this, &TCoolBand::GetColorImpl, &TCoolBand::SetColorImpl)
+    , ParentColor(this, &TCoolBand::GetParentColorImpl, &TCoolBand::SetParentColorImpl)
+    , Index(this, &TCoolBand::GetIndexImpl, &TCoolBand::SetIndexImpl)
+    , Control(this, &TCoolBand::GetControlImpl, &TCoolBand::SetControlImpl)
+    , Left(this, &TCoolBand::GetLeftImpl)
+    , Top(this, &TCoolBand::GetTopImpl)
+    , Right(this, &TCoolBand::GetRightImpl)
+    , Height(this, &TCoolBand::GetHeightImpl)
+{}
+
+void TCoolBand::AutosizeWidth() { no_vcl_TCoolBand_AutosizeWidth(handle_); }
+
+std::string TCoolBand::GetTextImpl(TObject* owner) { return std::string(no_vcl_TCoolBand_GetText(owner->Handle())); }
+void TCoolBand::SetTextImpl(TObject* owner, const std::string& value) { no_vcl_TCoolBand_SetText(owner->Handle(), value.c_str()); }
+int  TCoolBand::GetWidthImpl(TObject* owner)                            { return no_vcl_TCoolBand_GetWidth(owner->Handle()); }
+void TCoolBand::SetWidthImpl(TObject* owner, const int& value)           { no_vcl_TCoolBand_SetWidth(owner->Handle(), value); }
+int  TCoolBand::GetMinWidthImpl(TObject* owner)                         { return no_vcl_TCoolBand_GetMinWidth(owner->Handle()); }
+void TCoolBand::SetMinWidthImpl(TObject* owner, const int& value)        { no_vcl_TCoolBand_SetMinWidth(owner->Handle(), value); }
+int  TCoolBand::GetMinHeightImpl(TObject* owner)                        { return no_vcl_TCoolBand_GetMinHeight(owner->Handle()); }
+void TCoolBand::SetMinHeightImpl(TObject* owner, const int& value)       { no_vcl_TCoolBand_SetMinHeight(owner->Handle(), value); }
+bool TCoolBand::GetBreakImpl(TObject* owner)                            { return no_vcl_TCoolBand_GetBreak(owner->Handle()) != 0; }
+void TCoolBand::SetBreakImpl(TObject* owner, const bool& value)          { no_vcl_TCoolBand_SetBreak(owner->Handle(), value ? 1 : 0); }
+bool TCoolBand::GetVisibleImpl(TObject* owner)                          { return no_vcl_TCoolBand_GetVisible(owner->Handle()) != 0; }
+void TCoolBand::SetVisibleImpl(TObject* owner, const bool& value)        { no_vcl_TCoolBand_SetVisible(owner->Handle(), value ? 1 : 0); }
+bool TCoolBand::GetFixedSizeImpl(TObject* owner)                        { return no_vcl_TCoolBand_GetFixedSize(owner->Handle()) != 0; }
+void TCoolBand::SetFixedSizeImpl(TObject* owner, const bool& value)      { no_vcl_TCoolBand_SetFixedSize(owner->Handle(), value ? 1 : 0); }
+bool TCoolBand::GetFixedBackgroundImpl(TObject* owner)                  { return no_vcl_TCoolBand_GetFixedBackground(owner->Handle()) != 0; }
+void TCoolBand::SetFixedBackgroundImpl(TObject* owner, const bool& value) { no_vcl_TCoolBand_SetFixedBackground(owner->Handle(), value ? 1 : 0); }
+bool TCoolBand::GetHorizontalOnlyImpl(TObject* owner)                   { return no_vcl_TCoolBand_GetHorizontalOnly(owner->Handle()) != 0; }
+void TCoolBand::SetHorizontalOnlyImpl(TObject* owner, const bool& value) { no_vcl_TCoolBand_SetHorizontalOnly(owner->Handle(), value ? 1 : 0); }
+TColor TCoolBand::GetColorImpl(TObject* owner)                          { return static_cast<TColor>(no_vcl_TCoolBand_GetColor(owner->Handle())); }
+void TCoolBand::SetColorImpl(TObject* owner, const TColor& value)        { no_vcl_TCoolBand_SetColor(owner->Handle(), static_cast<no_vcl_int_t>(value)); }
+bool TCoolBand::GetParentColorImpl(TObject* owner)                      { return no_vcl_TCoolBand_GetParentColor(owner->Handle()) != 0; }
+void TCoolBand::SetParentColorImpl(TObject* owner, const bool& value)    { no_vcl_TCoolBand_SetParentColor(owner->Handle(), value ? 1 : 0); }
+int  TCoolBand::GetIndexImpl(TObject* owner)                            { return no_vcl_TCoolBand_GetIndex(owner->Handle()); }
+void TCoolBand::SetIndexImpl(TObject* owner, const int& value)           { no_vcl_TCoolBand_SetIndex(owner->Handle(), value); }
+// バンドに置くコントロールは利用者が生成したコンポーネントなので、ラッパーは必ずある。
+TControl* TCoolBand::GetControlImpl(TObject* owner)
+{
+    return static_cast<TControl*>(TControl::FromHandle(no_vcl_TCoolBand_GetControl(owner->Handle())));
+}
+void TCoolBand::SetControlImpl(TObject* owner, TControl* const& value)   { no_vcl_TCoolBand_SetControl(owner->Handle(), value ? value->Handle() : nullptr); }
+int  TCoolBand::GetLeftImpl(TObject* owner)                             { return no_vcl_TCoolBand_GetLeft(owner->Handle()); }
+int  TCoolBand::GetTopImpl(TObject* owner)                              { return no_vcl_TCoolBand_GetTop(owner->Handle()); }
+int  TCoolBand::GetRightImpl(TObject* owner)                            { return no_vcl_TCoolBand_GetRight(owner->Handle()); }
+int  TCoolBand::GetHeightImpl(TObject* owner)                           { return no_vcl_TCoolBand_GetHeight(owner->Handle()); }
+
+TCoolBands::TCoolBands(no_vcl_obj_t handle)
+    : TPersistent(handle)
+    , Count(this, &TCoolBands::GetCountImpl)
+    , Items(this, &TCoolBands::GetItemsImpl)
+{}
+
+TCoolBand* TCoolBands::Add()          { return TCoolBand::Wrap(no_vcl_TCoolBands_Add(handle_)); }
+void TCoolBands::Delete(int Index)    { no_vcl_TCoolBands_Delete(handle_, Index); }
+void TCoolBands::Clear()              { no_vcl_TCoolBands_Clear(handle_); }
+void TCoolBands::BeginUpdate()        { no_vcl_TCoolBands_BeginUpdate(handle_); }
+void TCoolBands::EndUpdate()          { no_vcl_TCoolBands_EndUpdate(handle_); }
+TCoolBand* TCoolBands::FindBand(TControl* AControl) const { return TCoolBand::Wrap(no_vcl_TCoolBands_FindBand(handle_, AControl ? AControl->Handle() : nullptr)); }
+int  TCoolBands::FindBandIndex(TControl* AControl) const  { return no_vcl_TCoolBands_FindBandIndex(handle_, AControl ? AControl->Handle() : nullptr); }
+TCoolBand* TCoolBands::GetItemsImpl(TObject* owner, int Index) { return TCoolBand::Wrap(no_vcl_TCoolBands_GetItem(owner->Handle(), Index)); }
+int  TCoolBands::GetCountImpl(TObject* owner) { return no_vcl_TCoolBands_GetCount(owner->Handle()); }
+
+TCustomCoolBar::TCustomCoolBar(no_vcl_obj_t handle)
+    : TToolWindow(handle)
+    , Bands(this, &TCustomCoolBar::GetBandsImpl)
+    , FixedSize(this, &TCustomCoolBar::GetFixedSizeImpl, &TCustomCoolBar::SetFixedSizeImpl)
+    , FixedOrder(this, &TCustomCoolBar::GetFixedOrderImpl, &TCustomCoolBar::SetFixedOrderImpl)
+    , GrabStyle(this, &TCustomCoolBar::GetGrabStyleImpl, &TCustomCoolBar::SetGrabStyleImpl)
+    , GrabWidth(this, &TCustomCoolBar::GetGrabWidthImpl, &TCustomCoolBar::SetGrabWidthImpl)
+    , HorizontalSpacing(this, &TCustomCoolBar::GetHorizontalSpacingImpl, &TCustomCoolBar::SetHorizontalSpacingImpl)
+    , VerticalSpacing(this, &TCustomCoolBar::GetVerticalSpacingImpl, &TCustomCoolBar::SetVerticalSpacingImpl)
+    , ShowText(this, &TCustomCoolBar::GetShowTextImpl, &TCustomCoolBar::SetShowTextImpl)
+    , Themed(this, &TCustomCoolBar::GetThemedImpl, &TCustomCoolBar::SetThemedImpl)
+    , Vertical(this, &TCustomCoolBar::GetVerticalImpl, &TCustomCoolBar::SetVerticalImpl)
+    , OnChange(this, &TCustomCoolBar::GetOnChangeImpl, &TCustomCoolBar::SetOnChangeImpl)
+    , bands_(no_vcl_TCustomCoolBar_GetBands(handle_))
+{}
+
+void TCustomCoolBar::AutosizeBands() { no_vcl_TCustomCoolBar_AutosizeBands(handle_); }
+
+void TCustomCoolBar::MouseToBandPos(int X, int Y, int& ABand, bool& AGrabber) const
+{
+    no_vcl_int_t band = -1;
+    no_vcl_bool_t grabber = 0;
+    no_vcl_TCustomCoolBar_MouseToBandPos(handle_, X, Y, &band, &grabber);
+    ABand = band;
+    AGrabber = grabber != 0;
+}
+
+TCoolBands* TCustomCoolBar::GetBandsImpl(TObject* owner) { return &static_cast<TCustomCoolBar*>(owner)->bands_; }
+bool TCustomCoolBar::GetFixedSizeImpl(TObject* owner)                        { return no_vcl_TCustomCoolBar_GetFixedSize(owner->Handle()) != 0; }
+void TCustomCoolBar::SetFixedSizeImpl(TObject* owner, const bool& value)      { no_vcl_TCustomCoolBar_SetFixedSize(owner->Handle(), value ? 1 : 0); }
+bool TCustomCoolBar::GetFixedOrderImpl(TObject* owner)                       { return no_vcl_TCustomCoolBar_GetFixedOrder(owner->Handle()) != 0; }
+void TCustomCoolBar::SetFixedOrderImpl(TObject* owner, const bool& value)     { no_vcl_TCustomCoolBar_SetFixedOrder(owner->Handle(), value ? 1 : 0); }
+TGrabStyle TCustomCoolBar::GetGrabStyleImpl(TObject* owner) { return static_cast<TGrabStyle>(no_vcl_TCustomCoolBar_GetGrabStyle(owner->Handle())); }
+void TCustomCoolBar::SetGrabStyleImpl(TObject* owner, const TGrabStyle& value) { no_vcl_TCustomCoolBar_SetGrabStyle(owner->Handle(), value); }
+int  TCustomCoolBar::GetGrabWidthImpl(TObject* owner)                        { return no_vcl_TCustomCoolBar_GetGrabWidth(owner->Handle()); }
+void TCustomCoolBar::SetGrabWidthImpl(TObject* owner, const int& value)       { no_vcl_TCustomCoolBar_SetGrabWidth(owner->Handle(), value); }
+int  TCustomCoolBar::GetHorizontalSpacingImpl(TObject* owner)                { return no_vcl_TCustomCoolBar_GetHorizontalSpacing(owner->Handle()); }
+void TCustomCoolBar::SetHorizontalSpacingImpl(TObject* owner, const int& value) { no_vcl_TCustomCoolBar_SetHorizontalSpacing(owner->Handle(), value); }
+int  TCustomCoolBar::GetVerticalSpacingImpl(TObject* owner)                  { return no_vcl_TCustomCoolBar_GetVerticalSpacing(owner->Handle()); }
+void TCustomCoolBar::SetVerticalSpacingImpl(TObject* owner, const int& value) { no_vcl_TCustomCoolBar_SetVerticalSpacing(owner->Handle(), value); }
+bool TCustomCoolBar::GetShowTextImpl(TObject* owner)                         { return no_vcl_TCustomCoolBar_GetShowText(owner->Handle()) != 0; }
+void TCustomCoolBar::SetShowTextImpl(TObject* owner, const bool& value)       { no_vcl_TCustomCoolBar_SetShowText(owner->Handle(), value ? 1 : 0); }
+bool TCustomCoolBar::GetThemedImpl(TObject* owner)                           { return no_vcl_TCustomCoolBar_GetThemed(owner->Handle()) != 0; }
+void TCustomCoolBar::SetThemedImpl(TObject* owner, const bool& value)         { no_vcl_TCustomCoolBar_SetThemed(owner->Handle(), value ? 1 : 0); }
+bool TCustomCoolBar::GetVerticalImpl(TObject* owner)                         { return no_vcl_TCustomCoolBar_GetVertical(owner->Handle()) != 0; }
+void TCustomCoolBar::SetVerticalImpl(TObject* owner, const bool& value)       { no_vcl_TCustomCoolBar_SetVertical(owner->Handle(), value ? 1 : 0); }
+
+void NO_VCL_CALL TCustomCoolBar::ChangeTrampoline(no_vcl_obj_t sender, void*)
+{
+    if (TCustomCoolBar* self = static_cast<TCustomCoolBar*>(FromHandle(sender)))
+        CallNotify(self->onChange_, self);
+}
+
+TNotifyEvent TCustomCoolBar::GetOnChangeImpl(TObject* owner) { return static_cast<TCustomCoolBar*>(owner)->onChange_; }
+
+void TCustomCoolBar::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCustomCoolBar* self = static_cast<TCustomCoolBar*>(owner);
+    SetSimpleEvent(self->handle_, self->onChange_, self->onChangeHooked_, value,
+                   &no_vcl_TCustomCoolBar_SetOnChange, &TCustomCoolBar::ChangeTrampoline);
+}
+
+TCoolBar::TCoolBar(TComponent* AOwner)
+    : TCustomCoolBar(no_vcl_TCoolBar_Create(HandleOf(AOwner)))
+{}
 
 } // namespace no_vcl

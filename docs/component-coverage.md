@@ -64,7 +64,7 @@ TScrollingWinControl のいずれかで、いずれも実装済み。既存パ�
 | ✅ TStringGrid / TDrawGrid | grids.pas(TCustomGrid → TCustomDrawGrid) | TCustomControl(実装済み) | Tier 2 の 4 バッチ目([ADR 0021](adr/0021-drawgrid-and-stringgrid.md))。Cells[c][r]・ColWidths[i] は添字で書ける([ADR 0022](adr/0022-indexed-property-proxy.md))、Options はビット集合、OnDrawCell/OnSelectCell/OnSelection/OnHeaderClick。Objects・Cols/Rows・OnGetEditText/OnSetEditText・Columns は未対応 |
 | ✅ THeaderControl | comctrls.pp(TCustomHeaderControl) | TCustomControl(実装済み) | Tier 2 の 5 バッチ目([ADR 0024](adr/0024-headercontrol.md))。Sections(Items[i]・Add・Insert・Delete・Clear)、DragReorder、OnSectionClick/Resize/Track/Drag/EndDrag/SeparatorDblClick。セクションの破棄は CreateSection を差し替えた派生セクションのデストラクタで通知。Images/ImageIndex は Tier 3 待ち |
 | ✅ TToolBar / TToolButton | comctrls.pp | TToolWindow(TCustomControl 系。実質は TCustomControl) | Tier 2 の 6 バッチ目([ADR 0025](adr/0025-toolbar-and-toolbutton.md))。ボタンは Parent をツールバーにして追加(TComponent なので寿命は既存の仕組み)。Style/Down/Grouped/DropdownMenu/MenuItem/OnArrowClick、Buttons[i]、EdgeBorders 等。Images/ImageIndex は Tier 3 待ち、OnPaint/OnPaintButton は未対応 |
-| TCoolBar | comctrls.pp(TCustomCoolBar) | TToolWindow | 優先度低め(現代の UI ではあまり使われない) |
+| ✅ TCoolBar | comctrls.pp(TCustomCoolBar) | TToolWindow(実装済み) | Tier 2 の 7 バッチ目([ADR 0026](adr/0026-coolbar-and-item-free-observer.md))。Bands(Items[i]・Add・Delete・Clear・FindBand)、バンドの Text/Width/Break/Control 等、GrabStyle・Vertical・OnChange。コントロールの Parent をクールバーにすると LCL がバンドを自動で追加する。Bitmap/Images は Tier 3 待ち |
 
 ### Tier 3 — グラフィックス基盤が前提
 
@@ -153,9 +153,8 @@ Tier 1 の 1 バッチ目([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.m
 4. **Tier 2** はバッチに分けて進めている。1 バッチ目の TPageControl+TTabSheet([ADR 0018](adr/0018-pagecontrol-and-tabsheet.md))と、
    2 バッチ目の TTreeView([ADR 0019](adr/0019-treeview-and-non-component-items.md))、3 バッチ目の TListView
    ([ADR 0020](adr/0020-listview-and-shared-item-registry.md))、4 バッチ目の TDrawGrid/TStringGrid
-   ([ADR 0021](adr/0021-drawgrid-and-stringgrid.md))、5 バッチ目の THeaderControl([ADR 0024](adr/0024-headercontrol.md))、6 バッチ目の TToolBar/TToolButton([ADR 0025](adr/0025-toolbar-and-toolbutton.md))は完了した。TComponent ではない項目の寿命管理は
-   `ItemRegistry` と項目の破棄通知(`ItemFree_SetCallback`)に共通化した。
-   残りは TCoolBar だけ。
+   ([ADR 0021](adr/0021-drawgrid-and-stringgrid.md))、5 バッチ目の THeaderControl([ADR 0024](adr/0024-headercontrol.md))、6 バッチ目の TToolBar/TToolButton([ADR 0025](adr/0025-toolbar-and-toolbutton.md))、7 バッチ目の TCoolBar([ADR 0026](adr/0026-coolbar-and-item-free-observer.md))で完了した。TComponent ではない項目の寿命管理は
+   `ItemRegistry` と項目の破棄通知(`ItemFree_SetCallback`)に共通化し、通知は TPersistent の観察者(`WatchItem`)から送る(ADR 0026)。
 5. **Tier 3(TBitmap/TPicture)** は、TImage 単体のためというより、Tier 1/2 のいくつか(Glyph・ImageList)の
    完成度を上げるために必要になる。着手するタイミングで独立した ADR を書く。
 6. **Tier 4(ダイアログ)** は他とほぼ独立して進められるので、隙間で着手しやすい。

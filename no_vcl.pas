@@ -26,6 +26,7 @@ uses
   Spin,
   MaskEdit,
   Grids,
+  AVL_Tree,
   Menus,
   LCLProc,
   Graphics,
@@ -138,8 +139,8 @@ var
   GFreeNotifier: TFreeNotifier;
   GFreeCallback: TNoVclCallback = nil;
   GFreeData: Pointer = nil;
-  { TComponent ではない項目(TTreeNode・TListItem・TListColumn・THeaderSection。FreeNotification が無い)の破棄通知。
-    TNoVclTreeView.Delete・TNoVclListView.DoDeletion・列を削除する関数・TNoVclHeaderSection.Destroy から呼ぶ(NotifyItemFreed)。 }
+  { TComponent ではない項目(TTreeNode・TListItem・TListColumn・THeaderSection・TCoolBand。FreeNotification が無い)の破棄通知。
+    WatchItem で付けた観察者が、項目の破棄(TPersistent.Destroy の ooFree)で呼ぶ(NotifyItemFreed)。 }
   GItemFreeCallback: TNoVclCallback = nil;
   GItemFreeData: Pointer = nil;
   { DLL の切り離し中は True。LCL の終了処理で起きるイベント(フォームの OnDestroy・OnHide 等)を呼び出し側へ送らない。 }
@@ -517,7 +518,12 @@ end;
 
 procedure TControl_SetAlign(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TControl(Obj).Align := TAlign(Value);
+  { TCustomCoolBar は Align の Setter を reintroduce で差し替え(非仮想)、alLeft/alRight なら Vertical も切り替えるため、
+    TControl の Setter を経由せずにその Setter を呼ぶ。 }
+  if TObject(Obj) is TCustomCoolBar then
+    TCustomCoolBar(Obj).Align := TAlign(Value)
+  else
+    TControl(Obj).Align := TAlign(Value);
 end;
 
 { Text は TControl で protected。TCustomEdit と TCustomComboBox がそれぞれ公開している。 }
@@ -2314,16 +2320,9 @@ end;
 
 { docs/component-coverage.md の Tier 2、2 バッチ目(TTreeView)。docs/adr/0019-... を参照。
   TTreeNode・TTreeNodes は TComponent ではなく TPersistent で、FreeNotification が使えない。
-  そこで TTreeView_Create は TTreeView の代わりに、ノードの削除(TCustomTreeView.Delete。protected virtual で、
-  TTreeNode.Destroy から必ず呼ばれ、OnDeletion を発生させる)を上書きした TNoVclTreeView を生成し、
-  利用者の OnDeletion(inherited)の後にノードの破棄通知(GItemFreeCallback)を送る。 }
+  ノードの破棄は、ハンドルを C 側へ渡すときに付ける観察者(WatchItem)で通知する(docs/adr/0026 で ADR 0019 の方式を置き換えた)。 }
 
 type
-  TNoVclTreeView = class(TTreeView)
-  protected
-    procedure Delete(Node: TTreeNode); override;
-  end;
-
   { TComponent ではない項目(ツリービューのノード・リストビューの項目や列)を 1 つ受け取るイベント用。
     ツリービューの OnChange/OnExpanded/OnCollapsed/OnDeletion、リストビューの OnDeletion/OnItemChecked/OnColumnClick、
     ヘッダーコントロールの OnSectionClick/OnSectionResize/OnSectionSeparatorDblClick。
@@ -2364,39 +2363,86 @@ type
     procedure DoNodeAllow(Sender: TObject; Node: TTreeNode; var Allow: Boolean);
   end;
 
-procedure TNoVclTreeView.Delete(Node: TTreeNode);
+{ TComponent ではない項目(TTreeNode・TListItem・TListColumn・THeaderSection・TCoolBand。いずれも TPersistent)の破棄通知。
+  項目のハンドルを C 側へ渡すとき(関数の戻り値・イベントの引数)に WatchItem で FPC の TPersistent の観察者を付け、
+  TPersistent.Destroy が送る ooFree で項目の破棄を通知する(コンポーネントの Watch と FreeNotification と同じ考え方)。
+  ooFree は破棄の最後(派生クラスのデストラクタの処理がすべて終わった後)に、コレクションの Clear・破棄の途中でも必ず送られる。
+  破棄の最初(TCustomTreeView.Delete 等)で通知すると、その後の破棄の処理から呼ばれたイベント(OnCollapsing 等)で
+  C++ 側が同じ項目を再びラップし、その登録が残ってしまう(docs/adr/0026)。 }
+
+type
+  { 参照カウントをしない TComponent の IInterface 実装を使う(観察者の一覧に入れても解放されない)。 }
+  TItemFreeObserver = class(TComponent, IFPObserver)
+  public
+    procedure FPOObservedChanged(ASender: TObject; Operation: TFPObservedOperation; Data: Pointer);
+  end;
+
+var
+  GItemFreeObserver: TItemFreeObserver = nil;
+  GObservedItems: TAVLTree = nil;  // 観察者を付けた項目(同じ項目に二重に付けないため。ポインタで比較する)
+
+procedure NotifyItemFreed(Item: TObject);
 begin
-  inherited Delete(Node);
   if Assigned(GItemFreeCallback) then
-    GItemFreeCallback(Pointer(Node), GItemFreeData);
+    GItemFreeCallback(Pointer(Item), GItemFreeData);
+end;
+
+procedure TItemFreeObserver.FPOObservedChanged(ASender: TObject; Operation: TFPObservedOperation; Data: Pointer);
+var
+  Node: TAVLTreeNode;
+begin
+  if Operation = ooFree then
+  begin
+    Node := GObservedItems.Find(ASender);
+    if Node <> nil then
+      GObservedItems.Delete(Node);
+    NotifyItemFreed(ASender);
+  end;
+end;
+
+function WatchItem(Item: TPersistent): Pointer;
+begin
+  Result := Pointer(Item);
+  if Item = nil then
+    Exit;
+  if GItemFreeObserver = nil then
+  begin
+    GItemFreeObserver := TItemFreeObserver.Create(nil);
+    GObservedItems := TAVLTree.Create;  // 既定の比較はポインタの大小
+  end;
+  if GObservedItems.Find(Item) = nil then
+  begin
+    Item.FPOAttachObserver(GItemFreeObserver);
+    GObservedItems.Add(Item);
+  end;
 end;
 
 procedure TItemCallbackBridge.DoNode(Sender: TObject; Node: TTreeNode);
 begin
   if not Assigned(FCallback) or GDetaching then
     Exit;
-  FCallback(Pointer(Sender), Pointer(Node), FData);
+  FCallback(Pointer(Sender), WatchItem(Node), FData);
 end;
 
 procedure TItemCallbackBridge.DoListItem(Sender: TObject; Item: TListItem);
 begin
   if not Assigned(FCallback) or GDetaching then
     Exit;
-  FCallback(Pointer(Sender), Pointer(Item), FData);
+  FCallback(Pointer(Sender), WatchItem(Item), FData);
 end;
 
 procedure TItemCallbackBridge.DoColumn(Sender: TObject; Column: TListColumn);
 begin
   if not Assigned(FCallback) or GDetaching then
     Exit;
-  FCallback(Pointer(Sender), Pointer(Column), FData);
+  FCallback(Pointer(Sender), WatchItem(Column), FData);
 end;
 
 procedure TItemCallbackBridge.DoSection(HeaderControl: TCustomHeaderControl; Section: THeaderSection);
 begin
   if not Assigned(FCallback) or GDetaching then
     Exit;
-  FCallback(Pointer(HeaderControl), Pointer(Section), FData);
+  FCallback(Pointer(HeaderControl), WatchItem(Section), FData);
 end;
 
 procedure TItemIntCallbackBridge.DoSelectItem(Sender: TObject; Item: TListItem; Selected: Boolean);
@@ -2404,16 +2450,16 @@ begin
   if not Assigned(FCallback) or GDetaching then
     Exit;
   if Selected then
-    FCallback(Pointer(Sender), Pointer(Item), -1, FData)
+    FCallback(Pointer(Sender), WatchItem(Item), -1, FData)
   else
-    FCallback(Pointer(Sender), Pointer(Item), 0, FData);
+    FCallback(Pointer(Sender), WatchItem(Item), 0, FData);
 end;
 
 procedure TItemIntCallbackBridge.DoItemChange(Sender: TObject; Item: TListItem; Change: TItemChange);
 begin
   if not Assigned(FCallback) or GDetaching then
     Exit;
-  FCallback(Pointer(Sender), Pointer(Item), Ord(Change), FData);
+  FCallback(Pointer(Sender), WatchItem(Item), Ord(Change), FData);
 end;
 
 procedure TItemAllowCallbackBridge.DoNodeAllow(Sender: TObject; Node: TTreeNode; var Allow: Boolean);
@@ -2423,7 +2469,7 @@ begin
   if not Assigned(FCallback) or GDetaching then
     Exit;
   if Allow then A := -1 else A := 0;
-  FCallback(Pointer(Sender), Pointer(Node), @A, FData);
+  FCallback(Pointer(Sender), WatchItem(Node), @A, FData);
   Allow := A <> 0;
 end;
 
@@ -2460,12 +2506,6 @@ begin
   Result.FData := Data;
 end;
 
-procedure NotifyItemFreed(Item: TObject);
-begin
-  if Assigned(GItemFreeCallback) then
-    GItemFreeCallback(Pointer(Item), GItemFreeData);
-end;
-
 procedure ItemFree_SetCallback(Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
   GItemFreeCallback := Cb;
@@ -2476,7 +2516,7 @@ end;
 
 function TTreeView_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TNoVclTreeView.Create(TComponent(Owner)));
+  Result := Watch(TTreeView.Create(TComponent(Owner)));
 end;
 
 { Items(TTreeNodes)はツリービューが所有する非所有のハンドル(TCanvas と同じく、ツリービューと寿命が一致する)。 }
@@ -2487,7 +2527,7 @@ end;
 
 function TCustomTreeView_GetSelected(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomTreeView(Obj).Selected);
+  Result := WatchItem(TCustomTreeView(Obj).Selected);
 end;
 
 procedure TCustomTreeView_SetSelected(Obj: Pointer; Node: Pointer); NO_VCL_CALL;
@@ -2513,7 +2553,7 @@ end;
 { X, Y はツリービューのクライアント座標。そこにノードが無ければ nil。 }
 function TCustomTreeView_GetNodeAt(Obj: Pointer; X, Y: Integer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomTreeView(Obj).GetNodeAt(X, Y));
+  Result := WatchItem(TCustomTreeView(Obj).GetNodeAt(X, Y));
 end;
 
 { TCustomTreeView の protected を TTreeView が published にしているプロパティ。 }
@@ -2627,27 +2667,27 @@ end;
 
 function TTreeNodes_Add(Obj: Pointer; Sibling: Pointer; Text: PChar): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TTreeNodes(Obj).Add(TTreeNode(Sibling), Text));
+  Result := WatchItem(TTreeNodes(Obj).Add(TTreeNode(Sibling), Text));
 end;
 
 function TTreeNodes_AddFirst(Obj: Pointer; Sibling: Pointer; Text: PChar): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TTreeNodes(Obj).AddFirst(TTreeNode(Sibling), Text));
+  Result := WatchItem(TTreeNodes(Obj).AddFirst(TTreeNode(Sibling), Text));
 end;
 
 function TTreeNodes_AddChild(Obj: Pointer; Parent: Pointer; Text: PChar): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TTreeNodes(Obj).AddChild(TTreeNode(Parent), Text));
+  Result := WatchItem(TTreeNodes(Obj).AddChild(TTreeNode(Parent), Text));
 end;
 
 function TTreeNodes_AddChildFirst(Obj: Pointer; Parent: Pointer; Text: PChar): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TTreeNodes(Obj).AddChildFirst(TTreeNode(Parent), Text));
+  Result := WatchItem(TTreeNodes(Obj).AddChildFirst(TTreeNode(Parent), Text));
 end;
 
 function TTreeNodes_Insert(Obj: Pointer; NextNode: Pointer; Text: PChar): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TTreeNodes(Obj).Insert(TTreeNode(NextNode), Text));
+  Result := WatchItem(TTreeNodes(Obj).Insert(TTreeNode(NextNode), Text));
 end;
 
 procedure TTreeNodes_Clear(Obj: Pointer); NO_VCL_CALL;
@@ -2668,17 +2708,17 @@ end;
 
 function TTreeNodes_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TTreeNodes(Obj).Item[Index]);
+  Result := WatchItem(TTreeNodes(Obj).Item[Index]);
 end;
 
 function TTreeNodes_GetFirstNode(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TTreeNodes(Obj).GetFirstNode);
+  Result := WatchItem(TTreeNodes(Obj).GetFirstNode);
 end;
 
 function TTreeNodes_FindNodeWithText(Obj: Pointer; Text: PChar): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TTreeNodes(Obj).FindNodeWithText(Text));
+  Result := WatchItem(TTreeNodes(Obj).FindNodeWithText(Text));
 end;
 
 procedure TTreeNodes_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
@@ -2751,7 +2791,7 @@ end;
 
 function TTreeNode_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TTreeNode(Obj).Items[Index]);
+  Result := WatchItem(TTreeNode(Obj).Items[Index]);
 end;
 
 function TTreeNode_GetIndex(Obj: Pointer): Integer; NO_VCL_CALL;
@@ -2771,7 +2811,7 @@ end;
 
 function TTreeNode_GetParent(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TTreeNode(Obj).Parent);
+  Result := WatchItem(TTreeNode(Obj).Parent);
 end;
 
 function TTreeNode_GetTreeView(Obj: Pointer): Pointer; NO_VCL_CALL;
@@ -2781,33 +2821,33 @@ end;
 
 function TTreeNode_GetFirstChild(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TTreeNode(Obj).GetFirstChild);
+  Result := WatchItem(TTreeNode(Obj).GetFirstChild);
 end;
 
 function TTreeNode_GetLastChild(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TTreeNode(Obj).GetLastChild);
+  Result := WatchItem(TTreeNode(Obj).GetLastChild);
 end;
 
 function TTreeNode_GetNextSibling(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TTreeNode(Obj).GetNextSibling);
+  Result := WatchItem(TTreeNode(Obj).GetNextSibling);
 end;
 
 function TTreeNode_GetPrevSibling(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TTreeNode(Obj).GetPrevSibling);
+  Result := WatchItem(TTreeNode(Obj).GetPrevSibling);
 end;
 
 { 上から順(子孫を含む)の次/前のノード。 }
 function TTreeNode_GetNext(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TTreeNode(Obj).GetNext);
+  Result := WatchItem(TTreeNode(Obj).GetNext);
 end;
 
 function TTreeNode_GetPrev(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TTreeNode(Obj).GetPrev);
+  Result := WatchItem(TTreeNode(Obj).GetPrev);
 end;
 
 function TTreeNode_IndexOf(Obj: Pointer; Node: Pointer): Integer; NO_VCL_CALL;
@@ -2848,42 +2888,16 @@ begin
 end;
 
 { docs/component-coverage.md の Tier 2、3 バッチ目(TListView)。docs/adr/0020-... を参照。
-  項目(TListItem。TPersistent)は TTreeNode と同じく、削除の通知でラッパーの寿命を管理する。
-  TListItem.Destroy は必ず TListItems.ItemDestroying → TCustomListView.ItemDeleted → DoDeletion(protected virtual)を通るため、
-  DoDeletion を上書きした TNoVclListView を生成し、利用者の OnDeletion(inherited)の後に通知する。
+  項目(TListItem。TPersistent)と列(TListColumn。TCollectionItem)は TTreeNode と同じく、ハンドルを C 側へ渡すときに付ける
+  観察者(WatchItem)で破棄を通知する(docs/adr/0026 で ADR 0020 の方式を置き換えた)。
   TCustomListView.Destroy は inherited Destroy(=破棄通知)の後で項目を破棄するため、リストビュー自身のラッパーが
-  delete された後にも項目の削除通知が届く(項目のレジストリはリストビューのラッパーに依存しないので問題ない)。
-  列(TListColumn。TCollectionItem)の一覧(TListColumns)は LCL がリストビューの中で生成するため差し替えられない。
-  そこで列の破棄は、この DLL の関数(TListColumns_Delete・Clear)で削除する前と、リストビューの破棄の最初に通知する。 }
-
-type
-  TNoVclListView = class(TListView)
-  protected
-    procedure DoDeletion(AItem: TListItem); override;
-  public
-    destructor Destroy; override;
-  end;
-
-procedure TNoVclListView.DoDeletion(AItem: TListItem);
-begin
-  inherited DoDeletion(AItem);
-  NotifyItemFreed(AItem);
-end;
-
-destructor TNoVclListView.Destroy;
-var
-  I: Integer;
-begin
-  for I := 0 to Columns.Count - 1 do
-    NotifyItemFreed(Columns[I]);
-  inherited Destroy;
-end;
+  delete された後にも項目の破棄通知が届く(項目のレジストリはリストビューのラッパーに依存しないので問題ない)。 }
 
 { TListView / TCustomListView }
 
 function TListView_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TNoVclListView.Create(TComponent(Owner)));
+  Result := Watch(TListView.Create(TComponent(Owner)));
 end;
 
 { Items(TListItems)と Columns(TListColumns)は、リストビューが所有する非所有のハンドル(リストビューと寿命が一致する)。 }
@@ -2894,7 +2908,7 @@ end;
 
 function TCustomListView_GetSelected(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomListView(Obj).Selected);
+  Result := WatchItem(TCustomListView(Obj).Selected);
 end;
 
 { LCL の TCustomListView.SetSelection は、ウィンドウハンドルが無いと(フォームの表示前・表示されていないページの上)
@@ -3011,7 +3025,7 @@ end;
 { X, Y はクライアント座標。そこに項目が無ければ nil。 }
 function TCustomListView_GetItemAt(Obj: Pointer; X, Y: Integer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomListView(Obj).GetItemAt(X, Y));
+  Result := WatchItem(TCustomListView(Obj).GetItemAt(X, Y));
 end;
 
 procedure TCustomListView_ClearSelection(Obj: Pointer); NO_VCL_CALL;
@@ -3114,12 +3128,12 @@ end;
 
 function TListItems_Add(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TListItems(Obj).Add);
+  Result := WatchItem(TListItems(Obj).Add);
 end;
 
 function TListItems_Insert(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TListItems(Obj).Insert(Index));
+  Result := WatchItem(TListItems(Obj).Insert(Index));
 end;
 
 procedure TListItems_Delete(Obj: Pointer; Index: Integer); NO_VCL_CALL;
@@ -3139,7 +3153,7 @@ end;
 
 function TListItems_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TListItems(Obj).Item[Index]);
+  Result := WatchItem(TListItems(Obj).Item[Index]);
 end;
 
 function TListItems_IndexOf(Obj: Pointer; Item: Pointer): Integer; NO_VCL_CALL;
@@ -3150,7 +3164,7 @@ end;
 { StartIndex の次(Inclusive なら StartIndex から)から Caption を探す。Partial なら前方一致、Wrap なら末尾から先頭へ続けて探す。 }
 function TListItems_FindCaption(Obj: Pointer; StartIndex: Integer; Value: PChar; Partial, Inclusive, Wrap: LongBool): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TListItems(Obj).FindCaption(StartIndex, Value, Partial, Inclusive, Wrap));
+  Result := WatchItem(TListItems(Obj).FindCaption(StartIndex, Value, Partial, Inclusive, Wrap));
 end;
 
 procedure TListItems_Exchange(Obj: Pointer; Index1, Index2: Integer); NO_VCL_CALL;
@@ -3277,7 +3291,7 @@ end;
 
 function TListColumns_Add(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TListColumns(Obj).Add);
+  Result := WatchItem(TListColumns(Obj).Add);
 end;
 
 function TListColumns_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
@@ -3287,21 +3301,16 @@ end;
 
 function TListColumns_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TListColumns(Obj).Items[Index]);
+  Result := WatchItem(TListColumns(Obj).Items[Index]);
 end;
 
 procedure TListColumns_Delete(Obj: Pointer; Index: Integer); NO_VCL_CALL;
 begin
-  NotifyItemFreed(TListColumns(Obj).Items[Index]);
   TListColumns(Obj).Delete(Index);
 end;
 
 procedure TListColumns_Clear(Obj: Pointer); NO_VCL_CALL;
-var
-  I: Integer;
 begin
-  for I := 0 to TListColumns(Obj).Count - 1 do
-    NotifyItemFreed(TListColumns(Obj).Items[I]);
   TListColumns(Obj).Clear;
 end;
 
@@ -3816,23 +3825,10 @@ begin
 end;
 
 { docs/component-coverage.md の Tier 2、5 バッチ目(THeaderControl)。docs/adr/0024-... を参照。
-  セクション(THeaderSection。TCollectionItem)は TListColumn と同じく、C++ のラッパーの寿命を破棄の通知で管理する。
-  LCL の THeaderSections.Add/Insert は TCustomHeaderControl.CreateSection(protected virtual)でセクションを生成するため、
-  CreateSection を上書きした TNoVclHeaderControl に、デストラクタで通知する TNoVclHeaderSection を生成させる。
-  これで Delete・Clear・ヘッダーコントロールの破棄のどれでも(リストビューの列と違い、この DLL の関数を通らなくても)通知される。
-  そのため OnCreateSectionClass(セクションのクラスの差し替え)は公開しない。 }
+  セクション(THeaderSection。TCollectionItem)は TListColumn と同じく、ハンドルを C 側へ渡すときに付ける観察者(WatchItem)で
+  破棄を通知する(docs/adr/0026 で ADR 0024 の方式を置き換えた)。 }
 
 type
-  TNoVclHeaderSection = class(THeaderSection)
-  public
-    destructor Destroy; override;
-  end;
-
-  TNoVclHeaderControl = class(THeaderControl)
-  protected
-    function CreateSection: THeaderSection; override;
-  end;
-
   { OnSectionTrack(HeaderControl, Section, Width, State)用。State は TSectionTrackState の序数。 }
   TNoVclSectionTrackCallback = procedure(Sender: Pointer; Section: Pointer; Width: Integer; State: Integer; Data: Pointer); NO_VCL_CALL;
 
@@ -3855,22 +3851,11 @@ type
     procedure DoDrag(Sender: TObject; FromSection, ToSection: THeaderSection; var AllowDrag: Boolean);
   end;
 
-destructor TNoVclHeaderSection.Destroy;
-begin
-  NotifyItemFreed(Self);
-  inherited Destroy;
-end;
-
-function TNoVclHeaderControl.CreateSection: THeaderSection;
-begin
-  Result := TNoVclHeaderSection.Create(Sections);
-end;
-
 procedure TSectionTrackCallbackBridge.DoTrack(HeaderControl: TCustomHeaderControl; Section: THeaderSection; Width: Integer; State: TSectionTrackState);
 begin
   if not Assigned(FCallback) or GDetaching then
     Exit;
-  FCallback(Pointer(HeaderControl), Pointer(Section), Width, Ord(State), FData);
+  FCallback(Pointer(HeaderControl), WatchItem(Section), Width, Ord(State), FData);
 end;
 
 procedure TSectionDragCallbackBridge.DoDrag(Sender: TObject; FromSection, ToSection: THeaderSection; var AllowDrag: Boolean);
@@ -3880,7 +3865,7 @@ begin
   if not Assigned(FCallback) or GDetaching then
     Exit;
   if AllowDrag then A := -1 else A := 0;
-  FCallback(Pointer(Sender), Pointer(FromSection), Pointer(ToSection), @A, FData);
+  FCallback(Pointer(Sender), WatchItem(FromSection), WatchItem(ToSection), @A, FData);
   AllowDrag := A <> 0;
 end;
 
@@ -3888,7 +3873,7 @@ end;
 
 function THeaderControl_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TNoVclHeaderControl.Create(TComponent(Owner)));
+  Result := Watch(THeaderControl.Create(TComponent(Owner)));
 end;
 
 { Sections(THeaderSections)は、ヘッダーコントロールが所有する非所有のハンドル(ヘッダーコントロールと寿命が一致する)。 }
@@ -3919,7 +3904,7 @@ end;
 
 function TCustomHeaderControl_GetSectionFromOriginalIndex(Obj: Pointer; OriginalIndex: Integer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomHeaderControl(Obj).SectionFromOriginalIndex[OriginalIndex]);
+  Result := WatchItem(TCustomHeaderControl(Obj).SectionFromOriginalIndex[OriginalIndex]);
 end;
 
 procedure TCustomHeaderControl_SetOnSectionClick(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
@@ -3974,16 +3959,16 @@ begin
   THeaderControl(Obj).OnSectionEndDrag := @BridgeFor(THeaderControl(Obj), MethodData(THeaderControl(Obj).OnSectionEndDrag), Cb, Data).DoClick;
 end;
 
-{ THeaderSections(TCollection)。Delete・Clear で破棄されたセクションは TNoVclHeaderSection.Destroy が通知する。 }
+{ THeaderSections(TCollection)。セクションを返す関数は WatchItem してから返す。 }
 
 function THeaderSections_Add(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(THeaderSections(Obj).Add);
+  Result := WatchItem(THeaderSections(Obj).Add);
 end;
 
 function THeaderSections_Insert(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(THeaderSections(Obj).Insert(Index));
+  Result := WatchItem(THeaderSections(Obj).Insert(Index));
 end;
 
 procedure THeaderSections_Delete(Obj: Pointer; Index: Integer); NO_VCL_CALL;
@@ -4003,7 +3988,7 @@ end;
 
 function THeaderSections_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(THeaderSections(Obj).Items[Index]);
+  Result := WatchItem(THeaderSections(Obj).Items[Index]);
 end;
 
 procedure THeaderSections_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
@@ -4413,6 +4398,341 @@ end;
 procedure TToolButton_SetOnArrowClick(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
   TToolButton(Obj).OnArrowClick := @BridgeFor(TToolButton(Obj), MethodData(TToolButton(Obj).OnArrowClick), Cb, Data).DoClick;
+end;
+
+{ docs/component-coverage.md の Tier 2、7 バッチ目(TCoolBar)。docs/adr/0026-... を参照。
+  バンド(TCoolBand。TCollectionItem)は、コントロールの Parent をクールバーにしたとき(InsertControl)に LCL が内部で生成し、
+  コントロールを外したとき(RemoveControl)にも内部で削除されるため、この DLL の関数を通らずに生成・破棄される。
+  破棄は他の項目と同じく、ハンドルを C 側へ返すときに付ける観察者(WatchItem)で通知する(どの経路で破棄されても届く)。 }
+
+{ TCoolBar / TCustomCoolBar。既定の Align は alTop。 }
+
+function TCoolBar_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TCoolBar.Create(TComponent(Owner)));
+end;
+
+{ Bands(TCoolBands)は、クールバーが所有する非所有のハンドル(クールバーと寿命が一致する)。 }
+function TCustomCoolBar_GetBands(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomCoolBar(Obj).Bands);
+end;
+
+procedure TCustomCoolBar_AutosizeBands(Obj: Pointer); NO_VCL_CALL;
+begin
+  TCustomCoolBar(Obj).AutosizeBands;
+end;
+
+procedure TCustomCoolBar_MouseToBandPos(Obj: Pointer; X, Y: Integer; ABand: PInteger; AGrabber: PInteger); NO_VCL_CALL;
+var
+  B: Integer;
+  G: Boolean;
+begin
+  TCustomCoolBar(Obj).MouseToBandPos(X, Y, B, G);
+  ABand^ := B;
+  if G then AGrabber^ := -1 else AGrabber^ := 0;
+end;
+
+function TCustomCoolBar_GetFixedSize(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomCoolBar(Obj).FixedSize;
+end;
+
+procedure TCustomCoolBar_SetFixedSize(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomCoolBar(Obj).FixedSize := Value;
+end;
+
+function TCustomCoolBar_GetFixedOrder(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomCoolBar(Obj).FixedOrder;
+end;
+
+procedure TCustomCoolBar_SetFixedOrder(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomCoolBar(Obj).FixedOrder := Value;
+end;
+
+{ TGrabStyle の序数(gsSimple = 0, gsDouble, gsHorLines, gsVerLines, gsGripper, gsButton)。 }
+function TCustomCoolBar_GetGrabStyle(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TCustomCoolBar(Obj).GrabStyle);
+end;
+
+procedure TCustomCoolBar_SetGrabStyle(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomCoolBar(Obj).GrabStyle := TGrabStyle(Value);
+end;
+
+function TCustomCoolBar_GetGrabWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomCoolBar(Obj).GrabWidth;
+end;
+
+procedure TCustomCoolBar_SetGrabWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomCoolBar(Obj).GrabWidth := Value;
+end;
+
+function TCustomCoolBar_GetHorizontalSpacing(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomCoolBar(Obj).HorizontalSpacing;
+end;
+
+procedure TCustomCoolBar_SetHorizontalSpacing(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomCoolBar(Obj).HorizontalSpacing := Value;
+end;
+
+function TCustomCoolBar_GetVerticalSpacing(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomCoolBar(Obj).VerticalSpacing;
+end;
+
+procedure TCustomCoolBar_SetVerticalSpacing(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomCoolBar(Obj).VerticalSpacing := Value;
+end;
+
+function TCustomCoolBar_GetShowText(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomCoolBar(Obj).ShowText;
+end;
+
+procedure TCustomCoolBar_SetShowText(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomCoolBar(Obj).ShowText := Value;
+end;
+
+function TCustomCoolBar_GetThemed(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomCoolBar(Obj).Themed;
+end;
+
+procedure TCustomCoolBar_SetThemed(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomCoolBar(Obj).Themed := Value;
+end;
+
+function TCustomCoolBar_GetVertical(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomCoolBar(Obj).Vertical;
+end;
+
+procedure TCustomCoolBar_SetVertical(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomCoolBar(Obj).Vertical := Value;
+end;
+
+procedure TCustomCoolBar_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TCustomCoolBar(Obj).OnChange := @BridgeFor(TCustomCoolBar(Obj), MethodData(TCustomCoolBar(Obj).OnChange), Cb, Data).DoClick;
+end;
+
+{ TCoolBands(TCollection)。バンドを返す関数は WatchItem してから返す。 }
+
+function TCoolBands_Add(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := WatchItem(TCoolBands(Obj).Add);
+end;
+
+function TCoolBands_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCoolBands(Obj).Count;
+end;
+
+function TCoolBands_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
+begin
+  Result := WatchItem(TCoolBands(Obj).Items[Index]);
+end;
+
+procedure TCoolBands_Delete(Obj: Pointer; Index: Integer); NO_VCL_CALL;
+begin
+  TCoolBands(Obj).Delete(Index);
+end;
+
+procedure TCoolBands_Clear(Obj: Pointer); NO_VCL_CALL;
+begin
+  TCoolBands(Obj).Clear;
+end;
+
+procedure TCoolBands_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
+begin
+  TCoolBands(Obj).BeginUpdate;
+end;
+
+procedure TCoolBands_EndUpdate(Obj: Pointer); NO_VCL_CALL;
+begin
+  TCoolBands(Obj).EndUpdate;
+end;
+
+function TCoolBands_FindBand(Obj: Pointer; AControl: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := WatchItem(TCoolBands(Obj).FindBand(TControl(AControl)));
+end;
+
+function TCoolBands_FindBandIndex(Obj: Pointer; AControl: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCoolBands(Obj).FindBandIndex(TControl(AControl));
+end;
+
+{ TCoolBand }
+
+function TCoolBand_GetText(Obj: Pointer): PChar; NO_VCL_CALL;
+begin
+  Result := ReturnStr(TCoolBand(Obj).Text);
+end;
+
+procedure TCoolBand_SetText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+begin
+  TCoolBand(Obj).Text := Value;
+end;
+
+function TCoolBand_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCoolBand(Obj).Width;
+end;
+
+procedure TCoolBand_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCoolBand(Obj).Width := Value;
+end;
+
+function TCoolBand_GetMinWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCoolBand(Obj).MinWidth;
+end;
+
+procedure TCoolBand_SetMinWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCoolBand(Obj).MinWidth := Value;
+end;
+
+function TCoolBand_GetMinHeight(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCoolBand(Obj).MinHeight;
+end;
+
+procedure TCoolBand_SetMinHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCoolBand(Obj).MinHeight := Value;
+end;
+
+function TCoolBand_GetBreak(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCoolBand(Obj).Break;
+end;
+
+procedure TCoolBand_SetBreak(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCoolBand(Obj).Break := Value;
+end;
+
+function TCoolBand_GetVisible(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCoolBand(Obj).Visible;
+end;
+
+procedure TCoolBand_SetVisible(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCoolBand(Obj).Visible := Value;
+end;
+
+function TCoolBand_GetFixedSize(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCoolBand(Obj).FixedSize;
+end;
+
+procedure TCoolBand_SetFixedSize(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCoolBand(Obj).FixedSize := Value;
+end;
+
+function TCoolBand_GetFixedBackground(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCoolBand(Obj).FixedBackground;
+end;
+
+procedure TCoolBand_SetFixedBackground(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCoolBand(Obj).FixedBackground := Value;
+end;
+
+function TCoolBand_GetHorizontalOnly(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCoolBand(Obj).HorizontalOnly;
+end;
+
+procedure TCoolBand_SetHorizontalOnly(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCoolBand(Obj).HorizontalOnly := Value;
+end;
+
+function TCoolBand_GetColor(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Integer(TCoolBand(Obj).Color);
+end;
+
+procedure TCoolBand_SetColor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCoolBand(Obj).Color := TColor(Value);
+end;
+
+function TCoolBand_GetParentColor(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCoolBand(Obj).ParentColor;
+end;
+
+procedure TCoolBand_SetParentColor(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCoolBand(Obj).ParentColor := Value;
+end;
+
+{ TCollectionItem.Index。書き換えるとバンドが移動する。 }
+function TCoolBand_GetIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCoolBand(Obj).Index;
+end;
+
+procedure TCoolBand_SetIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCoolBand(Obj).Index := Value;
+end;
+
+{ バンドに置くコントロール。設定するとそのコントロールの Parent がクールバーになり、Align は alNone になる。 }
+function TCoolBand_GetControl(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := WatchOrNil(TCoolBand(Obj).Control);
+end;
+
+procedure TCoolBand_SetControl(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TCoolBand(Obj).Control := TControl(Value);
+end;
+
+function TCoolBand_GetLeft(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCoolBand(Obj).Left;
+end;
+
+function TCoolBand_GetTop(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCoolBand(Obj).Top;
+end;
+
+function TCoolBand_GetRight(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCoolBand(Obj).Right;
+end;
+
+function TCoolBand_GetHeight(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCoolBand(Obj).Height;
+end;
+
+procedure TCoolBand_AutosizeWidth(Obj: Pointer); NO_VCL_CALL;
+begin
+  TCoolBand(Obj).AutosizeWidth;
 end;
 
 exports
@@ -5113,7 +5433,70 @@ exports
   TToolButton_Click,
   TToolButton_ArrowClick,
   TToolButton_PointInArrow,
-  TToolButton_SetOnArrowClick;
+  TToolButton_SetOnArrowClick,
+  TCoolBar_Create,
+  TCustomCoolBar_GetBands,
+  TCustomCoolBar_AutosizeBands,
+  TCustomCoolBar_MouseToBandPos,
+  TCustomCoolBar_GetFixedSize,
+  TCustomCoolBar_SetFixedSize,
+  TCustomCoolBar_GetFixedOrder,
+  TCustomCoolBar_SetFixedOrder,
+  TCustomCoolBar_GetGrabStyle,
+  TCustomCoolBar_SetGrabStyle,
+  TCustomCoolBar_GetGrabWidth,
+  TCustomCoolBar_SetGrabWidth,
+  TCustomCoolBar_GetHorizontalSpacing,
+  TCustomCoolBar_SetHorizontalSpacing,
+  TCustomCoolBar_GetVerticalSpacing,
+  TCustomCoolBar_SetVerticalSpacing,
+  TCustomCoolBar_GetShowText,
+  TCustomCoolBar_SetShowText,
+  TCustomCoolBar_GetThemed,
+  TCustomCoolBar_SetThemed,
+  TCustomCoolBar_GetVertical,
+  TCustomCoolBar_SetVertical,
+  TCustomCoolBar_SetOnChange,
+  TCoolBands_Add,
+  TCoolBands_GetCount,
+  TCoolBands_GetItem,
+  TCoolBands_Delete,
+  TCoolBands_Clear,
+  TCoolBands_BeginUpdate,
+  TCoolBands_EndUpdate,
+  TCoolBands_FindBand,
+  TCoolBands_FindBandIndex,
+  TCoolBand_GetText,
+  TCoolBand_SetText,
+  TCoolBand_GetWidth,
+  TCoolBand_SetWidth,
+  TCoolBand_GetMinWidth,
+  TCoolBand_SetMinWidth,
+  TCoolBand_GetMinHeight,
+  TCoolBand_SetMinHeight,
+  TCoolBand_GetBreak,
+  TCoolBand_SetBreak,
+  TCoolBand_GetVisible,
+  TCoolBand_SetVisible,
+  TCoolBand_GetFixedSize,
+  TCoolBand_SetFixedSize,
+  TCoolBand_GetFixedBackground,
+  TCoolBand_SetFixedBackground,
+  TCoolBand_GetHorizontalOnly,
+  TCoolBand_SetHorizontalOnly,
+  TCoolBand_GetColor,
+  TCoolBand_SetColor,
+  TCoolBand_GetParentColor,
+  TCoolBand_SetParentColor,
+  TCoolBand_GetIndex,
+  TCoolBand_SetIndex,
+  TCoolBand_GetControl,
+  TCoolBand_SetControl,
+  TCoolBand_GetLeft,
+  TCoolBand_GetTop,
+  TCoolBand_GetRight,
+  TCoolBand_GetHeight,
+  TCoolBand_AutosizeWidth;
 
 begin
   RequireDerivedFormResource := False;

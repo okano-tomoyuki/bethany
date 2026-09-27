@@ -665,6 +665,8 @@ protected:
     Property<std::string>  Text;
 
 private:
+    friend class TCoolBand;  // TCoolBand::Control の Getter から FromHandle を使うため
+
     TNotifyEvent onClick_;
     bool         onClickHooked_ = false;
     static void NO_VCL_CALL ClickTrampoline(no_vcl_obj_t sender, void* data);
@@ -1664,7 +1666,7 @@ enum TNodeAttachMode { naAdd, naAddFirst, naAddChild, naAddChildFirst, naInsert,
 // ツリービューのノード。TComponent ではない(LCL でも TPersistent)ため、new/Free() はせず、
 // TTreeNodes::Add 等で追加し、Delete() 等で削除する。
 // C++ のラッパーは初めて取得したときに作られ、同じノードには常に同じポインタが返る(ポインタ同士を比較してよい)。
-// ノードが削除されると(ツリービューの破棄に伴う削除も含め)、OnDeletion の後にラッパーも delete される。
+// ノードが削除されると(ツリービューの破棄に伴う削除も含め)、OnDeletion などの削除の処理がすべて終わった後にラッパーも delete される。
 // 削除後にそのポインタへ触れてはならない。
 // Items[Index] は直下の子(読み取り専用のインデックス付きプロパティ)。
 class TTreeNode : public TPersistent
@@ -1910,7 +1912,7 @@ class TListView;
 
 // リストビューの項目。TTreeNode と同じく TComponent ではないため、new/Free() はせず TListItems::Add 等で追加し、
 // Delete() 等で削除する。同じ項目には常に同じポインタが返り、項目が削除されると(リストビューの破棄に伴う削除も含め)
-// OnDeletion の後にラッパーも delete される。
+// OnDeletion などの削除の処理がすべて終わった後にラッパーも delete される。
 // Caption は 1 列目、SubItems は 2 列目以降の文字列(ViewStyle が vsReport のときに表示される)。
 // SubItems(TStrings)は、TComboBox の Items と同じく SubItemsAdd 等のメンバ関数で操作する。
 class TListItem : public TPersistent
@@ -1991,7 +1993,7 @@ private:
 };
 
 // リストビューの列(LCL の TListColumn。TCollectionItem)。項目と同じく同じ列には常に同じポインタが返る。
-// 列のラッパーは、TListColumns::Delete・Clear で削除したときと、リストビューの破棄のときに delete される。
+// 列のラッパーは、列が破棄されたとき(TListColumns::Delete・Clear、リストビューの破棄)に delete される。
 class TListColumn : public TPersistent
 {
 public:
@@ -3166,6 +3168,186 @@ private:
     static TNotifyEvent     GetOnArrowClickImpl(TObject* owner);
     static void             SetOnArrowClickImpl(TObject* owner, const TNotifyEvent& value);
     static int              GetIndexImpl(TObject* owner);
+};
+
+/* ---------------- CoolBar ---------------- */
+
+// バンドの左端のつまみの描き方(LCL の TGrabStyle と同じ値)。
+enum TGrabStyle
+{
+    gsSimple = 0,
+    gsDouble,
+    gsHorLines,
+    gsVerLines,
+    gsGripper,
+    gsButton
+};
+
+// クールバーのバンド(LCL の TCoolBand。TCollectionItem)。同じバンドには常に同じポインタが返る。
+// ウィンドウを持つコントロールの Parent をクールバーにすると LCL がバンドを自動で追加し、コントロールを外すと削除する。
+// ラッパーは、バンドが破棄されたとき(どの経路でも)に delete される。
+class TCoolBand : public TPersistent
+{
+public:
+    Property<std::string> Text;
+    Property<int>         Width;
+    Property<int>         MinWidth;
+    Property<int>         MinHeight;
+    // true なら、このバンドから新しい行を始める(既定は true)。
+    Property<bool>        Break;
+    Property<bool>        Visible;
+    Property<bool>        FixedSize;
+    Property<bool>        FixedBackground;
+    Property<bool>        HorizontalOnly;
+    Property<TColor>      Color;
+    Property<bool>        ParentColor;
+    // 並び順。書き換えるとバンドが移動する。
+    Property<int>         Index;
+    // バンドに置くコントロール。設定するとそのコントロールの Parent がクールバーになり、Align は alNone になる。
+    Property<TControl*>   Control;
+    // クールバーのクライアント座標での位置(配置の計算の後で決まる)。
+    ReadOnlyProperty<int> Left;
+    ReadOnlyProperty<int> Top;
+    ReadOnlyProperty<int> Right;
+    ReadOnlyProperty<int> Height;
+
+    // 幅を、置いているコントロールに合わせる。
+    void AutosizeWidth();
+
+private:
+    friend class ItemRegistry;
+    friend class TCoolBands;
+
+    explicit TCoolBand(no_vcl_obj_t handle);
+    ~TCoolBand() override = default;
+    static TCoolBand* Wrap(no_vcl_obj_t handle) { return ItemRegistry::Wrap<TCoolBand>(handle); }
+
+    static std::string GetTextImpl(TObject* owner);
+    static void        SetTextImpl(TObject* owner, const std::string& value);
+    static int         GetWidthImpl(TObject* owner);
+    static void        SetWidthImpl(TObject* owner, const int& value);
+    static int         GetMinWidthImpl(TObject* owner);
+    static void        SetMinWidthImpl(TObject* owner, const int& value);
+    static int         GetMinHeightImpl(TObject* owner);
+    static void        SetMinHeightImpl(TObject* owner, const int& value);
+    static bool        GetBreakImpl(TObject* owner);
+    static void        SetBreakImpl(TObject* owner, const bool& value);
+    static bool        GetVisibleImpl(TObject* owner);
+    static void        SetVisibleImpl(TObject* owner, const bool& value);
+    static bool        GetFixedSizeImpl(TObject* owner);
+    static void        SetFixedSizeImpl(TObject* owner, const bool& value);
+    static bool        GetFixedBackgroundImpl(TObject* owner);
+    static void        SetFixedBackgroundImpl(TObject* owner, const bool& value);
+    static bool        GetHorizontalOnlyImpl(TObject* owner);
+    static void        SetHorizontalOnlyImpl(TObject* owner, const bool& value);
+    static TColor      GetColorImpl(TObject* owner);
+    static void        SetColorImpl(TObject* owner, const TColor& value);
+    static bool        GetParentColorImpl(TObject* owner);
+    static void        SetParentColorImpl(TObject* owner, const bool& value);
+    static int         GetIndexImpl(TObject* owner);
+    static void        SetIndexImpl(TObject* owner, const int& value);
+    static TControl*   GetControlImpl(TObject* owner);
+    static void        SetControlImpl(TObject* owner, TControl* const& value);
+    static int         GetLeftImpl(TObject* owner);
+    static int         GetTopImpl(TObject* owner);
+    static int         GetRightImpl(TObject* owner);
+    static int         GetHeightImpl(TObject* owner);
+};
+
+// バンドの一覧(LCL の TCoolBands。TCollection)。クールバーの値メンバとして持つ非所有のビュー。
+class TCoolBands : public TPersistent
+{
+public:
+    explicit TCoolBands(no_vcl_obj_t handle);
+    ~TCoolBands() override = default;
+
+    ReadOnlyProperty<int> Count;
+    // CoolBar1->Bands->Items[i]。
+    ReadOnlyIndexedProperty<TCoolBand*> Items;
+
+    // 空のバンドを末尾に追加して返す(Text・Control 等はその後で設定する)。
+    TCoolBand* Add();
+    // バンドを削除する(バンドのラッパーも delete される。置いていたコントロールは破棄されない)。
+    void       Delete(int Index);
+    void       Clear();
+    void       BeginUpdate();
+    void       EndUpdate();
+    // Control がそのコントロールのバンド(無ければ nullptr・-1)。
+    TCoolBand* FindBand(TControl* AControl) const;
+    int        FindBandIndex(TControl* AControl) const;
+
+private:
+    static TCoolBand* GetItemsImpl(TObject* owner, int Index);
+    static int        GetCountImpl(TObject* owner);
+};
+
+// 以下のメンバは LCL の TCustomCoolBar の public(TCoolBar が published にしている)。
+// Align は TControl のものを使う(alLeft/alRight にすると Vertical も true になる)。既定は alTop。
+class TCustomCoolBar : public TToolWindow
+{
+public:
+    ReadOnlyProperty<TCoolBands*> Bands;
+    // true なら、ドラッグでバンドの幅を変えられない。
+    Property<bool>                FixedSize;
+    // true なら、ドラッグでバンドを並べ替えられない。
+    Property<bool>                FixedOrder;
+    Property<TGrabStyle>          GrabStyle;
+    Property<int>                 GrabWidth;
+    Property<int>                 HorizontalSpacing;
+    Property<int>                 VerticalSpacing;
+    // true なら、バンドの Text を表示する(既定は true)。
+    Property<bool>                ShowText;
+    Property<bool>                Themed;
+    Property<bool>                Vertical;
+    // ドラッグでバンドを動かす・幅を変えて、マウスを離したとき。
+    Property<TNotifyEvent>        OnChange;
+
+    // すべてのバンドの幅を、置いているコントロールに合わせる。
+    void AutosizeBands();
+    // クライアント座標 X, Y にあるバンドの表示上の位置(ABand。無ければ負)と、つまみの上か(AGrabber)。
+    void MouseToBandPos(int X, int Y, int& ABand, bool& AGrabber) const;
+
+protected:
+    explicit TCustomCoolBar(no_vcl_obj_t handle);
+    ~TCustomCoolBar() override = default;
+
+private:
+    TCoolBands   bands_;
+    TNotifyEvent onChange_;
+    bool         onChangeHooked_ = false;
+    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender, void* data);
+
+    static TCoolBands*  GetBandsImpl(TObject* owner);
+    static bool         GetFixedSizeImpl(TObject* owner);
+    static void         SetFixedSizeImpl(TObject* owner, const bool& value);
+    static bool         GetFixedOrderImpl(TObject* owner);
+    static void         SetFixedOrderImpl(TObject* owner, const bool& value);
+    static TGrabStyle   GetGrabStyleImpl(TObject* owner);
+    static void         SetGrabStyleImpl(TObject* owner, const TGrabStyle& value);
+    static int          GetGrabWidthImpl(TObject* owner);
+    static void         SetGrabWidthImpl(TObject* owner, const int& value);
+    static int          GetHorizontalSpacingImpl(TObject* owner);
+    static void         SetHorizontalSpacingImpl(TObject* owner, const int& value);
+    static int          GetVerticalSpacingImpl(TObject* owner);
+    static void         SetVerticalSpacingImpl(TObject* owner, const int& value);
+    static bool         GetShowTextImpl(TObject* owner);
+    static void         SetShowTextImpl(TObject* owner, const bool& value);
+    static bool         GetThemedImpl(TObject* owner);
+    static void         SetThemedImpl(TObject* owner, const bool& value);
+    static bool         GetVerticalImpl(TObject* owner);
+    static void         SetVerticalImpl(TObject* owner, const bool& value);
+    static TNotifyEvent GetOnChangeImpl(TObject* owner);
+    static void         SetOnChangeImpl(TObject* owner, const TNotifyEvent& value);
+};
+
+// 並べ替え・幅の変更ができるバンドに、コントロールを置くバー。
+class TCoolBar : public TCustomCoolBar
+{
+public:
+    explicit TCoolBar(TComponent* AOwner);
+
+protected:
+    ~TCoolBar() override = default;
 };
 
 /* ---------------- Timer ---------------- */

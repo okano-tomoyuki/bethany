@@ -711,7 +711,70 @@ using no_vcl_module_t = void*;
     X(void,          TToolButton_Click,                       (no_vcl_obj_t o),                                     (o)) \
     X(void,          TToolButton_ArrowClick,                  (no_vcl_obj_t o),                                     (o)) \
     X(no_vcl_bool_t, TToolButton_PointInArrow,                (no_vcl_obj_t o, no_vcl_int_t x, no_vcl_int_t y),     (o, x, y)) \
-    X(void,          TToolButton_SetOnArrowClick,             (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d))
+    X(void,          TToolButton_SetOnArrowClick,             (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d)) \
+    X(no_vcl_obj_t,  TCoolBar_Create,                         (no_vcl_obj_t owner),                                 (owner)) \
+    X(no_vcl_obj_t,  TCustomCoolBar_GetBands,                 (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomCoolBar_AutosizeBands,            (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomCoolBar_MouseToBandPos,           (no_vcl_obj_t o, no_vcl_int_t x, no_vcl_int_t y, no_vcl_int_t* b, no_vcl_bool_t* g), (o, x, y, b, g)) \
+    X(no_vcl_bool_t, TCustomCoolBar_GetFixedSize,             (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomCoolBar_SetFixedSize,             (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TCustomCoolBar_GetFixedOrder,            (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomCoolBar_SetFixedOrder,            (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_int_t,  TCustomCoolBar_GetGrabStyle,             (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomCoolBar_SetGrabStyle,             (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TCustomCoolBar_GetGrabWidth,             (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomCoolBar_SetGrabWidth,             (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TCustomCoolBar_GetHorizontalSpacing,     (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomCoolBar_SetHorizontalSpacing,     (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TCustomCoolBar_GetVerticalSpacing,       (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomCoolBar_SetVerticalSpacing,       (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_bool_t, TCustomCoolBar_GetShowText,              (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomCoolBar_SetShowText,              (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TCustomCoolBar_GetThemed,                (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomCoolBar_SetThemed,                (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TCustomCoolBar_GetVertical,              (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomCoolBar_SetVertical,              (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(void,          TCustomCoolBar_SetOnChange,              (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d)) \
+    X(no_vcl_obj_t,  TCoolBands_Add,                          (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_int_t,  TCoolBands_GetCount,                     (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TCoolBands_GetItem,                      (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(void,          TCoolBands_Delete,                       (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(void,          TCoolBands_Clear,                        (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCoolBands_BeginUpdate,                  (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCoolBands_EndUpdate,                    (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TCoolBands_FindBand,                     (no_vcl_obj_t o, no_vcl_obj_t c),                     (o, c)) \
+    X(no_vcl_int_t,  TCoolBands_FindBandIndex,                (no_vcl_obj_t o, no_vcl_obj_t c),                     (o, c)) \
+    X(no_vcl_str_t,  TCoolBand_GetText,                       (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCoolBand_SetText,                       (no_vcl_obj_t o, no_vcl_str_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TCoolBand_GetWidth,                      (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCoolBand_SetWidth,                      (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TCoolBand_GetMinWidth,                   (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCoolBand_SetMinWidth,                   (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TCoolBand_GetMinHeight,                  (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCoolBand_SetMinHeight,                  (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_bool_t, TCoolBand_GetBreak,                      (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCoolBand_SetBreak,                      (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TCoolBand_GetVisible,                    (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCoolBand_SetVisible,                    (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TCoolBand_GetFixedSize,                  (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCoolBand_SetFixedSize,                  (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TCoolBand_GetFixedBackground,            (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCoolBand_SetFixedBackground,            (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TCoolBand_GetHorizontalOnly,             (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCoolBand_SetHorizontalOnly,             (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_int_t,  TCoolBand_GetColor,                      (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCoolBand_SetColor,                      (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_bool_t, TCoolBand_GetParentColor,                (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCoolBand_SetParentColor,                (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_int_t,  TCoolBand_GetIndex,                      (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCoolBand_SetIndex,                      (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_obj_t,  TCoolBand_GetControl,                    (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCoolBand_SetControl,                    (no_vcl_obj_t o, no_vcl_obj_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TCoolBand_GetLeft,                       (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_int_t,  TCoolBand_GetTop,                        (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_int_t,  TCoolBand_GetRight,                      (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_int_t,  TCoolBand_GetHeight,                     (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCoolBand_AutosizeWidth,                 (no_vcl_obj_t o),                                     (o))
 
 namespace
 {
