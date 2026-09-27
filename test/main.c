@@ -406,6 +406,9 @@ int main(void)
     no_vcl_obj_t gridSheet;
     no_vcl_obj_t stringGrid;
     no_vcl_int_t selLeft, selTop, selRight, selBottom;
+    no_vcl_obj_t headerSheet;
+    no_vcl_obj_t headerControl;
+    no_vcl_obj_t sections;
 
     no_vcl_FreeNotify_SetCallback(OnComponentFreed, &freedCount);
 
@@ -906,6 +909,39 @@ int main(void)
                (int)selLeft, (int)selTop, (int)selRight, (int)selBottom);
     }
 
+    /* Tier 2、5 バッチ目(THeaderControl)。pageControl の新しいページ "Header" の上端に置く。 */
+    headerSheet = no_vcl_TTabSheet_Create(form);
+    no_vcl_TTabSheet_SetPageControl(headerSheet, pageControl);
+    no_vcl_TControl_SetCaption(headerSheet, "Header");
+    headerControl = no_vcl_THeaderControl_Create(form);
+    no_vcl_TControl_SetParent(headerControl, headerSheet);
+    no_vcl_TControl_SetAlign(headerControl, no_vcl_alTop);
+    no_vcl_TCustomHeaderControl_SetDragReorder(headerControl, 1);
+    sections = no_vcl_TCustomHeaderControl_GetSections(headerControl);
+    {
+        const char* texts[] = { "Temp", "Name", "Size" };
+        int i;
+        for (i = 0; i < 3; ++i)
+        {
+            no_vcl_obj_t section = no_vcl_THeaderSections_Add(sections);
+            no_vcl_THeaderSection_SetText(section, texts[i]);
+            no_vcl_THeaderSection_SetWidth(section, 60 + i * 10);
+        }
+    }
+    {
+        /* Delete したセクションは、その場で破棄通知が届く。 */
+        int freedBefore = itemsFreed;
+        no_vcl_obj_t size;
+        no_vcl_THeaderSections_Delete(sections, 0);
+        size = no_vcl_THeaderSections_GetItem(sections, 1);
+        printf("HeaderControl Sections Count=%d (expected 2), freed by Delete: %d (expected 1), "
+               "Size Left/Width=%d/%d (expected 70/80), OriginalIndex=%d (expected 1), DragReorder=%d (expected 1)\n",
+               no_vcl_THeaderSections_GetCount(sections), itemsFreed - freedBefore,
+               no_vcl_THeaderSection_GetLeft(size), no_vcl_THeaderSection_GetWidth(size),
+               no_vcl_THeaderSection_GetOriginalIndex(size),
+               no_vcl_TCustomHeaderControl_GetDragReorder(headerControl) != 0);
+    }
+
     printf("Running (click the button, then close the window twice: the first close is blocked)...\n");
     fflush(stdout);
     /* MainForm を表示してメッセージループに入り、MainForm が閉じられると戻る。 */
@@ -915,10 +951,11 @@ int main(void)
     /* Application が所有するフォーム(と、フォームが所有するコントロール)をまとめて破棄する。
        呼ばなくても DLL の切り離し時に LCL が破棄するが、そのときは破棄通知が呼ばれない。 */
     no_vcl_TComponent_DestroyComponents(app);
-    printf("Clicks: %d, Freed components: %d (expected 63: form + 56 owned + 6 created inside LCL: 2 menu roots, a separator and 3 AddTabSheet pages)\n", clickCount, freedCount);
-    /* ツリービュー・リストビューの破棄に伴って、残りのノード(4 つ)・リストビューの項目(2 つ)と列(2 つ)も破棄通知が届く。 */
-    printf("Items freed: %d (expected 12: tree 2 deleted + 4 with the tree view, list 1 item + 1 column deleted "
-           "+ 2 items + 2 columns with the list view)\n", itemsFreed);
+    printf("Clicks: %d, Freed components: %d (expected 65: form + 58 owned + 6 created inside LCL: 2 menu roots, a separator and 3 AddTabSheet pages)\n", clickCount, freedCount);
+    /* ツリービュー・リストビュー・ヘッダーコントロールの破棄に伴って、残りのノード(4 つ)・リストビューの項目(2 つ)と列(2 つ)・
+       セクション(2 つ)も破棄通知が届く。 */
+    printf("Items freed: %d (expected 15: tree 2 deleted + 4 with the tree view, list 1 item + 1 column deleted "
+           "+ 2 items + 2 columns with the list view, header 1 section deleted + 2 with the header control)\n", itemsFreed);
 
     printf("OK\n");
     return 0;

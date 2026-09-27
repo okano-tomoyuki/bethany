@@ -2469,4 +2469,191 @@ TStringGrid::TStringGrid(TComponent* AOwner)
     : TCustomStringGrid(no_vcl_TStringGrid_Create(HandleOf(AOwner)))
 {}
 
+/* ---------------- HeaderControl ---------------- */
+
+THeaderSection::THeaderSection(no_vcl_obj_t handle)
+    : TPersistent(handle)
+    , Text(this, &THeaderSection::GetTextImpl, &THeaderSection::SetTextImpl)
+    , Width(this, &THeaderSection::GetWidthImpl, &THeaderSection::SetWidthImpl)
+    , MinWidth(this, &THeaderSection::GetMinWidthImpl, &THeaderSection::SetMinWidthImpl)
+    , MaxWidth(this, &THeaderSection::GetMaxWidthImpl, &THeaderSection::SetMaxWidthImpl)
+    , Alignment(this, &THeaderSection::GetAlignmentImpl, &THeaderSection::SetAlignmentImpl)
+    , Visible(this, &THeaderSection::GetVisibleImpl, &THeaderSection::SetVisibleImpl)
+    , Index(this, &THeaderSection::GetIndexImpl, &THeaderSection::SetIndexImpl)
+    , Left(this, &THeaderSection::GetLeftImpl)
+    , Right(this, &THeaderSection::GetRightImpl)
+    , OriginalIndex(this, &THeaderSection::GetOriginalIndexImpl)
+{}
+
+std::string THeaderSection::GetTextImpl(TObject* owner) { return std::string(no_vcl_THeaderSection_GetText(owner->Handle())); }
+void THeaderSection::SetTextImpl(TObject* owner, const std::string& value) { no_vcl_THeaderSection_SetText(owner->Handle(), value.c_str()); }
+int  THeaderSection::GetWidthImpl(TObject* owner)                     { return no_vcl_THeaderSection_GetWidth(owner->Handle()); }
+void THeaderSection::SetWidthImpl(TObject* owner, const int& value)    { no_vcl_THeaderSection_SetWidth(owner->Handle(), value); }
+int  THeaderSection::GetMinWidthImpl(TObject* owner)                  { return no_vcl_THeaderSection_GetMinWidth(owner->Handle()); }
+void THeaderSection::SetMinWidthImpl(TObject* owner, const int& value) { no_vcl_THeaderSection_SetMinWidth(owner->Handle(), value); }
+int  THeaderSection::GetMaxWidthImpl(TObject* owner)                  { return no_vcl_THeaderSection_GetMaxWidth(owner->Handle()); }
+void THeaderSection::SetMaxWidthImpl(TObject* owner, const int& value) { no_vcl_THeaderSection_SetMaxWidth(owner->Handle(), value); }
+TAlignment THeaderSection::GetAlignmentImpl(TObject* owner) { return static_cast<TAlignment>(no_vcl_THeaderSection_GetAlignment(owner->Handle())); }
+void THeaderSection::SetAlignmentImpl(TObject* owner, const TAlignment& value) { no_vcl_THeaderSection_SetAlignment(owner->Handle(), value); }
+bool THeaderSection::GetVisibleImpl(TObject* owner)                   { return no_vcl_THeaderSection_GetVisible(owner->Handle()) != 0; }
+void THeaderSection::SetVisibleImpl(TObject* owner, const bool& value) { no_vcl_THeaderSection_SetVisible(owner->Handle(), value ? 1 : 0); }
+int  THeaderSection::GetIndexImpl(TObject* owner)                     { return no_vcl_THeaderSection_GetIndex(owner->Handle()); }
+void THeaderSection::SetIndexImpl(TObject* owner, const int& value)    { no_vcl_THeaderSection_SetIndex(owner->Handle(), value); }
+int  THeaderSection::GetLeftImpl(TObject* owner)                      { return no_vcl_THeaderSection_GetLeft(owner->Handle()); }
+int  THeaderSection::GetRightImpl(TObject* owner)                     { return no_vcl_THeaderSection_GetRight(owner->Handle()); }
+int  THeaderSection::GetOriginalIndexImpl(TObject* owner)             { return no_vcl_THeaderSection_GetOriginalIndex(owner->Handle()); }
+
+THeaderSections::THeaderSections(no_vcl_obj_t handle)
+    : TPersistent(handle)
+    , Count(this, &THeaderSections::GetCountImpl)
+    , Items(this, &THeaderSections::GetItemsImpl)
+{}
+
+THeaderSection* THeaderSections::Add()             { return THeaderSection::Wrap(no_vcl_THeaderSections_Add(handle_)); }
+THeaderSection* THeaderSections::Insert(int Index) { return THeaderSection::Wrap(no_vcl_THeaderSections_Insert(handle_, Index)); }
+void THeaderSections::Delete(int Index)            { no_vcl_THeaderSections_Delete(handle_, Index); }
+void THeaderSections::Clear()                      { no_vcl_THeaderSections_Clear(handle_); }
+void THeaderSections::BeginUpdate()                { no_vcl_THeaderSections_BeginUpdate(handle_); }
+void THeaderSections::EndUpdate()                  { no_vcl_THeaderSections_EndUpdate(handle_); }
+THeaderSection* THeaderSections::GetItemsImpl(TObject* owner, int Index) { return THeaderSection::Wrap(no_vcl_THeaderSections_GetItem(owner->Handle(), Index)); }
+int  THeaderSections::GetCountImpl(TObject* owner) { return no_vcl_THeaderSections_GetCount(owner->Handle()); }
+
+TCustomHeaderControl::TCustomHeaderControl(no_vcl_obj_t handle)
+    : TCustomControl(handle)
+    , Sections(this, &TCustomHeaderControl::GetSectionsImpl)
+    , DragReorder(this, &TCustomHeaderControl::GetDragReorderImpl, &TCustomHeaderControl::SetDragReorderImpl)
+    , SectionFromOriginalIndex(this, &TCustomHeaderControl::GetSectionFromOriginalIndexImpl)
+    , OnSectionClick(this, &TCustomHeaderControl::GetOnSectionClickImpl, &TCustomHeaderControl::SetOnSectionClickImpl)
+    , OnSectionResize(this, &TCustomHeaderControl::GetOnSectionResizeImpl, &TCustomHeaderControl::SetOnSectionResizeImpl)
+    , OnSectionSeparatorDblClick(this, &TCustomHeaderControl::GetOnSectionSeparatorDblClickImpl, &TCustomHeaderControl::SetOnSectionSeparatorDblClickImpl)
+    , OnSectionTrack(this, &TCustomHeaderControl::GetOnSectionTrackImpl, &TCustomHeaderControl::SetOnSectionTrackImpl)
+    , OnSectionDrag(this, &TCustomHeaderControl::GetOnSectionDragImpl, &TCustomHeaderControl::SetOnSectionDragImpl)
+    , OnSectionEndDrag(this, &TCustomHeaderControl::GetOnSectionEndDragImpl, &TCustomHeaderControl::SetOnSectionEndDragImpl)
+    , sections_(no_vcl_TCustomHeaderControl_GetSections(handle_))
+{}
+
+int TCustomHeaderControl::GetSectionAt(const TPoint& P) const
+{
+    return no_vcl_TCustomHeaderControl_GetSectionAt(handle_, P.X, P.Y);
+}
+
+THeaderSections* TCustomHeaderControl::GetSectionsImpl(TObject* owner) { return &static_cast<TCustomHeaderControl*>(owner)->sections_; }
+bool TCustomHeaderControl::GetDragReorderImpl(TObject* owner) { return no_vcl_TCustomHeaderControl_GetDragReorder(owner->Handle()) != 0; }
+void TCustomHeaderControl::SetDragReorderImpl(TObject* owner, const bool& value) { no_vcl_TCustomHeaderControl_SetDragReorder(owner->Handle(), value ? 1 : 0); }
+THeaderSection* TCustomHeaderControl::GetSectionFromOriginalIndexImpl(TObject* owner, int OriginalIndex)
+{
+    return THeaderSection::Wrap(no_vcl_TCustomHeaderControl_GetSectionFromOriginalIndex(owner->Handle(), OriginalIndex));
+}
+
+namespace
+{
+
+// OnSectionClick・OnSectionResize・OnSectionSeparatorDblClick の共通の呼び出し(ハンドラはコピーしてから呼ぶ)。
+void CallSectionNotify(TCustomHeaderControl* self, TCustomSectionNotifyEvent handler, THeaderSection* section)
+{
+    if (handler)
+        handler(self, section);
+}
+
+} // namespace
+
+void NO_VCL_CALL TCustomHeaderControl::SectionClickTrampoline(no_vcl_obj_t sender, no_vcl_obj_t section, void*)
+{
+    if (TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(FromHandle(sender)))
+        CallSectionNotify(self, self->onSectionClick_, THeaderSection::Wrap(section));
+}
+
+void NO_VCL_CALL TCustomHeaderControl::SectionResizeTrampoline(no_vcl_obj_t sender, no_vcl_obj_t section, void*)
+{
+    if (TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(FromHandle(sender)))
+        CallSectionNotify(self, self->onSectionResize_, THeaderSection::Wrap(section));
+}
+
+void NO_VCL_CALL TCustomHeaderControl::SectionSeparatorDblClickTrampoline(no_vcl_obj_t sender, no_vcl_obj_t section, void*)
+{
+    if (TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(FromHandle(sender)))
+        CallSectionNotify(self, self->onSectionSeparatorDblClick_, THeaderSection::Wrap(section));
+}
+
+void NO_VCL_CALL TCustomHeaderControl::SectionTrackTrampoline(no_vcl_obj_t sender, no_vcl_obj_t section,
+                                                              no_vcl_int_t width, no_vcl_int_t state, void*)
+{
+    TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(FromHandle(sender));
+    if (!self || !self->onSectionTrack_)
+        return;
+    TCustomSectionTrackEvent handler = self->onSectionTrack_;
+    handler(self, THeaderSection::Wrap(section), width, static_cast<TSectionTrackState>(state));
+}
+
+void NO_VCL_CALL TCustomHeaderControl::SectionDragTrampoline(no_vcl_obj_t sender, no_vcl_obj_t fromSection,
+                                                             no_vcl_obj_t toSection, no_vcl_bool_t* allow, void*)
+{
+    TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(FromHandle(sender));
+    if (!self || !self->onSectionDrag_)
+        return;
+    TSectionDragEvent handler = self->onSectionDrag_;
+    bool allowDrag = *allow != 0;
+    handler(self, THeaderSection::Wrap(fromSection), THeaderSection::Wrap(toSection), allowDrag);
+    *allow = allowDrag ? 1 : 0;
+}
+
+void NO_VCL_CALL TCustomHeaderControl::SectionEndDragTrampoline(no_vcl_obj_t sender, void*)
+{
+    if (TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(FromHandle(sender)))
+        CallNotify(self->onSectionEndDrag_, self);
+}
+
+TCustomSectionNotifyEvent TCustomHeaderControl::GetOnSectionClickImpl(TObject* owner) { return static_cast<TCustomHeaderControl*>(owner)->onSectionClick_; }
+TCustomSectionNotifyEvent TCustomHeaderControl::GetOnSectionResizeImpl(TObject* owner) { return static_cast<TCustomHeaderControl*>(owner)->onSectionResize_; }
+TCustomSectionNotifyEvent TCustomHeaderControl::GetOnSectionSeparatorDblClickImpl(TObject* owner) { return static_cast<TCustomHeaderControl*>(owner)->onSectionSeparatorDblClick_; }
+TCustomSectionTrackEvent  TCustomHeaderControl::GetOnSectionTrackImpl(TObject* owner) { return static_cast<TCustomHeaderControl*>(owner)->onSectionTrack_; }
+TSectionDragEvent         TCustomHeaderControl::GetOnSectionDragImpl(TObject* owner) { return static_cast<TCustomHeaderControl*>(owner)->onSectionDrag_; }
+TNotifyEvent              TCustomHeaderControl::GetOnSectionEndDragImpl(TObject* owner) { return static_cast<TCustomHeaderControl*>(owner)->onSectionEndDrag_; }
+
+void TCustomHeaderControl::SetOnSectionClickImpl(TObject* owner, const TCustomSectionNotifyEvent& value)
+{
+    TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(owner);
+    SetSimpleEvent(self->handle_, self->onSectionClick_, self->onSectionClickHooked_, value,
+                   &no_vcl_TCustomHeaderControl_SetOnSectionClick, &TCustomHeaderControl::SectionClickTrampoline);
+}
+
+void TCustomHeaderControl::SetOnSectionResizeImpl(TObject* owner, const TCustomSectionNotifyEvent& value)
+{
+    TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(owner);
+    SetSimpleEvent(self->handle_, self->onSectionResize_, self->onSectionResizeHooked_, value,
+                   &no_vcl_TCustomHeaderControl_SetOnSectionResize, &TCustomHeaderControl::SectionResizeTrampoline);
+}
+
+void TCustomHeaderControl::SetOnSectionSeparatorDblClickImpl(TObject* owner, const TCustomSectionNotifyEvent& value)
+{
+    TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(owner);
+    SetSimpleEvent(self->handle_, self->onSectionSeparatorDblClick_, self->onSectionSeparatorDblClickHooked_, value,
+                   &no_vcl_TCustomHeaderControl_SetOnSectionSeparatorDblClick, &TCustomHeaderControl::SectionSeparatorDblClickTrampoline);
+}
+
+void TCustomHeaderControl::SetOnSectionTrackImpl(TObject* owner, const TCustomSectionTrackEvent& value)
+{
+    TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(owner);
+    SetSimpleEvent(self->handle_, self->onSectionTrack_, self->onSectionTrackHooked_, value,
+                   &no_vcl_TCustomHeaderControl_SetOnSectionTrack, &TCustomHeaderControl::SectionTrackTrampoline);
+}
+
+void TCustomHeaderControl::SetOnSectionDragImpl(TObject* owner, const TSectionDragEvent& value)
+{
+    TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(owner);
+    SetSimpleEvent(self->handle_, self->onSectionDrag_, self->onSectionDragHooked_, value,
+                   &no_vcl_TCustomHeaderControl_SetOnSectionDrag, &TCustomHeaderControl::SectionDragTrampoline);
+}
+
+void TCustomHeaderControl::SetOnSectionEndDragImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(owner);
+    SetSimpleEvent(self->handle_, self->onSectionEndDrag_, self->onSectionEndDragHooked_, value,
+                   &no_vcl_TCustomHeaderControl_SetOnSectionEndDrag, &TCustomHeaderControl::SectionEndDragTrampoline);
+}
+
+THeaderControl::THeaderControl(TComponent* AOwner)
+    : TCustomHeaderControl(no_vcl_THeaderControl_Create(HandleOf(AOwner)))
+{}
+
 } // namespace no_vcl

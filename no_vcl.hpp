@@ -387,7 +387,7 @@ private:
     friend class ItemRegistry;  // 項目のラッパーを TPersistent* 経由で delete するため
 };
 
-// TComponent ではない項目(TTreeNode・TListItem・TListColumn)のラッパーの共通の管理(利用者は直接使わない)。
+// TComponent ではない項目(TTreeNode・TListItem・TListColumn・THeaderSection)のラッパーの共通の管理(利用者は直接使わない)。
 // 項目は FreeNotification を持たないため、TComponent のレジストリとは別に、DLL の「項目の破棄通知」
 // (no_vcl_ItemFree_SetCallback)でラッパーを delete する。同じ項目には常に同じラッパーが返る。
 // 各項目のクラスは、ハンドルを受け取るコンストラクタを private にし、friend class ItemRegistry とする。
@@ -2588,6 +2588,13 @@ struct TRect
 };
 using TGridRect = TRect;
 
+// 点(VCL の TPoint と同じく X/Y)。
+struct TPoint
+{
+    int X;
+    int Y;
+};
+
 // グリッドの Options(LCL の TGridOptions)。TShiftState と同じく、ビットを OR した集合として扱う。
 using TGridOptions = unsigned int;
 const TGridOptions goFixedVertLine               = 1u << 0;
@@ -2810,6 +2817,179 @@ public:
 
 protected:
     ~TStringGrid() override = default;
+};
+
+/* ---------------- HeaderControl ---------------- */
+
+class TCustomHeaderControl;
+
+// ヘッダーコントロールのセクション(LCL の THeaderSection。TCollectionItem)。同じセクションには常に同じポインタが返る。
+// ラッパーは、セクションが破棄されたとき(THeaderSections::Delete・Clear、ヘッダーコントロールの破棄)に delete される。
+class THeaderSection : public TPersistent
+{
+public:
+    Property<std::string> Text;
+    // Visible が false なら 0 を返す。
+    Property<int>         Width;
+    Property<int>         MinWidth;
+    Property<int>         MaxWidth;
+    Property<TAlignment>  Alignment;
+    Property<bool>        Visible;
+    // 並び順。書き換えるとセクションが移動する。
+    Property<int>         Index;
+    // クライアント座標での左端・右端。
+    ReadOnlyProperty<int> Left;
+    ReadOnlyProperty<int> Right;
+    // 並べ替えても変わらない位置。
+    ReadOnlyProperty<int> OriginalIndex;
+
+private:
+    friend class ItemRegistry;
+    friend class THeaderSections;
+    friend class TCustomHeaderControl;
+
+    explicit THeaderSection(no_vcl_obj_t handle);
+    ~THeaderSection() override = default;
+    static THeaderSection* Wrap(no_vcl_obj_t handle) { return ItemRegistry::Wrap<THeaderSection>(handle); }
+
+    static std::string GetTextImpl(TObject* owner);
+    static void        SetTextImpl(TObject* owner, const std::string& value);
+    static int         GetWidthImpl(TObject* owner);
+    static void        SetWidthImpl(TObject* owner, const int& value);
+    static int         GetMinWidthImpl(TObject* owner);
+    static void        SetMinWidthImpl(TObject* owner, const int& value);
+    static int         GetMaxWidthImpl(TObject* owner);
+    static void        SetMaxWidthImpl(TObject* owner, const int& value);
+    static TAlignment  GetAlignmentImpl(TObject* owner);
+    static void        SetAlignmentImpl(TObject* owner, const TAlignment& value);
+    static bool        GetVisibleImpl(TObject* owner);
+    static void        SetVisibleImpl(TObject* owner, const bool& value);
+    static int         GetIndexImpl(TObject* owner);
+    static void        SetIndexImpl(TObject* owner, const int& value);
+    static int         GetLeftImpl(TObject* owner);
+    static int         GetRightImpl(TObject* owner);
+    static int         GetOriginalIndexImpl(TObject* owner);
+};
+
+// セクションの一覧(LCL の THeaderSections。TCollection)。ヘッダーコントロールの値メンバとして持つ非所有のビュー。
+class THeaderSections : public TPersistent
+{
+public:
+    explicit THeaderSections(no_vcl_obj_t handle);
+    ~THeaderSections() override = default;
+
+    ReadOnlyProperty<int> Count;
+    // HeaderControl1->Sections->Items[i]。
+    ReadOnlyIndexedProperty<THeaderSection*> Items;
+
+    // 末尾に(Insert は Index の位置に)空のセクションを追加して返す(Text 等はその後で設定する。VCL と同じ)。
+    THeaderSection* Add();
+    THeaderSection* Insert(int Index);
+    // セクションを削除する(セクションのラッパーも delete される)。
+    void            Delete(int Index);
+    void            Clear();
+    void            BeginUpdate();
+    void            EndUpdate();
+
+private:
+    static THeaderSection* GetItemsImpl(TObject* owner, int Index);
+    static int             GetCountImpl(TObject* owner);
+};
+
+// ドラッグで幅を変えている間の段階(LCL の TSectionTrackState と同じ値)。
+enum TSectionTrackState
+{
+    tsTrackBegin = 0,
+    tsTrackMove,
+    tsTrackEnd
+};
+
+// セクションを対象とするイベント。1 つ目の引数は LCL と同じくヘッダーコントロール(OnSectionDrag だけは Sender)。
+using TCustomSectionNotifyEvent = std::function<void(TCustomHeaderControl* HeaderControl, THeaderSection* Section)>;
+using TCustomSectionTrackEvent  = std::function<void(TCustomHeaderControl* HeaderControl, THeaderSection* Section,
+                                                     int Width, TSectionTrackState State)>;
+// DragReorder のとき、セクションをドラッグで移動する前に呼ばれる。AllowDrag を false にすると移動させない。
+using TSectionDragEvent         = std::function<void(TObject* Sender, THeaderSection* FromSection, THeaderSection* ToSection,
+                                                     bool& AllowDrag)>;
+
+// 以下のメンバは LCL の TCustomHeaderControl の public/published。セクションは OS のコントロールではなく LCL が描画する。
+class TCustomHeaderControl : public TCustomControl
+{
+public:
+    ReadOnlyProperty<THeaderSections*> Sections;
+    // true にすると、セクションをドラッグで並べ替えられる。
+    Property<bool>                     DragReorder;
+    // 並べ替えても変わらない位置(OriginalIndex)のセクション。無ければ nullptr。
+    ReadOnlyIndexedProperty<THeaderSection*> SectionFromOriginalIndex;
+
+    // セクションがクリックされたとき。
+    Property<TCustomSectionNotifyEvent> OnSectionClick;
+    // ドラッグで幅を変え終えたとき。
+    Property<TCustomSectionNotifyEvent> OnSectionResize;
+    // セクションの境界がダブルクリックされたとき。
+    Property<TCustomSectionNotifyEvent> OnSectionSeparatorDblClick;
+    // ドラッグで幅を変えている間(開始・移動・終了)。
+    Property<TCustomSectionTrackEvent>  OnSectionTrack;
+    Property<TSectionDragEvent>         OnSectionDrag;
+    // ドラッグでの並べ替えが終わったとき。
+    Property<TNotifyEvent>              OnSectionEndDrag;
+
+    // クライアント座標 P にあるセクションの位置。無ければ -1。
+    int GetSectionAt(const TPoint& P) const;
+
+protected:
+    explicit TCustomHeaderControl(no_vcl_obj_t handle);
+    ~TCustomHeaderControl() override = default;
+
+private:
+    THeaderSections           sections_;
+    TCustomSectionNotifyEvent onSectionClick_;
+    TCustomSectionNotifyEvent onSectionResize_;
+    TCustomSectionNotifyEvent onSectionSeparatorDblClick_;
+    TCustomSectionTrackEvent  onSectionTrack_;
+    TSectionDragEvent         onSectionDrag_;
+    TNotifyEvent              onSectionEndDrag_;
+    bool onSectionClickHooked_             = false;
+    bool onSectionResizeHooked_            = false;
+    bool onSectionSeparatorDblClickHooked_ = false;
+    bool onSectionTrackHooked_             = false;
+    bool onSectionDragHooked_              = false;
+    bool onSectionEndDragHooked_           = false;
+
+    static void NO_VCL_CALL SectionClickTrampoline(no_vcl_obj_t sender, no_vcl_obj_t section, void* data);
+    static void NO_VCL_CALL SectionResizeTrampoline(no_vcl_obj_t sender, no_vcl_obj_t section, void* data);
+    static void NO_VCL_CALL SectionSeparatorDblClickTrampoline(no_vcl_obj_t sender, no_vcl_obj_t section, void* data);
+    static void NO_VCL_CALL SectionTrackTrampoline(no_vcl_obj_t sender, no_vcl_obj_t section, no_vcl_int_t width, no_vcl_int_t state, void* data);
+    static void NO_VCL_CALL SectionDragTrampoline(no_vcl_obj_t sender, no_vcl_obj_t fromSection, no_vcl_obj_t toSection, no_vcl_bool_t* allow, void* data);
+    static void NO_VCL_CALL SectionEndDragTrampoline(no_vcl_obj_t sender, void* data);
+
+    static THeaderSections* GetSectionsImpl(TObject* owner);
+    static bool             GetDragReorderImpl(TObject* owner);
+    static void             SetDragReorderImpl(TObject* owner, const bool& value);
+    static THeaderSection*  GetSectionFromOriginalIndexImpl(TObject* owner, int OriginalIndex);
+
+    static TCustomSectionNotifyEvent GetOnSectionClickImpl(TObject* owner);
+    static void                      SetOnSectionClickImpl(TObject* owner, const TCustomSectionNotifyEvent& value);
+    static TCustomSectionNotifyEvent GetOnSectionResizeImpl(TObject* owner);
+    static void                      SetOnSectionResizeImpl(TObject* owner, const TCustomSectionNotifyEvent& value);
+    static TCustomSectionNotifyEvent GetOnSectionSeparatorDblClickImpl(TObject* owner);
+    static void                      SetOnSectionSeparatorDblClickImpl(TObject* owner, const TCustomSectionNotifyEvent& value);
+    static TCustomSectionTrackEvent  GetOnSectionTrackImpl(TObject* owner);
+    static void                      SetOnSectionTrackImpl(TObject* owner, const TCustomSectionTrackEvent& value);
+    static TSectionDragEvent         GetOnSectionDragImpl(TObject* owner);
+    static void                      SetOnSectionDragImpl(TObject* owner, const TSectionDragEvent& value);
+    static TNotifyEvent              GetOnSectionEndDragImpl(TObject* owner);
+    static void                      SetOnSectionEndDragImpl(TObject* owner, const TNotifyEvent& value);
+};
+
+// 列の見出しを並べたコントロール。
+class THeaderControl : public TCustomHeaderControl
+{
+public:
+    explicit THeaderControl(TComponent* AOwner);
+
+protected:
+    ~THeaderControl() override = default;
 };
 
 /* ---------------- Timer ---------------- */

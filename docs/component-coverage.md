@@ -62,7 +62,7 @@ TScrollingWinControl のいずれかで、いずれも実装済み。既存パ�
 | ✅ TTreeView | comctrls.pp(TCustomTreeView) | TCustomControl(実装済み) | Tier 2 の 2 バッチ目([ADR 0019](adr/0019-treeview-and-non-component-items.md))。TTreeNode(TPersistent)は `TTreeNode*` で扱い、削除通知(TCustomTreeView.Delete の上書き)でラッパーの寿命を管理。画像・複数選択・ラベルの編集は未対応 |
 | ✅ TListView | comctrls.pp(TCustomListView) | TWinControl(実装済み) | Tier 2 の 3 バッチ目([ADR 0020](adr/0020-listview-and-shared-item-registry.md))。TListItem・TListColumn は TTreeNode と同じく削除通知で寿命を管理(`ItemRegistry` に共通化)。表示前の Selected は DLL 側で補正。画像・OwnerData・ラベルの編集は未対応 |
 | ✅ TStringGrid / TDrawGrid | grids.pas(TCustomGrid → TCustomDrawGrid) | TCustomControl(実装済み) | Tier 2 の 4 バッチ目([ADR 0021](adr/0021-drawgrid-and-stringgrid.md))。Cells[c][r]・ColWidths[i] は添字で書ける([ADR 0022](adr/0022-indexed-property-proxy.md))、Options はビット集合、OnDrawCell/OnSelectCell/OnSelection/OnHeaderClick。Objects・Cols/Rows・OnGetEditText/OnSetEditText・Columns は未対応 |
-| THeaderControl | comctrls.pp(TCustomHeaderControl) | TCustomControl(実装済み) | THeaderSections 相当のセクション操作 |
+| ✅ THeaderControl | comctrls.pp(TCustomHeaderControl) | TCustomControl(実装済み) | Tier 2 の 5 バッチ目([ADR 0024](adr/0024-headercontrol.md))。Sections(Items[i]・Add・Insert・Delete・Clear)、DragReorder、OnSectionClick/Resize/Track/Drag/EndDrag/SeparatorDblClick。セクションの破棄は CreateSection を差し替えた派生セクションのデストラクタで通知。Images/ImageIndex は Tier 3 待ち |
 | TToolBar / TToolButton | comctrls.pp | TToolWindow(TCustomControl 系。実質は TCustomControl) | ToolButton の並び・スタイル管理 |
 | TCoolBar | comctrls.pp(TCustomCoolBar) | TToolWindow | 優先度低め(現代の UI ではあまり使われない) |
 
@@ -153,9 +153,9 @@ Tier 1 の 1 バッチ目([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.m
 4. **Tier 2** はバッチに分けて進めている。1 バッチ目の TPageControl+TTabSheet([ADR 0018](adr/0018-pagecontrol-and-tabsheet.md))と、
    2 バッチ目の TTreeView([ADR 0019](adr/0019-treeview-and-non-component-items.md))、3 バッチ目の TListView
    ([ADR 0020](adr/0020-listview-and-shared-item-registry.md))、4 バッチ目の TDrawGrid/TStringGrid
-   ([ADR 0021](adr/0021-drawgrid-and-stringgrid.md))は完了した。TComponent ではない項目の寿命管理は
+   ([ADR 0021](adr/0021-drawgrid-and-stringgrid.md))、5 バッチ目の THeaderControl([ADR 0024](adr/0024-headercontrol.md))は完了した。TComponent ではない項目の寿命管理は
    `ItemRegistry` と項目の破棄通知(`ItemFree_SetCallback`)に共通化した。
-   残りの THeaderControl・TToolBar/TToolButton・TCoolBar は、それぞれ専用の設計を確認してから着手する。
+   残りの TToolBar/TToolButton・TCoolBar は、それぞれ専用の設計を確認してから着手する。
 5. **Tier 3(TBitmap/TPicture)** は、TImage 単体のためというより、Tier 1/2 のいくつか(Glyph・ImageList)の
    完成度を上げるために必要になる。着手するタイミングで独立した ADR を書く。
 6. **Tier 4(ダイアログ)** は他とほぼ独立して進められるので、隙間で着手しやすい。

@@ -42,6 +42,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0021](adr/0021-drawgrid-and-stringgrid.md) | Tier 2 の 4 バッチ目として TDrawGrid と TStringGrid を追加する | 承認(一部置換→0022) |
 | [0022](adr/0022-indexed-property-proxy.md) | インデックス付きプロパティを添字で書ける共通のプロキシを入れ、グリッドの Cells・ColWidths・RowHeights に使う | 承認 |
 | [0023](adr/0023-remaining-indexed-properties.md) | 残りのインデックス付きプロパティも添字で書けるようにし、読み取り専用のものは値を直接返す | 承認 |
+| [0024](adr/0024-headercontrol.md) | Tier 2 の 5 バッチ目として THeaderControl を追加し、セクションの破棄を派生クラスのデストラクタで通知する | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。

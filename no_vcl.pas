@@ -137,8 +137,8 @@ var
   GFreeNotifier: TFreeNotifier;
   GFreeCallback: TNoVclCallback = nil;
   GFreeData: Pointer = nil;
-  { TComponent ではない項目(TTreeNode・TListItem・TListColumn。FreeNotification が無い)の破棄通知。
-    TNoVclTreeView.Delete・TNoVclListView.DoDeletion・列を削除する関数から呼ぶ(NotifyItemFreed)。 }
+  { TComponent ではない項目(TTreeNode・TListItem・TListColumn・THeaderSection。FreeNotification が無い)の破棄通知。
+    TNoVclTreeView.Delete・TNoVclListView.DoDeletion・列を削除する関数・TNoVclHeaderSection.Destroy から呼ぶ(NotifyItemFreed)。 }
   GItemFreeCallback: TNoVclCallback = nil;
   GItemFreeData: Pointer = nil;
   { DLL の切り離し中は True。LCL の終了処理で起きるイベント(フォームの OnDestroy・OnHide 等)を呼び出し側へ送らない。 }
@@ -2324,7 +2324,8 @@ type
   end;
 
   { TComponent ではない項目(ツリービューのノード・リストビューの項目や列)を 1 つ受け取るイベント用。
-    ツリービューの OnChange/OnExpanded/OnCollapsed/OnDeletion、リストビューの OnDeletion/OnItemChecked/OnColumnClick。
+    ツリービューの OnChange/OnExpanded/OnCollapsed/OnDeletion、リストビューの OnDeletion/OnItemChecked/OnColumnClick、
+    ヘッダーコントロールの OnSectionClick/OnSectionResize/OnSectionSeparatorDblClick。
     イベントの型ごとに引数の型が異なるため、メソッドを分ける(コールバックの形は同じ)。 }
   TNoVclItemCallback = procedure(Sender: Pointer; Item: Pointer; Data: Pointer); NO_VCL_CALL;
 
@@ -2336,6 +2337,7 @@ type
     procedure DoNode(Sender: TObject; Node: TTreeNode);
     procedure DoListItem(Sender: TObject; Item: TListItem);
     procedure DoColumn(Sender: TObject; Column: TListColumn);
+    procedure DoSection(HeaderControl: TCustomHeaderControl; Section: THeaderSection);
   end;
 
   { 項目と整数(または真偽値)を 1 つずつ受け取るイベント用。リストビューの OnSelectItem(Selected)・OnChange(TItemChange の序数)。 }
@@ -2387,6 +2389,13 @@ begin
   if not Assigned(FCallback) or GDetaching then
     Exit;
   FCallback(Pointer(Sender), Pointer(Column), FData);
+end;
+
+procedure TItemCallbackBridge.DoSection(HeaderControl: TCustomHeaderControl; Section: THeaderSection);
+begin
+  if not Assigned(FCallback) or GDetaching then
+    Exit;
+  FCallback(Pointer(HeaderControl), Pointer(Section), FData);
 end;
 
 procedure TItemIntCallbackBridge.DoSelectItem(Sender: TObject; Item: TListItem; Selected: Boolean);
@@ -3805,6 +3814,296 @@ begin
   TCustomStringGrid(Obj).AutoSizeColumn(ACol);
 end;
 
+{ docs/component-coverage.md の Tier 2、5 バッチ目(THeaderControl)。docs/adr/0024-... を参照。
+  セクション(THeaderSection。TCollectionItem)は TListColumn と同じく、C++ のラッパーの寿命を破棄の通知で管理する。
+  LCL の THeaderSections.Add/Insert は TCustomHeaderControl.CreateSection(protected virtual)でセクションを生成するため、
+  CreateSection を上書きした TNoVclHeaderControl に、デストラクタで通知する TNoVclHeaderSection を生成させる。
+  これで Delete・Clear・ヘッダーコントロールの破棄のどれでも(リストビューの列と違い、この DLL の関数を通らなくても)通知される。
+  そのため OnCreateSectionClass(セクションのクラスの差し替え)は公開しない。 }
+
+type
+  TNoVclHeaderSection = class(THeaderSection)
+  public
+    destructor Destroy; override;
+  end;
+
+  TNoVclHeaderControl = class(THeaderControl)
+  protected
+    function CreateSection: THeaderSection; override;
+  end;
+
+  { OnSectionTrack(HeaderControl, Section, Width, State)用。State は TSectionTrackState の序数。 }
+  TNoVclSectionTrackCallback = procedure(Sender: Pointer; Section: Pointer; Width: Integer; State: Integer; Data: Pointer); NO_VCL_CALL;
+
+  TSectionTrackCallbackBridge = class(TComponent)
+  private
+    FCallback: TNoVclSectionTrackCallback;
+    FData: Pointer;
+  public
+    procedure DoTrack(HeaderControl: TCustomHeaderControl; Section: THeaderSection; Width: Integer; State: TSectionTrackState);
+  end;
+
+  { OnSectionDrag(Sender, FromSection, ToSection, var AllowDrag)用。Allow は書き換え可能(0 = False)。 }
+  TNoVclSectionDragCallback = procedure(Sender: Pointer; FromSection: Pointer; ToSection: Pointer; Allow: PInteger; Data: Pointer); NO_VCL_CALL;
+
+  TSectionDragCallbackBridge = class(TComponent)
+  private
+    FCallback: TNoVclSectionDragCallback;
+    FData: Pointer;
+  public
+    procedure DoDrag(Sender: TObject; FromSection, ToSection: THeaderSection; var AllowDrag: Boolean);
+  end;
+
+destructor TNoVclHeaderSection.Destroy;
+begin
+  NotifyItemFreed(Self);
+  inherited Destroy;
+end;
+
+function TNoVclHeaderControl.CreateSection: THeaderSection;
+begin
+  Result := TNoVclHeaderSection.Create(Sections);
+end;
+
+procedure TSectionTrackCallbackBridge.DoTrack(HeaderControl: TCustomHeaderControl; Section: THeaderSection; Width: Integer; State: TSectionTrackState);
+begin
+  if not Assigned(FCallback) or GDetaching then
+    Exit;
+  FCallback(Pointer(HeaderControl), Pointer(Section), Width, Ord(State), FData);
+end;
+
+procedure TSectionDragCallbackBridge.DoDrag(Sender: TObject; FromSection, ToSection: THeaderSection; var AllowDrag: Boolean);
+var
+  A: Integer;
+begin
+  if not Assigned(FCallback) or GDetaching then
+    Exit;
+  if AllowDrag then A := -1 else A := 0;
+  FCallback(Pointer(Sender), Pointer(FromSection), Pointer(ToSection), @A, FData);
+  AllowDrag := A <> 0;
+end;
+
+{ THeaderControl / TCustomHeaderControl }
+
+function THeaderControl_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TNoVclHeaderControl.Create(TComponent(Owner)));
+end;
+
+{ Sections(THeaderSections)は、ヘッダーコントロールが所有する非所有のハンドル(ヘッダーコントロールと寿命が一致する)。 }
+function TCustomHeaderControl_GetSections(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomHeaderControl(Obj).Sections);
+end;
+
+function TCustomHeaderControl_GetDragReorder(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomHeaderControl(Obj).DragReorder;
+end;
+
+procedure TCustomHeaderControl_SetDragReorder(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomHeaderControl(Obj).DragReorder := Value;
+end;
+
+{ Win32 では Windows ユニットの型名 Point(TPoint の別名)が Types.Point を隠すため、TPoint はフィールドで組み立てる。 }
+function TCustomHeaderControl_GetSectionAt(Obj: Pointer; X, Y: Integer): Integer; NO_VCL_CALL;
+var
+  P: TPoint;
+begin
+  P.X := X;
+  P.Y := Y;
+  Result := TCustomHeaderControl(Obj).GetSectionAt(P);
+end;
+
+function TCustomHeaderControl_GetSectionFromOriginalIndex(Obj: Pointer; OriginalIndex: Integer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomHeaderControl(Obj).SectionFromOriginalIndex[OriginalIndex]);
+end;
+
+procedure TCustomHeaderControl_SetOnSectionClick(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  THeaderControl(Obj).OnSectionClick := @ItemBridgeFor(THeaderControl(Obj), TMethod(THeaderControl(Obj).OnSectionClick).Data, Cb, Data).DoSection;
+end;
+
+procedure TCustomHeaderControl_SetOnSectionResize(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  THeaderControl(Obj).OnSectionResize := @ItemBridgeFor(THeaderControl(Obj), TMethod(THeaderControl(Obj).OnSectionResize).Data, Cb, Data).DoSection;
+end;
+
+procedure TCustomHeaderControl_SetOnSectionSeparatorDblClick(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  THeaderControl(Obj).OnSectionSeparatorDblClick := @ItemBridgeFor(THeaderControl(Obj), TMethod(THeaderControl(Obj).OnSectionSeparatorDblClick).Data, Cb, Data).DoSection;
+end;
+
+procedure TCustomHeaderControl_SetOnSectionTrack(Obj: Pointer; Cb: TNoVclSectionTrackCallback; Data: Pointer); NO_VCL_CALL;
+var
+  HC: THeaderControl;
+  Bridge: TSectionTrackCallbackBridge;
+begin
+  HC := THeaderControl(Obj);
+  if (TMethod(HC.OnSectionTrack).Data <> nil) and (TObject(TMethod(HC.OnSectionTrack).Data) is TSectionTrackCallbackBridge)
+     and (TSectionTrackCallbackBridge(TMethod(HC.OnSectionTrack).Data).Owner = HC) then
+    Bridge := TSectionTrackCallbackBridge(TMethod(HC.OnSectionTrack).Data)
+  else
+    Bridge := TSectionTrackCallbackBridge.Create(HC);
+  Bridge.FCallback := Cb;
+  Bridge.FData := Data;
+  HC.OnSectionTrack := @Bridge.DoTrack;
+end;
+
+procedure TCustomHeaderControl_SetOnSectionDrag(Obj: Pointer; Cb: TNoVclSectionDragCallback; Data: Pointer); NO_VCL_CALL;
+var
+  HC: THeaderControl;
+  Bridge: TSectionDragCallbackBridge;
+begin
+  HC := THeaderControl(Obj);
+  if (TMethod(HC.OnSectionDrag).Data <> nil) and (TObject(TMethod(HC.OnSectionDrag).Data) is TSectionDragCallbackBridge)
+     and (TSectionDragCallbackBridge(TMethod(HC.OnSectionDrag).Data).Owner = HC) then
+    Bridge := TSectionDragCallbackBridge(TMethod(HC.OnSectionDrag).Data)
+  else
+    Bridge := TSectionDragCallbackBridge.Create(HC);
+  Bridge.FCallback := Cb;
+  Bridge.FData := Data;
+  HC.OnSectionDrag := @Bridge.DoDrag;
+end;
+
+procedure TCustomHeaderControl_SetOnSectionEndDrag(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  THeaderControl(Obj).OnSectionEndDrag := @BridgeFor(THeaderControl(Obj), MethodData(THeaderControl(Obj).OnSectionEndDrag), Cb, Data).DoClick;
+end;
+
+{ THeaderSections(TCollection)。Delete・Clear で破棄されたセクションは TNoVclHeaderSection.Destroy が通知する。 }
+
+function THeaderSections_Add(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(THeaderSections(Obj).Add);
+end;
+
+function THeaderSections_Insert(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(THeaderSections(Obj).Insert(Index));
+end;
+
+procedure THeaderSections_Delete(Obj: Pointer; Index: Integer); NO_VCL_CALL;
+begin
+  THeaderSections(Obj).Delete(Index);
+end;
+
+procedure THeaderSections_Clear(Obj: Pointer); NO_VCL_CALL;
+begin
+  THeaderSections(Obj).Clear;
+end;
+
+function THeaderSections_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := THeaderSections(Obj).Count;
+end;
+
+function THeaderSections_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(THeaderSections(Obj).Items[Index]);
+end;
+
+procedure THeaderSections_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
+begin
+  THeaderSections(Obj).BeginUpdate;
+end;
+
+procedure THeaderSections_EndUpdate(Obj: Pointer); NO_VCL_CALL;
+begin
+  THeaderSections(Obj).EndUpdate;
+end;
+
+{ THeaderSection }
+
+function THeaderSection_GetText(Obj: Pointer): PChar; NO_VCL_CALL;
+begin
+  Result := ReturnStr(THeaderSection(Obj).Text);
+end;
+
+procedure THeaderSection_SetText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+begin
+  THeaderSection(Obj).Text := Value;
+end;
+
+function THeaderSection_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := THeaderSection(Obj).Width;
+end;
+
+procedure THeaderSection_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  THeaderSection(Obj).Width := Value;
+end;
+
+function THeaderSection_GetMinWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := THeaderSection(Obj).MinWidth;
+end;
+
+procedure THeaderSection_SetMinWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  THeaderSection(Obj).MinWidth := Value;
+end;
+
+function THeaderSection_GetMaxWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := THeaderSection(Obj).MaxWidth;
+end;
+
+procedure THeaderSection_SetMaxWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  THeaderSection(Obj).MaxWidth := Value;
+end;
+
+{ TAlignment の序数(taLeftJustify = 0, taRightJustify, taCenter)。 }
+function THeaderSection_GetAlignment(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(THeaderSection(Obj).Alignment);
+end;
+
+procedure THeaderSection_SetAlignment(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  THeaderSection(Obj).Alignment := TAlignment(Value);
+end;
+
+function THeaderSection_GetVisible(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := THeaderSection(Obj).Visible;
+end;
+
+procedure THeaderSection_SetVisible(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  THeaderSection(Obj).Visible := Value;
+end;
+
+{ TCollectionItem.Index。書き換えるとセクションが移動する。 }
+function THeaderSection_GetIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := THeaderSection(Obj).Index;
+end;
+
+procedure THeaderSection_SetIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  THeaderSection(Obj).Index := Value;
+end;
+
+function THeaderSection_GetLeft(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := THeaderSection(Obj).Left;
+end;
+
+function THeaderSection_GetRight(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := THeaderSection(Obj).Right;
+end;
+
+function THeaderSection_GetOriginalIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := THeaderSection(Obj).OriginalIndex;
+end;
+
 exports
   FreeNotify_SetCallback,
 
@@ -4409,7 +4708,44 @@ exports
   TCustomStringGrid_SetCells,
   TCustomStringGrid_Clean,
   TCustomStringGrid_AutoSizeColumns,
-  TCustomStringGrid_AutoSizeColumn;
+  TCustomStringGrid_AutoSizeColumn,
+  THeaderControl_Create,
+  TCustomHeaderControl_GetSections,
+  TCustomHeaderControl_GetDragReorder,
+  TCustomHeaderControl_SetDragReorder,
+  TCustomHeaderControl_GetSectionAt,
+  TCustomHeaderControl_GetSectionFromOriginalIndex,
+  TCustomHeaderControl_SetOnSectionClick,
+  TCustomHeaderControl_SetOnSectionResize,
+  TCustomHeaderControl_SetOnSectionSeparatorDblClick,
+  TCustomHeaderControl_SetOnSectionTrack,
+  TCustomHeaderControl_SetOnSectionDrag,
+  TCustomHeaderControl_SetOnSectionEndDrag,
+  THeaderSections_Add,
+  THeaderSections_Insert,
+  THeaderSections_Delete,
+  THeaderSections_Clear,
+  THeaderSections_GetCount,
+  THeaderSections_GetItem,
+  THeaderSections_BeginUpdate,
+  THeaderSections_EndUpdate,
+  THeaderSection_GetText,
+  THeaderSection_SetText,
+  THeaderSection_GetWidth,
+  THeaderSection_SetWidth,
+  THeaderSection_GetMinWidth,
+  THeaderSection_SetMinWidth,
+  THeaderSection_GetMaxWidth,
+  THeaderSection_SetMaxWidth,
+  THeaderSection_GetAlignment,
+  THeaderSection_SetAlignment,
+  THeaderSection_GetVisible,
+  THeaderSection_SetVisible,
+  THeaderSection_GetIndex,
+  THeaderSection_SetIndex,
+  THeaderSection_GetLeft,
+  THeaderSection_GetRight,
+  THeaderSection_GetOriginalIndex;
 
 begin
   RequireDerivedFormResource := False;

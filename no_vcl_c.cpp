@@ -617,7 +617,44 @@ using no_vcl_module_t = void*;
     X(void,          TCustomStringGrid_SetCells,              (no_vcl_obj_t o, no_vcl_int_t c, no_vcl_int_t r, no_vcl_str_t v), (o, c, r, v)) \
     X(void,          TCustomStringGrid_Clean,                 (no_vcl_obj_t o),                                     (o)) \
     X(void,          TCustomStringGrid_AutoSizeColumns,       (no_vcl_obj_t o),                                     (o)) \
-    X(void,          TCustomStringGrid_AutoSizeColumn,        (no_vcl_obj_t o, no_vcl_int_t c),                     (o, c))
+    X(void,          TCustomStringGrid_AutoSizeColumn,        (no_vcl_obj_t o, no_vcl_int_t c),                     (o, c)) \
+    X(no_vcl_obj_t,  THeaderControl_Create,                   (no_vcl_obj_t owner),                                 (owner)) \
+    X(no_vcl_obj_t,  TCustomHeaderControl_GetSections,        (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_bool_t, TCustomHeaderControl_GetDragReorder,     (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomHeaderControl_SetDragReorder,     (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_int_t,  TCustomHeaderControl_GetSectionAt,       (no_vcl_obj_t o, no_vcl_int_t x, no_vcl_int_t y),     (o, x, y)) \
+    X(no_vcl_obj_t,  TCustomHeaderControl_GetSectionFromOriginalIndex, (no_vcl_obj_t o, no_vcl_int_t i),            (o, i)) \
+    X(void,          TCustomHeaderControl_SetOnSectionClick,  (no_vcl_obj_t o, no_vcl_item_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TCustomHeaderControl_SetOnSectionResize, (no_vcl_obj_t o, no_vcl_item_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TCustomHeaderControl_SetOnSectionSeparatorDblClick, (no_vcl_obj_t o, no_vcl_item_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TCustomHeaderControl_SetOnSectionTrack,  (no_vcl_obj_t o, no_vcl_section_track_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TCustomHeaderControl_SetOnSectionDrag,   (no_vcl_obj_t o, no_vcl_section_drag_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TCustomHeaderControl_SetOnSectionEndDrag, (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),     (o, cb, d)) \
+    X(no_vcl_obj_t,  THeaderSections_Add,                     (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  THeaderSections_Insert,                  (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(void,          THeaderSections_Delete,                  (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(void,          THeaderSections_Clear,                   (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_int_t,  THeaderSections_GetCount,                (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  THeaderSections_GetItem,                 (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(void,          THeaderSections_BeginUpdate,             (no_vcl_obj_t o),                                     (o)) \
+    X(void,          THeaderSections_EndUpdate,               (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_str_t,  THeaderSection_GetText,                  (no_vcl_obj_t o),                                     (o)) \
+    X(void,          THeaderSection_SetText,                  (no_vcl_obj_t o, no_vcl_str_t v),                     (o, v)) \
+    X(no_vcl_int_t,  THeaderSection_GetWidth,                 (no_vcl_obj_t o),                                     (o)) \
+    X(void,          THeaderSection_SetWidth,                 (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  THeaderSection_GetMinWidth,              (no_vcl_obj_t o),                                     (o)) \
+    X(void,          THeaderSection_SetMinWidth,              (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  THeaderSection_GetMaxWidth,              (no_vcl_obj_t o),                                     (o)) \
+    X(void,          THeaderSection_SetMaxWidth,              (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  THeaderSection_GetAlignment,             (no_vcl_obj_t o),                                     (o)) \
+    X(void,          THeaderSection_SetAlignment,             (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_bool_t, THeaderSection_GetVisible,               (no_vcl_obj_t o),                                     (o)) \
+    X(void,          THeaderSection_SetVisible,               (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_int_t,  THeaderSection_GetIndex,                 (no_vcl_obj_t o),                                     (o)) \
+    X(void,          THeaderSection_SetIndex,                 (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  THeaderSection_GetLeft,                  (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_int_t,  THeaderSection_GetRight,                 (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_int_t,  THeaderSection_GetOriginalIndex,         (no_vcl_obj_t o),                                     (o))
 
 namespace
 {

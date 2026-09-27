@@ -160,6 +160,8 @@ public:
     TStringGrid*    StringGrid1;
     TDrawGrid*      DrawGrid1;
     int             drawnCells_ = 0;
+    TTabSheet*      HeaderSheet;
+    THeaderControl* HeaderControl1;
 
     // C++Builder と同じく Owner を受け取り、TForm に渡す(Application->CreateForm が Application を渡す)。
     explicit TMainForm(TComponent* AOwner) : TForm(AOwner)
@@ -802,6 +804,56 @@ public:
             std::fflush(stdout);
         };
 
+        // Tier 2、5 バッチ目(THeaderControl)。"Header" ページの上端に置く。
+        HeaderSheet = new TTabSheet(this);
+        HeaderSheet->PageControl = PageControl1;
+        HeaderSheet->Caption = "Header";
+        HeaderControl1 = new THeaderControl(this);
+        HeaderControl1->Parent = HeaderSheet;
+        HeaderControl1->Align = alTop;
+        HeaderControl1->DragReorder = true;
+        const char* headerTexts[] = { "Name", "Size", "Date" };
+        const int   headerWidths[] = { 80, 50, 60 };
+        for (int i = 0; i < 3; ++i)
+        {
+            THeaderSection* section = HeaderControl1->Sections->Add();
+            section->Text = headerTexts[i];
+            section->Width = headerWidths[i];
+            section->MinWidth = 20;
+        }
+        HeaderControl1->Sections->Items[1]->Alignment = taRightJustify;
+        HeaderControl1->OnSectionClick = [](TCustomHeaderControl*, THeaderSection* Section) {
+            std::printf("HeaderControl1SectionClick: %s (Index=%d)\n", std::string(Section->Text).c_str(), (int)Section->Index);
+            std::fflush(stdout);
+        };
+        HeaderControl1->OnSectionResize = [](TCustomHeaderControl*, THeaderSection* Section) {
+            std::printf("HeaderControl1SectionResize: %s Width=%d\n", std::string(Section->Text).c_str(), (int)Section->Width);
+            std::fflush(stdout);
+        };
+        HeaderControl1->OnSectionTrack = [](TCustomHeaderControl*, THeaderSection* Section, int Width, TSectionTrackState State) {
+            if (State != tsTrackMove)  // 移動中は何度も呼ばれるので、開始と終了だけ表示する
+            {
+                std::printf("HeaderControl1SectionTrack: %s Width=%d State=%d\n", std::string(Section->Text).c_str(), Width, (int)State);
+                std::fflush(stdout);
+            }
+        };
+        // "Name" は他のセクションと入れ替えさせない。
+        HeaderControl1->OnSectionDrag = [](TObject*, THeaderSection* FromSection, THeaderSection* ToSection, bool& AllowDrag) {
+            AllowDrag = std::string(FromSection->Text) != "Name" && std::string(ToSection->Text) != "Name";
+            std::printf("HeaderControl1SectionDrag: %s -> %s AllowDrag=%d\n",
+                        std::string(FromSection->Text).c_str(), std::string(ToSection->Text).c_str(), AllowDrag);
+            std::fflush(stdout);
+        };
+        HeaderControl1->OnSectionEndDrag = [](TObject*) {
+            std::printf("HeaderControl1SectionEndDrag\n");
+            std::fflush(stdout);
+        };
+        HeaderSheet->OnShow = [this](TObject*) {
+            std::printf("HeaderSheetShow: HeaderControl1 Width/Height=%d/%d, GetSectionAt(100, 5)=%d (expected 1)\n",
+                        (int)HeaderControl1->Width, (int)HeaderControl1->Height, HeaderControl1->GetSectionAt(TPoint{100, 5}));
+            std::fflush(stdout);
+        };
+
         OnCreate = [this](TObject* Sender) { FormCreate(Sender); };
         OnShow = [this](TObject* Sender) { FormShow(Sender); };
         OnResize = [this](TObject* Sender) { FormResize(Sender); };
@@ -1380,6 +1432,41 @@ int main()
         temp->Clear();
         std::printf("temp after Clear: ColCount/RowCount=%d/%d (expected 0/0)\n", (int)temp->ColCount, (int)temp->RowCount);
         temp->Free();
+    }
+
+    // Tier 2、5 バッチ目(THeaderControl)。
+    {
+        THeaderControl* hc = Form1->HeaderControl1;
+        THeaderSections* sections = hc->Sections;
+        THeaderSection* size = sections->Items[1];
+        std::printf("HeaderControl1 Sections->Count=%d (expected 3), Items[1]->Text=%s Width=%d (expected 50), "
+                    "Left/Right=%d/%d (expected 80/130), Alignment=%d (expected taRightJustify=%d), same wrapper: %s\n",
+                    (int)sections->Count, std::string(size->Text).c_str(), (int)size->Width,
+                    (int)size->Left, (int)size->Right, (int)size->Alignment, (int)taRightJustify,
+                    sections->Items[1] == size ? "yes" : "no");
+
+        // Index で移動しても OriginalIndex は変わらない。
+        THeaderSection* date = sections->Items[2];
+        date->Index = 0;
+        std::printf("After Date->Index = 0: Items[0] is Date: %s, Date OriginalIndex=%d (expected 2), "
+                    "SectionFromOriginalIndex[2] is Date: %s, Name Left=%d (expected 60)\n",
+                    sections->Items[0] == date ? "yes" : "no", (int)date->OriginalIndex,
+                    hc->SectionFromOriginalIndex[2] == date ? "yes" : "no", (int)sections->Items[1]->Left);
+        date->Index = 2;
+
+        // Visible が false のセクションは幅 0 として扱われる。
+        size->Visible = false;
+        std::printf("Size->Visible = false: Width=%d (expected 0), Date Left=%d (expected 80)\n", (int)size->Width, (int)date->Left);
+        size->Visible = true;
+
+        // Insert・Delete。Delete したセクションのラッパーは delete される(C のテストで破棄通知の数を確認する)。
+        THeaderSection* inserted = sections->Insert(1);
+        inserted->Text = "Temp";
+        std::printf("After Insert(1): Count=%d (expected 4), Items[1]->Text=%s, Items[2] is Size: %s\n",
+                    (int)sections->Count, std::string(sections->Items[1]->Text).c_str(), sections->Items[2] == size ? "yes" : "no");
+        sections->Delete(1);
+        std::printf("After Delete(1): Count=%d (expected 3), Items[1] is Size: %s, DragReorder=%d (expected 1)\n",
+                    (int)sections->Count, sections->Items[1] == size ? "yes" : "no", (bool)hc->DragReorder);
     }
 
     // 2 つ目以降に生成したフォームは MainForm にならない。

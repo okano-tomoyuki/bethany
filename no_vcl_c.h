@@ -654,10 +654,10 @@ void          NO_VCL_CALL no_vcl_TCustomPage_SetOnHide(no_vcl_obj_t Obj, no_vcl_
  *   ノードが削除されると(ツリービューの破棄に伴う削除も含め)、OnDeletion の後に項目の破棄通知が呼ばれる。 */
 
 /*
- * 項目の破棄通知: TComponent ではない項目(ツリービューのノード・リストビューの項目・リストビューの列)が破棄されると、
+ * 項目の破棄通知: TComponent ではない項目(ツリービューのノード・リストビューの項目・リストビューの列・ヘッダーコントロールのセクション)が破棄されると、
  * 登録したコールバックが破棄される項目を引数に呼ばれる(no_vcl_FreeNotify_SetCallback の項目版)。
  * コールバックは 1 つだけ登録でき、C++ ラッパー(no_vcl.hpp)を使う場合はラッパーが登録するため上書きしないこと。
- * 通知される経路はクラスごとに異なる(ノード・項目は LCL の削除処理から、列は no_vcl の関数から。各節を参照)。
+ * 通知される経路はクラスごとに異なる(ノード・項目は LCL の削除処理から、列は no_vcl の関数から、セクションはデストラクタから。各節を参照)。
  */
 void          NO_VCL_CALL no_vcl_ItemFree_SetCallback(no_vcl_callback_t Cb, void* Data);
 
@@ -1037,6 +1037,74 @@ void          NO_VCL_CALL no_vcl_TCustomStringGrid_Clean(no_vcl_obj_t Obj);
 /* 列の幅を文字列に合わせる。 */
 void          NO_VCL_CALL no_vcl_TCustomStringGrid_AutoSizeColumns(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TCustomStringGrid_AutoSizeColumn(no_vcl_obj_t Obj, no_vcl_int_t Col);
+
+/* ---------------- THeaderControl(Tier 2、5 バッチ目。docs/adr/0024) ----------------
+ * セクション(THeaderSection)は TComponent ではない項目で、ハンドルはヘッダーコントロールが所有する。
+ * 破棄の通知(no_vcl_ItemFree_SetCallback)は、セクションが破棄されるとき(THeaderSections_Delete・Clear、
+ * ヘッダーコントロールの破棄)に必ず呼ばれる。 */
+
+/* TSectionTrackState(OnSectionTrack の State)。 */
+enum { no_vcl_tsTrackBegin = 0, no_vcl_tsTrackMove, no_vcl_tsTrackEnd };
+
+/* OnSectionTrack 用(ドラッグで幅を変えている間)。width は新しい幅、state は no_vcl_ts*。 */
+typedef void (NO_VCL_CALL *no_vcl_section_track_callback_t)(no_vcl_obj_t sender, no_vcl_obj_t section,
+                                                             no_vcl_int_t width, no_vcl_int_t state, void* data);
+/* OnSectionDrag 用(DragReorder のときにセクションをドラッグで移動する)。*allow に 0 を書き込むと移動させない。 */
+typedef void (NO_VCL_CALL *no_vcl_section_drag_callback_t)(no_vcl_obj_t sender, no_vcl_obj_t fromSection,
+                                                            no_vcl_obj_t toSection, no_vcl_bool_t* allow, void* data);
+
+no_vcl_obj_t  NO_VCL_CALL no_vcl_THeaderControl_Create(no_vcl_obj_t Owner);
+
+/* TCustomHeaderControl の public/published。Sections は no_vcl_THeaderSections_* で操作する非所有のハンドル。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomHeaderControl_GetSections(no_vcl_obj_t Obj);
+/* 0 以外にすると、セクションをドラッグで並べ替えられる。 */
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomHeaderControl_GetDragReorder(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomHeaderControl_SetDragReorder(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* クライアント座標 X, Y にあるセクションの位置。無ければ -1。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomHeaderControl_GetSectionAt(no_vcl_obj_t Obj, no_vcl_int_t X, no_vcl_int_t Y);
+/* 並べ替えても変わらない位置(OriginalIndex)でセクションを探す。無ければ NULL。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomHeaderControl_GetSectionFromOriginalIndex(no_vcl_obj_t Obj, no_vcl_int_t OriginalIndex);
+/* sender はヘッダーコントロール、item はセクション。 */
+void          NO_VCL_CALL no_vcl_TCustomHeaderControl_SetOnSectionClick(no_vcl_obj_t Obj, no_vcl_item_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TCustomHeaderControl_SetOnSectionResize(no_vcl_obj_t Obj, no_vcl_item_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TCustomHeaderControl_SetOnSectionSeparatorDblClick(no_vcl_obj_t Obj, no_vcl_item_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TCustomHeaderControl_SetOnSectionTrack(no_vcl_obj_t Obj, no_vcl_section_track_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TCustomHeaderControl_SetOnSectionDrag(no_vcl_obj_t Obj, no_vcl_section_drag_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TCustomHeaderControl_SetOnSectionEndDrag(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+
+/* THeaderSections。Add・Insert は空のセクションを追加して返す(Text 等はその後で設定する)。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_THeaderSections_Add(no_vcl_obj_t Obj);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_THeaderSections_Insert(no_vcl_obj_t Obj, no_vcl_int_t Index);
+void          NO_VCL_CALL no_vcl_THeaderSections_Delete(no_vcl_obj_t Obj, no_vcl_int_t Index);
+void          NO_VCL_CALL no_vcl_THeaderSections_Clear(no_vcl_obj_t Obj);
+no_vcl_int_t  NO_VCL_CALL no_vcl_THeaderSections_GetCount(no_vcl_obj_t Obj);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_THeaderSections_GetItem(no_vcl_obj_t Obj, no_vcl_int_t Index);
+void          NO_VCL_CALL no_vcl_THeaderSections_BeginUpdate(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_THeaderSections_EndUpdate(no_vcl_obj_t Obj);
+
+/* THeaderSection。 */
+no_vcl_str_t  NO_VCL_CALL no_vcl_THeaderSection_GetText(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_THeaderSection_SetText(no_vcl_obj_t Obj, no_vcl_str_t Value);
+/* Visible が 0 なら 0 を返す。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_THeaderSection_GetWidth(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_THeaderSection_SetWidth(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_THeaderSection_GetMinWidth(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_THeaderSection_SetMinWidth(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_THeaderSection_GetMaxWidth(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_THeaderSection_SetMaxWidth(no_vcl_obj_t Obj, no_vcl_int_t Value);
+/* no_vcl_ta*。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_THeaderSection_GetAlignment(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_THeaderSection_SetAlignment(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_THeaderSection_GetVisible(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_THeaderSection_SetVisible(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* 並び順。書き換えるとセクションが移動する。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_THeaderSection_GetIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_THeaderSection_SetIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+/* クライアント座標での左端・右端(前のセクションの幅の合計から求める)。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_THeaderSection_GetLeft(no_vcl_obj_t Obj);
+no_vcl_int_t  NO_VCL_CALL no_vcl_THeaderSection_GetRight(no_vcl_obj_t Obj);
+/* 並べ替えても変わらない位置。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_THeaderSection_GetOriginalIndex(no_vcl_obj_t Obj);
 
 #ifdef __cplusplus
 }
