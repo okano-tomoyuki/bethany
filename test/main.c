@@ -376,6 +376,7 @@ int main(void)
     no_vcl_obj_t floatSpinEdit;
     no_vcl_obj_t spinEdit;
     no_vcl_obj_t maskEdit;
+    no_vcl_obj_t labeledEdit;
     no_vcl_obj_t tabControl;
     no_vcl_obj_t layoutPanel;
     AlignedControls aligned;
@@ -672,6 +673,34 @@ int main(void)
     printf("FloatSpinEdit Value=%.1f, SpinEdit Value=%d, MaskEdit EditMask=%s\n",
            no_vcl_TCustomFloatSpinEdit_GetValue(floatSpinEdit), no_vcl_TCustomSpinEdit_GetValue(spinEdit),
            no_vcl_TMaskEdit_GetEditMask(maskEdit));
+
+    /* TLabeledEdit。EditLabel は LCL が内部で生成したラベルで、取得すると破棄通知の対象になる(LabeledEdit と一緒に破棄される)。 */
+    labeledEdit = Place(no_vcl_TLabeledEdit_Create(form), form, 420, 690);
+    no_vcl_TControl_SetWidth(labeledEdit, 100);
+    no_vcl_TCustomLabeledEdit_SetLabelPosition(labeledEdit, no_vcl_lpLeft);
+    no_vcl_TControl_SetCaption(no_vcl_TCustomLabeledEdit_GetEditLabel(labeledEdit), "Zip:");
+    printf("LabeledEdit EditLabel Caption=%s (expected Zip:), Parent is form: %s, LabelPosition=%d (expected lpLeft=%d), LabelSpacing=%d (expected 3)\n",
+           no_vcl_TControl_GetCaption(no_vcl_TCustomLabeledEdit_GetEditLabel(labeledEdit)),
+           no_vcl_TControl_GetParent(no_vcl_TCustomLabeledEdit_GetEditLabel(labeledEdit)) == form ? "yes" : "no",
+           no_vcl_TCustomLabeledEdit_GetLabelPosition(labeledEdit), no_vcl_lpLeft,
+           no_vcl_TCustomLabeledEdit_GetLabelSpacing(labeledEdit));
+
+    /* TStringList。利用者が生成し、no_vcl_TStringList_Destroy で破棄する。操作は no_vcl_TStrings_*。 */
+    {
+        no_vcl_obj_t list = no_vcl_TStringList_Create();
+        no_vcl_int_t index = -1;
+        no_vcl_bool_t found;
+        char text[64];
+        no_vcl_TStrings_SetCommaText(list, "cherry,Banana,apple");
+        no_vcl_TStringList_SetSorted(list, 1);
+        found = no_vcl_TStringList_Find(list, "banana", &index);
+        no_vcl_TStrings_SetValues(list, "key", "value");
+        snprintf(text, sizeof(text), "%s", no_vcl_TStrings_GetCommaText(list));
+        printf("TStringList Sorted CommaText=%s (expected apple,Banana,cherry,key=value), Find(banana)=%d/%d (expected 1/1), "
+               "Values[key]=%s (expected value)\n",
+               text, found != 0, index, no_vcl_TStrings_GetValues(list, "key"));
+        no_vcl_TStringList_Destroy(list);
+    }
 
     /* Tier 1、7 バッチ目(最後のバッチ)。ページ付きの TPageControl/TTabSheet は今回見送る。 */
     tabControl = Place(no_vcl_TTabControl_Create(form), form, 20, 730);
@@ -1017,7 +1046,7 @@ int main(void)
     /* Application が所有するフォーム(と、フォームが所有するコントロール)をまとめて破棄する。
        呼ばなくても DLL の切り離し時に LCL が破棄するが、そのときは破棄通知が呼ばれない。 */
     no_vcl_TComponent_DestroyComponents(app);
-    printf("Clicks: %d, Freed components: %d (expected 71: form + 64 owned + 6 created inside LCL: 2 menu roots, a separator and 3 AddTabSheet pages)\n", clickCount, freedCount);
+    printf("Clicks: %d, Freed components: %d (expected 73: form + 65 owned + 7 created inside LCL: 2 menu roots, a separator, 3 AddTabSheet pages and an EditLabel)\n", clickCount, freedCount);
     /* ツリービュー・リストビュー・ヘッダーコントロールの破棄に伴って、残りのノード(4 つ)・リストビューの項目(2 つ)と列(2 つ)・
        セクション(2 つ)・バンド(1 つ)も破棄通知が届く。 */
     printf("Items freed: %d (expected 17: tree 2 deleted + 4 with the tree view, list 1 item + 1 column deleted "

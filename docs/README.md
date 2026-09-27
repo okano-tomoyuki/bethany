@@ -46,6 +46,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0025](adr/0025-toolbar-and-toolbutton.md) | Tier 2 の 6 バッチ目として TToolBar と TToolButton を追加する | 承認 |
 | [0026](adr/0026-coolbar-and-item-free-observer.md) | Tier 2 の 7 バッチ目として TCoolBar を追加し、項目の破棄の通知を TPersistent の観察者にそろえる | 承認 |
 | [0027](adr/0027-tstrings.md) | TStrings を表すクラスを入れ、Items・Lines・Tabs・SubItems を VCL と同じく TStrings* として公開する | 承認 |
+| [0028](adr/0028-labelededit-and-stringlist.md) | TLabeledEdit と、利用者が生成する TStringList を追加する | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。

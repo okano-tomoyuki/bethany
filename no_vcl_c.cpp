@@ -270,6 +270,13 @@ using no_vcl_module_t = void*;
     X(no_vcl_str_t,  TMaskEdit_GetEditMask,                   (no_vcl_obj_t o),                                     (o)) \
     X(void,          TMaskEdit_SetEditMask,                   (no_vcl_obj_t o, no_vcl_str_t v),                     (o, v)) \
     \
+    X(no_vcl_obj_t, TLabeledEdit_Create,                     (no_vcl_obj_t owner),                                 (owner)) \
+    X(no_vcl_obj_t, TCustomLabeledEdit_GetEditLabel,         (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_int_t, TCustomLabeledEdit_GetLabelPosition,     (no_vcl_obj_t o),                                     (o)) \
+    X(void,         TCustomLabeledEdit_SetLabelPosition,     (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t, TCustomLabeledEdit_GetLabelSpacing,      (no_vcl_obj_t o),                                     (o)) \
+    X(void,         TCustomLabeledEdit_SetLabelSpacing,      (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    \
     X(no_vcl_obj_t,  TTabControl_Create,                      (no_vcl_obj_t owner),                                 (owner)) \
     X(no_vcl_obj_t,  TTabControl_GetTabs,                     (no_vcl_obj_t o),                                     (o)) \
     X(no_vcl_int_t,  TTabControl_GetTabIndex,                 (no_vcl_obj_t o),                                     (o)) \
@@ -773,7 +780,31 @@ using no_vcl_module_t = void*;
     X(no_vcl_str_t,  TStrings_GetCommaText,                   (no_vcl_obj_t o),                                     (o)) \
     X(void,          TStrings_SetCommaText,                   (no_vcl_obj_t o, no_vcl_str_t v),                     (o, v)) \
     X(void,          TStrings_Assign,                         (no_vcl_obj_t o, no_vcl_obj_t s),                     (o, s)) \
-    X(void,          TStrings_AddStrings,                     (no_vcl_obj_t o, no_vcl_obj_t s),                     (o, s))
+    X(void,          TStrings_AddStrings,                     (no_vcl_obj_t o, no_vcl_obj_t s),                     (o, s)) \
+    X(no_vcl_str_t, TStrings_GetNames,                       (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(no_vcl_str_t, TStrings_GetValues,                      (no_vcl_obj_t o, no_vcl_str_t n),                     (o, n)) \
+    X(void,         TStrings_SetValues,                      (no_vcl_obj_t o, no_vcl_str_t n, no_vcl_str_t v),     (o, n, v)) \
+    X(no_vcl_str_t, TStrings_GetValueFromIndex,              (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(void,         TStrings_SetValueFromIndex,              (no_vcl_obj_t o, no_vcl_int_t i, no_vcl_str_t v),     (o, i, v)) \
+    X(no_vcl_int_t, TStrings_IndexOfName,                    (no_vcl_obj_t o, no_vcl_str_t n),                     (o, n)) \
+    X(char,         TStrings_GetDelimiter,                   (no_vcl_obj_t o),                                     (o)) \
+    X(void,         TStrings_SetDelimiter,                   (no_vcl_obj_t o, char v),                             (o, v)) \
+    X(no_vcl_bool_t, TStrings_GetStrictDelimiter,             (no_vcl_obj_t o),                                     (o)) \
+    X(void,         TStrings_SetStrictDelimiter,             (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_str_t, TStrings_GetDelimitedText,               (no_vcl_obj_t o),                                     (o)) \
+    X(void,         TStrings_SetDelimitedText,               (no_vcl_obj_t o, no_vcl_str_t v),                     (o, v)) \
+    X(void,         TStrings_LoadFromFile,                   (no_vcl_obj_t o, no_vcl_str_t f),                     (o, f)) \
+    X(void,         TStrings_SaveToFile,                     (no_vcl_obj_t o, no_vcl_str_t f),                     (o, f)) \
+    X(no_vcl_obj_t, TStringList_Create,                      (void),                                               ()) \
+    X(void,         TStringList_Destroy,                     (no_vcl_obj_t o),                                     (o)) \
+    X(void,         TStringList_Sort,                        (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_bool_t, TStringList_Find,                        (no_vcl_obj_t o, no_vcl_str_t s, no_vcl_int_t* i),    (o, s, i)) \
+    X(no_vcl_bool_t, TStringList_GetSorted,                   (no_vcl_obj_t o),                                     (o)) \
+    X(void,         TStringList_SetSorted,                   (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_int_t, TStringList_GetDuplicates,               (no_vcl_obj_t o),                                     (o)) \
+    X(void,         TStringList_SetDuplicates,               (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_bool_t, TStringList_GetCaseSensitive,            (no_vcl_obj_t o),                                     (o)) \
+    X(void,         TStringList_SetCaseSensitive,            (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v))
 
 namespace
 {

@@ -132,19 +132,20 @@ private:
 
 // インデックス付きのプロパティ(VCL の ColWidths[ACol] 等)。Grid->ColWidths[0] = 80; のように添字で読み書きできる。
 // 添字は所有者・添字・Getter/Setter を持つ要素のプロキシ(Reference)を返し、読み書きはその時点で所有者に委ねる。
-template<typename T>
+// 添字の型 I は既定で int。TStrings::Values のように文字列を添字にするものは I = std::string とする。
+template<typename T, typename I = int>
 class IndexedProperty
 {
 public:
-    using Getter = T    (*)(TObject*, int);
-    using Setter = void (*)(TObject*, int, const T&);
+    using Getter = T    (*)(TObject*, I);
+    using Setter = void (*)(TObject*, I, const T&);
 
     // 1 つの要素へのプロキシ。代入は値の書き込み、T への変換は値の読み出しになる
     // (auto で受けるとプロキシのままになるので、値が必要なら型を明示する)。
     class Reference
     {
     public:
-        Reference(TObject* owner, int index, Getter getter, Setter setter)
+        Reference(TObject* owner, I index, Getter getter, Setter setter)
             : owner_(owner), index_(index), getter_(getter), setter_(setter)
         {}
 
@@ -176,7 +177,7 @@ public:
 
     private:
         TObject* owner_;
-        int      index_;
+        I        index_;
         Getter   getter_;
         Setter   setter_;
     };
@@ -190,7 +191,7 @@ public:
     IndexedProperty(const IndexedProperty&) = delete;
     IndexedProperty& operator=(const IndexedProperty&) = delete;
 
-    Reference operator[](int index) const
+    Reference operator[](I index) const
     {
         return Reference(owner_, index, getter_, setter_);
     }
@@ -422,6 +423,7 @@ private:
 // LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがある(TListBox・TComboBox・TMemo)ため、
 // このビューは中身のハンドルを覚えず、操作のたびに所有者から取得する。そのため Handle() は nullptr を返す
 // (C API の no_vcl_TStrings_* に渡すハンドルは Current() で得る。保存しないこと)。
+// 利用者が生成する文字列の一覧は、派生の TStringList を使う(docs/adr/0028)。
 class TStrings : public TPersistent
 {
 public:
@@ -439,6 +441,18 @@ public:
     Property<std::string>        Text;
     // カンマ区切りの文字列(空白・カンマを含む要素は二重引用符で囲まれる)。
     Property<std::string>        CommaText;
+    // 名前=値 の形の行。Names[i] は '=' より前、ValueFromIndex[i] は後ろ。
+    // Values["name"] は name の行の値で、無ければ空文字列。無い名前に代入すると末尾に追加する。
+    // 空文字列を代入したとき、ValueFromIndex[i] はその行を削除するが、Values["name"] は値を空にするだけで行は残る
+    // (LCL(FPC)の仕様。VCL の Values は行を削除する)。
+    ReadOnlyIndexedProperty<std::string>      Names;
+    IndexedProperty<std::string, std::string> Values;
+    IndexedProperty<std::string>              ValueFromIndex;
+    // Delimiter で区切った文字列(既定は ',')。StrictDelimiter が false(既定)なら、空白も区切りとして扱い、
+    // 空白・区切り文字を含む要素は二重引用符で囲まれる。
+    Property<char>               Delimiter;
+    Property<bool>               StrictDelimiter;
+    Property<std::string>        DelimitedText;
 
     // 末尾に追加し、追加した位置を返す(ソートされた一覧では挿入された位置)。
     int  Add(const std::string& S);
@@ -455,13 +469,24 @@ public:
     // Source の内容(文字列と Objects)で置き換える / 末尾に加える。
     void Assign(const TStrings* Source);
     void AddStrings(const TStrings* Source);
+    // 名前=値 の行のうち、名前が Name の行の位置。見つからなければ -1。
+    int  IndexOfName(const std::string& Name) const;
+    // ファイル名・内容とも UTF-8 のまま扱う(文字コードの変換はしない)。
+    void LoadFromFile(const std::string& FileName);
+    void SaveToFile(const std::string& FileName) const;
 
     // 現在の中身のハンドル。
     no_vcl_obj_t Current() const { return accessor_(owner_->Handle()); }
 
+protected:
+    // 自分のハンドルそのものを中身とする(TStringList 用)。
+    explicit TStrings(no_vcl_obj_t handle);
+
 private:
     TObject* owner_;
     Accessor accessor_;
+
+    static no_vcl_obj_t NO_VCL_CALL SelfAccessor(no_vcl_obj_t handle) { return handle; }
 
     static int         GetCountImpl(TObject* owner);
     static std::string GetStringsImpl(TObject* owner, int Index);
@@ -472,6 +497,50 @@ private:
     static void        SetTextImpl(TObject* owner, const std::string& value);
     static std::string GetCommaTextImpl(TObject* owner);
     static void        SetCommaTextImpl(TObject* owner, const std::string& value);
+    static std::string GetNamesImpl(TObject* owner, int Index);
+    static std::string GetValuesImpl(TObject* owner, std::string Name);
+    static void        SetValuesImpl(TObject* owner, std::string Name, const std::string& value);
+    static std::string GetValueFromIndexImpl(TObject* owner, int Index);
+    static void        SetValueFromIndexImpl(TObject* owner, int Index, const std::string& value);
+    static char        GetDelimiterImpl(TObject* owner);
+    static void        SetDelimiterImpl(TObject* owner, const char& value);
+    static bool        GetStrictDelimiterImpl(TObject* owner);
+    static void        SetStrictDelimiterImpl(TObject* owner, const bool& value);
+    static std::string GetDelimitedTextImpl(TObject* owner);
+    static void        SetDelimitedTextImpl(TObject* owner, const std::string& value);
+};
+
+// Sorted のときの重複の扱い(LCL の TDuplicates と同じ値)。
+enum TDuplicates { dupIgnore, dupAccept, dupError };
+
+// 利用者が生成する文字列の一覧(LCL の TStringList)。TComponent ではないため、Owner も破棄通知も無く、
+// 生成した側が破棄する(VCL と同じく new して delete する。スタックや値メンバに置いてもよい)。
+// TStrings* を受け取るもの(ListBox1->Items->Assign(List) 等)にそのまま渡せる。
+class TStringList : public TStrings
+{
+public:
+    TStringList();
+    ~TStringList() override;
+
+    // true にすると並べ替え、以降の Add はソート順の位置に入る(Insert と Strings への代入は例外になる)。
+    Property<bool>        Sorted;
+    // Sorted のときの重複の扱い(既定は dupIgnore で、重複は加えない。dupError で重複を加えると例外になる)。
+    Property<TDuplicates> Duplicates;
+    // 並べ替え・IndexOf・Find で大文字と小文字を区別するか(既定は false)。
+    Property<bool>        CaseSensitive;
+
+    void Sort();
+    // ソートされた一覧から S を二分探索する。見つからなければ、S を挿入すべき位置を Index に入れて false を返す。
+    // Sorted が false の一覧には使えない(LCL が例外を送出する)。
+    bool Find(const std::string& S, int& Index) const;
+
+private:
+    static bool        GetSortedImpl(TObject* owner);
+    static void        SetSortedImpl(TObject* owner, const bool& value);
+    static TDuplicates GetDuplicatesImpl(TObject* owner);
+    static void        SetDuplicatesImpl(TObject* owner, const TDuplicates& value);
+    static bool        GetCaseSensitiveImpl(TObject* owner);
+    static void        SetCaseSensitiveImpl(TObject* owner, const bool& value);
 };
 
 // LCL のコンポーネント(Create/Destroy を持つオブジェクト)。
@@ -1293,6 +1362,18 @@ protected:
     ~TLabel() override = default;
 };
 
+// TLabeledEdit の EditLabel。LCL が LabeledEdit の生成時に内部で作るラベルで、利用者は生成しない
+// (LabeledEdit と一緒に破棄される)。Caption 等は TControl のものを使う。
+class TBoundLabel : public TCustomLabel
+{
+protected:
+    ~TBoundLabel() override = default;
+
+private:
+    friend class TComponent;  // WrapExisting から(TCustomLabeledEdit::EditLabel のラップ)
+    explicit TBoundLabel(no_vcl_obj_t handle) : TCustomLabel(handle) {}
+};
+
 // 枠線や凹凸の表現に使う、単純な表示専用コントロール(TGraphicControl の直接の派生)。
 enum TBevelShape { bsBox, bsFrame, bsTopLine, bsBottomLine, bsLeftLine, bsRightLine, bsSpacer };
 enum TBevelStyle { bsLowered, bsRaised };
@@ -1541,6 +1622,41 @@ protected:
 private:
     static std::string GetEditMaskImpl(TObject* owner);
     static void         SetEditMaskImpl(TObject* owner, const std::string& value);
+};
+
+// ラベルの位置(LCL の TLabelPosition と同じ値)。
+enum TLabelPosition { lpAbove, lpBelow, lpLeft, lpRight };
+
+// ラベル付きのエディット。EditLabel は LCL が内部で生成したラベルで、初めて取得したときにラッパーが作られる(docs/adr/0028)。
+// ラベルの Parent と位置は、エディットの Parent・LabelPosition・LabelSpacing に合わせて LCL が決める
+// (位置の反映はフォームの配置が行われるとき。Align と同じく、表示までは行われないことがある)。
+class TCustomLabeledEdit : public TCustomEdit
+{
+public:
+    ReadOnlyProperty<TBoundLabel*> EditLabel;
+    Property<TLabelPosition>       LabelPosition;
+    // ラベルとエディットの間隔(既定は 3)。
+    Property<int>                  LabelSpacing;
+
+protected:
+    explicit TCustomLabeledEdit(no_vcl_obj_t handle);
+    ~TCustomLabeledEdit() override = default;
+
+private:
+    static TBoundLabel*   GetEditLabelImpl(TObject* owner);
+    static TLabelPosition GetLabelPositionImpl(TObject* owner);
+    static void           SetLabelPositionImpl(TObject* owner, const TLabelPosition& value);
+    static int            GetLabelSpacingImpl(TObject* owner);
+    static void           SetLabelSpacingImpl(TObject* owner, const int& value);
+};
+
+class TLabeledEdit : public TCustomLabeledEdit
+{
+public:
+    explicit TLabeledEdit(TComponent* AOwner);
+
+protected:
+    ~TLabeledEdit() override = default;
 };
 
 // タブの位置(LCL の TTabPosition と同じ値)。

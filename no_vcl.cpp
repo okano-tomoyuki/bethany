@@ -39,9 +39,22 @@ TStrings::TStrings(TObject* owner, Accessor accessor)
     , Objects(this, &TStrings::GetObjectsImpl, &TStrings::SetObjectsImpl)
     , Text(this, &TStrings::GetTextImpl, &TStrings::SetTextImpl)
     , CommaText(this, &TStrings::GetCommaTextImpl, &TStrings::SetCommaTextImpl)
+    , Names(this, &TStrings::GetNamesImpl)
+    , Values(this, &TStrings::GetValuesImpl, &TStrings::SetValuesImpl)
+    , ValueFromIndex(this, &TStrings::GetValueFromIndexImpl, &TStrings::SetValueFromIndexImpl)
+    , Delimiter(this, &TStrings::GetDelimiterImpl, &TStrings::SetDelimiterImpl)
+    , StrictDelimiter(this, &TStrings::GetStrictDelimiterImpl, &TStrings::SetStrictDelimiterImpl)
+    , DelimitedText(this, &TStrings::GetDelimitedTextImpl, &TStrings::SetDelimitedTextImpl)
     , owner_(owner)
     , accessor_(accessor)
 {}
+
+// TStringList は自分のハンドルを持ち、Current() はそれをそのまま返す(所有者が自分、取得関数が恒等関数)。
+TStrings::TStrings(no_vcl_obj_t handle)
+    : TStrings(this, &TStrings::SelfAccessor)
+{
+    handle_ = handle;
+}
 
 int  TStrings::Add(const std::string& S)                     { return no_vcl_TStrings_Add(Current(), S.c_str()); }
 int  TStrings::AddObject(const std::string& S, void* AObject) { return no_vcl_TStrings_AddObject(Current(), S.c_str(), AObject); }
@@ -55,6 +68,9 @@ void TStrings::BeginUpdate()                                 { no_vcl_TStrings_B
 void TStrings::EndUpdate()                                   { no_vcl_TStrings_EndUpdate(Current()); }
 void TStrings::Assign(const TStrings* Source)                { no_vcl_TStrings_Assign(Current(), Source ? Source->Current() : nullptr); }
 void TStrings::AddStrings(const TStrings* Source)            { if (Source) no_vcl_TStrings_AddStrings(Current(), Source->Current()); }
+int  TStrings::IndexOfName(const std::string& Name) const     { return no_vcl_TStrings_IndexOfName(Current(), Name.c_str()); }
+void TStrings::LoadFromFile(const std::string& FileName)     { no_vcl_TStrings_LoadFromFile(Current(), FileName.c_str()); }
+void TStrings::SaveToFile(const std::string& FileName) const { no_vcl_TStrings_SaveToFile(Current(), FileName.c_str()); }
 
 int TStrings::GetCountImpl(TObject* owner) { return no_vcl_TStrings_GetCount(static_cast<TStrings*>(owner)->Current()); }
 std::string TStrings::GetStringsImpl(TObject* owner, int Index)
@@ -74,6 +90,69 @@ std::string TStrings::GetTextImpl(TObject* owner) { return std::string(no_vcl_TS
 void TStrings::SetTextImpl(TObject* owner, const std::string& value) { no_vcl_TStrings_SetText(static_cast<TStrings*>(owner)->Current(), value.c_str()); }
 std::string TStrings::GetCommaTextImpl(TObject* owner) { return std::string(no_vcl_TStrings_GetCommaText(static_cast<TStrings*>(owner)->Current())); }
 void TStrings::SetCommaTextImpl(TObject* owner, const std::string& value) { no_vcl_TStrings_SetCommaText(static_cast<TStrings*>(owner)->Current(), value.c_str()); }
+std::string TStrings::GetNamesImpl(TObject* owner, int Index)
+{
+    return std::string(no_vcl_TStrings_GetNames(static_cast<TStrings*>(owner)->Current(), Index));
+}
+std::string TStrings::GetValuesImpl(TObject* owner, std::string Name)
+{
+    return std::string(no_vcl_TStrings_GetValues(static_cast<TStrings*>(owner)->Current(), Name.c_str()));
+}
+void TStrings::SetValuesImpl(TObject* owner, std::string Name, const std::string& value)
+{
+    no_vcl_TStrings_SetValues(static_cast<TStrings*>(owner)->Current(), Name.c_str(), value.c_str());
+}
+std::string TStrings::GetValueFromIndexImpl(TObject* owner, int Index)
+{
+    return std::string(no_vcl_TStrings_GetValueFromIndex(static_cast<TStrings*>(owner)->Current(), Index));
+}
+void TStrings::SetValueFromIndexImpl(TObject* owner, int Index, const std::string& value)
+{
+    no_vcl_TStrings_SetValueFromIndex(static_cast<TStrings*>(owner)->Current(), Index, value.c_str());
+}
+char TStrings::GetDelimiterImpl(TObject* owner) { return no_vcl_TStrings_GetDelimiter(static_cast<TStrings*>(owner)->Current()); }
+void TStrings::SetDelimiterImpl(TObject* owner, const char& value) { no_vcl_TStrings_SetDelimiter(static_cast<TStrings*>(owner)->Current(), value); }
+bool TStrings::GetStrictDelimiterImpl(TObject* owner) { return no_vcl_TStrings_GetStrictDelimiter(static_cast<TStrings*>(owner)->Current()) != 0; }
+void TStrings::SetStrictDelimiterImpl(TObject* owner, const bool& value)
+{
+    no_vcl_TStrings_SetStrictDelimiter(static_cast<TStrings*>(owner)->Current(), value ? 1 : 0);
+}
+std::string TStrings::GetDelimitedTextImpl(TObject* owner) { return std::string(no_vcl_TStrings_GetDelimitedText(static_cast<TStrings*>(owner)->Current())); }
+void TStrings::SetDelimitedTextImpl(TObject* owner, const std::string& value)
+{
+    no_vcl_TStrings_SetDelimitedText(static_cast<TStrings*>(owner)->Current(), value.c_str());
+}
+
+/* ---------------- TStringList ---------------- */
+
+TStringList::TStringList()
+    : TStrings(no_vcl_TStringList_Create())
+    , Sorted(this, &TStringList::GetSortedImpl, &TStringList::SetSortedImpl)
+    , Duplicates(this, &TStringList::GetDuplicatesImpl, &TStringList::SetDuplicatesImpl)
+    , CaseSensitive(this, &TStringList::GetCaseSensitiveImpl, &TStringList::SetCaseSensitiveImpl)
+{}
+
+TStringList::~TStringList()
+{
+    no_vcl_TStringList_Destroy(handle_);
+}
+
+void TStringList::Sort() { no_vcl_TStringList_Sort(handle_); }
+
+bool TStringList::Find(const std::string& S, int& Index) const
+{
+    no_vcl_int_t index = -1;
+    bool found = no_vcl_TStringList_Find(handle_, S.c_str(), &index) != 0;
+    Index = index;
+    return found;
+}
+
+bool TStringList::GetSortedImpl(TObject* owner) { return no_vcl_TStringList_GetSorted(owner->Handle()) != 0; }
+void TStringList::SetSortedImpl(TObject* owner, const bool& value) { no_vcl_TStringList_SetSorted(owner->Handle(), value ? 1 : 0); }
+TDuplicates TStringList::GetDuplicatesImpl(TObject* owner) { return static_cast<TDuplicates>(no_vcl_TStringList_GetDuplicates(owner->Handle())); }
+void TStringList::SetDuplicatesImpl(TObject* owner, const TDuplicates& value) { no_vcl_TStringList_SetDuplicates(owner->Handle(), value); }
+bool TStringList::GetCaseSensitiveImpl(TObject* owner) { return no_vcl_TStringList_GetCaseSensitive(owner->Handle()) != 0; }
+void TStringList::SetCaseSensitiveImpl(TObject* owner, const bool& value) { no_vcl_TStringList_SetCaseSensitive(owner->Handle(), value ? 1 : 0); }
 
 /* ---------------- TComponent ---------------- */
 
@@ -1101,6 +1180,32 @@ TMaskEdit::TMaskEdit(TComponent* AOwner)
 
 std::string TMaskEdit::GetEditMaskImpl(TObject* owner) { return std::string(no_vcl_TMaskEdit_GetEditMask(owner->Handle())); }
 void TMaskEdit::SetEditMaskImpl(TObject* owner, const std::string& value) { no_vcl_TMaskEdit_SetEditMask(owner->Handle(), value.c_str()); }
+
+TCustomLabeledEdit::TCustomLabeledEdit(no_vcl_obj_t handle)
+    : TCustomEdit(handle)
+    , EditLabel(this, &TCustomLabeledEdit::GetEditLabelImpl)
+    , LabelPosition(this, &TCustomLabeledEdit::GetLabelPositionImpl, &TCustomLabeledEdit::SetLabelPositionImpl)
+    , LabelSpacing(this, &TCustomLabeledEdit::GetLabelSpacingImpl, &TCustomLabeledEdit::SetLabelSpacingImpl)
+{}
+
+TBoundLabel* TCustomLabeledEdit::GetEditLabelImpl(TObject* owner)
+{
+    return WrapExisting<TBoundLabel>(no_vcl_TCustomLabeledEdit_GetEditLabel(owner->Handle()));
+}
+TLabelPosition TCustomLabeledEdit::GetLabelPositionImpl(TObject* owner)
+{
+    return static_cast<TLabelPosition>(no_vcl_TCustomLabeledEdit_GetLabelPosition(owner->Handle()));
+}
+void TCustomLabeledEdit::SetLabelPositionImpl(TObject* owner, const TLabelPosition& value)
+{
+    no_vcl_TCustomLabeledEdit_SetLabelPosition(owner->Handle(), value);
+}
+int  TCustomLabeledEdit::GetLabelSpacingImpl(TObject* owner) { return no_vcl_TCustomLabeledEdit_GetLabelSpacing(owner->Handle()); }
+void TCustomLabeledEdit::SetLabelSpacingImpl(TObject* owner, const int& value) { no_vcl_TCustomLabeledEdit_SetLabelSpacing(owner->Handle(), value); }
+
+TLabeledEdit::TLabeledEdit(TComponent* AOwner)
+    : TCustomLabeledEdit(no_vcl_TLabeledEdit_Create(HandleOf(AOwner)))
+{}
 
 TTabControl::TTabControl(TComponent* AOwner)
     : TCustomTabControl(no_vcl_TTabControl_Create(HandleOf(AOwner)))

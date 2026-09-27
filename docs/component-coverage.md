@@ -43,7 +43,7 @@ TScrollingWinControl のいずれかで、いずれも実装済み。既存パ�
 | ✅ TRadioGroup | extctrls.pp(TCustomRadioGroup) | TCustomGroupBox(実装済み) | Items/ItemIndex/OnClick(ADR 0015 の 3 バッチ目)。OnClick は TControl のものとは別の独自フィールド |
 | ✅ TCheckGroup | extctrls.pp(TCustomCheckGroup) | TCustomGroupBox(実装済み) | Items + インデックス付き Checked(ADR 0015 の 3 バッチ目) |
 | ✅ TCheckListBox | checklst.pas(TCustomCheckListBox) | TCustomListBox(実装済み) | 基底の Items をそのまま使い、インデックス付き Checked と OnClickCheck を追加(ADR 0015 の 3 バッチ目) |
-| TLabeledEdit | extctrls.pp(TCustomLabeledEdit) | TCustomEdit(実装済み) | EditLabel は LCL が内部で生成する子コンポーネント。ラップの仕組み(`WrapExisting`)は [ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md) で入ったため、着手可能になった |
+| ✅ TLabeledEdit | extctrls.pp(TCustomLabeledEdit) | TCustomEdit(実装済み) | EditLabel(LCL が内部で生成する TBoundLabel)は `WrapExisting` でラップする。LabelPosition/LabelSpacing([ADR 0028](adr/0028-labelededit-and-stringlist.md)) |
 | ✅ TSpeedButton | buttons.pp(TCustomSpeedButton) | TGraphicControl(実装済み) | Down/GroupIndex/Flat/AllowAllUp(ADR 0015 の 4 バッチ目)。Glyph(ビットマップ)は未対応 |
 | ✅ TBitBtn | buttons.pp(TCustomBitBtn) | TCustomButton(実装済み) | Kind(bkOK 等)のみ実装(ADR 0015 の 4 バッチ目)。Kind を設定すると LCL が既定の Caption を自動設定する。Glyph は Tier 3 まで保留 |
 | ✅ TSpinEdit / TFloatSpinEdit | spin.pp | TCustomEdit(実装済み) | TCustomSpinEdit が Value 等を Integer で再宣言(TCustomFloatSpinEdit の Double 版を隠す)。C++ でも `Property<int>` で `Property<double>` を隠す形で再現した(ADR 0015 の 5 バッチ目) |
@@ -116,8 +116,9 @@ VCL アプリらしい UI に必須だが、TMenuItem がツリー構造の TCom
 ### コントロールではないが VCL 移行でよく使うもの(参考)
 
 `TAction`/`TActionList`(アクションベースの UI 更新)、`TScreen`(Application と対になるグローバル)、
-`TClipboard`、単体の `TStringList` は「コントロール」ではないため今回の一覧から外しているが、
+`TClipboard` は「コントロール」ではないため今回の一覧から外しているが、
 実際の VCL アプリの移行では必要になることが多い。着手する場合は別途 ADR で設計を切る。
+単体の `TStringList` は、TStrings の派生として実装済み([ADR 0028](adr/0028-labelededit-and-stringlist.md))。
 
 ## 3. cross-cutting な既知の課題(特定のクラスではなく設計全体に関わるもの)
 
@@ -143,7 +144,7 @@ Tier 1 の 1 バッチ目([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.m
 ## 4. 推奨する着手順序
 
 1. **Tier 1 は完了した**(19 クラス。[ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.md))。
-   TLabeledEdit(内部生成コンポーネントのラップ待ち。ADR 0017 で仕組みが入ったため着手可能)・
+   TLabeledEdit(内部生成コンポーネントのラップ待ち。ADR 0017 で仕組みが入った後、[ADR 0028](adr/0028-labelededit-and-stringlist.md) で実装済み)・
    TPageControl+TTabSheet(所有ページの設計が必要、Tier 2 へ再分類)は cross-cutting な課題または
    複雑度の都合で見送った。
 2. ✅ **`TControl.Align` の追加**(上記 cross-cutting な課題)と、それを待っていた TSplitter は完了した

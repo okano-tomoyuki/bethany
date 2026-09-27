@@ -461,6 +461,20 @@ no_vcl_obj_t  NO_VCL_CALL no_vcl_TMaskEdit_Create(no_vcl_obj_t Owner);
 no_vcl_str_t  NO_VCL_CALL no_vcl_TMaskEdit_GetEditMask(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TMaskEdit_SetEditMask(no_vcl_obj_t Obj, no_vcl_str_t Value);
 
+/* TLabeledEdit(docs/adr/0028)。TCustomEdit の派生のため、Text・MaxLength 等は no_vcl_TCustomEdit_* 等を使う。
+ * EditLabel(TBoundLabel。TCustomLabel の派生)は LCL が生成時に内部で作る子コンポーネントで、LabeledEdit と一緒に破棄される。
+ * 返したラベルは破棄通知の対象になる。Caption 等は no_vcl_TControl_* で設定する。
+ * ラベルの Parent と位置は、LabeledEdit の Parent・LabelPosition・LabelSpacing に合わせて LCL が決める
+ * (位置の反映は、フォームの配置が行われるとき。Align と同じく、表示までは行われないことがある)。 */
+enum { no_vcl_lpAbove = 0, no_vcl_lpBelow, no_vcl_lpLeft, no_vcl_lpRight };
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TLabeledEdit_Create(no_vcl_obj_t Owner);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomLabeledEdit_GetEditLabel(no_vcl_obj_t Obj);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomLabeledEdit_GetLabelPosition(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomLabeledEdit_SetLabelPosition(no_vcl_obj_t Obj, no_vcl_int_t Value);
+/* ラベルとエディットの間隔(既定は 3)。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomLabeledEdit_GetLabelSpacing(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomLabeledEdit_SetLabelSpacing(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
 /* docs/component-coverage.md の Tier 1、7 バッチ目(最後のバッチ)。
  * Tabs/TabIndex/OnChange は TCustomTabControl では protected だが、唯一の具象クラス TTabControl が
  * 独自のフィールドで再宣言して published にしているため、関数名は no_vcl_TTabControl_* にする。
@@ -1315,6 +1329,49 @@ void          NO_VCL_CALL no_vcl_TStrings_SetCommaText(no_vcl_obj_t Obj, no_vcl_
 /* Source の内容(文字列と Objects)で置き換える / 末尾に加える。 */
 void          NO_VCL_CALL no_vcl_TStrings_Assign(no_vcl_obj_t Obj, no_vcl_obj_t Source);
 void          NO_VCL_CALL no_vcl_TStrings_AddStrings(no_vcl_obj_t Obj, no_vcl_obj_t Source);
+/* 名前=値 の形の行。Names[Index] は '=' より前、ValueFromIndex[Index] は後ろ。
+ * Values[Name] は Name の行の値で、無ければ空文字列。無い名前に設定すると末尾に追加する。
+ * 空文字列を設定したとき、ValueFromIndex はその行を削除するが、Values は値を空にするだけで行は残る
+ * (LCL(FPC)の仕様。VCL の Values は行を削除する)。 */
+no_vcl_str_t  NO_VCL_CALL no_vcl_TStrings_GetNames(no_vcl_obj_t Obj, no_vcl_int_t Index);
+no_vcl_str_t  NO_VCL_CALL no_vcl_TStrings_GetValues(no_vcl_obj_t Obj, no_vcl_str_t Name);
+void          NO_VCL_CALL no_vcl_TStrings_SetValues(no_vcl_obj_t Obj, no_vcl_str_t Name, no_vcl_str_t Value);
+no_vcl_str_t  NO_VCL_CALL no_vcl_TStrings_GetValueFromIndex(no_vcl_obj_t Obj, no_vcl_int_t Index);
+void          NO_VCL_CALL no_vcl_TStrings_SetValueFromIndex(no_vcl_obj_t Obj, no_vcl_int_t Index, no_vcl_str_t Value);
+/* 見つからなければ -1。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TStrings_IndexOfName(no_vcl_obj_t Obj, no_vcl_str_t Name);
+/* Delimiter で区切った文字列(既定は ',')。StrictDelimiter が偽(既定)なら、空白も区切りとして扱い、
+ * 空白・区切り文字を含む要素は二重引用符で囲まれる。 */
+char          NO_VCL_CALL no_vcl_TStrings_GetDelimiter(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TStrings_SetDelimiter(no_vcl_obj_t Obj, char Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TStrings_GetStrictDelimiter(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TStrings_SetStrictDelimiter(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_str_t  NO_VCL_CALL no_vcl_TStrings_GetDelimitedText(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TStrings_SetDelimitedText(no_vcl_obj_t Obj, no_vcl_str_t Value);
+/* ファイル名・内容とも UTF-8 のまま扱う(文字コードの変換はしない)。 */
+void          NO_VCL_CALL no_vcl_TStrings_LoadFromFile(no_vcl_obj_t Obj, no_vcl_str_t FileName);
+void          NO_VCL_CALL no_vcl_TStrings_SaveToFile(no_vcl_obj_t Obj, no_vcl_str_t FileName);
+
+/* ---------------- TStringList(docs/adr/0028) ----------------
+ * 利用者が生成する文字列の一覧。TComponent ではない(Owner も破棄通知も無い)ため、使い終わったら
+ * no_vcl_TStringList_Destroy で破棄する。TStrings の操作(Add・Strings・Values 等)は no_vcl_TStrings_* を使い、
+ * このハンドルは生成した側の持ち物なので、コントロールの Items と違って保存してよい。 */
+enum { no_vcl_dupIgnore = 0, no_vcl_dupAccept, no_vcl_dupError };
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TStringList_Create(void);
+void          NO_VCL_CALL no_vcl_TStringList_Destroy(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TStringList_Sort(no_vcl_obj_t Obj);
+/* ソートされた一覧から S を二分探索する。見つからなければ、S を挿入すべき位置を *Index に入れて偽を返す。
+ * Sorted が偽の一覧には使えない(LCL が例外を送出する)。 */
+no_vcl_bool_t NO_VCL_CALL no_vcl_TStringList_Find(no_vcl_obj_t Obj, no_vcl_str_t S, no_vcl_int_t* Index);
+/* 真にすると並べ替え、以降の Add はソート順の位置に入る(Insert と Strings の設定は例外になる)。 */
+no_vcl_bool_t NO_VCL_CALL no_vcl_TStringList_GetSorted(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TStringList_SetSorted(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* Sorted のときの重複の扱い(no_vcl_dupIgnore(既定。重複は加えない)・dupAccept・dupError)。dupError で重複を加えると例外になる。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TStringList_GetDuplicates(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TStringList_SetDuplicates(no_vcl_obj_t Obj, no_vcl_int_t Value);
+/* 並べ替え・IndexOf・Find で大文字と小文字を区別するか(既定は偽)。 */
+no_vcl_bool_t NO_VCL_CALL no_vcl_TStringList_GetCaseSensitive(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TStringList_SetCaseSensitive(no_vcl_obj_t Obj, no_vcl_bool_t Value);
 
 #ifdef __cplusplus
 }

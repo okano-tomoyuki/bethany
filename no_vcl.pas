@@ -1675,6 +1675,46 @@ begin
   TMaskEdit(Obj).EditMask := Value;
 end;
 
+{ TCustomLabeledEdit(docs/adr/0028)。EditLabel(TBoundLabel)は、LCL が生成時に内部で作る子コンポーネント
+  (Owner は LabeledEdit 自身。LabeledEdit と一緒に破棄される)。返すときに Watch し、C++ 側は WrapExisting でラップする
+  (ADR 0017 と同じ形)。ラベルの Parent と位置は、LabeledEdit の Parent・LabelPosition・LabelSpacing に合わせて LCL が決める。 }
+
+function TLabeledEdit_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TLabeledEdit.Create(TComponent(Owner)));
+end;
+
+function TCustomLabeledEdit_GetEditLabel(Obj: Pointer): Pointer; NO_VCL_CALL;
+var
+  L: TBoundLabel;
+begin
+  L := TCustomLabeledEdit(Obj).EditLabel;
+  if L = nil then
+    Result := nil
+  else
+    Result := Watch(L);
+end;
+
+function TCustomLabeledEdit_GetLabelPosition(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TCustomLabeledEdit(Obj).LabelPosition);
+end;
+
+procedure TCustomLabeledEdit_SetLabelPosition(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomLabeledEdit(Obj).LabelPosition := TLabelPosition(Value);
+end;
+
+function TCustomLabeledEdit_GetLabelSpacing(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomLabeledEdit(Obj).LabelSpacing;
+end;
+
+procedure TCustomLabeledEdit_SetLabelSpacing(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomLabeledEdit(Obj).LabelSpacing := Value;
+end;
+
 { docs/component-coverage.md の Tier 1、7 バッチ目(最後のバッチ)。
   Tabs/TabIndex/OnChange は TCustomTabControl では protected だが、唯一の具象クラス TTabControl が
   独自のフィールドで再宣言して published にしているため、TTabControl(Obj) で直接アクセスする
@@ -4742,6 +4782,141 @@ begin
   TStrings(Obj).AddStrings(TStrings(Source));
 end;
 
+{ 名前=値 の形の行(Names・Values・ValueFromIndex・IndexOfName)。区切りは LCL の既定の '='。 }
+
+function TStrings_GetNames(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
+begin
+  Result := ReturnStr(TStrings(Obj).Names[Index]);
+end;
+
+function TStrings_GetValues(Obj: Pointer; Name: PChar): PChar; NO_VCL_CALL;
+begin
+  Result := ReturnStr(TStrings(Obj).Values[Name]);
+end;
+
+procedure TStrings_SetValues(Obj: Pointer; Name: PChar; Value: PChar); NO_VCL_CALL;
+begin
+  TStrings(Obj).Values[Name] := Value;
+end;
+
+function TStrings_GetValueFromIndex(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
+begin
+  Result := ReturnStr(TStrings(Obj).ValueFromIndex[Index]);
+end;
+
+procedure TStrings_SetValueFromIndex(Obj: Pointer; Index: Integer; Value: PChar); NO_VCL_CALL;
+begin
+  TStrings(Obj).ValueFromIndex[Index] := Value;
+end;
+
+function TStrings_IndexOfName(Obj: Pointer; Name: PChar): Integer; NO_VCL_CALL;
+begin
+  Result := TStrings(Obj).IndexOfName(Name);
+end;
+
+{ 任意の区切り文字の文字列(Delimiter・StrictDelimiter・DelimitedText)。 }
+
+function TStrings_GetDelimiter(Obj: Pointer): AnsiChar; NO_VCL_CALL;
+begin
+  Result := TStrings(Obj).Delimiter;
+end;
+
+procedure TStrings_SetDelimiter(Obj: Pointer; Value: AnsiChar); NO_VCL_CALL;
+begin
+  TStrings(Obj).Delimiter := Value;
+end;
+
+function TStrings_GetStrictDelimiter(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TStrings(Obj).StrictDelimiter;
+end;
+
+procedure TStrings_SetStrictDelimiter(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TStrings(Obj).StrictDelimiter := Value;
+end;
+
+function TStrings_GetDelimitedText(Obj: Pointer): PChar; NO_VCL_CALL;
+begin
+  Result := ReturnStr(TStrings(Obj).DelimitedText);
+end;
+
+procedure TStrings_SetDelimitedText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+begin
+  TStrings(Obj).DelimitedText := Value;
+end;
+
+{ ファイル名・内容とも UTF-8 のまま扱う(LCL は文字列を UTF-8 として扱う)。 }
+
+procedure TStrings_LoadFromFile(Obj: Pointer; FileName: PChar); NO_VCL_CALL;
+begin
+  TStrings(Obj).LoadFromFile(FileName);
+end;
+
+procedure TStrings_SaveToFile(Obj: Pointer; FileName: PChar); NO_VCL_CALL;
+begin
+  TStrings(Obj).SaveToFile(FileName);
+end;
+
+{ TStringList(docs/adr/0028)。利用者が生成し、TStringList_Destroy で破棄する(TComponent ではなく、Owner も破棄通知も無い)。
+  TStrings の操作は TStrings_* を使う。 }
+
+function TStringList_Create: Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TStringList.Create);
+end;
+
+procedure TStringList_Destroy(Obj: Pointer); NO_VCL_CALL;
+begin
+  TStringList(Obj).Free;
+end;
+
+procedure TStringList_Sort(Obj: Pointer); NO_VCL_CALL;
+begin
+  TStringList(Obj).Sort;
+end;
+
+{ ソートされた一覧から S を二分探索する。見つからなければ、S を挿入すべき位置を Index に入れて False を返す。
+  Sorted でない一覧に使うと例外になる(LCL の仕様)。 }
+function TStringList_Find(Obj: Pointer; S: PChar; Index: PInteger): LongBool; NO_VCL_CALL;
+var
+  I: Integer;
+begin
+  Result := TStringList(Obj).Find(S, I);
+  if Index <> nil then
+    Index^ := I;
+end;
+
+function TStringList_GetSorted(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TStringList(Obj).Sorted;
+end;
+
+procedure TStringList_SetSorted(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TStringList(Obj).Sorted := Value;
+end;
+
+function TStringList_GetDuplicates(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TStringList(Obj).Duplicates);
+end;
+
+procedure TStringList_SetDuplicates(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TStringList(Obj).Duplicates := TDuplicates(Value);
+end;
+
+function TStringList_GetCaseSensitive(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TStringList(Obj).CaseSensitive;
+end;
+
+procedure TStringList_SetCaseSensitive(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TStringList(Obj).CaseSensitive := Value;
+end;
+
 exports
   FreeNotify_SetCallback,
 
@@ -4993,6 +5168,13 @@ exports
   TMaskEdit_Create,
   TMaskEdit_GetEditMask,
   TMaskEdit_SetEditMask,
+
+  TLabeledEdit_Create,
+  TCustomLabeledEdit_GetEditLabel,
+  TCustomLabeledEdit_GetLabelPosition,
+  TCustomLabeledEdit_SetLabelPosition,
+  TCustomLabeledEdit_GetLabelSpacing,
+  TCustomLabeledEdit_SetLabelSpacing,
 
   TTabControl_Create,
   TTabControl_GetTabIndex,
@@ -5502,7 +5684,31 @@ exports
   TStrings_GetCommaText,
   TStrings_SetCommaText,
   TStrings_Assign,
-  TStrings_AddStrings;
+  TStrings_AddStrings,
+  TStrings_GetNames,
+  TStrings_GetValues,
+  TStrings_SetValues,
+  TStrings_GetValueFromIndex,
+  TStrings_SetValueFromIndex,
+  TStrings_IndexOfName,
+  TStrings_GetDelimiter,
+  TStrings_SetDelimiter,
+  TStrings_GetStrictDelimiter,
+  TStrings_SetStrictDelimiter,
+  TStrings_GetDelimitedText,
+  TStrings_SetDelimitedText,
+  TStrings_LoadFromFile,
+  TStrings_SaveToFile,
+  TStringList_Create,
+  TStringList_Destroy,
+  TStringList_Sort,
+  TStringList_Find,
+  TStringList_GetSorted,
+  TStringList_SetSorted,
+  TStringList_GetDuplicates,
+  TStringList_SetDuplicates,
+  TStringList_GetCaseSensitive,
+  TStringList_SetCaseSensitive;
 
 begin
   RequireDerivedFormResource := False;

@@ -120,11 +120,14 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 | OnCreate | TCustomForm(public) | TCustomForm | TCustomForm(public。発火は C++ 側、[ADR 0011](adr/0011-form-release-onclose-oncreate.md)) | (なし) |
 | Checked | TButtonControl(protected) | TCheckBox / TRadioButton | TButtonControl(protected)、TCheckBox / TRadioButton で `using` | `TButtonControl_GetChecked` / `SetChecked`(protected hack) |
 | MaxLength / ReadOnly / OnChange | TCustomEdit(public) | TCustomEdit | TCustomEdit(public) | `TCustomEdit_*` |
+| EditLabel / LabelPosition / LabelSpacing | TCustomLabeledEdit(public) | TCustomLabeledEdit | TCustomLabeledEdit(public。EditLabel は `WrapExisting<TBoundLabel>`) | `TCustomLabeledEdit_*`([ADR 0028](adr/0028-labelededit-and-stringlist.md)) |
 | Lines / ScrollBars | TCustomMemo(public) | TCustomMemo | TCustomMemo(public。Lines は `ReadOnlyProperty<TStrings*>`。ADR 0027) | `TCustomMemo_*` |
 | Items / ItemIndex | TCustomComboBox(public) | TCustomComboBox | TCustomComboBox(public。Items は `ReadOnlyProperty<TStrings*>`。ADR 0027) | `TCustomComboBox_*` |
 | OnChange(ComboBox) | TCustomComboBox(protected) | TComboBox のみ | TComboBox(public) | `TComboBox_SetOnChange` |
 | Items / ItemIndex | TCustomListBox(public) | TCustomListBox | TCustomListBox(public。Items は `ReadOnlyProperty<TStrings*>`。ADR 0027) | `TCustomListBox_*` |
 | Count / Strings[i] / Objects[i] / Text / CommaText / Add / AddObject / Insert / Delete / Clear / IndexOf / Exchange / Move / BeginUpdate / EndUpdate / Assign / AddStrings | TStrings(public。TPersistent) | TStrings | TStrings(public。所有者から中身を都度取得するビュー) | `TStrings_*`([ADR 0027](adr/0027-tstrings.md)) |
+| Names[i] / Values[name] / ValueFromIndex[i] / IndexOfName / Delimiter / StrictDelimiter / DelimitedText / LoadFromFile / SaveToFile | TStrings(public) | TStrings | TStrings(public。Values は `IndexedProperty<std::string, std::string>`) | `TStrings_*`(ADR 0028) |
+| Sorted / Duplicates / CaseSensitive / Sort / Find | TStringList(public。TStrings の派生) | TStringList | TStringList(public。new / delete で生成・破棄) | `TStringList_*`(ADR 0028) |
 | Canvas / OnPaint | TPaintBox(public/published) | TPaintBox | TPaintBox(public) | `TPaintBox_*` |
 | AutoSnap / Beveled / MinSize / ResizeAnchor / ResizeStyle / OnMoved / Get・SetSplitterPosition | TCustomSplitter(public) | TCustomSplitter | TCustomSplitter(public) | `TCustomSplitter_*`([ADR 0016](adr/0016-control-align-and-splitter.md)) |
 | PopupMenu | TControl(public) | TControl | TControl(public) | `TControl_GetPopupMenu` / `SetPopupMenu`([ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md)) |

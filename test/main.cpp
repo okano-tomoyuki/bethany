@@ -124,6 +124,7 @@ public:
     TFloatSpinEdit* FloatSpinEdit1;
     TSpinEdit*      SpinEdit1;
     TMaskEdit*      MaskEdit1;
+    TLabeledEdit*   LabeledEdit1;
     TTabControl*    TabControl1;
     TPanel*         LayoutPanel;
     TPanel*         AlignTopPanel;
@@ -504,6 +505,16 @@ public:
         MaskEdit1->Top = 690;
         MaskEdit1->Width = 100;
         MaskEdit1->EditMask = "000-0000;1;_";
+
+        // TLabeledEdit。EditLabel は LCL が内部で生成したラベル。Parent を設定すると、ラベルも同じ親に置かれる。
+        LabeledEdit1 = new TLabeledEdit(this);
+        LabeledEdit1->Parent = this;
+        LabeledEdit1->Left = 420;
+        LabeledEdit1->Top = 690;
+        LabeledEdit1->Width = 100;
+        LabeledEdit1->LabelPosition = lpLeft;
+        LabeledEdit1->LabelSpacing = 6;
+        LabeledEdit1->EditLabel->Caption = "Zip:";
 
         // Tier 1、7 バッチ目(最後のバッチ)。ページ付きの TPageControl/TTabSheet は今回見送る。
         TabControl1 = new TTabControl(this);
@@ -1013,6 +1024,11 @@ private:
         printBounds("AlignLeftPanel", AlignLeftPanel, "1,21,80,68");
         printBounds("Splitter1", Splitter1, "81,21,5,68");
         printBounds("AlignClientPanel", AlignClientPanel, "86,21,193,68");
+        // LabeledEdit1 のラベル(lpLeft)は、エディットの左に LabelSpacing(6)だけ離れて置かれる。
+        TBoundLabel* zipLabel = LabeledEdit1->EditLabel;
+        std::printf("LabeledEdit1 EditLabel right + 6 == Edit Left: %s (%d + %d + 6 vs %d)\n",
+                    zipLabel->Left + zipLabel->Width + 6 == LabeledEdit1->Left ? "yes" : "no",
+                    (int)zipLabel->Left, (int)zipLabel->Width, (int)LabeledEdit1->Left);
         // 表示後は、座標からノードを引ける(1 行目は Root)。
         TTreeNode* atTop = TreeView1->GetNodeAt(30, 5);
         std::printf("TreeView1->GetNodeAt(30, 5) is RootNode: %s\n", atTop == RootNode ? "yes" : "no");
@@ -1298,6 +1314,22 @@ int main()
     // SpinEdit1->Value は int 版(TCustomSpinEdit)が基底の double 版を隠していることの確認。
     std::printf("SpinEdit1 Value: %d (expected 42, int hides the inherited double)\n", (int)Form1->SpinEdit1->Value);
     std::printf("MaskEdit1 EditMask: %s\n", std::string(Form1->MaskEdit1->EditMask).c_str());
+    {
+        // EditLabel は初めて取得したときにラッパーが作られ、以降は同じラッパーが返る。
+        TLabeledEdit* le = Form1->LabeledEdit1;
+        TBoundLabel* editLabel = le->EditLabel;
+        std::printf("LabeledEdit1 EditLabel Caption=%s (expected Zip:), same wrapper: %s, Parent is Form1: %s, "
+                    "LabelPosition=%d (expected lpLeft=%d), LabelSpacing=%d (expected 6)\n",
+                    std::string(editLabel->Caption).c_str(), editLabel == (TBoundLabel*)le->EditLabel ? "yes" : "no",
+                    editLabel->Parent == Form1 ? "yes" : "no", (int)(TLabelPosition)le->LabelPosition, (int)lpLeft,
+                    (int)le->LabelSpacing);
+        // 生成直後の既定値(lpAbove・3)と、エディットと一緒にラベルも破棄されること(ラッパーも delete される)。
+        TLabeledEdit* temp = new TLabeledEdit(Form1);
+        std::printf("temp LabeledEdit LabelPosition=%d (expected lpAbove=%d), LabelSpacing=%d (expected 3), EditLabel Parent is null: %s\n",
+                    (int)(TLabelPosition)temp->LabelPosition, (int)lpAbove, (int)temp->LabelSpacing,
+                    (TWinControl*)temp->EditLabel->Parent == nullptr ? "yes" : "no");
+        temp->Free();
+    }
     std::printf("TabControl1 Tabs->Count/TabIndex: %d/%d (expected 3/0)\n",
                 (int)Form1->TabControl1->Tabs->Count, (int)Form1->TabControl1->TabIndex);
     std::printf("StatusBar1 SimpleText: %s (expected Ready)\n", std::string(Form1->StatusBar1->SimpleText).c_str());
@@ -1707,6 +1739,80 @@ int main()
                     "BetaItem SubItems->Strings[0]=%s (expected 20), RadioGroup1 Items->Strings[2]=%s (expected Option C)\n",
                     (int)f->Memo1->Lines->Count, std::string(f->TabControl1->Tabs->Strings[1]).c_str(),
                     std::string(f->BetaItem->SubItems->Strings[0]).c_str(), std::string(f->RadioGroup1->Items->Strings[2]).c_str());
+    }
+
+    // TStringList(利用者が生成する文字列の一覧。docs/adr/0028)。VCL と同じく new して delete する。
+    {
+        TStringList* list = new TStringList();
+        list->Add("cherry");
+        list->Add("Banana");
+        list->Add("apple");
+        list->Sort();
+        std::printf("TStringList Sort: CommaText=%s (expected apple,Banana,cherry: case-insensitive by default)\n",
+                    std::string(list->CommaText).c_str());
+        // CaseSensitive は IndexOf・Find・並べ替えの比較に効く(並べ替えは地域の設定に従うため、大文字が先になるとは限らない)。
+        int insensitive = list->IndexOf("APPLE");
+        list->CaseSensitive = true;
+        std::printf("IndexOf(\"APPLE\"): %d (expected 0) / CaseSensitive: %d (expected -1)\n", insensitive, list->IndexOf("APPLE"));
+        list->CaseSensitive = false;
+
+        // Sorted にすると、Add はソート順の位置に入り、既定の dupIgnore では重複を加えない。
+        list->Sorted = true;
+        int blueberry = list->Add("blueberry");
+        int countBefore = (int)list->Count;
+        list->Add("APPLE");
+        int index = -1;
+        bool found = list->Find("CHERRY", index);
+        int missing = -1;
+        bool foundMissing = list->Find("avocado", missing);
+        std::printf("Sorted Add(\"blueberry\")=%d (expected 2), Add(\"APPLE\") ignored: %s, Duplicates=%d (expected dupIgnore=%d), "
+                    "Find(\"CHERRY\")=%d/%d (expected 1/3), Find(\"avocado\")=%d/%d (expected 0/1)\n",
+                    blueberry, (int)list->Count == countBefore ? "yes" : "no", (int)(TDuplicates)list->Duplicates, (int)dupIgnore,
+                    found, index, foundMissing, missing);
+
+        // TStrings* を受け取るものにそのまま渡せる。
+        TListBox* box = new TListBox(Form1);
+        box->Items->Assign(list);
+        std::printf("ListBox Items->Assign(list): Count=%d (expected 4), Strings[3]=%s (expected cherry)\n",
+                    (int)box->Items->Count, std::string(box->Items->Strings[3]).c_str());
+        box->Free();
+        delete list;
+
+        // 名前=値 の行(Values・Names・ValueFromIndex)。スタックに置いてもよい。
+        TStringList config;
+        config.Values["host"] = "localhost";
+        config.Values["port"] = "8080";
+        std::printf("Values: Count=%d (expected 2), Names[1]=%s (expected port), ValueFromIndex[1]=%s (expected 8080), "
+                    "Values[\"host\"]=%s (expected localhost), Values[\"none\"] is empty: %s, IndexOfName(\"port\")=%d (expected 1)\n",
+                    (int)config.Count, config.Names[1].c_str(), std::string(config.ValueFromIndex[1]).c_str(),
+                    std::string(config.Values["host"]).c_str(), std::string(config.Values["none"]).empty() ? "yes" : "no",
+                    config.IndexOfName("port"));
+        // LCL(FPC)では、Values[Name] に空文字列を代入しても行は削除されず、値が空になる(VCL は削除する)。
+        // 行を削除するには ValueFromIndex[i] に空文字列を代入する(または Delete)。
+        config.Values["host"] = "";
+        std::printf("After Values[\"host\"] = \"\": Count=%d (expected 2), Strings[0]=%s (expected host=)\n",
+                    (int)config.Count, std::string(config.Strings[0]).c_str());
+        config.ValueFromIndex[0] = "";
+        std::printf("After ValueFromIndex[0] = \"\": Count=%d (expected 1), Strings[0]=%s (expected port=8080)\n",
+                    (int)config.Count, std::string(config.Strings[0]).c_str());
+
+        // 任意の区切り文字(StrictDelimiter なら空白は区切りにならない)。
+        TStringList fields;
+        fields.Delimiter = ';';
+        fields.StrictDelimiter = true;
+        fields.DelimitedText = "a b;c;;d";
+        std::printf("DelimitedText a b;c;;d: Count=%d (expected 4), Strings[0]=%s (expected a b), Strings[2] is empty: %s, Delimiter=%c\n",
+                    (int)fields.Count, std::string(fields.Strings[0]).c_str(),
+                    std::string(fields.Strings[2]).empty() ? "yes" : "no", (char)fields.Delimiter);
+
+        // ファイルへの保存と読み込み。
+        const char* path = "no_vcl_stringlist_test.txt";
+        fields.SaveToFile(path);
+        TStringList loaded;
+        loaded.LoadFromFile(path);
+        std::remove(path);
+        std::printf("SaveToFile/LoadFromFile: Count=%d (expected 4), Strings[3]=%s (expected d)\n",
+                    (int)loaded.Count, std::string(loaded.Strings[3]).c_str());
     }
 
     // 2 つ目以降に生成したフォームは MainForm にならない。
