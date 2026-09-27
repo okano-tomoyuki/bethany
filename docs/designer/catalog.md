@@ -1,4 +1,4 @@
-# コンポーネントカタログ — 草案
+# コンポーネントカタログ
 
 デザイナーが扱うコンポーネントの一覧と、それぞれのプロパティ・イベントの情報。DSL の検証([dsl-spec.md](dsl-spec.md) §7)、
 デザイナーのパレット・プロパティエディタ、コード生成(プロパティの型・ハンドラの引数)が使う。
@@ -22,7 +22,14 @@ tk-designer は Tk を実際に動かしてオプションを抽出した(tk-des
 
 ## 2. 抽出の手順
 
-`designer/tools/catalog/`(Python)に置き、開発時に実行する。生成したカタログ(JSON)は `designer/packages/core` にコミットする。
+[designer/tools/catalog/extract.py](../../designer/tools/catalog/extract.py)(Python)で、開発時に実行する。
+生成したカタログは [designer/packages/core/src/catalog/catalog.json](../../designer/packages/core/src/catalog/catalog.json) にコミットする。
+
+```sh
+python designer/tools/catalog/extract.py              # 静的な抽出 + 実測 + 補足(py/no_vcl.dll が要る)
+python designer/tools/catalog/extract.py --no-runtime # 実測せず、既定値は今のカタログから引き継ぐ
+python designer/tools/catalog/extract.py --check      # カタログが no_vcl.hpp・overlay.json と食い違っていればエラー
+```
 
 1. **静的な抽出**: `parse_hpp` の結果から、クラス・プロパティ・イベント・列挙型を取り出す。
 2. **実測**: DLL をビルドした状態で、フォームを 1 つ作り、利用者が生成できる各クラスを生成して、読める各プロパティ
@@ -31,6 +38,15 @@ tk-designer は Tk を実際に動かしてオプションを抽出した(tk-des
 3. **補足を重ねる**: 手書きの補足(`overlay.json`)を重ねて、最終的なカタログにする。
 
 ## 3. 手書きの補足(オーバーレイ)
+
+[designer/tools/catalog/overlay.json](../../designer/tools/catalog/overlay.json)。
+
+- デザイン時に設定できるかは、まず型で決める(読み書きできて、添字が無く、値・列挙型・集合型・参照・入れ子のオブジェクトのいずれか。
+  TStrings は読み取り専用のプロパティでも中身を設定するので含める。画像(TBitmap*・TPicture*)は dsl-spec.md §10 Q7 まで含めない)。
+  そのうえで `notDesignable`(そのクラスと派生で除外)と `designable`(除外の取り消し)を重ねる。
+  例: Caption は TControl で除外し、表示するクラス(TCustomLabel・TButtonControl・TCustomPanel 等)で取り消す(VCL で Caption を
+  公開しているクラスに揃える)。Parent は DSL の木で表すので除外する。
+- `classes` には、利用者が生成できる全クラスを書く(無いクラス・余分なクラスがあると extract.py がエラーにする)。
 
 | 項目 | 内容 | 例 |
 |---|---|---|
@@ -77,12 +93,22 @@ tk-designer は Tk を実際に動かしてオプションを抽出した(tk-des
 
 値(既定値・大きさ・定数)は形を示すための例で、実際の値は実測・抽出で決まる。
 継承したプロパティ・イベントは、各クラスに展開して持つ(DSL の検証・プロパティエディタで継承をたどらなくて済むように)。
+デザイン時に設定できないプロパティは書き出さない。`doc` は no_vcl.hpp のコメント(日本語)。
+
+## 4.1 実測して分かったこと(2026-09-28、Win32)
+
+- フォントの既定値は Name が `default`、Size が 0、Color が clDefault(LCL の既定のフォント。実際の書体・大きさは OS が決める)。
+- TabOrder は Parent を設定するまで -1(Parent を設定した順に 0, 1, … が付く)。
+- TShortCut の 0(割り当てなし)を LCL の ShortCutToText は `Unknown` にするため、カタログでは空文字列で表す。
+- ダイアログの Title の既定値は LCL の英語の文字列(TOpenDialog は `Open existing file`)。
+- 既定の大きさ: TButton 75x25、TEdit 80x23、TLabel 65x17(AutoSize)、TPanel 170x50、TForm 320x240 等。
 
 ## 5. no_vcl.hpp との整合
 
 no_vcl.hpp を変えたら、カタログを抽出し直す([ADR 0035](../adr/0035-designer-in-this-repository.md) の影響)。
-静的な部分(クラス・プロパティ・イベント・列挙型)は DLL が無くても抽出できるので、`pnpm check` で抽出し直した結果と
-コミットされたカタログを比べ、食い違っていればエラーにする。既定値(実測)は DLL が要るため、抽出し直すのは手で行う。
+静的な部分(クラス・プロパティ・イベント・列挙型)は DLL が無くても抽出できるので、`extract.py --check` で抽出し直した結果と
+コミットされたカタログを比べ、食い違っていればエラーにする(`designer/` の TS のパッケージを作ったら `pnpm check` から呼ぶ)。
+既定値(実測)は DLL が要るため、抽出し直すのは手で行う(新しいクラス・プロパティの既定値は、実測するまで空になる)。
 
 ## 6. 未決の論点
 
