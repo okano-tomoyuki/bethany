@@ -1,6 +1,6 @@
 # 0019. Tier 2 の 2 バッチ目として TTreeView を追加し、TComponent ではない項目(TTreeNode)の寿命を削除通知で管理する
 
-- 状態: 承認(一部置換→0020。`TreeNodeFree_SetCallback` は `ItemFree_SetCallback` に改名し、ノード専用のレジストリは `ItemRegistry` に共通化した)
+- 状態: 承認(一部置換→0020。`TreeNodeFree_SetCallback` は `ItemFree_SetCallback` に改名し、ノード専用のレジストリは `ItemRegistry` に共通化した。一部置換→0023。インデックス付きプロパティは添字で書く)
 - 日付: 2026-09-27
 
 ## 背景

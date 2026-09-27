@@ -428,8 +428,8 @@ public:
         CheckGroup1->ItemsAdd("Feature X");
         CheckGroup1->ItemsAdd("Feature Y");
         CheckGroup1->ItemsAdd("Feature Z");
-        CheckGroup1->SetChecked(0, true);
-        CheckGroup1->SetChecked(2, true);
+        CheckGroup1->Checked[0] = true;
+        CheckGroup1->Checked[2] = true;
 
         CheckListBox1 = new TCheckListBox(this);
         CheckListBox1->Parent = this;
@@ -440,7 +440,7 @@ public:
         CheckListBox1->ItemsAdd("Item 1");
         CheckListBox1->ItemsAdd("Item 2");
         CheckListBox1->ItemsAdd("Item 3");
-        CheckListBox1->SetChecked(1, true);
+        CheckListBox1->Checked[1] = true;
         CheckListBox1->OnClickCheck = [this](TObject* Sender) { CheckListBox1ClickCheck(Sender); };
 
         // Tier 1、5 バッチ目(ボタンの派生)。
@@ -977,7 +977,7 @@ private:
     {
         TCheckListBox* box = static_cast<TCheckListBox*>(Sender);
         std::printf("CheckListBox1ClickCheck: Checked[0]=%d Checked[1]=%d Checked[2]=%d\n",
-                    box->GetChecked(0), box->GetChecked(1), box->GetChecked(2));
+                    (bool)box->Checked[0], (bool)box->Checked[1], (bool)box->Checked[2]);
         std::fflush(stdout);
     }
 
@@ -1122,9 +1122,9 @@ int main()
     std::printf("RadioGroup1 ItemsCount/ItemIndex: %d/%d (expected 3/1)\n",
                 Form1->RadioGroup1->ItemsCount(), (int)Form1->RadioGroup1->ItemIndex);
     std::printf("CheckGroup1 Checked[0]/[1]/[2]: %d/%d/%d (expected 1/0/1)\n",
-                Form1->CheckGroup1->GetChecked(0), Form1->CheckGroup1->GetChecked(1), Form1->CheckGroup1->GetChecked(2));
+                (bool)Form1->CheckGroup1->Checked[0], (bool)Form1->CheckGroup1->Checked[1], (bool)Form1->CheckGroup1->Checked[2]);
     std::printf("CheckListBox1 ItemsCount/Checked[1]: %d/%d (expected 3/1)\n",
-                Form1->CheckListBox1->ItemsCount(), Form1->CheckListBox1->GetChecked(1));
+                Form1->CheckListBox1->ItemsCount(), (bool)Form1->CheckListBox1->Checked[1]);
     std::printf("BitBtn1 Kind: %d (expected bkOK=1), Caption: %s\n",
                 (int)Form1->BitBtn1->Kind, std::string(Form1->BitBtn1->Caption).c_str());
     std::printf("FloatSpinEdit1 Value: %.1f (expected 2.5)\n", (double)Form1->FloatSpinEdit1->Value);
@@ -1157,11 +1157,11 @@ int main()
         // ルート項目のラッパーは初回アクセス時に作られ、以降は同じものが返る。
         std::printf("MainMenu1->Items is the same wrapper each time: %s, Count=%d (expected 2)\n",
                     root == (TMenuItem*)f->MainMenu1->Items ? "yes" : "no", (int)root->Count);
-        std::printf("FileMenu->Parent is MainMenu1->Items: %s, Items->GetItem(1) is ViewMenu: %s\n",
-                    f->FileMenu->Parent == root ? "yes" : "no", root->GetItem(1) == f->ViewMenu ? "yes" : "no");
-        // AddSeparator の区切り線も LCL が内部で生成した項目で、GetItem で初めてラッパーができる。
-        TMenuItem* sep = f->FileMenu->GetItem(1);
-        std::printf("FileMenu Count=%d (expected 3), GetItem(1) IsLine=%d Caption=%s Parent is FileMenu: %s\n",
+        std::printf("FileMenu->Parent is MainMenu1->Items: %s, Items->Items[1] is ViewMenu: %s\n",
+                    f->FileMenu->Parent == root ? "yes" : "no", root->Items[1] == f->ViewMenu ? "yes" : "no");
+        // AddSeparator の区切り線も LCL が内部で生成した項目で、Items[i] で初めてラッパーができる。
+        TMenuItem* sep = f->FileMenu->Items[1];
+        std::printf("FileMenu Count=%d (expected 3), Items[1] IsLine=%d Caption=%s Parent is FileMenu: %s\n",
                     (int)f->FileMenu->Count, sep->IsLine(), std::string(sep->Caption).c_str(),
                     sep->Parent == f->FileMenu ? "yes" : "no");
         std::printf("FileNewItem ShortCut=%s (0x%04x, TextToShortCut(\"Ctrl+N\") matches: %s)\n",
@@ -1195,14 +1195,14 @@ int main()
         TPageControl* pc = f->PageControl1;
         std::printf("PageControl1 PageCount=%d (expected 3), ActivePage is TabSheet1: %s, ActivePageIndex=%d (expected 0)\n",
                     (int)pc->PageCount, pc->ActivePage == f->TabSheet1 ? "yes" : "no", (int)pc->ActivePageIndex);
-        std::printf("GetPage(1) is TabSheet2 (AddTabSheet): %s, TabSheet2->PageControl is PageControl1: %s\n",
-                    pc->GetPage(1) == f->TabSheet2 ? "yes" : "no", f->TabSheet2->PageControl == pc ? "yes" : "no");
+        std::printf("Pages[1] is TabSheet2 (AddTabSheet): %s, TabSheet2->PageControl is PageControl1: %s\n",
+                    pc->Pages[1] == f->TabSheet2 ? "yes" : "no", f->TabSheet2->PageControl == pc ? "yes" : "no");
         std::printf("TabSheet3 TabVisible=%d TabIndex=%d (expected 0/-1), PageIndex=%d (expected 2)\n",
                     (bool)f->TabSheet3->TabVisible, (int)f->TabSheet3->TabIndex, (int)f->TabSheet3->PageIndex);
         // PageIndex を書き換えるとページの並びが変わる。
         f->TabSheet2->PageIndex = 0;
-        std::printf("After TabSheet2->PageIndex = 0: GetPage(0) is TabSheet2: %s, TabSheet1 PageIndex=%d (expected 1)\n",
-                    pc->GetPage(0) == f->TabSheet2 ? "yes" : "no", (int)f->TabSheet1->PageIndex);
+        std::printf("After TabSheet2->PageIndex = 0: Pages[0] is TabSheet2: %s, TabSheet1 PageIndex=%d (expected 1)\n",
+                    pc->Pages[0] == f->TabSheet2 ? "yes" : "no", (int)f->TabSheet1->PageIndex);
         f->TabSheet2->PageIndex = 1;
         std::printf("TabPosition=%d (expected tpTop=%d), ShowTabs=%d, MultiLine=%d\n",
                     (int)pc->TabPosition, (int)tpTop, (bool)pc->ShowTabs, (bool)pc->MultiLine);
@@ -1225,14 +1225,19 @@ int main()
         std::printf("TreeView1 Items->Count=%d (expected 5), RootNode->Count=%d (expected 2), GrandchildNode->Level=%d (expected 2)\n",
                     (int)items->Count, (int)f->RootNode->Count, (int)f->GrandchildNode->Level);
         // 同じノードには常に同じラッパーが返る。
-        std::printf("Child1Node->Parent is RootNode: %s, Items->GetItem(2) is GrandchildNode: %s, "
+        std::printf("Child1Node->Parent is RootNode: %s, Items->Item[2] is GrandchildNode: %s, "
                     "FindNodeWithText(\"Child 2\") is Child2Node: %s, RootNode->GetNextSibling() is Root2Node: %s\n",
                     f->Child1Node->Parent == f->RootNode ? "yes" : "no",
-                    items->GetItem(2) == f->GrandchildNode ? "yes" : "no",
+                    items->Item[2] == f->GrandchildNode ? "yes" : "no",
                     items->FindNodeWithText("Child 2") == f->Child2Node ? "yes" : "no",
                     f->RootNode->GetNextSibling() == f->Root2Node ? "yes" : "no");
         std::printf("RootNode->Parent is null: %s, TreeView is TreeView1: %s\n",
                     f->RootNode->Parent == nullptr ? "yes" : "no", f->RootNode->TreeView == tv ? "yes" : "no");
+        // TTreeNode::Items[i] は直下の子。読み取り専用の添字は値そのものを返すので auto で受けられる。
+        auto firstChild = f->RootNode->Items[0];
+        std::printf("RootNode->Items[1] is Child2Node: %s, RootNode->Items[0]->Items[0] is GrandchildNode: %s\n",
+                    f->RootNode->Items[1] == f->Child2Node ? "yes" : "no",
+                    firstChild->Items[0] == f->GrandchildNode ? "yes" : "no");
 
         static int userData = 42;
         f->Child2Node->Data = &userData;
@@ -1269,14 +1274,14 @@ int main()
         TListView* lv = f->ListView1;
         TListItems* items = lv->Items;
         TListColumns* columns = lv->Columns;
-        std::printf("ListView1 Columns->Count=%d (expected 2), GetItem(1)->Caption=%s Alignment=%d (expected taRightJustify=%d), "
+        std::printf("ListView1 Columns->Count=%d (expected 2), Items[1]->Caption=%s Alignment=%d (expected taRightJustify=%d), "
                     "same wrapper: %s\n",
-                    (int)columns->Count, std::string(columns->GetItem(1)->Caption).c_str(),
-                    (int)columns->GetItem(1)->Alignment, (int)taRightJustify,
-                    columns->GetItem(1) == columns->GetItem(1) ? "yes" : "no");
-        std::printf("Items->Count=%d (expected 3), GetItem(1) is BetaItem: %s, SubItems[0]=%s (expected 20), "
+                    (int)columns->Count, std::string(columns->Items[1]->Caption).c_str(),
+                    (int)columns->Items[1]->Alignment, (int)taRightJustify,
+                    columns->Items[1] == columns->Items[1] ? "yes" : "no");
+        std::printf("Items->Count=%d (expected 3), Item[1] is BetaItem: %s, SubItems[0]=%s (expected 20), "
                     "ListView is ListView1: %s\n",
-                    (int)items->Count, items->GetItem(1) == f->BetaItem ? "yes" : "no",
+                    (int)items->Count, items->Item[1] == f->BetaItem ? "yes" : "no",
                     f->BetaItem->SubItemsGetText(0).c_str(), f->BetaItem->ListView == lv ? "yes" : "no");
         std::printf("FindCaption(\"Gam\", partial) is GammaItem: %s\n",
                     items->FindCaption(0, "Gam", true, true, false) == f->GammaItem ? "yes" : "no");
@@ -1291,11 +1296,11 @@ int main()
 
         // Exchange で入れ替え、SortType = stText で Caption の順に並べ直す。
         items->Exchange(0, 2);
-        std::printf("After Exchange(0, 2): GetItem(0) is GammaItem: %s\n", items->GetItem(0) == f->GammaItem ? "yes" : "no");
+        std::printf("After Exchange(0, 2): Item[0] is GammaItem: %s\n", items->Item[0] == f->GammaItem ? "yes" : "no");
         lv->SortColumn = 0;  // 既定の -1 のままでは並べ替えない
         lv->SortType = stText;
-        std::printf("After SortType = stText: GetItem(0) is AlphaItem: %s, GetItem(2) is GammaItem: %s\n",
-                    items->GetItem(0) == f->AlphaItem ? "yes" : "no", items->GetItem(2) == f->GammaItem ? "yes" : "no");
+        std::printf("After SortType = stText: Item[0] is AlphaItem: %s, Item[2] is GammaItem: %s\n",
+                    items->Item[0] == f->AlphaItem ? "yes" : "no", items->Item[2] == f->GammaItem ? "yes" : "no");
         lv->SortType = stNone;
 
         // Delete: OnDeletion の後に項目のラッパーも delete される。列の Delete も同様。

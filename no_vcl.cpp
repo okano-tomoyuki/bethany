@@ -864,8 +864,13 @@ std::string TCustomCheckGroup::ItemsGetText(int index) const
     return std::string(no_vcl_TCustomCheckGroup_Items_GetText(handle_, index));
 }
 
-bool TCustomCheckGroup::GetChecked(int index) const { return no_vcl_TCustomCheckGroup_GetChecked(handle_, index) != 0; }
-void TCustomCheckGroup::SetChecked(int index, bool value) { no_vcl_TCustomCheckGroup_SetChecked(handle_, index, value ? 1 : 0); }
+TCustomCheckGroup::TCustomCheckGroup(no_vcl_obj_t handle)
+    : TCustomGroupBox(handle)
+    , Checked(this, &TCustomCheckGroup::GetCheckedImpl, &TCustomCheckGroup::SetCheckedImpl)
+{}
+
+bool TCustomCheckGroup::GetCheckedImpl(TObject* owner, int index)                     { return no_vcl_TCustomCheckGroup_GetChecked(owner->Handle(), index) != 0; }
+void TCustomCheckGroup::SetCheckedImpl(TObject* owner, int index, const bool& value)  { no_vcl_TCustomCheckGroup_SetChecked(owner->Handle(), index, value ? 1 : 0); }
 
 TCheckGroup::TCheckGroup(TComponent* AOwner)
     : TCustomCheckGroup(no_vcl_TCheckGroup_Create(HandleOf(AOwner)))
@@ -1137,9 +1142,10 @@ TPageControl::TPageControl(TComponent* AOwner)
     , ActivePageIndex(this, &TPageControl::GetActivePageIndexImpl, &TPageControl::SetActivePageIndexImpl)
     , TabIndex(this, &TPageControl::GetTabIndexImpl, &TPageControl::SetTabIndexImpl)
     , OnChange(this, &TPageControl::GetOnChangeImpl, &TPageControl::SetOnChangeImpl)
+    , Pages(this, &TPageControl::GetPagesImpl)
 {}
 
-TTabSheet* TPageControl::GetPage(int Index) const { return WrapExisting<TTabSheet>(no_vcl_TPageControl_GetPage(handle_, Index)); }
+TTabSheet* TPageControl::GetPagesImpl(TObject* owner, int Index) { return WrapExisting<TTabSheet>(no_vcl_TPageControl_GetPage(owner->Handle(), Index)); }
 TTabSheet* TPageControl::AddTabSheet()            { return WrapExisting<TTabSheet>(no_vcl_TPageControl_AddTabSheet(handle_)); }
 void TPageControl::Clear()                        { no_vcl_TPageControl_Clear(handle_); }
 void TPageControl::SelectNextPage(bool GoForward) { no_vcl_TPageControl_SelectNextPage(handle_, GoForward ? 1 : 0); }
@@ -1278,9 +1284,10 @@ TTreeNode::TTreeNode(no_vcl_obj_t handle)
     , AbsoluteIndex(this, &TTreeNode::GetAbsoluteIndexImpl)
     , Parent(this, &TTreeNode::GetParentImpl)
     , TreeView(this, &TTreeNode::GetTreeViewImpl)
+    , Items(this, &TTreeNode::GetItemsImpl)
 {}
 
-TTreeNode* TTreeNode::GetItem(int Index) const  { return Wrap(no_vcl_TTreeNode_GetItem(handle_, Index)); }
+TTreeNode* TTreeNode::GetItemsImpl(TObject* owner, int Index) { return Wrap(no_vcl_TTreeNode_GetItem(owner->Handle(), Index)); }
 TTreeNode* TTreeNode::GetFirstChild() const     { return Wrap(no_vcl_TTreeNode_GetFirstChild(handle_)); }
 TTreeNode* TTreeNode::GetLastChild() const      { return Wrap(no_vcl_TTreeNode_GetLastChild(handle_)); }
 TTreeNode* TTreeNode::GetNextSibling() const    { return Wrap(no_vcl_TTreeNode_GetNextSibling(handle_)); }
@@ -1324,6 +1331,7 @@ TCustomTreeView* TTreeNode::GetTreeViewImpl(TObject* owner)
 TTreeNodes::TTreeNodes(no_vcl_obj_t handle)
     : TPersistent(handle)
     , Count(this, &TTreeNodes::GetCountImpl)
+    , Item(this, &TTreeNodes::GetItemImpl)
 {}
 
 namespace
@@ -1358,7 +1366,7 @@ TTreeNode* TTreeNodes::Insert(TTreeNode* NextNode, const std::string& S)
 
 void TTreeNodes::Clear()                   { no_vcl_TTreeNodes_Clear(handle_); }
 void TTreeNodes::Delete(TTreeNode* Node)   { no_vcl_TTreeNodes_Delete(handle_, NodeHandle(Node)); }
-TTreeNode* TTreeNodes::GetItem(int Index) const { return TTreeNode::Wrap(no_vcl_TTreeNodes_GetItem(handle_, Index)); }
+TTreeNode* TTreeNodes::GetItemImpl(TObject* owner, int Index) { return TTreeNode::Wrap(no_vcl_TTreeNodes_GetItem(owner->Handle(), Index)); }
 TTreeNode* TTreeNodes::GetFirstNode() const     { return TTreeNode::Wrap(no_vcl_TTreeNodes_GetFirstNode(handle_)); }
 
 TTreeNode* TTreeNodes::FindNodeWithText(const std::string& S) const
@@ -1573,13 +1581,14 @@ TCustomListView* TListItem::GetListViewImpl(TObject* owner)
 TListItems::TListItems(no_vcl_obj_t handle)
     : TPersistent(handle)
     , Count(this, &TListItems::GetCountImpl)
+    , Item(this, &TListItems::GetItemImpl)
 {}
 
 TListItem* TListItems::Add()                     { return TListItem::Wrap(no_vcl_TListItems_Add(handle_)); }
 TListItem* TListItems::Insert(int Index)         { return TListItem::Wrap(no_vcl_TListItems_Insert(handle_, Index)); }
 void TListItems::Delete(int Index)               { no_vcl_TListItems_Delete(handle_, Index); }
 void TListItems::Clear()                         { no_vcl_TListItems_Clear(handle_); }
-TListItem* TListItems::GetItem(int Index) const  { return TListItem::Wrap(no_vcl_TListItems_GetItem(handle_, Index)); }
+TListItem* TListItems::GetItemImpl(TObject* owner, int Index) { return TListItem::Wrap(no_vcl_TListItems_GetItem(owner->Handle(), Index)); }
 int  TListItems::IndexOf(TListItem* Item) const  { return no_vcl_TListItems_IndexOf(handle_, ItemHandle(Item)); }
 
 TListItem* TListItems::FindCaption(int StartIndex, const std::string& Value, bool Partial, bool Inclusive, bool Wrap) const
@@ -1620,10 +1629,11 @@ void TListColumn::SetIndexImpl(TObject* owner, const int& value)   { no_vcl_TLis
 TListColumns::TListColumns(no_vcl_obj_t handle)
     : TPersistent(handle)
     , Count(this, &TListColumns::GetCountImpl)
+    , Items(this, &TListColumns::GetItemsImpl)
 {}
 
 TListColumn* TListColumns::Add()                    { return TListColumn::Wrap(no_vcl_TListColumns_Add(handle_)); }
-TListColumn* TListColumns::GetItem(int Index) const { return TListColumn::Wrap(no_vcl_TListColumns_GetItem(handle_, Index)); }
+TListColumn* TListColumns::GetItemsImpl(TObject* owner, int Index) { return TListColumn::Wrap(no_vcl_TListColumns_GetItem(owner->Handle(), Index)); }
 void TListColumns::Delete(int Index)                { no_vcl_TListColumns_Delete(handle_, Index); }
 void TListColumns::Clear()                          { no_vcl_TListColumns_Clear(handle_); }
 int  TListColumns::GetCountImpl(TObject* owner)     { return no_vcl_TListColumns_GetCount(owner->Handle()); }
@@ -1924,10 +1934,11 @@ TListBox::TListBox(TComponent* AOwner)
 TCustomCheckListBox::TCustomCheckListBox(no_vcl_obj_t handle)
     : TCustomListBox(handle)
     , OnClickCheck(this, &TCustomCheckListBox::GetOnClickCheckImpl, &TCustomCheckListBox::SetOnClickCheckImpl)
+    , Checked(this, &TCustomCheckListBox::GetCheckedImpl, &TCustomCheckListBox::SetCheckedImpl)
 {}
 
-bool TCustomCheckListBox::GetChecked(int index) const { return no_vcl_TCustomCheckListBox_GetChecked(handle_, index) != 0; }
-void TCustomCheckListBox::SetChecked(int index, bool value) { no_vcl_TCustomCheckListBox_SetChecked(handle_, index, value ? 1 : 0); }
+bool TCustomCheckListBox::GetCheckedImpl(TObject* owner, int index)                    { return no_vcl_TCustomCheckListBox_GetChecked(owner->Handle(), index) != 0; }
+void TCustomCheckListBox::SetCheckedImpl(TObject* owner, int index, const bool& value) { no_vcl_TCustomCheckListBox_SetChecked(owner->Handle(), index, value ? 1 : 0); }
 
 TNotifyEvent TCustomCheckListBox::GetOnClickCheckImpl(TObject* owner) { return static_cast<TCustomCheckListBox*>(owner)->onClickCheck_; }
 
@@ -2152,9 +2163,10 @@ TMenuItem::TMenuItem(no_vcl_obj_t handle)
     , OnClick(this, &TMenuItem::GetOnClickImpl, &TMenuItem::SetOnClickImpl)
     , Count(this, &TMenuItem::GetCountImpl)
     , Parent(this, &TMenuItem::GetParentImpl)
+    , Items(this, &TMenuItem::GetItemsImpl)
 {}
 
-TMenuItem* TMenuItem::GetItem(int Index) const { return WrapExisting<TMenuItem>(no_vcl_TMenuItem_GetItem(handle_, Index)); }
+TMenuItem* TMenuItem::GetItemsImpl(TObject* owner, int Index) { return WrapExisting<TMenuItem>(no_vcl_TMenuItem_GetItem(owner->Handle(), Index)); }
 void TMenuItem::Add(TMenuItem* Item)              { no_vcl_TMenuItem_Add(handle_, HandleOf(Item)); }
 void TMenuItem::Insert(int Index, TMenuItem* Item) { no_vcl_TMenuItem_Insert(handle_, Index, HandleOf(Item)); }
 void TMenuItem::Delete(int Index)                 { no_vcl_TMenuItem_Delete(handle_, Index); }

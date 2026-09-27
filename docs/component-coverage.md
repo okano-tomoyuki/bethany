@@ -98,7 +98,7 @@ VCL アプリらしい UI に必須だが、TMenuItem がツリー構造の TCom
 
 | クラス | LCL 宣言ユニット | LCL での基底 | 備考 |
 |---|---|---|---|
-| ✅ TMenuItem | menus.pp | TLCLComponent(no_vcl では TComponent 直下に置く) | Caption/Checked/Enabled/Visible/AutoCheck/RadioItem/GroupIndex/Default/ShortCut/Hint/OnClick と、子の項目の操作(GetItem/Count/Add/Insert/Delete/Remove/Clear/IndexOf/AddSeparator)([ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md))。Bitmap/ImageIndex は Tier 3 待ち |
+| ✅ TMenuItem | menus.pp | TLCLComponent(no_vcl では TComponent 直下に置く) | Caption/Checked/Enabled/Visible/AutoCheck/RadioItem/GroupIndex/Default/ShortCut/Hint/OnClick と、子の項目の操作(Items[i]/Count/Add/Insert/Delete/Remove/Clear/IndexOf/AddSeparator)([ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md))。Bitmap/ImageIndex は Tier 3 待ち |
 | ✅ TMainMenu | menus.pp(TMenu) | TLCLComponent → TComponent | フォームに割り当てる(TForm.Menu)。Items(ルート項目)は LCL が内部で生成するため、`WrapExisting` でラップする(ADR 0017)。Merge は未対応 |
 | ✅ TPopupMenu | menus.pp(TMenu) | TLCLComponent → TComponent | コントロールに割り当てる(TControl.PopupMenu)。AutoPopup/PopupComponent/OnPopup/OnClose/Popup(X, Y)(ADR 0017) |
 

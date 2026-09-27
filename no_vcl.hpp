@@ -201,6 +201,32 @@ private:
     Setter   setter_;
 };
 
+// 読み取り専用のインデックス付きのプロパティ(VCL の MenuItem->Items[i]・PageControl->Pages[i] 等)。
+// 代入できないため要素のプロキシは使わず、添字で値そのものを返す(auto で受けても、printf に渡しても値になる)。
+template<typename T>
+class ReadOnlyIndexedProperty
+{
+public:
+    using Getter = T (*)(TObject*, int);
+
+    ReadOnlyIndexedProperty(TObject* owner, Getter getter)
+        : owner_(owner)
+        , getter_(getter)
+    {}
+
+    ReadOnlyIndexedProperty(const ReadOnlyIndexedProperty&) = delete;
+    ReadOnlyIndexedProperty& operator=(const ReadOnlyIndexedProperty&) = delete;
+
+    T operator[](int index) const
+    {
+        return getter_(owner_, index);
+    }
+
+private:
+    TObject* owner_;
+    Getter   getter_;
+};
+
 // 添字が 2 つのインデックス付きのプロパティ(VCL の TStringGrid::Cells[ACol][ARow])。
 // Delphi の Cells[ACol, ARow] は、C++Builder と同じく Cells[ACol][ARow] と書く(1 つ目が列、2 つ目が行)。
 template<typename T>
@@ -453,7 +479,7 @@ std::string ShortCutToText(TShortCut ShortCut);
 class TMenu;
 
 // メニューの項目。TControl ではない(Parent/Left 等は無く、画面上の親子関係は Add/Insert で組む)。
-// 子の項目は LCL の Items[Index] / Count に合わせ、GetItem(Index) / Count で参照する。
+// 子の項目は LCL の Items[Index] / Count に合わせ、Items[Index] / Count で参照する。
 // 親の項目が破棄されると、子の項目も(Owner が別でも)一緒に破棄される(LCL の仕様。ラッパーも delete される)。
 class TMenuItem : public TComponent
 {
@@ -478,7 +504,9 @@ public:
     // 親の項目。メニューの直下の項目なら、そのメニューの Items(ルート)。どこにも追加されていなければ nullptr。
     ReadOnlyProperty<TMenuItem*> Parent;
 
-    TMenuItem* GetItem(int Index) const;
+    // 子の項目(MenuItem->Items[i]->Caption のように使う)。
+    ReadOnlyIndexedProperty<TMenuItem*> Items;
+
     void Add(TMenuItem* Item);
     void Insert(int Index, TMenuItem* Item);
     // Delete/Remove は子から外すだけで破棄しない(VCL と同じ)。Clear はすべての子を破棄する。
@@ -496,6 +524,7 @@ protected:
     ~TMenuItem() override = default;
 
 private:
+    static TMenuItem* GetItemsImpl(TObject* owner, int Index);
     friend class TComponent;  // WrapExisting から、下のハンドルを受け取るコンストラクタを呼ぶため
     explicit TMenuItem(no_vcl_obj_t handle);
 
@@ -1167,12 +1196,16 @@ public:
     void        ItemsClear();
     int         ItemsCount() const;
     std::string ItemsGetText(int index) const;
-    bool        GetChecked(int index) const;
-    void        SetChecked(int index, bool value);
+    // 項目ごとのチェックの状態(CheckGroup1->Checked[i] = true;)。
+    IndexedProperty<bool> Checked;
 
 protected:
-    explicit TCustomCheckGroup(no_vcl_obj_t handle) : TCustomGroupBox(handle) {}
+    explicit TCustomCheckGroup(no_vcl_obj_t handle);
     ~TCustomCheckGroup() override = default;
+
+private:
+    static bool GetCheckedImpl(TObject* owner, int index);
+    static void SetCheckedImpl(TObject* owner, int index, const bool& value);
 };
 
 class TCheckGroup : public TCustomCheckGroup
@@ -1522,7 +1555,7 @@ class TTabSheet;
 
 // ページ付きのタブ。ページ(TTabSheet)は VCL と同じく、TTabSheet を生成して PageControl を設定するか、
 // AddTabSheet で追加する。ページの上のコントロールは、ページを Parent にして置く。
-// Pages[Index] は GetPage(Index)(インデックス付きプロパティは Get メソッドで表す、TMenuItem::GetItem と同じ形)。
+// Pages[Index] は読み取り専用のインデックス付きプロパティ(ReadOnlyIndexedProperty)。
 class TPageControl : public TCustomTabControl
 {
 public:
@@ -1537,7 +1570,8 @@ public:
     // TCustomPage::PageIndex でページを並べ替えたときは(表示中のページの位置が変わるため)呼ばれる。
     Property<TNotifyEvent> OnChange;
 
-    TTabSheet* GetPage(int Index) const;
+    ReadOnlyIndexedProperty<TTabSheet*> Pages;
+
     // ページを末尾に追加する。ページは LCL が内部で生成し、Owner はこのページコントロールになる。
     TTabSheet* AddTabSheet();
     // すべてのページを外して破棄する。破棄は LCL の遅延破棄(Application.ReleaseComponent)で、次にメッセージを
@@ -1549,6 +1583,7 @@ protected:
     ~TPageControl() override = default;
 
 private:
+    static TTabSheet* GetPagesImpl(TObject* owner, int Index);
     TNotifyEvent onChange_;
     bool         onChangeHooked_ = false;
     static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender, void* data);
@@ -1631,7 +1666,7 @@ enum TNodeAttachMode { naAdd, naAddFirst, naAddChild, naAddChildFirst, naInsert,
 // C++ のラッパーは初めて取得したときに作られ、同じノードには常に同じポインタが返る(ポインタ同士を比較してよい)。
 // ノードが削除されると(ツリービューの破棄に伴う削除も含め)、OnDeletion の後にラッパーも delete される。
 // 削除後にそのポインタへ触れてはならない。
-// Items[Index] は GetItem(Index)(インデックス付きプロパティは Get メソッドで表す、TMenuItem::GetItem と同じ形)。
+// Items[Index] は直下の子(読み取り専用のインデックス付きプロパティ)。
 class TTreeNode : public TPersistent
 {
 public:
@@ -1651,9 +1686,10 @@ public:
     // 最上位のノードなら nullptr。
     ReadOnlyProperty<TTreeNode*>       Parent;
     ReadOnlyProperty<TCustomTreeView*> TreeView;
+    // 直下の子(Node->Items[i])。
+    ReadOnlyIndexedProperty<TTreeNode*> Items;
 
     // 以下のノードを返すメンバは、該当するノードが無ければ nullptr を返す。
-    TTreeNode* GetItem(int Index) const;
     TTreeNode* GetFirstChild() const;
     TTreeNode* GetLastChild() const;
     TTreeNode* GetNextSibling() const;
@@ -1673,6 +1709,7 @@ public:
     void MoveTo(TTreeNode* Destination, TNodeAttachMode Mode);
 
 private:
+    static TTreeNode* GetItemsImpl(TObject* owner, int Index);
     friend class ItemRegistry;
     friend class TTreeNodes;
     friend class TCustomTreeView;
@@ -1713,6 +1750,8 @@ public:
 
     // すべてのノード(子孫を含む)の数。GetItem の Index は、上から順に数えた位置(AbsoluteIndex)。
     ReadOnlyProperty<int> Count;
+    // 上から順(子孫を含む)に数えた位置のノード(TreeView1->Items->Item[i])。
+    ReadOnlyIndexedProperty<TTreeNode*> Item;
 
     TTreeNode* Add(TTreeNode* Sibling, const std::string& S);
     TTreeNode* AddFirst(TTreeNode* Sibling, const std::string& S);
@@ -1722,13 +1761,13 @@ public:
     TTreeNode* Insert(TTreeNode* NextNode, const std::string& S);
     void       Clear();
     void       Delete(TTreeNode* Node);
-    TTreeNode* GetItem(int Index) const;
     TTreeNode* GetFirstNode() const;
     TTreeNode* FindNodeWithText(const std::string& S) const;
     void       BeginUpdate();
     void       EndUpdate();
 
 private:
+    static TTreeNode* GetItemImpl(TObject* owner, int Index);
     static int GetCountImpl(TObject* owner);
 };
 
@@ -1922,7 +1961,7 @@ private:
 };
 
 // リストビューの項目の一覧(LCL の TListItems)。TTreeNodes と同じく、リストビューの値メンバとして持つ非所有のビュー。
-// Items[Index] は GetItem(Index)。
+// Item[Index] は LCL と同じ名前(Items ではない)。
 class TListItems : public TPersistent
 {
 public:
@@ -1930,13 +1969,14 @@ public:
     ~TListItems() override = default;
 
     ReadOnlyProperty<int> Count;
+    // ListView1->Items->Item[i]。
+    ReadOnlyIndexedProperty<TListItem*> Item;
 
     // 末尾に(Insert は Index の位置に)空の項目を追加して返す(Caption 等はその後で設定する。VCL と同じ)。
     TListItem* Add();
     TListItem* Insert(int Index);
     void       Delete(int Index);
     void       Clear();
-    TListItem* GetItem(int Index) const;
     int        IndexOf(TListItem* Item) const;
     // StartIndex の次(Inclusive なら StartIndex から)から Caption を探す。Partial なら前方一致、Wrap なら末尾から先頭へ続けて探す。
     TListItem* FindCaption(int StartIndex, const std::string& Value, bool Partial, bool Inclusive, bool Wrap) const;
@@ -1946,6 +1986,7 @@ public:
     void       EndUpdate();
 
 private:
+    static TListItem* GetItemImpl(TObject* owner, int Index);
     static int GetCountImpl(TObject* owner);
 };
 
@@ -1985,7 +2026,7 @@ private:
     static void        SetIndexImpl(TObject* owner, const int& value);
 };
 
-// リストビューの列の一覧(LCL の TListColumns)。リストビューの値メンバとして持つ非所有のビュー。Items[Index] は GetItem(Index)。
+// リストビューの列の一覧(LCL の TListColumns)。リストビューの値メンバとして持つ非所有のビュー。Items[Index] で列を参照する。
 class TListColumns : public TPersistent
 {
 public:
@@ -1993,14 +2034,16 @@ public:
     ~TListColumns() override = default;
 
     ReadOnlyProperty<int> Count;
+    // ListView1->Columns->Items[i]。
+    ReadOnlyIndexedProperty<TListColumn*> Items;
 
     TListColumn* Add();
-    TListColumn* GetItem(int Index) const;
     // 列を削除する(列のラッパーも delete される)。
     void         Delete(int Index);
     void         Clear();
 
 private:
+    static TListColumn* GetItemsImpl(TObject* owner, int Index);
     static int GetCountImpl(TObject* owner);
 };
 
@@ -2297,14 +2340,16 @@ class TCustomCheckListBox : public TCustomListBox
 public:
     Property<TNotifyEvent> OnClickCheck;
 
-    bool GetChecked(int index) const;
-    void SetChecked(int index, bool value);
+    // 項目ごとのチェックの状態(CheckListBox1->Checked[i] = true;)。
+    IndexedProperty<bool> Checked;
 
 protected:
     explicit TCustomCheckListBox(no_vcl_obj_t handle);
     ~TCustomCheckListBox() override = default;
 
 private:
+    static bool GetCheckedImpl(TObject* owner, int index);
+    static void SetCheckedImpl(TObject* owner, int index, const bool& value);
     TNotifyEvent onClickCheck_;
     bool         onClickCheckHooked_ = false;
     static void NO_VCL_CALL ClickCheckTrampoline(no_vcl_obj_t sender, void* data);
