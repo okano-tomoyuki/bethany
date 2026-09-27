@@ -1,0 +1,3 @@
+// CMake が configure_file で manifest の絶対パスを埋めて生成する。
+// 1 は CREATEPROCESS_MANIFEST_RESOURCE_ID、24 は RT_MANIFEST。
+1 24 "@NO_VCL_MANIFEST_PATH@"
