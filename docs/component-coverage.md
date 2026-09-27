@@ -131,7 +131,8 @@ Tier 1 の 1 バッチ目([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.m
 - ✅ **`TControl.Align` が無い。** → 解決済み([ADR 0016](adr/0016-control-align-and-splitter.md))。
   LCL と同じく TControl の public プロパティとして追加し、あわせて TSplitter を追加した。
   LCL では Align による配置がフォームの表示まで行われない(VCL と異なる)点に注意。
-  Anchors・BorderSpacing・Constraints・AutoSize は未実装。
+  AutoSize は [ADR 0029](adr/0029-graphics-picture-image-glyph.md)、Anchors・BorderSpacing・Constraints は
+  [ADR 0034](adr/0034-designer-common-properties.md) で追加した(Anchors・BorderSpacing も表示まで配置に反映されない)。
 - ✅ **LCL が内部で生成する子コンポーネントをラップできない。** → 仕組みとしては解決済み
   ([ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md))。ハンドルを返す DLL の関数の側で破棄通知に登録し、
   C++ 側は `TComponent::WrapExisting<T>` で初回アクセス時にラッパーを作る。TMenu.Items で初めて使った。
@@ -174,3 +175,5 @@ Tier 1 の 1 バッチ目([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.m
 6. ✅ **Tier 4(ダイアログ)** は、印刷のダイアログを除いて完了した([ADR 0033](adr/0033-dialogs.md))。
    ダイアログの結果を適用する先として、TControl の Color・Font と TFont の Style・Assign もあわせて追加した。
 7. **Tier 6** は必要になった時点で個別に対応する。
+8. ✅ デザイナーアプリの設計の前提として、どのコントロールにもある共通のプロパティ(Anchors・BorderSpacing・Constraints・
+   TabOrder・TabStop・Hint・ShowHint・Cursor・ParentColor・ParentFont・Tag)を追加した([ADR 0034](adr/0034-designer-common-properties.md))。

@@ -28,6 +28,7 @@ DLL を直接呼ぶ層を作るときにも、これに従う([ADR 0032](adr/003
 | `uint_t` | `LongWord` | ビット集合(グリッド・ダイアログの Options、TFont の Style。グリッドの Options は 32 ビットすべてを使う) |
 | `bool_t` | `LongBool` | 4 バイトの真偽値。0 は偽、0 以外は真。DLL が返す真は -1 |
 | `real_t` | `Double` | 倍精度の実数 |
+| `iptr_t` | `PtrInt` | ポインタと同じ幅の符号付き整数(TComponent の Tag) |
 
 集合型(TShiftState 等)は、各要素をビットにした整数で受け渡す(ビットの値は no_vcl.hpp の `ssShift` 等と同じ)。
 

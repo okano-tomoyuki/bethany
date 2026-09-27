@@ -10784,6 +10784,465 @@ begin
   end;
 end;
 
+{ デザイナーで設定する共通のプロパティ(docs/adr/0034) }
+
+{ TComponent }
+
+function TComponent_GetTag(Obj: Pointer): PtrInt; NO_VCL_CALL;
+begin
+  try
+    Result := TComponent(Obj).Tag;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TComponent_SetTag(Obj: Pointer; Value: PtrInt); NO_VCL_CALL;
+begin
+  try
+    TComponent(Obj).Tag := Value;
+  except
+    ReportException;
+  end;
+end;
+
+{ TControl }
+
+{ TAnchors(集合型)を LongWord のビット集合(akTop = 1 shl 0 等)に変換する。 }
+function AnchorsToInt(const A: TAnchors): LongWord;
+var
+  I: TAnchorKind;
+begin
+  Result := 0;
+  for I := Low(TAnchorKind) to High(TAnchorKind) do
+    if I in A then
+      Result := Result or (LongWord(1) shl Ord(I));
+end;
+
+function IntToAnchors(V: LongWord): TAnchors;
+var
+  I: TAnchorKind;
+begin
+  Result := [];
+  for I := Low(TAnchorKind) to High(TAnchorKind) do
+    if (V and (LongWord(1) shl Ord(I))) <> 0 then
+      Include(Result, I);
+end;
+
+function TControl_GetAnchors(Obj: Pointer): LongWord; NO_VCL_CALL;
+begin
+  try
+    Result := AnchorsToInt(TControl(Obj).Anchors);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TControl_SetAnchors(Obj: Pointer; Value: LongWord); NO_VCL_CALL;
+begin
+  try
+    TControl(Obj).Anchors := IntToAnchors(Value);
+  except
+    ReportException;
+  end;
+end;
+
+{ コントロールが所有する TControlBorderSpacing(コントロールと寿命が一致し、差し替わらない)。 }
+function TControl_GetBorderSpacing(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  try
+    Result := Pointer(TControl(Obj).BorderSpacing);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+{ Value の内容を写す(LCL の SetBorderSpacing と同じ)。nil なら何もしない。 }
+procedure TControl_SetBorderSpacing(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  try
+    if Value <> nil then
+      TControl(Obj).BorderSpacing := TControlBorderSpacing(Value);
+  except
+    ReportException;
+  end;
+end;
+
+{ コントロールが所有する TSizeConstraints(コントロールと寿命が一致し、差し替わらない)。 }
+function TControl_GetConstraints(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  try
+    Result := Pointer(TControl(Obj).Constraints);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+{ Value の内容を写す(LCL の SetConstraints と同じ)。nil なら何もしない。 }
+procedure TControl_SetConstraints(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  try
+    if Value <> nil then
+      TControl(Obj).Constraints := TSizeConstraints(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TControl_GetHint(Obj: Pointer): PChar; NO_VCL_CALL;
+begin
+  try
+    Result := ReturnStr(TControl(Obj).Hint);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TControl_SetHint(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+begin
+  try
+    TControl(Obj).Hint := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TControl_GetShowHint(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  try
+    Result := TControl(Obj).ShowHint;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TControl_SetShowHint(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  try
+    TControl(Obj).ShowHint := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TControl_GetCursor(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  try
+    Result := TControl(Obj).Cursor;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TControl_SetCursor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  try
+    TControl(Obj).Cursor := TCursor(Value);
+  except
+    ReportException;
+  end;
+end;
+
+{ ParentColor・ParentFont・ParentShowHint は TControl の protected で、ほとんどの具象クラスが published にしている。 }
+
+function TControl_GetParentColor(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  try
+    Result := TControlAccess(Obj).ParentColor;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TControl_SetParentColor(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  try
+    TControlAccess(Obj).ParentColor := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TControl_GetParentFont(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  try
+    Result := TControlAccess(Obj).ParentFont;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TControl_SetParentFont(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  try
+    TControlAccess(Obj).ParentFont := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TControl_GetParentShowHint(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  try
+    Result := TControlAccess(Obj).ParentShowHint;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TControl_SetParentShowHint(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  try
+    TControlAccess(Obj).ParentShowHint := Value;
+  except
+    ReportException;
+  end;
+end;
+
+{ TWinControl }
+
+function TWinControl_GetTabOrder(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  try
+    Result := TWinControl(Obj).TabOrder;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TWinControl_SetTabOrder(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  try
+    TWinControl(Obj).TabOrder := TTabOrder(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TWinControl_GetTabStop(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  try
+    Result := TWinControl(Obj).TabStop;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TWinControl_SetTabStop(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  try
+    TWinControl(Obj).TabStop := Value;
+  except
+    ReportException;
+  end;
+end;
+
+{ TSizeConstraints(0 は制限なし) }
+
+function TSizeConstraints_GetMinWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  try
+    Result := TSizeConstraints(Obj).MinWidth;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TSizeConstraints_SetMinWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  try
+    TSizeConstraints(Obj).MinWidth := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TSizeConstraints_GetMinHeight(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  try
+    Result := TSizeConstraints(Obj).MinHeight;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TSizeConstraints_SetMinHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  try
+    TSizeConstraints(Obj).MinHeight := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TSizeConstraints_GetMaxWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  try
+    Result := TSizeConstraints(Obj).MaxWidth;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TSizeConstraints_SetMaxWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  try
+    TSizeConstraints(Obj).MaxWidth := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TSizeConstraints_GetMaxHeight(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  try
+    Result := TSizeConstraints(Obj).MaxHeight;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TSizeConstraints_SetMaxHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  try
+    TSizeConstraints(Obj).MaxHeight := Value;
+  except
+    ReportException;
+  end;
+end;
+
+{ TControlBorderSpacing }
+
+function TControlBorderSpacing_GetLeft(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  try
+    Result := TControlBorderSpacing(Obj).Left;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TControlBorderSpacing_SetLeft(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  try
+    TControlBorderSpacing(Obj).Left := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TControlBorderSpacing_GetTop(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  try
+    Result := TControlBorderSpacing(Obj).Top;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TControlBorderSpacing_SetTop(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  try
+    TControlBorderSpacing(Obj).Top := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TControlBorderSpacing_GetRight(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  try
+    Result := TControlBorderSpacing(Obj).Right;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TControlBorderSpacing_SetRight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  try
+    TControlBorderSpacing(Obj).Right := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TControlBorderSpacing_GetBottom(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  try
+    Result := TControlBorderSpacing(Obj).Bottom;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TControlBorderSpacing_SetBottom(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  try
+    TControlBorderSpacing(Obj).Bottom := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TControlBorderSpacing_GetAround(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  try
+    Result := TControlBorderSpacing(Obj).Around;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TControlBorderSpacing_SetAround(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  try
+    TControlBorderSpacing(Obj).Around := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TControlBorderSpacing_GetInnerBorder(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  try
+    Result := TControlBorderSpacing(Obj).InnerBorder;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TControlBorderSpacing_SetInnerBorder(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  try
+    TControlBorderSpacing(Obj).InnerBorder := Value;
+  except
+    ReportException;
+  end;
+end;
+
 exports
   FreeNotify_SetCallback,
   Error_SetCallback,
@@ -11812,7 +12271,51 @@ exports
   TFindDialog_SetTop,
   TFindDialog_CloseDialog,
   TFindDialog_SetOnFind,
-  TFindDialog_SetOnReplace;
+  TFindDialog_SetOnReplace,
+  TComponent_GetTag,
+  TComponent_SetTag,
+  TControl_GetAnchors,
+  TControl_SetAnchors,
+  TControl_GetBorderSpacing,
+  TControl_SetBorderSpacing,
+  TControl_GetConstraints,
+  TControl_SetConstraints,
+  TControl_GetHint,
+  TControl_SetHint,
+  TControl_GetShowHint,
+  TControl_SetShowHint,
+  TControl_GetCursor,
+  TControl_SetCursor,
+  TControl_GetParentColor,
+  TControl_SetParentColor,
+  TControl_GetParentFont,
+  TControl_SetParentFont,
+  TControl_GetParentShowHint,
+  TControl_SetParentShowHint,
+  TWinControl_GetTabOrder,
+  TWinControl_SetTabOrder,
+  TWinControl_GetTabStop,
+  TWinControl_SetTabStop,
+  TSizeConstraints_GetMinWidth,
+  TSizeConstraints_SetMinWidth,
+  TSizeConstraints_GetMinHeight,
+  TSizeConstraints_SetMinHeight,
+  TSizeConstraints_GetMaxWidth,
+  TSizeConstraints_SetMaxWidth,
+  TSizeConstraints_GetMaxHeight,
+  TSizeConstraints_SetMaxHeight,
+  TControlBorderSpacing_GetLeft,
+  TControlBorderSpacing_SetLeft,
+  TControlBorderSpacing_GetTop,
+  TControlBorderSpacing_SetTop,
+  TControlBorderSpacing_GetRight,
+  TControlBorderSpacing_SetRight,
+  TControlBorderSpacing_GetBottom,
+  TControlBorderSpacing_SetBottom,
+  TControlBorderSpacing_GetAround,
+  TControlBorderSpacing_SetAround,
+  TControlBorderSpacing_GetInnerBorder,
+  TControlBorderSpacing_SetInnerBorder;
 
 begin
   RequireDerivedFormResource := False;

@@ -985,6 +985,50 @@
     X(void,          TFindDialog_SetTop,                    (obj_t o, int_t v),                                            (o, v)) \
     X(void,          TFindDialog_CloseDialog,               (obj_t o),                                                     (o)) \
     X(void,          TFindDialog_SetOnFind,                 (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
-    X(void,          TFindDialog_SetOnReplace,              (obj_t o, callback_t cb, void* d),                             (o, cb, d))
+    X(void,          TFindDialog_SetOnReplace,              (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(iptr_t,        TComponent_GetTag,                     (obj_t o),                                                     (o)) \
+    X(void,          TComponent_SetTag,                     (obj_t o, iptr_t v),                                           (o, v)) \
+    X(uint_t,        TControl_GetAnchors,                   (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetAnchors,                   (obj_t o, uint_t v),                                           (o, v)) \
+    X(obj_t,         TControl_GetBorderSpacing,             (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetBorderSpacing,             (obj_t o, obj_t v),                                            (o, v)) \
+    X(obj_t,         TControl_GetConstraints,               (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetConstraints,               (obj_t o, obj_t v),                                            (o, v)) \
+    X(str_t,         TControl_GetHint,                      (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetHint,                      (obj_t o, str_t v),                                            (o, v)) \
+    X(bool_t,        TControl_GetShowHint,                  (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetShowHint,                  (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TControl_GetCursor,                    (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetCursor,                    (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TControl_GetParentColor,               (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetParentColor,               (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TControl_GetParentFont,                (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetParentFont,                (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TControl_GetParentShowHint,            (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetParentShowHint,            (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TWinControl_GetTabOrder,               (obj_t o),                                                     (o)) \
+    X(void,          TWinControl_SetTabOrder,               (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TWinControl_GetTabStop,                (obj_t o),                                                     (o)) \
+    X(void,          TWinControl_SetTabStop,                (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TSizeConstraints_GetMinWidth,          (obj_t o),                                                     (o)) \
+    X(void,          TSizeConstraints_SetMinWidth,          (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TSizeConstraints_GetMinHeight,         (obj_t o),                                                     (o)) \
+    X(void,          TSizeConstraints_SetMinHeight,         (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TSizeConstraints_GetMaxWidth,          (obj_t o),                                                     (o)) \
+    X(void,          TSizeConstraints_SetMaxWidth,          (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TSizeConstraints_GetMaxHeight,         (obj_t o),                                                     (o)) \
+    X(void,          TSizeConstraints_SetMaxHeight,         (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TControlBorderSpacing_GetLeft,         (obj_t o),                                                     (o)) \
+    X(void,          TControlBorderSpacing_SetLeft,         (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TControlBorderSpacing_GetTop,          (obj_t o),                                                     (o)) \
+    X(void,          TControlBorderSpacing_SetTop,          (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TControlBorderSpacing_GetRight,        (obj_t o),                                                     (o)) \
+    X(void,          TControlBorderSpacing_SetRight,        (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TControlBorderSpacing_GetBottom,       (obj_t o),                                                     (o)) \
+    X(void,          TControlBorderSpacing_SetBottom,       (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TControlBorderSpacing_GetAround,       (obj_t o),                                                     (o)) \
+    X(void,          TControlBorderSpacing_SetAround,       (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TControlBorderSpacing_GetInnerBorder,  (obj_t o),                                                     (o)) \
+    X(void,          TControlBorderSpacing_SetInnerBorder,  (obj_t o, int_t v),                                            (o, v))
 
 #endif

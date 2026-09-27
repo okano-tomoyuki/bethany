@@ -11,6 +11,8 @@
     #define NO_VCL_CALL
 #endif
 
+#include <cstdint>
+
 #include "internal/funcs.h"
 
 namespace no_vcl
@@ -25,6 +27,7 @@ using int_t  = int;
 using uint_t = unsigned int;  // ビット集合(グリッド・ダイアログの Options、TFont の Style。グリッドの Options は 32 ビットすべてを使う)。
 using bool_t = int;           // Pascal の LongBool。0 以外は真(DLL が返す真は -1)。
 using real_t = double;
+using iptr_t = std::intptr_t; // ポインタと同じ幅の符号付き整数(Pascal の PtrInt。TComponent の Tag)。
 
 // DLL が呼ぶコールバック(イベント・破棄通知)。data は登録時に渡した値。
 using callback_t = void (NO_VCL_CALL *)(obj_t sender, void* data);

@@ -13,7 +13,7 @@ import os
 import platform
 import threading
 import ctypes
-from ctypes import POINTER, c_void_p, c_char_p, c_char, c_int, c_uint, c_double
+from ctypes import POINTER, c_void_p, c_char_p, c_char, c_int, c_uint, c_ssize_t, c_double
 
 # 基本型(internal/api.h)
 obj_t = c_void_p
@@ -22,6 +22,7 @@ int_t = c_int
 uint_t = c_uint
 bool_t = c_int     # Pascal の LongBool。0 以外は真(DLL が返す真は -1)
 real_t = c_double
+iptr_t = c_ssize_t  # ポインタと同じ幅の符号付き整数(Pascal の PtrInt。TComponent の Tag)
 
 # DLL の呼び出し規約は Windows では __stdcall(Win64 では cdecl と同じ)
 if platform.system() == "Windows":
@@ -1139,3 +1140,47 @@ _bind('TFindDialog_SetTop', None, [obj_t, int_t])
 _bind('TFindDialog_CloseDialog', None, [obj_t])
 _bind('TFindDialog_SetOnFind', None, [obj_t, callback_t, c_void_p], 1)
 _bind('TFindDialog_SetOnReplace', None, [obj_t, callback_t, c_void_p], 1)
+_bind('TComponent_GetTag', iptr_t, [obj_t])
+_bind('TComponent_SetTag', None, [obj_t, iptr_t])
+_bind('TControl_GetAnchors', uint_t, [obj_t])
+_bind('TControl_SetAnchors', None, [obj_t, uint_t])
+_bind('TControl_GetBorderSpacing', obj_t, [obj_t])
+_bind('TControl_SetBorderSpacing', None, [obj_t, obj_t])
+_bind('TControl_GetConstraints', obj_t, [obj_t])
+_bind('TControl_SetConstraints', None, [obj_t, obj_t])
+_bind('TControl_GetHint', str_t, [obj_t])
+_bind('TControl_SetHint', None, [obj_t, str_t])
+_bind('TControl_GetShowHint', bool_t, [obj_t])
+_bind('TControl_SetShowHint', None, [obj_t, bool_t])
+_bind('TControl_GetCursor', int_t, [obj_t])
+_bind('TControl_SetCursor', None, [obj_t, int_t])
+_bind('TControl_GetParentColor', bool_t, [obj_t])
+_bind('TControl_SetParentColor', None, [obj_t, bool_t])
+_bind('TControl_GetParentFont', bool_t, [obj_t])
+_bind('TControl_SetParentFont', None, [obj_t, bool_t])
+_bind('TControl_GetParentShowHint', bool_t, [obj_t])
+_bind('TControl_SetParentShowHint', None, [obj_t, bool_t])
+_bind('TWinControl_GetTabOrder', int_t, [obj_t])
+_bind('TWinControl_SetTabOrder', None, [obj_t, int_t])
+_bind('TWinControl_GetTabStop', bool_t, [obj_t])
+_bind('TWinControl_SetTabStop', None, [obj_t, bool_t])
+_bind('TSizeConstraints_GetMinWidth', int_t, [obj_t])
+_bind('TSizeConstraints_SetMinWidth', None, [obj_t, int_t])
+_bind('TSizeConstraints_GetMinHeight', int_t, [obj_t])
+_bind('TSizeConstraints_SetMinHeight', None, [obj_t, int_t])
+_bind('TSizeConstraints_GetMaxWidth', int_t, [obj_t])
+_bind('TSizeConstraints_SetMaxWidth', None, [obj_t, int_t])
+_bind('TSizeConstraints_GetMaxHeight', int_t, [obj_t])
+_bind('TSizeConstraints_SetMaxHeight', None, [obj_t, int_t])
+_bind('TControlBorderSpacing_GetLeft', int_t, [obj_t])
+_bind('TControlBorderSpacing_SetLeft', None, [obj_t, int_t])
+_bind('TControlBorderSpacing_GetTop', int_t, [obj_t])
+_bind('TControlBorderSpacing_SetTop', None, [obj_t, int_t])
+_bind('TControlBorderSpacing_GetRight', int_t, [obj_t])
+_bind('TControlBorderSpacing_SetRight', None, [obj_t, int_t])
+_bind('TControlBorderSpacing_GetBottom', int_t, [obj_t])
+_bind('TControlBorderSpacing_SetBottom', None, [obj_t, int_t])
+_bind('TControlBorderSpacing_GetAround', int_t, [obj_t])
+_bind('TControlBorderSpacing_SetAround', None, [obj_t, int_t])
+_bind('TControlBorderSpacing_GetInnerBorder', int_t, [obj_t])
+_bind('TControlBorderSpacing_SetInnerBorder', None, [obj_t, int_t])

@@ -475,6 +475,24 @@ class TMainForm(TForm):
         self.AlignClientPanel.Align = alClient
         self.AlignClientPanel.Caption = "alClient"
 
+        # Anchors・BorderSpacing(docs/adr/0034)。Align と同じく、LCL ではフォームが表示されるまで配置されない。
+        # AnchoredButton は左右の辺に付けるので、AlignClientPanel の幅が変わると同じだけ幅が変わる。
+        self.AnchoredButton = TButton(self)
+        self.AnchoredButton.Parent = self.AlignClientPanel
+        self.AnchoredButton.Left = 5
+        self.AnchoredButton.Top = 5
+        self.AnchoredButton.Width = 60
+        self.AnchoredButton.Height = 22
+        self.AnchoredButton.Caption = "Anchored"
+        self.AnchoredButton.Anchors = {akLeft, akTop, akRight}
+        # SpacedButton は下端に寄せ、周りに 4px の余白を空ける。
+        self.SpacedButton = TButton(self)
+        self.SpacedButton.Parent = self.AlignClientPanel
+        self.SpacedButton.Height = 22
+        self.SpacedButton.Caption = "Spaced"
+        self.SpacedButton.Align = alBottom
+        self.SpacedButton.BorderSpacing.Around = 4
+
         # メニュー。項目の Owner はフォームにし、親子関係は Add で組む。
         self.MainMenu1 = TMainMenu(self)
 
@@ -1068,10 +1086,17 @@ class TMainForm(TForm):
         # 表示後は、座標からノードを引ける(1 行目は Root)。
         atTop = self.TreeView1.GetNodeAt(30, 5)
         pr(f"TreeView1->GetNodeAt(30, 5) is RootNode: {yn(atTop is self.RootNode)}")
+        # BorderSpacing.Around(4)の分だけ、AlignClientPanel のクライアント領域(枠の 1px の内側)から離れる。
+        printBounds("SpacedButton", self.SpacedButton, "5,41,183,22")
+        anchoredBefore = self.AnchoredButton.Width
+        clientBefore = self.AlignClientPanel.Width
         # プログラムから Splitter を動かすと、alLeft のパネルの幅と alClient のパネルが追随する。
         self.Splitter1.SetSplitterPosition(121)
         pr(f"After SetSplitterPosition(121): SplitterPosition={self.Splitter1.GetSplitterPosition()} "
            f"AlignLeftPanel->Width={self.AlignLeftPanel.Width} AlignClientPanel->Left={self.AlignClientPanel.Left}")
+        # 左右の辺に付けた AnchoredButton の幅は、AlignClientPanel の幅と同じだけ変わる。
+        pr(f"AnchoredButton Width change={self.AnchoredButton.Width - anchoredBefore}, "
+           f"AlignClientPanel Width change={self.AlignClientPanel.Width - clientBefore} (expected equal)")
         # AutoSize の TImage は画像の大きさになる(表示されていないページにあっても)。
         pr(f"Image1 AutoSize Width/Height={self.Image1.Width}/{self.Image1.Height} (expected 60/40)")
 
@@ -1825,7 +1850,39 @@ def main():
     os.remove(pngPath)
     os.remove(jpgPath)
 
-    # Tier 4(ダイアログ。docs/adr/0033)。Execute は "Dialogs" メニューから試す。ここでは既定値とプロパティを確かめる。
+    # デザイナーで設定する共通のプロパティ(docs/adr/0034)。Python では Anchors は要素の frozenset。
+    temp = TButton(Form1)
+    temp.Parent = Form1.Panel1
+    pr(f"temp button defaults: Anchors={{akLeft, akTop}}: {yn(temp.Anchors == {akLeft, akTop})}, TabStop={int(temp.TabStop)} (expected 1), "
+       f"ShowHint={int(temp.ShowHint)} (expected 0), ParentShowHint={int(temp.ParentShowHint)} (expected 1), "
+       f"ParentFont={int(temp.ParentFont)} (expected 1), Cursor={temp.Cursor} (expected crDefault=0), Tag={temp.Tag} (expected 0)")
+    temp.TabOrder = 0
+    pr(f"temp->TabOrder=0: temp={temp.TabOrder} (expected 0), PanelButton={Form1.PanelButton.TabOrder} (expected 1)")
+    temp.Hint = "ヒント"
+    temp.ShowHint = True
+    temp.Font.Size = 14
+    temp.Cursor = crHandPoint
+    temp.Tag = 0x123456789A
+    pr(f"After setting: Hint={temp.Hint}, ParentShowHint={int(temp.ParentShowHint)} (expected 0: ShowHint was set), "
+       f"ParentFont={int(temp.ParentFont)} (expected 0: Font was set), Cursor={temp.Cursor} (expected crHandPoint=-21), "
+       f"Tag=0x{temp.Tag:x} (expected 0x123456789a: pointer-sized)")
+    temp.Constraints.MaxWidth = 60
+    temp.Width = 200
+    other = TButton(Form1)
+    other.Constraints = temp.Constraints
+    other.BorderSpacing.Around = 7
+    temp.BorderSpacing = other.BorderSpacing
+    pr(f"Constraints MaxWidth=60 then Width=200: Width={temp.Width} (expected 60); other Constraints MaxWidth={other.Constraints.MaxWidth} "
+       f"(expected 60), temp BorderSpacing Around={temp.BorderSpacing.Around} (expected 7)")
+    tempPanel = TPanel(Form1)
+    before = int(tempPanel.ParentColor)
+    tempPanel.Color = clYellow
+    pr(f"tempPanel ParentColor before/after setting Color: {before}/{int(tempPanel.ParentColor)} (expected 1/0)")
+    tempPanel.Free()
+    other.Free()
+    temp.Free()
+    pr(f"AnchoredButton Anchors contains akRight: {yn(akRight in Form1.AnchoredButton.Anchors)} (expected yes)")
+
     open_ = Form1.OpenDialog1
     pr(f"OpenDialog1 Options has ofEnableSizing|ofViewDetail|ofFileMustExist: "
        f"{yn(open_.Options == (ofEnableSizing | ofViewDetail | ofFileMustExist))}, FilterIndex={open_.FilterIndex} (expected 1), "

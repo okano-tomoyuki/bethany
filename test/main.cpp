@@ -133,6 +133,9 @@ public:
     TPanel*         AlignLeftPanel;
     TSplitter*      Splitter1;
     TPanel*         AlignClientPanel;
+    TButton*        AnchoredButton;
+    TButton*        SpacedButton;
+    int             anchoredWidthBefore_ = 0;
     TMainMenu*      MainMenu1;
     TMenuItem*      FileMenu;
     TMenuItem*      FileNewItem;
@@ -587,6 +590,24 @@ public:
         AlignClientPanel->Parent = LayoutPanel;
         AlignClientPanel->Align = alClient;
         AlignClientPanel->Caption = "alClient";
+
+        // Anchors・BorderSpacing(docs/adr/0034)。Align と同じく、LCL ではフォームが表示されるまで配置されない。
+        // AnchoredButton は左右の辺に付けるので、AlignClientPanel の幅が変わると同じだけ幅が変わる。
+        AnchoredButton = new TButton(this);
+        AnchoredButton->Parent = AlignClientPanel;
+        AnchoredButton->Left = 5;
+        AnchoredButton->Top = 5;
+        AnchoredButton->Width = 60;
+        AnchoredButton->Height = 22;
+        AnchoredButton->Caption = "Anchored";
+        AnchoredButton->Anchors = TAnchors() << akLeft << akTop << akRight;
+        // SpacedButton は下端に寄せ、周りに 4px の余白を空ける。
+        SpacedButton = new TButton(this);
+        SpacedButton->Parent = AlignClientPanel;
+        SpacedButton->Height = 22;
+        SpacedButton->Caption = "Spaced";
+        SpacedButton->Align = alBottom;
+        SpacedButton->BorderSpacing->Around = 4;
 
         // Tier 5(メニュー)。項目の Owner はフォームにし、親子関係は Add で組む。
         // MainMenu1->Items はメニューのルート項目で、LCL が内部で生成したもの(初回アクセス時にラッパーができる)。
@@ -1303,10 +1324,17 @@ private:
         // 表示後は、座標からノードを引ける(1 行目は Root)。
         TTreeNode* atTop = TreeView1->GetNodeAt(30, 5);
         std::printf("TreeView1->GetNodeAt(30, 5) is RootNode: %s\n", atTop == RootNode ? "yes" : "no");
+        // BorderSpacing->Around(4)の分だけ、AlignClientPanel のクライアント領域(枠の 1px の内側)から離れる。
+        printBounds("SpacedButton", SpacedButton, "5,41,183,22");
+        int anchoredBefore = AnchoredButton->Width;
+        int clientBefore = AlignClientPanel->Width;
         // プログラムから Splitter を動かすと、alLeft のパネルの幅と alClient のパネルが追随する。
         Splitter1->SetSplitterPosition(121);
         std::printf("After SetSplitterPosition(121): SplitterPosition=%d AlignLeftPanel->Width=%d AlignClientPanel->Left=%d\n",
                     Splitter1->GetSplitterPosition(), (int)AlignLeftPanel->Width, (int)AlignClientPanel->Left);
+        // 左右の辺に付けた AnchoredButton の幅は、AlignClientPanel の幅と同じだけ変わる。
+        std::printf("AnchoredButton Width change=%d, AlignClientPanel Width change=%d (expected equal)\n",
+                    AnchoredButton->Width - anchoredBefore, AlignClientPanel->Width - clientBefore);
         // AutoSize の TImage は画像の大きさになる(表示されていないページにあっても)。
         std::printf("Image1 AutoSize Width/Height=%d/%d (expected 60/40)\n", (int)Image1->Width, (int)Image1->Height);
         std::fflush(stdout);
@@ -2270,6 +2298,57 @@ int main()
         delete bmp;
         std::remove(pngPath);
         std::remove(jpgPath);
+    }
+
+    // デザイナーで設定する共通のプロパティ(docs/adr/0034)。
+    {
+        TButton* temp = new TButton(Form1);
+        temp->Parent = Form1->Panel1;
+        std::printf("temp button defaults: Anchors=0x%x (expected akLeft|akTop=0x3), TabStop=%d (expected 1), ShowHint=%d (expected 0), "
+                    "ParentShowHint=%d (expected 1), ParentFont=%d (expected 1), Cursor=%d (expected crDefault=0), Tag=%d (expected 0)\n",
+                    ((TAnchors)temp->Anchors).ToInt(), (bool)temp->TabStop, (bool)temp->ShowHint, (bool)temp->ParentShowHint,
+                    (bool)temp->ParentFont, (int)temp->Cursor, (int)temp->Tag);
+        // Panel1 の中の最後の TabOrder を 0 にすると、それまで 0 だったもの(PanelButton)は 1 になる。
+        temp->TabOrder = 0;
+        std::printf("temp->TabOrder=0: temp=%d (expected 0), PanelButton=%d (expected 1)\n",
+                    (int)temp->TabOrder, (int)Form1->PanelButton->TabOrder);
+        temp->Hint = "ヒント";
+        temp->ShowHint = true;
+        temp->Font->Size = 14;
+        temp->Cursor = crHandPoint;
+        temp->Tag = (std::intptr_t)0x12345678;
+        std::printf("After setting: Hint=%s, ParentShowHint=%d (expected 0: ShowHint was set), ParentFont=%d (expected 0: Font was set), "
+                    "Cursor=%d (expected crHandPoint=-21), Tag=0x%x\n",
+                    std::string(temp->Hint).c_str(), (bool)temp->ParentShowHint, (bool)temp->ParentFont, (int)temp->Cursor,
+                    (unsigned)(std::intptr_t)temp->Tag);
+        // Constraints は設定した時点で効く(表示を待たない)。代入は内容のコピー。
+        temp->Constraints->MaxWidth = 60;
+        temp->Width = 200;
+        TButton* other = new TButton(Form1);
+        other->Constraints = temp->Constraints;
+        other->BorderSpacing->Around = 7;
+        temp->BorderSpacing = other->BorderSpacing;
+        std::printf("Constraints MaxWidth=60 then Width=200: Width=%d (expected 60); other Constraints MaxWidth=%d (expected 60), "
+                    "temp BorderSpacing Around=%d (expected 7)\n",
+                    (int)temp->Width, (int)other->Constraints->MaxWidth, (int)temp->BorderSpacing->Around);
+        // ParentColor は Color を設定すると false になる(今と同じ色の代入では変わらない)。
+        TPanel* tempPanel = new TPanel(Form1);
+        std::printf("tempPanel ParentColor before/after setting Color: %d/", (bool)tempPanel->ParentColor);
+        tempPanel->Color = clYellow;
+        std::printf("%d (expected 1/0)\n", (bool)tempPanel->ParentColor);
+        tempPanel->Free();
+        other->Free();
+        temp->Free();
+
+        // Set<E>(TAnchors)の演算。
+        TAnchors a = TAnchors() << akLeft << akTop;
+        TAnchors b = TAnchors() << akTop << akBottom;
+        std::printf("TAnchors: a+b=0x%x (expected 0xb), a-b=0x%x (expected 0x2), a*b=0x%x (expected 0x1), a==(akTop,akLeft): %d, "
+                    "Contains(akRight): %d\n",
+                    (a + b).ToInt(), (a - b).ToInt(), (a * b).ToInt(), a == (TAnchors() << akTop << akLeft), a.Contains(akRight));
+        a >> akTop;
+        std::printf("After a >> akTop: 0x%x (expected 0x2), AnchoredButton->Anchors->Contains(akRight): %d (expected 1)\n",
+                    a.ToInt(), Form1->AnchoredButton->Anchors->Contains(akRight));
     }
 
     // Tier 4(ダイアログ。docs/adr/0033)。Execute は "Dialogs" メニューから試す。ここでは既定値とプロパティを確かめる。

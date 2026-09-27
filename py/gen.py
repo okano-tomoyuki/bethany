@@ -20,6 +20,7 @@ BASE_TYPES = {
     "uint_t": "uint_t",
     "bool_t": "bool_t",
     "real_t": "real_t",
+    "iptr_t": "iptr_t",
     "char": "c_char",
     "void*": "c_void_p",
 }
@@ -82,7 +83,7 @@ import os
 import platform
 import threading
 import ctypes
-from ctypes import POINTER, c_void_p, c_char_p, c_char, c_int, c_uint, c_double
+from ctypes import POINTER, c_void_p, c_char_p, c_char, c_int, c_uint, c_ssize_t, c_double
 
 # 基本型(internal/api.h)
 obj_t = c_void_p
@@ -91,6 +92,7 @@ int_t = c_int
 uint_t = c_uint
 bool_t = c_int     # Pascal の LongBool。0 以外は真(DLL が返す真は -1)
 real_t = c_double
+iptr_t = c_ssize_t  # ポインタと同じ幅の符号付き整数(Pascal の PtrInt。TComponent の Tag)
 
 # DLL の呼び出し規約は Windows では __stdcall(Win64 では cdecl と同じ)
 if platform.system() == "Windows":

@@ -259,6 +259,19 @@ def main():
         print(f"TMenuItem_Click with a failing callback raised: class_name={e.class_name} (expected EMyError), "
               f"message={e.message}, cause={type(e.__cause__).__name__}")
 
+    # ---- デザイナーで設定する共通のプロパティ(docs/adr/0034) ----
+    lib.TControl_SetAnchors(memo, 1 | 2 | 4)  # akTop | akLeft | akRight
+    lib.TSizeConstraints_SetMinHeight(lib.TControl_GetConstraints(memo), 50)
+    lib.TControlBorderSpacing_SetAround(lib.TControl_GetBorderSpacing(memo), 3)
+    lib.TWinControl_SetTabOrder(memo, 0)
+    lib.TComponent_SetTag(memo, 0x123456789A)
+    lib.TControl_SetHint(memo, "メモ".encode())
+    print(f"memo Anchors=0x{lib.TControl_GetAnchors(memo):x} (expected 0x7), Constraints MinHeight="
+          f"{lib.TSizeConstraints_GetMinHeight(lib.TControl_GetConstraints(memo))} (expected 50), BorderSpacing Around="
+          f"{lib.TControlBorderSpacing_GetAround(lib.TControl_GetBorderSpacing(memo))} (expected 3), TabOrder="
+          f"{lib.TWinControl_GetTabOrder(memo)} (expected 0), Tag=0x{lib.TComponent_GetTag(memo):x} (expected 0x123456789a), "
+          f"Hint={lib.TControl_GetHint(memo).decode()}")
+
     # ---- ダイアログ(docs/adr/0033) ----
     # モーダルのダイアログの Execute は閉じるまで戻らないため、ここでは呼ばない。プロパティだけ確かめる。
     openDialog = lib.TOpenDialog_Create(form)

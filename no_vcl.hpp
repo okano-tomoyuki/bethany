@@ -923,6 +923,9 @@ private:
 class TComponent : public TPersistent
 {
 public:
+    // 利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。
+    Property<std::intptr_t> Tag;
+
     // LCL オブジェクトを破棄する。破棄通知によってこのラッパーも delete されるため、
     // 呼び出し後にこのオブジェクトへ触れてはならない。
     void Free();
@@ -956,6 +959,9 @@ private:
 
     static void NO_VCL_CALL FreeNotifyTrampoline(ObjectHandle handle, void* data);
     static std::unordered_map<ObjectHandle, TComponent*>& Registry();
+
+    static std::intptr_t GetTagImpl(TObject* owner);
+    static void          SetTagImpl(TObject* owner, const std::intptr_t& value);
 };
 
 // ショートカットキー(VCL の TShortCut と同じく、仮想キーコードに修飾キーのビットを OR した値)。
@@ -1219,6 +1225,133 @@ class TWinControl;
 // (alTop なら Left/Top/Width が親に合わせられ、Height だけが保たれる。alClient は残りの領域をすべて埋める)。
 enum TAlign { alNone, alTop, alBottom, alLeft, alRight, alClient, alCustom };
 
+// Pascal の集合型(set of 列挙型)に対応する値型(C++Builder の Set<T, minEl, maxEl> に倣う。docs/adr/0034)。
+// 要素は << で加え、>> で除き、Contains で確かめる(Button1->Anchors = TAnchors() << akLeft << akRight;)。
+// プロパティからは Button1->Anchors->Contains(akRight) のように -> で読める。
+template<typename E>
+class Set
+{
+public:
+    Set() : bits_(0) {}
+
+    Set& operator<<(E e) { bits_ |= Bit(e); return *this; }
+    Set& operator>>(E e) { bits_ &= ~Bit(e); return *this; }
+    bool Contains(E e) const { return (bits_ & Bit(e)) != 0; }
+    bool Empty() const { return bits_ == 0; }
+
+    // 和・差・積(Pascal の +・-・*)。
+    Set operator+(const Set& other) const { return FromInt(bits_ | other.bits_); }
+    Set operator-(const Set& other) const { return FromInt(bits_ & ~other.bits_); }
+    Set operator*(const Set& other) const { return FromInt(bits_ & other.bits_); }
+    bool operator==(const Set& other) const { return bits_ == other.bits_; }
+    bool operator!=(const Set& other) const { return bits_ != other.bits_; }
+
+    // Property<Set<E>> の operator-> から、メンバをたどれるようにする。
+    const Set* operator->() const { return this; }
+
+    // 要素の序数をビットの位置とした整数(DLL との受け渡しに使う)。
+    unsigned int ToInt() const { return bits_; }
+    static Set FromInt(unsigned int bits) { Set s; s.bits_ = bits; return s; }
+
+private:
+    static unsigned int Bit(E e) { return 1u << static_cast<unsigned int>(e); }
+    unsigned int bits_;
+};
+
+// コントロールの辺(LCL の TAnchorKind と同じ値。VCL の TAnchorKind とは並びが違う)。
+enum TAnchorKind { akTop, akLeft, akRight, akBottom };
+// 親の辺との距離を保つ辺の集合(既定は akLeft・akTop。akRight も加えると、親の幅に合わせて幅が変わる)。
+using TAnchors = Set<TAnchorKind>;
+
+// マウスカーソルの形(LCL の TCursor と同じ値)。
+using TCursor = std::int32_t;
+const TCursor crDefault   = 0;
+const TCursor crNone      = -1;
+const TCursor crArrow     = -2;
+const TCursor crCross     = -3;
+const TCursor crIBeam     = -4;
+const TCursor crSizeNESW  = -6;
+const TCursor crSizeNS    = -7;
+const TCursor crSizeNWSE  = -8;
+const TCursor crSizeWE    = -9;
+const TCursor crUpArrow   = -10;
+const TCursor crHourGlass = -11;
+const TCursor crDrag      = -12;
+const TCursor crNoDrop    = -13;
+const TCursor crHSplit    = -14;
+const TCursor crVSplit    = -15;
+const TCursor crMultiDrag = -16;
+const TCursor crSQLWait   = -17;
+const TCursor crNo        = -18;
+const TCursor crAppStart  = -19;
+const TCursor crHelp      = -20;
+const TCursor crHandPoint = -21;
+const TCursor crSizeAll   = -22;
+const TCursor crSize      = -22;
+const TCursor crSizeNW    = -23;
+const TCursor crSizeN     = -24;
+const TCursor crSizeNE    = -25;
+const TCursor crSizeW     = -26;
+const TCursor crSizeE     = -27;
+const TCursor crSizeSW    = -28;
+const TCursor crSizeS     = -29;
+const TCursor crSizeSE    = -30;
+
+// コントロールの大きさの制限(LCL の TSizeConstraints)。コントロールが所有するものへの非所有のラッパー(docs/adr/0034)。
+// 0 は制限なし。Button1->Constraints->MinWidth = 80; のように使う。
+class TSizeConstraints : public TPersistent
+{
+public:
+    Property<int> MinWidth;
+    Property<int> MinHeight;
+    Property<int> MaxWidth;
+    Property<int> MaxHeight;
+
+    explicit TSizeConstraints(ObjectHandle handle);
+    ~TSizeConstraints() override = default;
+
+private:
+    static int  GetMinWidthImpl(TObject* owner);
+    static void SetMinWidthImpl(TObject* owner, const int& value);
+    static int  GetMinHeightImpl(TObject* owner);
+    static void SetMinHeightImpl(TObject* owner, const int& value);
+    static int  GetMaxWidthImpl(TObject* owner);
+    static void SetMaxWidthImpl(TObject* owner, const int& value);
+    static int  GetMaxHeightImpl(TObject* owner);
+    static void SetMaxHeightImpl(TObject* owner, const int& value);
+};
+
+// コントロールの周りの余白(LCL の TControlBorderSpacing。VCL には無く、VCL の Margins に近い)。
+// コントロールが所有するものへの非所有のラッパー(docs/adr/0034)。Align・Anchors で配置するときに、親・隣との間を空ける。
+// 各辺の余白は Around + その辺の値。InnerBorder はコントロールの内側の余白(AutoSize のときに使われる)。
+class TControlBorderSpacing : public TPersistent
+{
+public:
+    Property<int> Left;
+    Property<int> Top;
+    Property<int> Right;
+    Property<int> Bottom;
+    Property<int> Around;
+    Property<int> InnerBorder;
+
+    explicit TControlBorderSpacing(ObjectHandle handle);
+    ~TControlBorderSpacing() override = default;
+
+private:
+    static int  GetLeftImpl(TObject* owner);
+    static void SetLeftImpl(TObject* owner, const int& value);
+    static int  GetTopImpl(TObject* owner);
+    static void SetTopImpl(TObject* owner, const int& value);
+    static int  GetRightImpl(TObject* owner);
+    static void SetRightImpl(TObject* owner, const int& value);
+    static int  GetBottomImpl(TObject* owner);
+    static void SetBottomImpl(TObject* owner, const int& value);
+    static int  GetAroundImpl(TObject* owner);
+    static void SetAroundImpl(TObject* owner, const int& value);
+    static int  GetInnerBorderImpl(TObject* owner);
+    static void SetInnerBorderImpl(TObject* owner, const int& value);
+};
+
 class TControl : public TComponent
 {
 public:
@@ -1241,6 +1374,20 @@ public:
     // 文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。
     // 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。
     Property<TFont*>       Font;
+    // true(既定)なら、Parent の Color・Font を使う(Color・Font を設定すると false になる)。
+    // LCL では TControl の protected で、ほとんどの具象クラスが published にしている(docs/adr/0034)。
+    Property<bool>         ParentColor;
+    Property<bool>         ParentFont;
+    // 親の辺との距離を保つ辺(既定は akLeft・akTop。docs/adr/0034)。親の大きさが変わると、それに合わせて位置・大きさが変わる。
+    Property<TAnchors>     Anchors;
+    // 周りの余白・大きさの制限。コントロールが所有するもののビューで、代入は内容のコピー(nullptr なら何もしない)。
+    Property<TControlBorderSpacing*> BorderSpacing;
+    Property<TSizeConstraints*>      Constraints;
+    // マウスを重ねたときに表示する文字列。表示するのは ShowHint が true のとき(ParentShowHint が true なら Parent に従う)。
+    Property<std::string>  Hint;
+    Property<bool>         ShowHint;
+    Property<bool>         ParentShowHint;
+    Property<TCursor>      Cursor;
     Property<TNotifyEvent> OnClick;
     Property<TNotifyEvent> OnDblClick;
     // LCL では他のウィンドウメッセージへの応答等で発生し、必ずしもユーザー操作直後とは限らない。
@@ -1265,7 +1412,9 @@ protected:
 private:
     friend class TCoolBand;  // TCoolBand::Control の Getter から FromHandle を使うため
 
-    TFont font_;
+    TFont                 font_;
+    TControlBorderSpacing borderSpacing_;
+    TSizeConstraints      constraints_;
 
     TNotifyEvent onClick_;
     bool         onClickHooked_ = false;
@@ -1342,6 +1491,24 @@ private:
     static void         SetColorImpl(TObject* owner, const TColor& value);
     static TFont*       GetFontImpl(TObject* owner);
     static void         SetFontImpl(TObject* owner, TFont* const& value);
+    static bool         GetParentColorImpl(TObject* owner);
+    static void         SetParentColorImpl(TObject* owner, const bool& value);
+    static bool         GetParentFontImpl(TObject* owner);
+    static void         SetParentFontImpl(TObject* owner, const bool& value);
+    static TAnchors     GetAnchorsImpl(TObject* owner);
+    static void         SetAnchorsImpl(TObject* owner, const TAnchors& value);
+    static TControlBorderSpacing* GetBorderSpacingImpl(TObject* owner);
+    static void                   SetBorderSpacingImpl(TObject* owner, TControlBorderSpacing* const& value);
+    static TSizeConstraints*      GetConstraintsImpl(TObject* owner);
+    static void                   SetConstraintsImpl(TObject* owner, TSizeConstraints* const& value);
+    static std::string  GetHintImpl(TObject* owner);
+    static void         SetHintImpl(TObject* owner, const std::string& value);
+    static bool         GetShowHintImpl(TObject* owner);
+    static void         SetShowHintImpl(TObject* owner, const bool& value);
+    static bool         GetParentShowHintImpl(TObject* owner);
+    static void         SetParentShowHintImpl(TObject* owner, const bool& value);
+    static TCursor      GetCursorImpl(TObject* owner);
+    static void         SetCursorImpl(TObject* owner, const TCursor& value);
     static std::string  GetTextImpl(TObject* owner);
     static void         SetTextImpl(TObject* owner, const std::string& value);
 };
@@ -1352,6 +1519,9 @@ public:
     Property<TKeyEvent>      OnKeyDown;
     Property<TKeyEvent>      OnKeyUp;
     Property<TKeyPressEvent> OnKeyPress;
+    // Tab キーでのフォーカスの移動の順(同じ Parent の中での位置。-1 は末尾)と、移動の対象にするか(docs/adr/0034)。
+    Property<int>            TabOrder;
+    Property<bool>           TabStop;
 
 protected:
     explicit TWinControl(ObjectHandle handle);
@@ -1375,6 +1545,10 @@ private:
     static void      SetOnKeyUpImpl(TObject* owner, const TKeyEvent& value);
     static TKeyPressEvent GetOnKeyPressImpl(TObject* owner);
     static void           SetOnKeyPressImpl(TObject* owner, const TKeyPressEvent& value);
+    static int            GetTabOrderImpl(TObject* owner);
+    static void           SetTabOrderImpl(TObject* owner, const int& value);
+    static bool           GetTabStopImpl(TObject* owner);
+    static void           SetTabStopImpl(TObject* owner, const bool& value);
 };
 
 // つまみを左右または上下にドラッグして値を選ぶスクロールバー。
@@ -2927,8 +3101,7 @@ private:
     static void SetStateImagesImpl(TObject* owner, TCustomImageList* const& value);
 };
 
-// Splitter が寄せる辺(LCL の TAnchorKind と同じ値。VCL には無い)と、ドラッグ中の表示のしかた。
-enum TAnchorKind  { akTop, akLeft, akRight, akBottom };
+// Splitter のドラッグ中の表示のしかた(寄せる辺の ResizeAnchor は TAnchorKind)。
 enum TResizeStyle { rsLine, rsNone, rsPattern, rsUpdate };
 
 // 同じ Align を持つ直前のコントロール(alLeft なら、自分より左にある alLeft のコントロール)の幅・高さを

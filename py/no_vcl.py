@@ -32,7 +32,7 @@ import enum
 from no_vcl_core import (NoVclError, Ref, TRect, TPoint, TObject, TPersistent, TComponent,
                          ShortCut, TextToShortCut, ShortCutToText)
 from no_vcl_core import (lib, _mixins, _register, _event_types, _ItemMixin, _Prop, _Indexed, _Event,
-                         _int, _float, _bool, _str, _char, _ptr, _rect_conv, _enum, _comp, _existing, _item, _obj, _view,
+                         _int, _float, _bool, _str, _char, _ptr, _rect_conv, _enum, _set, _comp, _existing, _item, _obj, _view,
                          _str_key, _enc, _dec, _h, _b, _rect, _point, _to_enum, _to_comp, _to_existing, _to_item, _to_obj,
                          _a_int, _a_bool, _a_rect, _a_enum, _a_comp, _a_item, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_enum)
 
@@ -114,6 +114,16 @@ class TAlign(enum.IntEnum):
     alCustom = 6
 
 alNone, alTop, alBottom, alLeft, alRight, alClient, alCustom = TAlign.alNone, TAlign.alTop, TAlign.alBottom, TAlign.alLeft, TAlign.alRight, TAlign.alClient, TAlign.alCustom
+
+
+# コントロールの辺(LCL の TAnchorKind と同じ値。VCL の TAnchorKind とは並びが違う)。
+class TAnchorKind(enum.IntEnum):
+    akTop = 0
+    akLeft = 1
+    akRight = 2
+    akBottom = 3
+
+akTop, akLeft, akRight, akBottom = TAnchorKind.akTop, TAnchorKind.akLeft, TAnchorKind.akRight, TAnchorKind.akBottom
 
 
 # つまみを左右または上下にドラッグして値を選ぶスクロールバー。
@@ -247,16 +257,7 @@ class TItemChange(enum.IntEnum):
 ctText, ctImage, ctState = TItemChange.ctText, TItemChange.ctImage, TItemChange.ctState
 
 
-# Splitter が寄せる辺(LCL の TAnchorKind と同じ値。VCL には無い)と、ドラッグ中の表示のしかた。
-class TAnchorKind(enum.IntEnum):
-    akTop = 0
-    akLeft = 1
-    akRight = 2
-    akBottom = 3
-
-akTop, akLeft, akRight, akBottom = TAnchorKind.akTop, TAnchorKind.akLeft, TAnchorKind.akRight, TAnchorKind.akBottom
-
-
+# Splitter のドラッグ中の表示のしかた(寄せる辺の ResizeAnchor は TAnchorKind)。
 class TResizeStyle(enum.IntEnum):
     rsLine = 0
     rsNone = 1
@@ -657,6 +658,39 @@ scShift = 0x2000
 scCtrl = 0x4000
 scAlt = 0x8000
 
+TCursor = int
+crDefault = 0
+crNone = -1
+crArrow = -2
+crCross = -3
+crIBeam = -4
+crSizeNESW = -6
+crSizeNS = -7
+crSizeNWSE = -8
+crSizeWE = -9
+crUpArrow = -10
+crHourGlass = -11
+crDrag = -12
+crNoDrop = -13
+crHSplit = -14
+crVSplit = -15
+crMultiDrag = -16
+crSQLWait = -17
+crNo = -18
+crAppStart = -19
+crHelp = -20
+crHandPoint = -21
+crSizeAll = -22
+crSize = -22
+crSizeNW = -23
+crSizeN = -24
+crSizeNE = -25
+crSizeW = -26
+crSizeE = -27
+crSizeSW = -28
+crSizeS = -29
+crSizeSE = -30
+
 
 class TStrings(_mixins["TStrings"], TPersistent):
     """文字列の一覧(LCL の TStrings)。コントロールの Items・Lines・Tabs 等として、所有者の値メンバで持つ非所有のビュー
@@ -1011,6 +1045,27 @@ class TPopupMenu(TMenu):
         lib.TPopupMenu_Popup(self._current(), int(X), int(Y))
 
 
+class TSizeConstraints(TPersistent):
+    """コントロールの大きさの制限(LCL の TSizeConstraints)。コントロールが所有するものへの非所有のラッパー(docs/adr/0034)。
+    0 は制限なし。Button1->Constraints->MinWidth = 80; のように使う。"""
+    MinWidth = _Prop("TSizeConstraints_GetMinWidth", "TSizeConstraints_SetMinWidth", _int)
+    MinHeight = _Prop("TSizeConstraints_GetMinHeight", "TSizeConstraints_SetMinHeight", _int)
+    MaxWidth = _Prop("TSizeConstraints_GetMaxWidth", "TSizeConstraints_SetMaxWidth", _int)
+    MaxHeight = _Prop("TSizeConstraints_GetMaxHeight", "TSizeConstraints_SetMaxHeight", _int)
+
+
+class TControlBorderSpacing(TPersistent):
+    """コントロールの周りの余白(LCL の TControlBorderSpacing。VCL には無く、VCL の Margins に近い)。
+    コントロールが所有するものへの非所有のラッパー(docs/adr/0034)。Align・Anchors で配置するときに、親・隣との間を空ける。
+    各辺の余白は Around + その辺の値。InnerBorder はコントロールの内側の余白(AutoSize のときに使われる)。"""
+    Left = _Prop("TControlBorderSpacing_GetLeft", "TControlBorderSpacing_SetLeft", _int)
+    Top = _Prop("TControlBorderSpacing_GetTop", "TControlBorderSpacing_SetTop", _int)
+    Right = _Prop("TControlBorderSpacing_GetRight", "TControlBorderSpacing_SetRight", _int)
+    Bottom = _Prop("TControlBorderSpacing_GetBottom", "TControlBorderSpacing_SetBottom", _int)
+    Around = _Prop("TControlBorderSpacing_GetAround", "TControlBorderSpacing_SetAround", _int)
+    InnerBorder = _Prop("TControlBorderSpacing_GetInnerBorder", "TControlBorderSpacing_SetInnerBorder", _int)
+
+
 class TControl(TComponent):
     Parent = _Prop("TControl_GetParent", "TControl_SetParent", _comp("TWinControl"))
     Left = _Prop("TControl_GetLeft", "TControl_SetLeft", _int)
@@ -1031,6 +1086,20 @@ class TControl(TComponent):
     # 文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。
     # 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。
     Font = _Prop("TControl_GetFont", "TControl_SetFont", _obj("TFont"))
+    # true(既定)なら、Parent の Color・Font を使う(Color・Font を設定すると false になる)。
+    # LCL では TControl の protected で、ほとんどの具象クラスが published にしている(docs/adr/0034)。
+    ParentColor = _Prop("TControl_GetParentColor", "TControl_SetParentColor", _bool)
+    ParentFont = _Prop("TControl_GetParentFont", "TControl_SetParentFont", _bool)
+    # 親の辺との距離を保つ辺(既定は akLeft・akTop。docs/adr/0034)。親の大きさが変わると、それに合わせて位置・大きさが変わる。
+    Anchors = _Prop("TControl_GetAnchors", "TControl_SetAnchors", _set("TAnchorKind"))
+    # 周りの余白・大きさの制限。コントロールが所有するもののビューで、代入は内容のコピー(nullptr なら何もしない)。
+    BorderSpacing = _Prop("TControl_GetBorderSpacing", "TControl_SetBorderSpacing", _obj("TControlBorderSpacing"))
+    Constraints = _Prop("TControl_GetConstraints", "TControl_SetConstraints", _obj("TSizeConstraints"))
+    # マウスを重ねたときに表示する文字列。表示するのは ShowHint が true のとき(ParentShowHint が true なら Parent に従う)。
+    Hint = _Prop("TControl_GetHint", "TControl_SetHint", _str)
+    ShowHint = _Prop("TControl_GetShowHint", "TControl_SetShowHint", _bool)
+    ParentShowHint = _Prop("TControl_GetParentShowHint", "TControl_SetParentShowHint", _bool)
+    Cursor = _Prop("TControl_GetCursor", "TControl_SetCursor", _int)
     OnClick = _Event("TControl_SetOnClick", "TNotifyEvent")
     OnDblClick = _Event("TControl_SetOnDblClick", "TNotifyEvent")
     # LCL では他のウィンドウメッセージへの応答等で発生し、必ずしもユーザー操作直後とは限らない。
@@ -1053,6 +1122,9 @@ class TWinControl(TControl):
     OnKeyDown = _Event("TWinControl_SetOnKeyDown", "TKeyEvent")
     OnKeyUp = _Event("TWinControl_SetOnKeyUp", "TKeyEvent")
     OnKeyPress = _Event("TWinControl_SetOnKeyPress", "TKeyPressEvent")
+    # Tab キーでのフォーカスの移動の順(同じ Parent の中での位置。-1 は末尾)と、移動の対象にするか(docs/adr/0034)。
+    TabOrder = _Prop("TWinControl_GetTabOrder", "TWinControl_SetTabOrder", _int)
+    TabStop = _Prop("TWinControl_GetTabStop", "TWinControl_SetTabStop", _bool)
 
 
 class TCustomScrollBar(TWinControl):
@@ -2411,16 +2483,16 @@ __all__ = [
     "TPixelFormat", "pfDevice", "pf1bit", "pf4bit", "pf8bit", "pf15bit", "pf16bit", "pf24bit", "pf32bit",
     "pfCustom", "TTransparentMode", "tmAuto", "tmFixed", "TDrawingStyle", "dsFocus", "dsSelected", "dsNormal",
     "dsTransparent", "TAlign", "alNone", "alTop", "alBottom", "alLeft", "alRight", "alClient", "alCustom",
-    "TScrollBarKind", "sbHorizontal", "sbVertical", "TBevelShape", "bsBox", "bsFrame", "bsTopLine", "bsBottomLine",
-    "bsLeftLine", "bsRightLine", "bsSpacer", "TBevelStyle", "bsLowered", "bsRaised", "TBitBtnKind", "bkCustom",
-    "bkOK", "bkCancel", "bkHelp", "bkYes", "bkNo", "bkClose", "bkAbort", "bkRetry", "bkIgnore", "bkAll",
-    "bkNoToAll", "bkYesToAll", "TButtonLayout", "blGlyphLeft", "blGlyphRight", "blGlyphTop", "blGlyphBottom",
-    "TLabelPosition", "lpAbove", "lpBelow", "lpLeft", "lpRight", "TTabPosition", "tpTop", "tpBottom", "tpLeft",
-    "tpRight", "TNodeAttachMode", "naAdd", "naAddFirst", "naAddChild", "naAddChildFirst", "naInsert",
-    "naInsertBehind", "TViewStyle", "vsIcon", "vsSmallIcon", "vsList", "vsReport", "TSortType", "stNone", "stData",
-    "stText", "stBoth", "TSortDirection", "sdAscending", "sdDescending", "TAlignment", "taLeftJustify",
-    "taRightJustify", "taCenter", "TItemChange", "ctText", "ctImage", "ctState", "TAnchorKind", "akTop", "akLeft",
-    "akRight", "akBottom", "TResizeStyle", "rsLine", "rsNone", "rsPattern", "rsUpdate", "TStaticBorderStyle",
+    "TAnchorKind", "akTop", "akLeft", "akRight", "akBottom", "TScrollBarKind", "sbHorizontal", "sbVertical",
+    "TBevelShape", "bsBox", "bsFrame", "bsTopLine", "bsBottomLine", "bsLeftLine", "bsRightLine", "bsSpacer",
+    "TBevelStyle", "bsLowered", "bsRaised", "TBitBtnKind", "bkCustom", "bkOK", "bkCancel", "bkHelp", "bkYes",
+    "bkNo", "bkClose", "bkAbort", "bkRetry", "bkIgnore", "bkAll", "bkNoToAll", "bkYesToAll", "TButtonLayout",
+    "blGlyphLeft", "blGlyphRight", "blGlyphTop", "blGlyphBottom", "TLabelPosition", "lpAbove", "lpBelow", "lpLeft",
+    "lpRight", "TTabPosition", "tpTop", "tpBottom", "tpLeft", "tpRight", "TNodeAttachMode", "naAdd", "naAddFirst",
+    "naAddChild", "naAddChildFirst", "naInsert", "naInsertBehind", "TViewStyle", "vsIcon", "vsSmallIcon", "vsList",
+    "vsReport", "TSortType", "stNone", "stData", "stText", "stBoth", "TSortDirection", "sdAscending",
+    "sdDescending", "TAlignment", "taLeftJustify", "taRightJustify", "taCenter", "TItemChange", "ctText",
+    "ctImage", "ctState", "TResizeStyle", "rsLine", "rsNone", "rsPattern", "rsUpdate", "TStaticBorderStyle",
     "sbsNone", "sbsSingle", "sbsSunken", "TShapeType", "stRectangle", "stSquare", "stRoundRect", "stRoundSquare",
     "stEllipse", "stCircle", "stSquaredDiamond", "stDiamond", "stTriangle", "stTriangleLeft", "stTriangleRight",
     "stTriangleDown", "stStar", "stStarDown", "stPolygon", "TSectionTrackState", "tsTrackBegin", "tsTrackMove",
@@ -2449,12 +2521,16 @@ __all__ = [
     "frDisableMatchCase", "frDisableUpDown", "frDisableWholeWord", "frReplace", "frReplaceAll", "frWholeWord",
     "frShowHelp", "frEntireScope", "frHideEntireScope", "frPromptOnReplace", "frHidePromptOnReplace",
     "frButtonsAtBottom", "TColor", "clBlack", "clWhite", "clRed", "clGreen", "clBlue", "clYellow", "clNone",
-    "clDefault", "TShortCut", "scShift", "scCtrl", "scAlt", "TStrings", "TStringList", "TPen", "TBrush", "TFont",
-    "TCanvas", "TGraphic", "TRasterImage", "TCustomBitmap", "TBitmap", "TPortableNetworkGraphic", "TJPEGImage",
-    "TPicture", "TCustomImageList", "TImageList", "TMenuItem", "TMenu", "TMainMenu", "TPopupMenu", "TControl",
-    "TWinControl", "TCustomScrollBar", "TScrollBar", "TCustomTrackBar", "TTrackBar", "TCustomProgressBar",
-    "TProgressBar", "TGraphicControl", "TCustomControl", "TUpDown", "TScrollingWinControl", "TScrollBox",
-    "TCustomForm", "TForm", "TApplication", "TCustomPanel", "TPanel", "TCustomGroupBox", "TGroupBox",
+    "clDefault", "TShortCut", "scShift", "scCtrl", "scAlt", "TCursor", "crDefault", "crNone", "crArrow", "crCross",
+    "crIBeam", "crSizeNESW", "crSizeNS", "crSizeNWSE", "crSizeWE", "crUpArrow", "crHourGlass", "crDrag",
+    "crNoDrop", "crHSplit", "crVSplit", "crMultiDrag", "crSQLWait", "crNo", "crAppStart", "crHelp", "crHandPoint",
+    "crSizeAll", "crSize", "crSizeNW", "crSizeN", "crSizeNE", "crSizeW", "crSizeE", "crSizeSW", "crSizeS",
+    "crSizeSE", "TStrings", "TStringList", "TPen", "TBrush", "TFont", "TCanvas", "TGraphic", "TRasterImage",
+    "TCustomBitmap", "TBitmap", "TPortableNetworkGraphic", "TJPEGImage", "TPicture", "TCustomImageList",
+    "TImageList", "TMenuItem", "TMenu", "TMainMenu", "TPopupMenu", "TSizeConstraints", "TControlBorderSpacing",
+    "TControl", "TWinControl", "TCustomScrollBar", "TScrollBar", "TCustomTrackBar", "TTrackBar",
+    "TCustomProgressBar", "TProgressBar", "TGraphicControl", "TCustomControl", "TUpDown", "TScrollingWinControl",
+    "TScrollBox", "TCustomForm", "TForm", "TApplication", "TCustomPanel", "TPanel", "TCustomGroupBox", "TGroupBox",
     "TCustomRadioGroup", "TRadioGroup", "TCustomCheckGroup", "TCheckGroup", "TCustomLabel", "TLabel",
     "TBoundLabel", "TBevel", "TButtonControl", "TCustomButton", "TButton", "TCustomBitBtn", "TBitBtn",
     "TCustomCheckBox", "TCheckBox", "TRadioButton", "TToggleBox", "TCustomEdit", "TEdit", "TCustomFloatSpinEdit",

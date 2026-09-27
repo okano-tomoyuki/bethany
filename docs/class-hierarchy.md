@@ -208,6 +208,12 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 | AllowAllUp / Down / Grouped / Indeterminate / Marked / ShowCaption / Wrap / Style / DropdownMenu / MenuItem / OnArrowClick / Index / Click / ArrowClick / PointInArrow | TToolButton(public/published) | TToolButton | TToolButton(public) | `TToolButton_*`(ADR 0025) |
 | Interval / Enabled / OnTimer | TCustomTimer(public) | TCustomTimer | TCustomTimer(public) | `TCustomTimer_*` |
 | Color / Font | TControl(public) | TControl | TControl(public。Font は代入で内容を写す `Property<TFont*>`) | `TControl_GetColor` 等([ADR 0033](adr/0033-dialogs.md)) |
+| Anchors / BorderSpacing / Constraints / Hint / ShowHint / Cursor | TControl(public) | TControl | TControl(public。Anchors は `Property<TAnchors>`(`Set<TAnchorKind>`)、BorderSpacing・Constraints は代入で内容を写す `Property<T*>`) | `TControl_*`([ADR 0034](adr/0034-designer-common-properties.md)) |
+| ParentColor / ParentFont / ParentShowHint | TControl(protected) | ほとんどの具象クラス | TControl(public。protected hack で読み書き) | `TControl_*`(ADR 0034) |
+| MinWidth / MinHeight / MaxWidth / MaxHeight | TSizeConstraints(published。TPersistent) | TSizeConstraints | TSizeConstraints(public。コントロールの値メンバのビュー) | `TSizeConstraints_*`(ADR 0034) |
+| Left / Top / Right / Bottom / Around / InnerBorder | TControlBorderSpacing(published。TPersistent) | TControlBorderSpacing | TControlBorderSpacing(public。コントロールの値メンバのビュー) | `TControlBorderSpacing_*`(ADR 0034) |
+| TabOrder / TabStop | TWinControl(public) | TWinControl | TWinControl(public) | `TWinControl_*`(ADR 0034) |
+| Tag | TComponent(published) | TComponent | TComponent(public。`Property<std::intptr_t>`) | `TComponent_GetTag` / `SetTag`(ADR 0034) |
 | Style / Assign | TFont(published / public) | TFont | TFont(public。Style はビット集合) | `TFont_GetStyle` / `SetStyle` / `Assign`(ADR 0033) |
 | Execute / Title / OnShow / OnClose / OnCanClose | TCommonDialog(public/published) | TCommonDialog | TCommonDialog(public) | `TCommonDialog_*`(ADR 0033) |
 | FileName / Filter / FilterIndex / InitialDir / DefaultExt / Files | TFileDialog(public/published) | TFileDialog | TFileDialog(public。Files は `ReadOnlyProperty<TStrings*>`) | `TFileDialog_*`(ADR 0033) |
@@ -224,6 +230,8 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 
 修飾キー・マウスボタンの状態(TShiftState)は、`ssShift` 等のビット定数を OR した
 単純な整数のビット集合として表す(TColor と同様、Pascal の集合型を素の整数として扱う。DLL の関数も同じ整数)。
+要素の列挙型が C++ にある集合型(TAnchors)は、C++Builder の `Set<>` に倣った値型 `Set<E>` で表す
+(`TAnchors() << akLeft << akTop`。DLL の関数は同じく整数。[ADR 0034](adr/0034-designer-common-properties.md))。
 マウスボタンは `TMouseButton` の序数と同じ整数([ADR 0014](adr/0014-control-key-mouse-events.md))。
 
 イベント(OnClick・OnChange・OnPaint・OnTimer・OnShow 等)は C++ では `Property<TNotifyEvent>`(`TNotifyEvent = std::function<void(TObject* Sender)>`)、

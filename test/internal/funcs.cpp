@@ -1138,6 +1138,21 @@ int main(void)
                itemsFreed - freedBefore);
     }
 
+    /* デザイナーで設定する共通のプロパティ(docs/adr/0034)。Anchors はビットの位置が TAnchorKind の序数のビット集合。 */
+    TControl_SetAnchors(memo, (1u << akTop) | (1u << akLeft) | (1u << akRight));
+    TSizeConstraints_SetMinHeight(TControl_GetConstraints(memo), 50);
+    TControlBorderSpacing_SetAround(TControl_GetBorderSpacing(memo), 3);
+    TWinControl_SetTabOrder(memo, 0);
+    TComponent_SetTag(memo, (iptr_t)0x12345678);
+    TControl_SetShowHint(memo, 1);
+    TControl_SetCursor(memo, crIBeam);
+    printf("internal memo Anchors=0x%x (expected 0x7), Constraints MinHeight=%d (expected 50), BorderSpacing Around=%d (expected 3), "
+           "TabOrder=%d (expected 0), Tag=0x%x, ParentShowHint=%d (expected 0), Cursor=%d (expected crIBeam=-4), ParentColor=%d (expected 0: TCustomEdit sets it to false)\n",
+           TControl_GetAnchors(memo), TSizeConstraints_GetMinHeight(TControl_GetConstraints(memo)),
+           TControlBorderSpacing_GetAround(TControl_GetBorderSpacing(memo)), TWinControl_GetTabOrder(memo),
+           (unsigned)TComponent_GetTag(memo), TControl_GetParentShowHint(memo) != 0, TControl_GetCursor(memo),
+           TControl_GetParentColor(memo) != 0);
+
     /* Tier 4(ダイアログ。docs/adr/0033)。TComponent なので Owner(フォーム)に破棄を任せる。
        モーダルのダイアログの Execute は閉じるまで戻らないため、ここでは呼ばない(C++ のテストの "Dialogs" メニューから試す)。 */
     {

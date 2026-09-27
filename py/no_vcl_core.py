@@ -197,6 +197,17 @@ def _enum(name):
     return _Conv(lambda raw: _to_enum(name, raw), int)
 
 
+def _set(name):
+    """C++ の Set<E>(Pascal の集合型。TAnchors 等)。読むと要素(列挙型)の frozenset、書くときは要素の集まり
+    ({akLeft, akTop} のような set・list・tuple)を渡す。"""
+    def from_raw(raw):
+        return frozenset(k for k in _types[name] if raw & (1 << int(k)))
+
+    def to_raw(value):
+        return sum(1 << int(k) for k in set(value))
+    return _Conv(from_raw, to_raw)
+
+
 def _comp(name):
     return _Conv(lambda raw: _to_comp(name, raw), _h)
 
@@ -507,6 +518,9 @@ def _install_free_notify():
 class TComponent(TPersistent):
     """LCL のコンポーネント。ラッパーの寿命は LCL オブジェクトに従い、Free()・Owner による連鎖破棄で LCL オブジェクトが
     破棄されると、そのラッパーは破棄済みになる(触ると ReferenceError)。"""
+
+    # 利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。
+    Tag = _Prop("TComponent_GetTag", "TComponent_SetTag", _int)
 
     def _attach(self, handle):
         _install_free_notify()

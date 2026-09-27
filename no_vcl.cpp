@@ -194,6 +194,7 @@ void TStringList::SetCaseSensitiveImpl(TObject* owner, const bool& value) { inte
 
 TComponent::TComponent(ObjectHandle handle)
     : TPersistent(handle)
+    , Tag(this, &TComponent::GetTagImpl, &TComponent::SetTagImpl)
 {
     static bool callbackInstalled = false;
     if (!callbackInstalled)
@@ -221,6 +222,9 @@ void TComponent::Free()
 {
     internal::TComponent_Destroy(handle_);
 }
+
+std::intptr_t TComponent::GetTagImpl(TObject* owner)                             { return internal::TComponent_GetTag(owner->Handle()); }
+void          TComponent::SetTagImpl(TObject* owner, const std::intptr_t& value) { internal::TComponent_SetTag(owner->Handle(), value); }
 
 void NO_VCL_CALL TComponent::FreeNotifyTrampoline(ObjectHandle handle, void*)
 {
@@ -267,6 +271,15 @@ TControl::TControl(ObjectHandle handle)
     , PopupMenu(this, &TControl::GetPopupMenuImpl, &TControl::SetPopupMenuImpl)
     , Color(this, &TControl::GetColorImpl, &TControl::SetColorImpl)
     , Font(this, &TControl::GetFontImpl, &TControl::SetFontImpl)
+    , ParentColor(this, &TControl::GetParentColorImpl, &TControl::SetParentColorImpl)
+    , ParentFont(this, &TControl::GetParentFontImpl, &TControl::SetParentFontImpl)
+    , Anchors(this, &TControl::GetAnchorsImpl, &TControl::SetAnchorsImpl)
+    , BorderSpacing(this, &TControl::GetBorderSpacingImpl, &TControl::SetBorderSpacingImpl)
+    , Constraints(this, &TControl::GetConstraintsImpl, &TControl::SetConstraintsImpl)
+    , Hint(this, &TControl::GetHintImpl, &TControl::SetHintImpl)
+    , ShowHint(this, &TControl::GetShowHintImpl, &TControl::SetShowHintImpl)
+    , ParentShowHint(this, &TControl::GetParentShowHintImpl, &TControl::SetParentShowHintImpl)
+    , Cursor(this, &TControl::GetCursorImpl, &TControl::SetCursorImpl)
     , OnClick(this, &TControl::GetOnClickImpl, &TControl::SetOnClickImpl)
     , OnDblClick(this, &TControl::GetOnDblClickImpl, &TControl::SetOnDblClickImpl)
     , OnResize(this, &TControl::GetOnResizeImpl, &TControl::SetOnResizeImpl)
@@ -278,6 +291,8 @@ TControl::TControl(ObjectHandle handle)
     , OnMouseWheel(this, &TControl::GetOnMouseWheelImpl, &TControl::SetOnMouseWheelImpl)
     , Text(this, &TControl::GetTextImpl, &TControl::SetTextImpl)
     , font_(handle ? internal::TControl_GetFont(handle) : nullptr)
+    , borderSpacing_(handle ? internal::TControl_GetBorderSpacing(handle) : nullptr)
+    , constraints_(handle ? internal::TControl_GetConstraints(handle) : nullptr)
 {}
 
 void TControl::Show() { internal::TControl_Show(handle_); }
@@ -370,6 +385,33 @@ TColor TControl::GetColorImpl(TObject* owner)                      { return stat
 void   TControl::SetColorImpl(TObject* owner, const TColor& value) { internal::TControl_SetColor(owner->Handle(), value); }
 TFont* TControl::GetFontImpl(TObject* owner)                       { return &static_cast<TControl*>(owner)->font_; }
 void   TControl::SetFontImpl(TObject* owner, TFont* const& value)  { internal::TControl_SetFont(owner->Handle(), value ? value->Handle() : nullptr); }
+
+bool TControl::GetParentColorImpl(TObject* owner)                     { return internal::TControl_GetParentColor(owner->Handle()) != 0; }
+void TControl::SetParentColorImpl(TObject* owner, const bool& value)  { internal::TControl_SetParentColor(owner->Handle(), value ? 1 : 0); }
+bool TControl::GetParentFontImpl(TObject* owner)                      { return internal::TControl_GetParentFont(owner->Handle()) != 0; }
+void TControl::SetParentFontImpl(TObject* owner, const bool& value)   { internal::TControl_SetParentFont(owner->Handle(), value ? 1 : 0); }
+TAnchors TControl::GetAnchorsImpl(TObject* owner)                        { return TAnchors::FromInt(internal::TControl_GetAnchors(owner->Handle())); }
+void     TControl::SetAnchorsImpl(TObject* owner, const TAnchors& value) { internal::TControl_SetAnchors(owner->Handle(), value.ToInt()); }
+
+TControlBorderSpacing* TControl::GetBorderSpacingImpl(TObject* owner) { return &static_cast<TControl*>(owner)->borderSpacing_; }
+void TControl::SetBorderSpacingImpl(TObject* owner, TControlBorderSpacing* const& value)
+{
+    internal::TControl_SetBorderSpacing(owner->Handle(), value ? value->Handle() : nullptr);
+}
+TSizeConstraints* TControl::GetConstraintsImpl(TObject* owner) { return &static_cast<TControl*>(owner)->constraints_; }
+void TControl::SetConstraintsImpl(TObject* owner, TSizeConstraints* const& value)
+{
+    internal::TControl_SetConstraints(owner->Handle(), value ? value->Handle() : nullptr);
+}
+
+std::string TControl::GetHintImpl(TObject* owner)                           { return std::string(internal::TControl_GetHint(owner->Handle())); }
+void        TControl::SetHintImpl(TObject* owner, const std::string& value) { internal::TControl_SetHint(owner->Handle(), value.c_str()); }
+bool TControl::GetShowHintImpl(TObject* owner)                          { return internal::TControl_GetShowHint(owner->Handle()) != 0; }
+void TControl::SetShowHintImpl(TObject* owner, const bool& value)       { internal::TControl_SetShowHint(owner->Handle(), value ? 1 : 0); }
+bool TControl::GetParentShowHintImpl(TObject* owner)                    { return internal::TControl_GetParentShowHint(owner->Handle()) != 0; }
+void TControl::SetParentShowHintImpl(TObject* owner, const bool& value) { internal::TControl_SetParentShowHint(owner->Handle(), value ? 1 : 0); }
+TCursor TControl::GetCursorImpl(TObject* owner)                       { return static_cast<TCursor>(internal::TControl_GetCursor(owner->Handle())); }
+void    TControl::SetCursorImpl(TObject* owner, const TCursor& value) { internal::TControl_SetCursor(owner->Handle(), value); }
 
 std::string TControl::GetTextImpl(TObject* owner)
 {
@@ -547,7 +589,14 @@ TWinControl::TWinControl(ObjectHandle handle)
     , OnKeyDown(this, &TWinControl::GetOnKeyDownImpl, &TWinControl::SetOnKeyDownImpl)
     , OnKeyUp(this, &TWinControl::GetOnKeyUpImpl, &TWinControl::SetOnKeyUpImpl)
     , OnKeyPress(this, &TWinControl::GetOnKeyPressImpl, &TWinControl::SetOnKeyPressImpl)
+    , TabOrder(this, &TWinControl::GetTabOrderImpl, &TWinControl::SetTabOrderImpl)
+    , TabStop(this, &TWinControl::GetTabStopImpl, &TWinControl::SetTabStopImpl)
 {}
+
+int  TWinControl::GetTabOrderImpl(TObject* owner)                   { return internal::TWinControl_GetTabOrder(owner->Handle()); }
+void TWinControl::SetTabOrderImpl(TObject* owner, const int& value)  { internal::TWinControl_SetTabOrder(owner->Handle(), value); }
+bool TWinControl::GetTabStopImpl(TObject* owner)                    { return internal::TWinControl_GetTabStop(owner->Handle()) != 0; }
+void TWinControl::SetTabStopImpl(TObject* owner, const bool& value) { internal::TWinControl_SetTabStop(owner->Handle(), value ? 1 : 0); }
 
 TKeyEvent TWinControl::GetOnKeyDownImpl(TObject* owner) { return static_cast<TWinControl*>(owner)->onKeyDown_; }
 TKeyEvent TWinControl::GetOnKeyUpImpl(TObject* owner)   { return static_cast<TWinControl*>(owner)->onKeyUp_; }
@@ -2324,6 +2373,48 @@ TBrush::TBrush(ObjectHandle handle)
 
 TColor TBrush::GetColorImpl(TObject* owner)                      { return static_cast<TColor>(internal::TBrush_GetColor(owner->Handle())); }
 void   TBrush::SetColorImpl(TObject* owner, const TColor& value) { internal::TBrush_SetColor(owner->Handle(), value); }
+
+/* ---------------- TSizeConstraints / TControlBorderSpacing ---------------- */
+
+TSizeConstraints::TSizeConstraints(ObjectHandle handle)
+    : TPersistent(handle)
+    , MinWidth(this, &TSizeConstraints::GetMinWidthImpl, &TSizeConstraints::SetMinWidthImpl)
+    , MinHeight(this, &TSizeConstraints::GetMinHeightImpl, &TSizeConstraints::SetMinHeightImpl)
+    , MaxWidth(this, &TSizeConstraints::GetMaxWidthImpl, &TSizeConstraints::SetMaxWidthImpl)
+    , MaxHeight(this, &TSizeConstraints::GetMaxHeightImpl, &TSizeConstraints::SetMaxHeightImpl)
+{}
+
+int  TSizeConstraints::GetMinWidthImpl(TObject* owner)                    { return internal::TSizeConstraints_GetMinWidth(owner->Handle()); }
+void TSizeConstraints::SetMinWidthImpl(TObject* owner, const int& value)  { internal::TSizeConstraints_SetMinWidth(owner->Handle(), value); }
+int  TSizeConstraints::GetMinHeightImpl(TObject* owner)                   { return internal::TSizeConstraints_GetMinHeight(owner->Handle()); }
+void TSizeConstraints::SetMinHeightImpl(TObject* owner, const int& value) { internal::TSizeConstraints_SetMinHeight(owner->Handle(), value); }
+int  TSizeConstraints::GetMaxWidthImpl(TObject* owner)                    { return internal::TSizeConstraints_GetMaxWidth(owner->Handle()); }
+void TSizeConstraints::SetMaxWidthImpl(TObject* owner, const int& value)  { internal::TSizeConstraints_SetMaxWidth(owner->Handle(), value); }
+int  TSizeConstraints::GetMaxHeightImpl(TObject* owner)                   { return internal::TSizeConstraints_GetMaxHeight(owner->Handle()); }
+void TSizeConstraints::SetMaxHeightImpl(TObject* owner, const int& value) { internal::TSizeConstraints_SetMaxHeight(owner->Handle(), value); }
+
+TControlBorderSpacing::TControlBorderSpacing(ObjectHandle handle)
+    : TPersistent(handle)
+    , Left(this, &TControlBorderSpacing::GetLeftImpl, &TControlBorderSpacing::SetLeftImpl)
+    , Top(this, &TControlBorderSpacing::GetTopImpl, &TControlBorderSpacing::SetTopImpl)
+    , Right(this, &TControlBorderSpacing::GetRightImpl, &TControlBorderSpacing::SetRightImpl)
+    , Bottom(this, &TControlBorderSpacing::GetBottomImpl, &TControlBorderSpacing::SetBottomImpl)
+    , Around(this, &TControlBorderSpacing::GetAroundImpl, &TControlBorderSpacing::SetAroundImpl)
+    , InnerBorder(this, &TControlBorderSpacing::GetInnerBorderImpl, &TControlBorderSpacing::SetInnerBorderImpl)
+{}
+
+int  TControlBorderSpacing::GetLeftImpl(TObject* owner)                          { return internal::TControlBorderSpacing_GetLeft(owner->Handle()); }
+void TControlBorderSpacing::SetLeftImpl(TObject* owner, const int& value)        { internal::TControlBorderSpacing_SetLeft(owner->Handle(), value); }
+int  TControlBorderSpacing::GetTopImpl(TObject* owner)                           { return internal::TControlBorderSpacing_GetTop(owner->Handle()); }
+void TControlBorderSpacing::SetTopImpl(TObject* owner, const int& value)         { internal::TControlBorderSpacing_SetTop(owner->Handle(), value); }
+int  TControlBorderSpacing::GetRightImpl(TObject* owner)                         { return internal::TControlBorderSpacing_GetRight(owner->Handle()); }
+void TControlBorderSpacing::SetRightImpl(TObject* owner, const int& value)       { internal::TControlBorderSpacing_SetRight(owner->Handle(), value); }
+int  TControlBorderSpacing::GetBottomImpl(TObject* owner)                        { return internal::TControlBorderSpacing_GetBottom(owner->Handle()); }
+void TControlBorderSpacing::SetBottomImpl(TObject* owner, const int& value)      { internal::TControlBorderSpacing_SetBottom(owner->Handle(), value); }
+int  TControlBorderSpacing::GetAroundImpl(TObject* owner)                        { return internal::TControlBorderSpacing_GetAround(owner->Handle()); }
+void TControlBorderSpacing::SetAroundImpl(TObject* owner, const int& value)      { internal::TControlBorderSpacing_SetAround(owner->Handle(), value); }
+int  TControlBorderSpacing::GetInnerBorderImpl(TObject* owner)                   { return internal::TControlBorderSpacing_GetInnerBorder(owner->Handle()); }
+void TControlBorderSpacing::SetInnerBorderImpl(TObject* owner, const int& value) { internal::TControlBorderSpacing_SetInnerBorder(owner->Handle(), value); }
 
 TFont::TFont(ObjectHandle handle)
     : TPersistent(handle)

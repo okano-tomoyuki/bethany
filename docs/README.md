@@ -52,6 +52,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0031](adr/0031-exceptions-across-dll.md) | DLL の境界で例外を受け渡し、C は直前のエラー、C++ は Exception として扱う | 承認(一部置換→0032) |
 | [0032](adr/0032-internalize-c-api.md) | C API の提供を終了し、DLL の呼び出し層を内部層(no_vcl::internal)にする | 承認 |
 | [0033](adr/0033-dialogs.md) | Tier 4 としてダイアログを追加し、結果を適用する先の TControl.Color・Font を追加する | 承認 |
+| [0034](adr/0034-designer-common-properties.md) | デザイナーで設定する共通のプロパティ(Anchors・BorderSpacing・Constraints・TabOrder 等)を追加し、集合型を Set<E> で表す | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。

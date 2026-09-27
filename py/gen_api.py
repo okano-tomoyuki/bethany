@@ -155,6 +155,7 @@ class Model:
         self.enums = {}        # 名前 → [(要素, 値)]
         self.enum_comments = {}
         self.flags = {}        # 名前 → [(要素, 値の式, コメント)]
+        self.sets = {}         # Set<E> の別名(TAnchors 等) → 要素の列挙型
         self.int_aliases = {}  # TColor・TShortCut 等 → 定数 [(名前, 値の式, コメント)]
         self.events = {}       # 名前 → [引数の型](Sender を除く)
         self.event_aliases = {}
@@ -204,6 +205,10 @@ def parse_hpp():
         m = re.fullmatch(r"using (\w+) = (\w+)", t)
         if m and (m.group(2) in model.events):
             model.event_aliases[m.group(1)] = m.group(2)
+            continue
+        m = re.fullmatch(r"using (\w+) = Set<(\w+)>", t)
+        if m:
+            model.sets[m.group(1)] = m.group(2)
             continue
         m = re.fullmatch(r"using (\w+) = unsigned int", t)
         if m:
@@ -279,7 +284,7 @@ class Gen:
     def scalar(self, t):
         """スカラーの型 → 'int'・'bool'・'float'・'char'・'str'・'ptr'・('enum', 名前)。クラス等なら None。"""
         t = t.replace("const ", "").strip()
-        if t in ("int", "unsigned short", "unsigned int") or t in self.m.int_aliases:
+        if t in ("int", "unsigned short", "unsigned int", "std::intptr_t") or t in self.m.int_aliases:
             return "int"
         if t == "bool":
             return "bool"
@@ -308,6 +313,8 @@ class Gen:
 
     def conv(self, t):
         """プロパティ・添字の値の変換(no_vcl_core の _Conv)の式。"""
+        if t in self.m.sets:
+            return f'_set("{self.m.sets[t]}")'
         s = self.scalar(t)
         if s is not None:
             if isinstance(s, tuple):
@@ -733,7 +740,7 @@ import enum
 from no_vcl_core import (NoVclError, Ref, TRect, TPoint, TObject, TPersistent, TComponent,
                          ShortCut, TextToShortCut, ShortCutToText)
 from no_vcl_core import (lib, _mixins, _register, _event_types, _ItemMixin, _Prop, _Indexed, _Event,
-                         _int, _float, _bool, _str, _char, _ptr, _rect_conv, _enum, _comp, _existing, _item, _obj, _view,
+                         _int, _float, _bool, _str, _char, _ptr, _rect_conv, _enum, _set, _comp, _existing, _item, _obj, _view,
                          _str_key, _enc, _dec, _h, _b, _rect, _point, _to_enum, _to_comp, _to_existing, _to_item, _to_obj,
                          _a_int, _a_bool, _a_rect, _a_enum, _a_comp, _a_item, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_enum)
 '''
