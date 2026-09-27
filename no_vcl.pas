@@ -20,6 +20,7 @@ uses
   StdCtrls,
   ExtCtrls,
   ComCtrls,
+  ToolWin,
   CheckLst,
   Buttons,
   Spin,
@@ -4104,6 +4105,316 @@ begin
   Result := THeaderSection(Obj).OriginalIndex;
 end;
 
+{ docs/component-coverage.md の Tier 2、6 バッチ目(TToolBar・TToolButton)。docs/adr/0025-... を参照。
+  TToolButton は TGraphicControl(TComponent)なので、他のコントロールと同じく Owner と FreeNotification で寿命を管理する。
+  ツールバーへの追加は Parent にツールバーを設定することで行う(LCL の TToolButton.SetParent がツールバーに登録する)。 }
+
+{ TToolWindow。EdgeBorders は TEdgeBorder の序数をビットの位置とするビット集合(ebLeft = 1, ebTop = 2, ...)。 }
+
+function TToolWindow_GetEdgeBorders(Obj: Pointer): LongWord; NO_VCL_CALL;
+var
+  B: TEdgeBorder;
+begin
+  Result := 0;
+  for B := Low(TEdgeBorder) to High(TEdgeBorder) do
+    if B in TToolWindow(Obj).EdgeBorders then
+      Result := Result or (LongWord(1) shl Ord(B));
+end;
+
+procedure TToolWindow_SetEdgeBorders(Obj: Pointer; Value: LongWord); NO_VCL_CALL;
+var
+  B: TEdgeBorder;
+  S: TEdgeBorders;
+begin
+  S := [];
+  for B := Low(TEdgeBorder) to High(TEdgeBorder) do
+    if (Value and (LongWord(1) shl Ord(B))) <> 0 then
+      Include(S, B);
+  TToolWindow(Obj).EdgeBorders := S;
+end;
+
+{ TEdgeStyle の序数(esNone = 0, esRaised, esLowered)。 }
+function TToolWindow_GetEdgeInner(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TToolWindow(Obj).EdgeInner);
+end;
+
+procedure TToolWindow_SetEdgeInner(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TToolWindow(Obj).EdgeInner := TEdgeStyle(Value);
+end;
+
+function TToolWindow_GetEdgeOuter(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TToolWindow(Obj).EdgeOuter);
+end;
+
+procedure TToolWindow_SetEdgeOuter(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TToolWindow(Obj).EdgeOuter := TEdgeStyle(Value);
+end;
+
+procedure TToolWindow_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
+begin
+  TToolWindow(Obj).BeginUpdate;
+end;
+
+procedure TToolWindow_EndUpdate(Obj: Pointer); NO_VCL_CALL;
+begin
+  TToolWindow(Obj).EndUpdate;
+end;
+
+{ TToolBar }
+
+function TToolBar_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TToolBar.Create(TComponent(Owner)));
+end;
+
+function TToolBar_GetButtonCount(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TToolBar(Obj).ButtonCount;
+end;
+
+function TToolBar_GetButton(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
+begin
+  Result := WatchOrNil(TToolBar(Obj).Buttons[Index]);
+end;
+
+function TToolBar_GetRowCount(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TToolBar(Obj).RowCount;
+end;
+
+function TToolBar_GetButtonHeight(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TToolBar(Obj).ButtonHeight;
+end;
+
+procedure TToolBar_SetButtonHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TToolBar(Obj).ButtonHeight := Value;
+end;
+
+function TToolBar_GetButtonWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TToolBar(Obj).ButtonWidth;
+end;
+
+procedure TToolBar_SetButtonWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TToolBar(Obj).ButtonWidth := Value;
+end;
+
+function TToolBar_GetDropDownWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TToolBar(Obj).DropDownWidth;
+end;
+
+procedure TToolBar_SetDropDownWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TToolBar(Obj).DropDownWidth := Value;
+end;
+
+function TToolBar_GetIndent(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TToolBar(Obj).Indent;
+end;
+
+procedure TToolBar_SetIndent(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TToolBar(Obj).Indent := Value;
+end;
+
+function TToolBar_GetFlat(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TToolBar(Obj).Flat;
+end;
+
+procedure TToolBar_SetFlat(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TToolBar(Obj).Flat := Value;
+end;
+
+function TToolBar_GetList(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TToolBar(Obj).List;
+end;
+
+procedure TToolBar_SetList(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TToolBar(Obj).List := Value;
+end;
+
+function TToolBar_GetShowCaptions(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TToolBar(Obj).ShowCaptions;
+end;
+
+procedure TToolBar_SetShowCaptions(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TToolBar(Obj).ShowCaptions := Value;
+end;
+
+function TToolBar_GetTransparent(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TToolBar(Obj).Transparent;
+end;
+
+procedure TToolBar_SetTransparent(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TToolBar(Obj).Transparent := Value;
+end;
+
+function TToolBar_GetWrapable(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TToolBar(Obj).Wrapable;
+end;
+
+procedure TToolBar_SetWrapable(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TToolBar(Obj).Wrapable := Value;
+end;
+
+procedure TToolBar_SetButtonSize(Obj: Pointer; NewButtonWidth, NewButtonHeight: Integer); NO_VCL_CALL;
+begin
+  TToolBar(Obj).SetButtonSize(NewButtonWidth, NewButtonHeight);
+end;
+
+{ TToolButton }
+
+function TToolButton_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TToolButton.Create(TComponent(Owner)));
+end;
+
+function TToolButton_GetAllowAllUp(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TToolButton(Obj).AllowAllUp;
+end;
+
+procedure TToolButton_SetAllowAllUp(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TToolButton(Obj).AllowAllUp := Value;
+end;
+
+function TToolButton_GetDown(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TToolButton(Obj).Down;
+end;
+
+procedure TToolButton_SetDown(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TToolButton(Obj).Down := Value;
+end;
+
+function TToolButton_GetGrouped(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TToolButton(Obj).Grouped;
+end;
+
+procedure TToolButton_SetGrouped(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TToolButton(Obj).Grouped := Value;
+end;
+
+function TToolButton_GetIndeterminate(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TToolButton(Obj).Indeterminate;
+end;
+
+procedure TToolButton_SetIndeterminate(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TToolButton(Obj).Indeterminate := Value;
+end;
+
+function TToolButton_GetMarked(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TToolButton(Obj).Marked;
+end;
+
+procedure TToolButton_SetMarked(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TToolButton(Obj).Marked := Value;
+end;
+
+function TToolButton_GetShowCaption(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TToolButton(Obj).ShowCaption;
+end;
+
+procedure TToolButton_SetShowCaption(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TToolButton(Obj).ShowCaption := Value;
+end;
+
+function TToolButton_GetWrap(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TToolButton(Obj).Wrap;
+end;
+
+procedure TToolButton_SetWrap(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TToolButton(Obj).Wrap := Value;
+end;
+
+{ TToolButtonStyle の序数(tbsButton = 0, tbsCheck, tbsDropDown, tbsSeparator, tbsDivider, tbsButtonDrop)。 }
+function TToolButton_GetStyle(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TToolButton(Obj).Style);
+end;
+
+procedure TToolButton_SetStyle(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TToolButton(Obj).Style := TToolButtonStyle(Value);
+end;
+
+function TToolButton_GetDropdownMenu(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := WatchOrNil(TToolButton(Obj).DropdownMenu);
+end;
+
+procedure TToolButton_SetDropdownMenu(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TToolButton(Obj).DropdownMenu := TPopupMenu(Value);
+end;
+
+function TToolButton_GetMenuItem(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := WatchOrNil(TToolButton(Obj).MenuItem);
+end;
+
+procedure TToolButton_SetMenuItem(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TToolButton(Obj).MenuItem := TMenuItem(Value);
+end;
+
+{ ツールバーの中での位置(ツールバーに置かれていなければ -1)。 }
+function TToolButton_GetIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TToolButton(Obj).Index;
+end;
+
+procedure TToolButton_Click(Obj: Pointer); NO_VCL_CALL;
+begin
+  TToolButton(Obj).Click;
+end;
+
+procedure TToolButton_ArrowClick(Obj: Pointer); NO_VCL_CALL;
+begin
+  TToolButton(Obj).ArrowClick;
+end;
+
+function TToolButton_PointInArrow(Obj: Pointer; X, Y: Integer): LongBool; NO_VCL_CALL;
+begin
+  Result := TToolButton(Obj).PointInArrow(X, Y);
+end;
+
+procedure TToolButton_SetOnArrowClick(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TToolButton(Obj).OnArrowClick := @BridgeFor(TToolButton(Obj), MethodData(TToolButton(Obj).OnArrowClick), Cb, Data).DoClick;
+end;
+
 exports
   FreeNotify_SetCallback,
 
@@ -4745,7 +5056,64 @@ exports
   THeaderSection_SetIndex,
   THeaderSection_GetLeft,
   THeaderSection_GetRight,
-  THeaderSection_GetOriginalIndex;
+  THeaderSection_GetOriginalIndex,
+  TToolWindow_GetEdgeBorders,
+  TToolWindow_SetEdgeBorders,
+  TToolWindow_GetEdgeInner,
+  TToolWindow_SetEdgeInner,
+  TToolWindow_GetEdgeOuter,
+  TToolWindow_SetEdgeOuter,
+  TToolWindow_BeginUpdate,
+  TToolWindow_EndUpdate,
+  TToolBar_Create,
+  TToolBar_GetButtonCount,
+  TToolBar_GetButton,
+  TToolBar_GetRowCount,
+  TToolBar_GetButtonHeight,
+  TToolBar_SetButtonHeight,
+  TToolBar_GetButtonWidth,
+  TToolBar_SetButtonWidth,
+  TToolBar_GetDropDownWidth,
+  TToolBar_SetDropDownWidth,
+  TToolBar_GetIndent,
+  TToolBar_SetIndent,
+  TToolBar_GetFlat,
+  TToolBar_SetFlat,
+  TToolBar_GetList,
+  TToolBar_SetList,
+  TToolBar_GetShowCaptions,
+  TToolBar_SetShowCaptions,
+  TToolBar_GetTransparent,
+  TToolBar_SetTransparent,
+  TToolBar_GetWrapable,
+  TToolBar_SetWrapable,
+  TToolBar_SetButtonSize,
+  TToolButton_Create,
+  TToolButton_GetAllowAllUp,
+  TToolButton_SetAllowAllUp,
+  TToolButton_GetDown,
+  TToolButton_SetDown,
+  TToolButton_GetGrouped,
+  TToolButton_SetGrouped,
+  TToolButton_GetIndeterminate,
+  TToolButton_SetIndeterminate,
+  TToolButton_GetMarked,
+  TToolButton_SetMarked,
+  TToolButton_GetShowCaption,
+  TToolButton_SetShowCaption,
+  TToolButton_GetWrap,
+  TToolButton_SetWrap,
+  TToolButton_GetStyle,
+  TToolButton_SetStyle,
+  TToolButton_GetDropdownMenu,
+  TToolButton_SetDropdownMenu,
+  TToolButton_GetMenuItem,
+  TToolButton_SetMenuItem,
+  TToolButton_GetIndex,
+  TToolButton_Click,
+  TToolButton_ArrowClick,
+  TToolButton_PointInArrow,
+  TToolButton_SetOnArrowClick;
 
 begin
   RequireDerivedFormResource := False;

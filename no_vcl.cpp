@@ -2656,4 +2656,130 @@ THeaderControl::THeaderControl(TComponent* AOwner)
     : TCustomHeaderControl(no_vcl_THeaderControl_Create(HandleOf(AOwner)))
 {}
 
+/* ---------------- ToolBar ---------------- */
+
+TToolWindow::TToolWindow(no_vcl_obj_t handle)
+    : TCustomControl(handle)
+    , EdgeBorders(this, &TToolWindow::GetEdgeBordersImpl, &TToolWindow::SetEdgeBordersImpl)
+    , EdgeInner(this, &TToolWindow::GetEdgeInnerImpl, &TToolWindow::SetEdgeInnerImpl)
+    , EdgeOuter(this, &TToolWindow::GetEdgeOuterImpl, &TToolWindow::SetEdgeOuterImpl)
+{}
+
+void TToolWindow::BeginUpdate() { no_vcl_TToolWindow_BeginUpdate(handle_); }
+void TToolWindow::EndUpdate()   { no_vcl_TToolWindow_EndUpdate(handle_); }
+TEdgeBorders TToolWindow::GetEdgeBordersImpl(TObject* owner) { return no_vcl_TToolWindow_GetEdgeBorders(owner->Handle()); }
+void TToolWindow::SetEdgeBordersImpl(TObject* owner, const TEdgeBorders& value) { no_vcl_TToolWindow_SetEdgeBorders(owner->Handle(), value); }
+TEdgeStyle TToolWindow::GetEdgeInnerImpl(TObject* owner) { return static_cast<TEdgeStyle>(no_vcl_TToolWindow_GetEdgeInner(owner->Handle())); }
+void TToolWindow::SetEdgeInnerImpl(TObject* owner, const TEdgeStyle& value) { no_vcl_TToolWindow_SetEdgeInner(owner->Handle(), value); }
+TEdgeStyle TToolWindow::GetEdgeOuterImpl(TObject* owner) { return static_cast<TEdgeStyle>(no_vcl_TToolWindow_GetEdgeOuter(owner->Handle())); }
+void TToolWindow::SetEdgeOuterImpl(TObject* owner, const TEdgeStyle& value) { no_vcl_TToolWindow_SetEdgeOuter(owner->Handle(), value); }
+
+TToolBar::TToolBar(TComponent* AOwner)
+    : TToolWindow(no_vcl_TToolBar_Create(HandleOf(AOwner)))
+    , ButtonCount(this, &TToolBar::GetButtonCountImpl)
+    , Buttons(this, &TToolBar::GetButtonsImpl)
+    , RowCount(this, &TToolBar::GetRowCountImpl)
+    , ButtonHeight(this, &TToolBar::GetButtonHeightImpl, &TToolBar::SetButtonHeightImpl)
+    , ButtonWidth(this, &TToolBar::GetButtonWidthImpl, &TToolBar::SetButtonWidthImpl)
+    , DropDownWidth(this, &TToolBar::GetDropDownWidthImpl, &TToolBar::SetDropDownWidthImpl)
+    , Indent(this, &TToolBar::GetIndentImpl, &TToolBar::SetIndentImpl)
+    , Flat(this, &TToolBar::GetFlatImpl, &TToolBar::SetFlatImpl)
+    , List(this, &TToolBar::GetListImpl, &TToolBar::SetListImpl)
+    , ShowCaptions(this, &TToolBar::GetShowCaptionsImpl, &TToolBar::SetShowCaptionsImpl)
+    , Transparent(this, &TToolBar::GetTransparentImpl, &TToolBar::SetTransparentImpl)
+    , Wrapable(this, &TToolBar::GetWrapableImpl, &TToolBar::SetWrapableImpl)
+{}
+
+void TToolBar::SetButtonSize(int NewButtonWidth, int NewButtonHeight)
+{
+    no_vcl_TToolBar_SetButtonSize(handle_, NewButtonWidth, NewButtonHeight);
+}
+
+int  TToolBar::GetButtonCountImpl(TObject* owner) { return no_vcl_TToolBar_GetButtonCount(owner->Handle()); }
+// ボタンは利用者が生成したコンポーネントなので、ラッパーは必ずある。
+TToolButton* TToolBar::GetButtonsImpl(TObject* owner, int Index)
+{
+    return static_cast<TToolButton*>(FromHandle(no_vcl_TToolBar_GetButton(owner->Handle(), Index)));
+}
+int  TToolBar::GetRowCountImpl(TObject* owner)                         { return no_vcl_TToolBar_GetRowCount(owner->Handle()); }
+int  TToolBar::GetButtonHeightImpl(TObject* owner)                     { return no_vcl_TToolBar_GetButtonHeight(owner->Handle()); }
+void TToolBar::SetButtonHeightImpl(TObject* owner, const int& value)    { no_vcl_TToolBar_SetButtonHeight(owner->Handle(), value); }
+int  TToolBar::GetButtonWidthImpl(TObject* owner)                      { return no_vcl_TToolBar_GetButtonWidth(owner->Handle()); }
+void TToolBar::SetButtonWidthImpl(TObject* owner, const int& value)     { no_vcl_TToolBar_SetButtonWidth(owner->Handle(), value); }
+int  TToolBar::GetDropDownWidthImpl(TObject* owner)                    { return no_vcl_TToolBar_GetDropDownWidth(owner->Handle()); }
+void TToolBar::SetDropDownWidthImpl(TObject* owner, const int& value)   { no_vcl_TToolBar_SetDropDownWidth(owner->Handle(), value); }
+int  TToolBar::GetIndentImpl(TObject* owner)                           { return no_vcl_TToolBar_GetIndent(owner->Handle()); }
+void TToolBar::SetIndentImpl(TObject* owner, const int& value)          { no_vcl_TToolBar_SetIndent(owner->Handle(), value); }
+bool TToolBar::GetFlatImpl(TObject* owner)                             { return no_vcl_TToolBar_GetFlat(owner->Handle()) != 0; }
+void TToolBar::SetFlatImpl(TObject* owner, const bool& value)           { no_vcl_TToolBar_SetFlat(owner->Handle(), value ? 1 : 0); }
+bool TToolBar::GetListImpl(TObject* owner)                             { return no_vcl_TToolBar_GetList(owner->Handle()) != 0; }
+void TToolBar::SetListImpl(TObject* owner, const bool& value)           { no_vcl_TToolBar_SetList(owner->Handle(), value ? 1 : 0); }
+bool TToolBar::GetShowCaptionsImpl(TObject* owner)                     { return no_vcl_TToolBar_GetShowCaptions(owner->Handle()) != 0; }
+void TToolBar::SetShowCaptionsImpl(TObject* owner, const bool& value)   { no_vcl_TToolBar_SetShowCaptions(owner->Handle(), value ? 1 : 0); }
+bool TToolBar::GetTransparentImpl(TObject* owner)                      { return no_vcl_TToolBar_GetTransparent(owner->Handle()) != 0; }
+void TToolBar::SetTransparentImpl(TObject* owner, const bool& value)    { no_vcl_TToolBar_SetTransparent(owner->Handle(), value ? 1 : 0); }
+bool TToolBar::GetWrapableImpl(TObject* owner)                         { return no_vcl_TToolBar_GetWrapable(owner->Handle()) != 0; }
+void TToolBar::SetWrapableImpl(TObject* owner, const bool& value)       { no_vcl_TToolBar_SetWrapable(owner->Handle(), value ? 1 : 0); }
+
+TToolButton::TToolButton(TComponent* AOwner)
+    : TGraphicControl(no_vcl_TToolButton_Create(HandleOf(AOwner)))
+    , AllowAllUp(this, &TToolButton::GetAllowAllUpImpl, &TToolButton::SetAllowAllUpImpl)
+    , Down(this, &TToolButton::GetDownImpl, &TToolButton::SetDownImpl)
+    , Grouped(this, &TToolButton::GetGroupedImpl, &TToolButton::SetGroupedImpl)
+    , Indeterminate(this, &TToolButton::GetIndeterminateImpl, &TToolButton::SetIndeterminateImpl)
+    , Marked(this, &TToolButton::GetMarkedImpl, &TToolButton::SetMarkedImpl)
+    , ShowCaption(this, &TToolButton::GetShowCaptionImpl, &TToolButton::SetShowCaptionImpl)
+    , Wrap(this, &TToolButton::GetWrapImpl, &TToolButton::SetWrapImpl)
+    , Style(this, &TToolButton::GetStyleImpl, &TToolButton::SetStyleImpl)
+    , DropdownMenu(this, &TToolButton::GetDropdownMenuImpl, &TToolButton::SetDropdownMenuImpl)
+    , MenuItem(this, &TToolButton::GetMenuItemImpl, &TToolButton::SetMenuItemImpl)
+    , OnArrowClick(this, &TToolButton::GetOnArrowClickImpl, &TToolButton::SetOnArrowClickImpl)
+    , Index(this, &TToolButton::GetIndexImpl)
+{}
+
+void TToolButton::Click()      { no_vcl_TToolButton_Click(handle_); }
+void TToolButton::ArrowClick() { no_vcl_TToolButton_ArrowClick(handle_); }
+bool TToolButton::PointInArrow(int X, int Y) const { return no_vcl_TToolButton_PointInArrow(handle_, X, Y) != 0; }
+
+bool TToolButton::GetAllowAllUpImpl(TObject* owner)                      { return no_vcl_TToolButton_GetAllowAllUp(owner->Handle()) != 0; }
+void TToolButton::SetAllowAllUpImpl(TObject* owner, const bool& value)    { no_vcl_TToolButton_SetAllowAllUp(owner->Handle(), value ? 1 : 0); }
+bool TToolButton::GetDownImpl(TObject* owner)                            { return no_vcl_TToolButton_GetDown(owner->Handle()) != 0; }
+void TToolButton::SetDownImpl(TObject* owner, const bool& value)          { no_vcl_TToolButton_SetDown(owner->Handle(), value ? 1 : 0); }
+bool TToolButton::GetGroupedImpl(TObject* owner)                         { return no_vcl_TToolButton_GetGrouped(owner->Handle()) != 0; }
+void TToolButton::SetGroupedImpl(TObject* owner, const bool& value)       { no_vcl_TToolButton_SetGrouped(owner->Handle(), value ? 1 : 0); }
+bool TToolButton::GetIndeterminateImpl(TObject* owner)                   { return no_vcl_TToolButton_GetIndeterminate(owner->Handle()) != 0; }
+void TToolButton::SetIndeterminateImpl(TObject* owner, const bool& value) { no_vcl_TToolButton_SetIndeterminate(owner->Handle(), value ? 1 : 0); }
+bool TToolButton::GetMarkedImpl(TObject* owner)                          { return no_vcl_TToolButton_GetMarked(owner->Handle()) != 0; }
+void TToolButton::SetMarkedImpl(TObject* owner, const bool& value)        { no_vcl_TToolButton_SetMarked(owner->Handle(), value ? 1 : 0); }
+bool TToolButton::GetShowCaptionImpl(TObject* owner)                     { return no_vcl_TToolButton_GetShowCaption(owner->Handle()) != 0; }
+void TToolButton::SetShowCaptionImpl(TObject* owner, const bool& value)   { no_vcl_TToolButton_SetShowCaption(owner->Handle(), value ? 1 : 0); }
+bool TToolButton::GetWrapImpl(TObject* owner)                            { return no_vcl_TToolButton_GetWrap(owner->Handle()) != 0; }
+void TToolButton::SetWrapImpl(TObject* owner, const bool& value)          { no_vcl_TToolButton_SetWrap(owner->Handle(), value ? 1 : 0); }
+TToolButtonStyle TToolButton::GetStyleImpl(TObject* owner) { return static_cast<TToolButtonStyle>(no_vcl_TToolButton_GetStyle(owner->Handle())); }
+void TToolButton::SetStyleImpl(TObject* owner, const TToolButtonStyle& value) { no_vcl_TToolButton_SetStyle(owner->Handle(), value); }
+TPopupMenu* TToolButton::GetDropdownMenuImpl(TObject* owner)
+{
+    return static_cast<TPopupMenu*>(FromHandle(no_vcl_TToolButton_GetDropdownMenu(owner->Handle())));
+}
+void TToolButton::SetDropdownMenuImpl(TObject* owner, TPopupMenu* const& value) { no_vcl_TToolButton_SetDropdownMenu(owner->Handle(), HandleOf(value)); }
+// メニュー項目は LCL が内部で生成したもの(メニューのルート項目等)もありうるため WrapExisting で引く。
+TMenuItem* TToolButton::GetMenuItemImpl(TObject* owner) { return WrapExisting<TMenuItem>(no_vcl_TToolButton_GetMenuItem(owner->Handle())); }
+void TToolButton::SetMenuItemImpl(TObject* owner, TMenuItem* const& value) { no_vcl_TToolButton_SetMenuItem(owner->Handle(), HandleOf(value)); }
+int  TToolButton::GetIndexImpl(TObject* owner) { return no_vcl_TToolButton_GetIndex(owner->Handle()); }
+
+void NO_VCL_CALL TToolButton::ArrowClickTrampoline(no_vcl_obj_t sender, void*)
+{
+    if (TToolButton* self = static_cast<TToolButton*>(FromHandle(sender)))
+        CallNotify(self->onArrowClick_, self);
+}
+
+TNotifyEvent TToolButton::GetOnArrowClickImpl(TObject* owner) { return static_cast<TToolButton*>(owner)->onArrowClick_; }
+
+void TToolButton::SetOnArrowClickImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TToolButton* self = static_cast<TToolButton*>(owner);
+    SetSimpleEvent(self->handle_, self->onArrowClick_, self->onArrowClickHooked_, value,
+                   &no_vcl_TToolButton_SetOnArrowClick, &TToolButton::ArrowClickTrampoline);
+}
+
 } // namespace no_vcl

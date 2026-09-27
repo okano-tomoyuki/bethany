@@ -1106,6 +1106,102 @@ no_vcl_int_t  NO_VCL_CALL no_vcl_THeaderSection_GetRight(no_vcl_obj_t Obj);
 /* 並べ替えても変わらない位置。 */
 no_vcl_int_t  NO_VCL_CALL no_vcl_THeaderSection_GetOriginalIndex(no_vcl_obj_t Obj);
 
+/* ---------------- TToolBar / TToolButton(Tier 2、6 バッチ目。docs/adr/0025) ----------------
+ * TToolButton は他のコントロールと同じく Owner を持つコンポーネント。ツールバーに置くには、Parent をツールバーにする。 */
+
+/* TEdgeBorders(no_vcl_TToolWindow_GetEdgeBorders 等)のビット。 */
+#define no_vcl_ebLeft   0x01u
+#define no_vcl_ebTop    0x02u
+#define no_vcl_ebRight  0x04u
+#define no_vcl_ebBottom 0x08u
+/* TEdgeStyle。 */
+enum { no_vcl_esNone = 0, no_vcl_esRaised, no_vcl_esLowered };
+/* TToolButtonStyle。 */
+enum { no_vcl_tbsButton = 0, no_vcl_tbsCheck, no_vcl_tbsDropDown, no_vcl_tbsSeparator, no_vcl_tbsDivider, no_vcl_tbsButtonDrop };
+
+/* TToolWindow の public(縁の描画と、更新の一時停止)。 */
+no_vcl_uint_t NO_VCL_CALL no_vcl_TToolWindow_GetEdgeBorders(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolWindow_SetEdgeBorders(no_vcl_obj_t Obj, no_vcl_uint_t Value);
+/* no_vcl_es*。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TToolWindow_GetEdgeInner(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolWindow_SetEdgeInner(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TToolWindow_GetEdgeOuter(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolWindow_SetEdgeOuter(no_vcl_obj_t Obj, no_vcl_int_t Value);
+void          NO_VCL_CALL no_vcl_TToolWindow_BeginUpdate(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolWindow_EndUpdate(no_vcl_obj_t Obj);
+
+/* TToolBar。既定の Align は alTop。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TToolBar_Create(no_vcl_obj_t Owner);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TToolBar_GetButtonCount(no_vcl_obj_t Obj);
+/* LCL の Buttons[Index](並び順)。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TToolBar_GetButton(no_vcl_obj_t Obj, no_vcl_int_t Index);
+/* LCL では行数ではなく、Wrapable が 0 のときに Wrap のボタンで折り返した回数(折り返しが無ければ 0)。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TToolBar_GetRowCount(no_vcl_obj_t Obj);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TToolBar_GetButtonHeight(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolBar_SetButtonHeight(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TToolBar_GetButtonWidth(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolBar_SetButtonWidth(no_vcl_obj_t Obj, no_vcl_int_t Value);
+/* tbsDropDown のボタンの矢印部分の幅。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TToolBar_GetDropDownWidth(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolBar_SetDropDownWidth(no_vcl_obj_t Obj, no_vcl_int_t Value);
+/* 最初のボタンの左の余白。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TToolBar_GetIndent(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolBar_SetIndent(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TToolBar_GetFlat(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolBar_SetFlat(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* 0 以外なら、ボタンの文字をアイコンの右に置く。 */
+no_vcl_bool_t NO_VCL_CALL no_vcl_TToolBar_GetList(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolBar_SetList(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* 0 以外なら、ボタンに Caption を表示する(既定は 0)。 */
+no_vcl_bool_t NO_VCL_CALL no_vcl_TToolBar_GetShowCaptions(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolBar_SetShowCaptions(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TToolBar_GetTransparent(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolBar_SetTransparent(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* 0 以外なら、幅に収まらないボタンを次の行へ折り返す(既定は 0 以外)。 */
+no_vcl_bool_t NO_VCL_CALL no_vcl_TToolBar_GetWrapable(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolBar_SetWrapable(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+void          NO_VCL_CALL no_vcl_TToolBar_SetButtonSize(no_vcl_obj_t Obj, no_vcl_int_t NewButtonWidth, no_vcl_int_t NewButtonHeight);
+
+/* TToolButton。Caption・OnClick は no_vcl_TControl_* を使う。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TToolButton_Create(no_vcl_obj_t Owner);
+/* tbsCheck で Grouped のとき、すべてのボタンを上げた状態にできるか。 */
+no_vcl_bool_t NO_VCL_CALL no_vcl_TToolButton_GetAllowAllUp(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolButton_SetAllowAllUp(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* 押された状態(tbsCheck はクリックで切り替わる)。 */
+no_vcl_bool_t NO_VCL_CALL no_vcl_TToolButton_GetDown(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolButton_SetDown(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* 隣り合う Grouped の tbsCheck のボタンは、どれか 1 つだけが Down になる。 */
+no_vcl_bool_t NO_VCL_CALL no_vcl_TToolButton_GetGrouped(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolButton_SetGrouped(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TToolButton_GetIndeterminate(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolButton_SetIndeterminate(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TToolButton_GetMarked(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolButton_SetMarked(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TToolButton_GetShowCaption(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolButton_SetShowCaption(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* 0 以外なら、このボタンの後で行を折り返す。 */
+no_vcl_bool_t NO_VCL_CALL no_vcl_TToolButton_GetWrap(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolButton_SetWrap(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* no_vcl_tbs*。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TToolButton_GetStyle(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolButton_SetStyle(no_vcl_obj_t Obj, no_vcl_int_t Value);
+/* tbsDropDown・tbsButtonDrop の矢印で表示するポップアップメニュー。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TToolButton_GetDropdownMenu(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolButton_SetDropdownMenu(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+/* 設定すると、そのメニュー項目の Caption・Enabled 等を写す。マウスで押すと、その項目の OnClick を呼んでから
+ * 子の項目をポップアップメニューとして表示する(メニューを閉じるまで戻らない)。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TToolButton_GetMenuItem(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolButton_SetMenuItem(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+/* ツールバーの中での位置(ツールバーに置かれていなければ -1)。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TToolButton_GetIndex(no_vcl_obj_t Obj);
+/* OnClick を呼ぶ(tbsCheck の Down は変えない)。ArrowClick は OnArrowClick を呼ぶ(DropdownMenu は表示しない)。 */
+void          NO_VCL_CALL no_vcl_TToolButton_Click(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TToolButton_ArrowClick(no_vcl_obj_t Obj);
+/* ボタンのクライアント座標 X, Y が矢印の部分にあるか。 */
+no_vcl_bool_t NO_VCL_CALL no_vcl_TToolButton_PointInArrow(no_vcl_obj_t Obj, no_vcl_int_t X, no_vcl_int_t Y);
+/* tbsDropDown・tbsButtonDrop の矢印がクリックされたとき(DropdownMenu を表示する前)。 */
+void          NO_VCL_CALL no_vcl_TToolButton_SetOnArrowClick(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+
 #ifdef __cplusplus
 }
 #endif

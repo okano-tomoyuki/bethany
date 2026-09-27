@@ -2992,6 +2992,182 @@ protected:
     ~THeaderControl() override = default;
 };
 
+/* ---------------- ToolBar ---------------- */
+
+// 縁を描く辺のビット集合(LCL の TEdgeBorders に対応)。
+using TEdgeBorders = unsigned int;
+const TEdgeBorders ebLeft   = 0x01;
+const TEdgeBorders ebTop    = 0x02;
+const TEdgeBorders ebRight  = 0x04;
+const TEdgeBorders ebBottom = 0x08;
+
+// 縁の描き方(LCL の TEdgeStyle と同じ値)。
+enum TEdgeStyle
+{
+    esNone = 0,
+    esRaised,
+    esLowered
+};
+
+// ツールボタンの種類(LCL の TToolButtonStyle と同じ値)。
+enum TToolButtonStyle
+{
+    tbsButton = 0,  // 普通のボタン
+    tbsCheck,       // クリックで Down が切り替わる(Grouped なら隣り合うボタンのどれか 1 つだけが Down)
+    tbsDropDown,    // 右に矢印が付き、矢印で DropdownMenu を表示する
+    tbsSeparator,   // 空白
+    tbsDivider,     // 線の入った区切り
+    tbsButtonDrop   // ボタンと一体の矢印(どこを押しても DropdownMenu を表示する)
+};
+
+// 以下のメンバは LCL の TToolWindow の public(TToolBar が published にしている)。
+class TToolWindow : public TCustomControl
+{
+public:
+    Property<TEdgeBorders> EdgeBorders;
+    Property<TEdgeStyle>   EdgeInner;
+    Property<TEdgeStyle>   EdgeOuter;
+
+    void BeginUpdate();
+    void EndUpdate();
+
+protected:
+    explicit TToolWindow(no_vcl_obj_t handle);
+    ~TToolWindow() override = default;
+
+private:
+    static TEdgeBorders GetEdgeBordersImpl(TObject* owner);
+    static void         SetEdgeBordersImpl(TObject* owner, const TEdgeBorders& value);
+    static TEdgeStyle   GetEdgeInnerImpl(TObject* owner);
+    static void         SetEdgeInnerImpl(TObject* owner, const TEdgeStyle& value);
+    static TEdgeStyle   GetEdgeOuterImpl(TObject* owner);
+    static void         SetEdgeOuterImpl(TObject* owner, const TEdgeStyle& value);
+};
+
+class TToolButton;
+
+// ツールバー。ボタン(TToolButton)は、Parent をツールバーにすると追加される(VCL と同じ)。既定の Align は alTop。
+class TToolBar : public TToolWindow
+{
+public:
+    explicit TToolBar(TComponent* AOwner);
+
+    ReadOnlyProperty<int>                ButtonCount;
+    // 並び順のボタン(ToolBar1->Buttons[i])。
+    ReadOnlyIndexedProperty<TToolButton*> Buttons;
+    // LCL では行数ではなく、Wrapable が false のときに Wrap のボタンで折り返した回数(折り返しが無ければ 0)。
+    ReadOnlyProperty<int>                RowCount;
+    Property<int>                        ButtonHeight;
+    Property<int>                        ButtonWidth;
+    // tbsDropDown のボタンの矢印部分の幅。
+    Property<int>                        DropDownWidth;
+    // 最初のボタンの左の余白。
+    Property<int>                        Indent;
+    Property<bool>                       Flat;
+    // true なら、ボタンの文字をアイコンの右に置く。
+    Property<bool>                       List;
+    // true なら、ボタンに Caption を表示する(既定は false)。
+    Property<bool>                       ShowCaptions;
+    Property<bool>                       Transparent;
+    // true なら、幅に収まらないボタンを次の行へ折り返す(既定は true)。
+    Property<bool>                       Wrapable;
+
+    void SetButtonSize(int NewButtonWidth, int NewButtonHeight);
+
+protected:
+    ~TToolBar() override = default;
+
+private:
+    static int          GetButtonCountImpl(TObject* owner);
+    static TToolButton* GetButtonsImpl(TObject* owner, int Index);
+    static int          GetRowCountImpl(TObject* owner);
+    static int          GetButtonHeightImpl(TObject* owner);
+    static void         SetButtonHeightImpl(TObject* owner, const int& value);
+    static int          GetButtonWidthImpl(TObject* owner);
+    static void         SetButtonWidthImpl(TObject* owner, const int& value);
+    static int          GetDropDownWidthImpl(TObject* owner);
+    static void         SetDropDownWidthImpl(TObject* owner, const int& value);
+    static int          GetIndentImpl(TObject* owner);
+    static void         SetIndentImpl(TObject* owner, const int& value);
+    static bool         GetFlatImpl(TObject* owner);
+    static void         SetFlatImpl(TObject* owner, const bool& value);
+    static bool         GetListImpl(TObject* owner);
+    static void         SetListImpl(TObject* owner, const bool& value);
+    static bool         GetShowCaptionsImpl(TObject* owner);
+    static void         SetShowCaptionsImpl(TObject* owner, const bool& value);
+    static bool         GetTransparentImpl(TObject* owner);
+    static void         SetTransparentImpl(TObject* owner, const bool& value);
+    static bool         GetWrapableImpl(TObject* owner);
+    static void         SetWrapableImpl(TObject* owner, const bool& value);
+};
+
+// ツールバーのボタン。Caption・OnClick は TControl のものを使う。
+class TToolButton : public TGraphicControl
+{
+public:
+    explicit TToolButton(TComponent* AOwner);
+
+    // tbsCheck で Grouped のとき、すべてのボタンを上げた状態にできるか。
+    Property<bool>             AllowAllUp;
+    // 押された状態(tbsCheck はクリックで切り替わる)。
+    Property<bool>             Down;
+    Property<bool>             Grouped;
+    Property<bool>             Indeterminate;
+    Property<bool>             Marked;
+    Property<bool>             ShowCaption;
+    // true なら、このボタンの後で行を折り返す。
+    Property<bool>             Wrap;
+    Property<TToolButtonStyle> Style;
+    // tbsDropDown・tbsButtonDrop の矢印で表示するポップアップメニュー。
+    Property<TPopupMenu*>      DropdownMenu;
+    // 設定すると、そのメニュー項目の Caption・Enabled 等を写す。マウスで押すと、その項目の OnClick を呼んでから
+    // 子の項目をポップアップメニューとして表示する(DropdownMenu と同じく、メニューを閉じるまで戻らない)。
+    Property<TMenuItem*>       MenuItem;
+    // tbsDropDown・tbsButtonDrop の矢印がクリックされたとき(DropdownMenu を表示する前)。
+    Property<TNotifyEvent>     OnArrowClick;
+    // ツールバーの中での位置(ツールバーに置かれていなければ -1)。
+    ReadOnlyProperty<int>      Index;
+
+    // OnClick を呼ぶ(tbsCheck の Down は変えない。Down の切り替えはマウスを離したときに LCL が行う)。
+    void Click();
+    // OnArrowClick を呼ぶ(DropdownMenu は表示しない)。
+    void ArrowClick();
+    // ボタンのクライアント座標 X, Y が矢印の部分にあるか。
+    bool PointInArrow(int X, int Y) const;
+
+protected:
+    ~TToolButton() override = default;
+
+private:
+    TNotifyEvent onArrowClick_;
+    bool         onArrowClickHooked_ = false;
+    static void NO_VCL_CALL ArrowClickTrampoline(no_vcl_obj_t sender, void* data);
+
+    static bool             GetAllowAllUpImpl(TObject* owner);
+    static void             SetAllowAllUpImpl(TObject* owner, const bool& value);
+    static bool             GetDownImpl(TObject* owner);
+    static void             SetDownImpl(TObject* owner, const bool& value);
+    static bool             GetGroupedImpl(TObject* owner);
+    static void             SetGroupedImpl(TObject* owner, const bool& value);
+    static bool             GetIndeterminateImpl(TObject* owner);
+    static void             SetIndeterminateImpl(TObject* owner, const bool& value);
+    static bool             GetMarkedImpl(TObject* owner);
+    static void             SetMarkedImpl(TObject* owner, const bool& value);
+    static bool             GetShowCaptionImpl(TObject* owner);
+    static void             SetShowCaptionImpl(TObject* owner, const bool& value);
+    static bool             GetWrapImpl(TObject* owner);
+    static void             SetWrapImpl(TObject* owner, const bool& value);
+    static TToolButtonStyle GetStyleImpl(TObject* owner);
+    static void             SetStyleImpl(TObject* owner, const TToolButtonStyle& value);
+    static TPopupMenu*      GetDropdownMenuImpl(TObject* owner);
+    static void             SetDropdownMenuImpl(TObject* owner, TPopupMenu* const& value);
+    static TMenuItem*       GetMenuItemImpl(TObject* owner);
+    static void             SetMenuItemImpl(TObject* owner, TMenuItem* const& value);
+    static TNotifyEvent     GetOnArrowClickImpl(TObject* owner);
+    static void             SetOnArrowClickImpl(TObject* owner, const TNotifyEvent& value);
+    static int              GetIndexImpl(TObject* owner);
+};
+
 /* ---------------- Timer ---------------- */
 
 class TCustomTimer : public TComponent

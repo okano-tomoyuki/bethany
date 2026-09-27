@@ -654,7 +654,64 @@ using no_vcl_module_t = void*;
     X(void,          THeaderSection_SetIndex,                 (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
     X(no_vcl_int_t,  THeaderSection_GetLeft,                  (no_vcl_obj_t o),                                     (o)) \
     X(no_vcl_int_t,  THeaderSection_GetRight,                 (no_vcl_obj_t o),                                     (o)) \
-    X(no_vcl_int_t,  THeaderSection_GetOriginalIndex,         (no_vcl_obj_t o),                                     (o))
+    X(no_vcl_int_t,  THeaderSection_GetOriginalIndex,         (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_uint_t, TToolWindow_GetEdgeBorders,              (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TToolWindow_SetEdgeBorders,              (no_vcl_obj_t o, no_vcl_uint_t v),                    (o, v)) \
+    X(no_vcl_int_t,  TToolWindow_GetEdgeInner,                (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TToolWindow_SetEdgeInner,                (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TToolWindow_GetEdgeOuter,                (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TToolWindow_SetEdgeOuter,                (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(void,          TToolWindow_BeginUpdate,                 (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TToolWindow_EndUpdate,                   (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TToolBar_Create,                         (no_vcl_obj_t owner),                                 (owner)) \
+    X(no_vcl_int_t,  TToolBar_GetButtonCount,                 (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TToolBar_GetButton,                      (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(no_vcl_int_t,  TToolBar_GetRowCount,                    (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_int_t,  TToolBar_GetButtonHeight,                (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TToolBar_SetButtonHeight,                (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TToolBar_GetButtonWidth,                 (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TToolBar_SetButtonWidth,                 (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TToolBar_GetDropDownWidth,               (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TToolBar_SetDropDownWidth,               (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TToolBar_GetIndent,                      (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TToolBar_SetIndent,                      (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_bool_t, TToolBar_GetFlat,                        (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TToolBar_SetFlat,                        (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TToolBar_GetList,                        (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TToolBar_SetList,                        (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TToolBar_GetShowCaptions,                (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TToolBar_SetShowCaptions,                (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TToolBar_GetTransparent,                 (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TToolBar_SetTransparent,                 (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TToolBar_GetWrapable,                    (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TToolBar_SetWrapable,                    (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(void,          TToolBar_SetButtonSize,                  (no_vcl_obj_t o, no_vcl_int_t w, no_vcl_int_t h),     (o, w, h)) \
+    X(no_vcl_obj_t,  TToolButton_Create,                      (no_vcl_obj_t owner),                                 (owner)) \
+    X(no_vcl_bool_t, TToolButton_GetAllowAllUp,               (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TToolButton_SetAllowAllUp,               (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TToolButton_GetDown,                     (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TToolButton_SetDown,                     (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TToolButton_GetGrouped,                  (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TToolButton_SetGrouped,                  (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TToolButton_GetIndeterminate,            (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TToolButton_SetIndeterminate,            (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TToolButton_GetMarked,                   (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TToolButton_SetMarked,                   (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TToolButton_GetShowCaption,              (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TToolButton_SetShowCaption,              (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TToolButton_GetWrap,                     (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TToolButton_SetWrap,                     (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_int_t,  TToolButton_GetStyle,                    (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TToolButton_SetStyle,                    (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_obj_t,  TToolButton_GetDropdownMenu,             (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TToolButton_SetDropdownMenu,             (no_vcl_obj_t o, no_vcl_obj_t v),                     (o, v)) \
+    X(no_vcl_obj_t,  TToolButton_GetMenuItem,                 (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TToolButton_SetMenuItem,                 (no_vcl_obj_t o, no_vcl_obj_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TToolButton_GetIndex,                    (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TToolButton_Click,                       (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TToolButton_ArrowClick,                  (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_bool_t, TToolButton_PointInArrow,                (no_vcl_obj_t o, no_vcl_int_t x, no_vcl_int_t y),     (o, x, y)) \
+    X(void,          TToolButton_SetOnArrowClick,             (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d))
 
 namespace
 {

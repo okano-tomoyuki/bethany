@@ -162,6 +162,14 @@ public:
     int             drawnCells_ = 0;
     TTabSheet*      HeaderSheet;
     THeaderControl* HeaderControl1;
+    TTabSheet*      ToolsSheet;
+    TToolBar*       ToolBar1;
+    TToolButton*    NewToolButton;
+    TToolButton*    SepToolButton;
+    TToolButton*    BoldToolButton;
+    TToolButton*    LeftToolButton;
+    TToolButton*    RightToolButton;
+    TToolButton*    DropToolButton;
 
     // C++Builder と同じく Owner を受け取り、TForm に渡す(Application->CreateForm が Application を渡す)。
     explicit TMainForm(TComponent* AOwner) : TForm(AOwner)
@@ -848,6 +856,67 @@ public:
             std::printf("HeaderControl1SectionEndDrag\n");
             std::fflush(stdout);
         };
+        // Tier 2、6 バッチ目(TToolBar・TToolButton)。"Tools" ページの上端に置く(TToolBar の既定の Align は alTop)。
+        ToolsSheet = new TTabSheet(this);
+        ToolsSheet->PageControl = PageControl1;
+        ToolsSheet->Caption = "Tools";
+        ToolBar1 = new TToolBar(this);
+        ToolBar1->Parent = ToolsSheet;
+        ToolBar1->ShowCaptions = true;
+        ToolBar1->SetButtonSize(30, 22);
+        // ボタンは Parent をツールバーにすると、その順で末尾に追加される。
+        auto addButton = [this](const char* caption, TToolButtonStyle style) {
+            TToolButton* button = new TToolButton(this);
+            button->Caption = caption;
+            button->Style = style;
+            button->Parent = ToolBar1;
+            return button;
+        };
+        NewToolButton   = addButton("New", tbsButton);
+        SepToolButton   = addButton("", tbsDivider);
+        BoldToolButton  = addButton("B", tbsCheck);
+        LeftToolButton  = addButton("L", tbsCheck);
+        RightToolButton = addButton("R", tbsCheck);
+        DropToolButton  = addButton("Drop", tbsDropDown);
+        // 隣り合う Grouped の tbsCheck は、どれか 1 つだけが Down になる。
+        LeftToolButton->Grouped = true;
+        RightToolButton->Grouped = true;
+        LeftToolButton->Down = true;
+        NewToolButton->OnClick = [](TObject* Sender) {
+            std::printf("NewToolButtonClick: %s\n", std::string(static_cast<TToolButton*>(Sender)->Caption).c_str());
+            std::fflush(stdout);
+        };
+        auto printDown = [this](TObject* Sender) {
+            std::printf("ToolButtonClick: %s Down=%d, B/L/R Down=%d/%d/%d\n",
+                        std::string(static_cast<TToolButton*>(Sender)->Caption).c_str(),
+                        (bool)static_cast<TToolButton*>(Sender)->Down,
+                        (bool)BoldToolButton->Down, (bool)LeftToolButton->Down, (bool)RightToolButton->Down);
+            std::fflush(stdout);
+        };
+        BoldToolButton->OnClick = printDown;
+        LeftToolButton->OnClick = printDown;
+        RightToolButton->OnClick = printDown;
+        DropToolButton->OnClick = [](TObject*) {
+            std::printf("DropToolButtonClick\n");
+            std::fflush(stdout);
+        };
+        // DropdownMenu は設定しない(矢印で OnArrowClick だけが呼ばれる)。
+        DropToolButton->OnArrowClick = [](TObject*) {
+            std::printf("DropToolButtonArrowClick\n");
+            std::fflush(stdout);
+        };
+        ToolsSheet->OnShow = [this](TObject*) {
+            std::printf("ToolsSheetShow: ToolBar1 Height=%d RowCount=%d, buttons (Left,Top,Width):",
+                        (int)ToolBar1->Height, (int)ToolBar1->RowCount);
+            for (int i = 0; i < ToolBar1->ButtonCount; ++i)
+            {
+                TToolButton* b = ToolBar1->Buttons[i];
+                std::printf(" %d,%d,%d", (int)b->Left, (int)b->Top, (int)b->Width);
+            }
+            std::printf("\n");
+            std::fflush(stdout);
+        };
+
         HeaderSheet->OnShow = [this](TObject*) {
             std::printf("HeaderSheetShow: HeaderControl1 Width/Height=%d/%d, GetSectionAt(100, 5)=%d (expected 1)\n",
                         (int)HeaderControl1->Width, (int)HeaderControl1->Height, HeaderControl1->GetSectionAt(TPoint{100, 5}));
@@ -1467,6 +1536,35 @@ int main()
         sections->Delete(1);
         std::printf("After Delete(1): Count=%d (expected 3), Items[1] is Size: %s, DragReorder=%d (expected 1)\n",
                     (int)sections->Count, sections->Items[1] == size ? "yes" : "no", (bool)hc->DragReorder);
+    }
+
+    // Tier 2、6 バッチ目(TToolBar・TToolButton)。
+    {
+        TMainForm* f = Form1;
+        TToolBar* tb = f->ToolBar1;
+        std::printf("ToolBar1 ButtonCount=%d (expected 6), Buttons[2] is BoldToolButton: %s, DropToolButton->Index=%d (expected 5), "
+                    "Align=%d (expected alTop=%d), EdgeBorders=0x%x (expected ebTop=0x%x), ButtonWidth/Height=%d/%d (expected 30/22)\n",
+                    (int)tb->ButtonCount, tb->Buttons[2] == f->BoldToolButton ? "yes" : "no", (int)f->DropToolButton->Index,
+                    (int)(TAlign)tb->Align, (int)alTop, (unsigned)(TEdgeBorders)tb->EdgeBorders, (unsigned)ebTop,
+                    (int)tb->ButtonWidth, (int)tb->ButtonHeight);
+
+        // Click は OnClick を呼ぶだけで、tbsCheck の Down は変えない(Down の切り替えはマウスを離したときに LCL が行う)。
+        f->BoldToolButton->Click();
+        std::printf("After BoldToolButton->Click(): B Down=%d (expected 0)\n", (bool)f->BoldToolButton->Down);
+        // Grouped の tbsCheck は、Down を設定すると他方が上がる。
+        f->RightToolButton->Down = true;
+        std::printf("After RightToolButton->Down = true: L/R Down=%d/%d (expected 0/1), Style of SepToolButton=%d (expected tbsDivider=%d)\n",
+                    (bool)f->LeftToolButton->Down, (bool)f->RightToolButton->Down, (int)(TToolButtonStyle)f->SepToolButton->Style, (int)tbsDivider);
+        f->LeftToolButton->Down = true;
+
+        // MenuItem を設定すると、その項目の Caption 等を写す。
+        TToolButton* temp = new TToolButton(f);
+        temp->Parent = tb;
+        temp->MenuItem = f->FileNewItem;
+        std::printf("temp MenuItem is FileNewItem: %s, Caption=%s (expected &New), ButtonCount=%d (expected 7)\n",
+                    temp->MenuItem == f->FileNewItem ? "yes" : "no", std::string(temp->Caption).c_str(), (int)tb->ButtonCount);
+        temp->Free();
+        std::printf("After temp->Free(): ButtonCount=%d (expected 6)\n", (int)tb->ButtonCount);
     }
 
     // 2 つ目以降に生成したフォームは MainForm にならない。

@@ -409,6 +409,10 @@ int main(void)
     no_vcl_obj_t headerSheet;
     no_vcl_obj_t headerControl;
     no_vcl_obj_t sections;
+    no_vcl_obj_t toolsSheet;
+    no_vcl_obj_t toolBar;
+    no_vcl_obj_t leftButton;
+    no_vcl_obj_t rightButton;
 
     no_vcl_FreeNotify_SetCallback(OnComponentFreed, &freedCount);
 
@@ -942,6 +946,33 @@ int main(void)
                no_vcl_TCustomHeaderControl_GetDragReorder(headerControl) != 0);
     }
 
+    /* Tier 2、6 バッチ目(TToolBar・TToolButton)。pageControl の新しいページ "Tools" の上端に置く。
+       ボタンは Parent をツールバーにすると末尾に追加される。 */
+    toolsSheet = no_vcl_TTabSheet_Create(form);
+    no_vcl_TTabSheet_SetPageControl(toolsSheet, pageControl);
+    no_vcl_TControl_SetCaption(toolsSheet, "Tools");
+    toolBar = no_vcl_TToolBar_Create(form);
+    no_vcl_TControl_SetParent(toolBar, toolsSheet);
+    no_vcl_TToolBar_SetShowCaptions(toolBar, 1);
+    leftButton = no_vcl_TToolButton_Create(form);
+    no_vcl_TControl_SetCaption(leftButton, "L");
+    no_vcl_TToolButton_SetStyle(leftButton, no_vcl_tbsCheck);
+    no_vcl_TToolButton_SetGrouped(leftButton, 1);
+    no_vcl_TControl_SetParent(leftButton, toolBar);
+    rightButton = no_vcl_TToolButton_Create(form);
+    no_vcl_TControl_SetCaption(rightButton, "R");
+    no_vcl_TToolButton_SetStyle(rightButton, no_vcl_tbsCheck);
+    no_vcl_TToolButton_SetGrouped(rightButton, 1);
+    no_vcl_TControl_SetParent(rightButton, toolBar);
+    no_vcl_TToolButton_SetDown(leftButton, 1);
+    no_vcl_TToolButton_SetDown(rightButton, 1);
+    printf("ToolBar ButtonCount=%d (expected 2), GetButton(1) is rightButton: %s, rightButton Index=%d (expected 1), "
+           "Grouped Down L/R=%d/%d (expected 0/1), Align=%d (expected alTop=%d), EdgeBorders=0x%x (expected ebTop=0x%x)\n",
+           no_vcl_TToolBar_GetButtonCount(toolBar), no_vcl_TToolBar_GetButton(toolBar, 1) == rightButton ? "yes" : "no",
+           no_vcl_TToolButton_GetIndex(rightButton),
+           no_vcl_TToolButton_GetDown(leftButton) != 0, no_vcl_TToolButton_GetDown(rightButton) != 0,
+           no_vcl_TControl_GetAlign(toolBar), no_vcl_alTop, no_vcl_TToolWindow_GetEdgeBorders(toolBar), no_vcl_ebTop);
+
     printf("Running (click the button, then close the window twice: the first close is blocked)...\n");
     fflush(stdout);
     /* MainForm を表示してメッセージループに入り、MainForm が閉じられると戻る。 */
@@ -951,7 +982,7 @@ int main(void)
     /* Application が所有するフォーム(と、フォームが所有するコントロール)をまとめて破棄する。
        呼ばなくても DLL の切り離し時に LCL が破棄するが、そのときは破棄通知が呼ばれない。 */
     no_vcl_TComponent_DestroyComponents(app);
-    printf("Clicks: %d, Freed components: %d (expected 65: form + 58 owned + 6 created inside LCL: 2 menu roots, a separator and 3 AddTabSheet pages)\n", clickCount, freedCount);
+    printf("Clicks: %d, Freed components: %d (expected 69: form + 62 owned + 6 created inside LCL: 2 menu roots, a separator and 3 AddTabSheet pages)\n", clickCount, freedCount);
     /* ツリービュー・リストビュー・ヘッダーコントロールの破棄に伴って、残りのノード(4 つ)・リストビューの項目(2 つ)と列(2 つ)・
        セクション(2 つ)も破棄通知が届く。 */
     printf("Items freed: %d (expected 15: tree 2 deleted + 4 with the tree view, list 1 item + 1 column deleted "
