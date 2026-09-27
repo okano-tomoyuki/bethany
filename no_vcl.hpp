@@ -9,7 +9,7 @@
 #include <type_traits>
 #include <unordered_map>
 
-#include "no_vcl_c.h"
+#include "internal/api.h"
 
 // クラス階層は LCL の継承関係の「部分列」になっている(途中の階層を省くことはあっても、
 // LCL に無い継承関係は作らない)。これにより、C++ 上で基底クラスとして扱えるオブジェクトは
@@ -19,6 +19,9 @@
 
 namespace no_vcl
 {
+
+// LCL のオブジェクトを指すハンドル(TObject::Handle())。DLL の関数に渡す値で、利用者が中身を解釈することはない。
+using ObjectHandle = internal::obj_t;
 
 // DelphiのTColorに合わせ $00BBGGRR 順のパック整数として表す。
 using TColor = std::int32_t;
@@ -60,18 +63,18 @@ public:
     TObject(TObject&&) = delete;
     TObject& operator=(TObject&&) = delete;
 
-    no_vcl_obj_t Handle() const { return handle_; }
+    ObjectHandle Handle() const { return handle_; }
 
 protected:
     // 各クラスは、生成した(または取得した)ハンドルを基底クラスの初期化の時点で渡す。
     // これにより、派生クラスのメンバ(Property や TPaintBox::Canvas)を構築する時点で
     // handle_ が有効であることが保証される。
-    explicit TObject(no_vcl_obj_t handle) : handle_(handle) {}
+    explicit TObject(ObjectHandle handle) : handle_(handle) {}
 
     // TObject* 経由の delete でコンポーネントの寿命管理(TComponent 参照)を迂回できないよう protected にする。
     virtual ~TObject() = default;
 
-    no_vcl_obj_t handle_;
+    ObjectHandle handle_;
 };
 
 // 所有者(TObject派生インスタンス)への生ポインタ + 固定のGetter/Setter関数ポインタを持つ
@@ -405,7 +408,7 @@ using TMouseWheelEvent = std::function<void(TObject* Sender, TShiftState Shift, 
 class TPersistent : public TObject
 {
 protected:
-    explicit TPersistent(no_vcl_obj_t handle) : TObject(handle) {}
+    explicit TPersistent(ObjectHandle handle) : TObject(handle) {}
     ~TPersistent() override = default;
 
 private:
@@ -414,19 +417,19 @@ private:
 
 // TComponent ではない項目(TTreeNode・TListItem・TListColumn・THeaderSection)のラッパーの共通の管理(利用者は直接使わない)。
 // 項目は FreeNotification を持たないため、TComponent のレジストリとは別に、DLL の「項目の破棄通知」
-// (no_vcl_ItemFree_SetCallback)でラッパーを delete する。同じ項目には常に同じラッパーが返る。
+// (ItemFree_SetCallback)でラッパーを delete する。同じ項目には常に同じラッパーが返る。
 // 各項目のクラスは、ハンドルを受け取るコンストラクタを private にし、friend class ItemRegistry とする。
 class ItemRegistry
 {
 public:
     // ハンドルからラッパーを得る(無ければ作る)。nullptr には nullptr を返す。
     template<typename T>
-    static T* Wrap(no_vcl_obj_t handle)
+    static T* Wrap(ObjectHandle handle)
     {
         if (!handle)
             return nullptr;
         InstallCallback();
-        std::unordered_map<no_vcl_obj_t, TPersistent*>& registry = Registry();
+        std::unordered_map<ObjectHandle, TPersistent*>& registry = Registry();
         auto it = registry.find(handle);
         if (it != registry.end())
             return static_cast<T*>(it->second);
@@ -437,8 +440,8 @@ public:
 
 private:
     static void InstallCallback();
-    static std::unordered_map<no_vcl_obj_t, TPersistent*>& Registry();
-    static void NO_VCL_CALL FreeTrampoline(no_vcl_obj_t handle, void* data);
+    static std::unordered_map<ObjectHandle, TPersistent*>& Registry();
+    static void NO_VCL_CALL FreeTrampoline(ObjectHandle handle, void* data);
 };
 
 
@@ -446,13 +449,13 @@ private:
 // (ListBox1->Items->Add("x"); ListBox1->Items->Strings[0]; Memo1->Lines->Text = "..."; のように VCL と同じく使う)。
 // LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがある(TListBox・TComboBox・TMemo)ため、
 // このビューは中身のハンドルを覚えず、操作のたびに所有者から取得する。そのため Handle() は nullptr を返す
-// (C API の no_vcl_TStrings_* に渡すハンドルは Current() で得る。保存しないこと)。
+// (DLL の関数に渡すハンドルは Current() で得る。保存しないこと)。
 // 利用者が生成する文字列の一覧は、派生の TStringList を使う(docs/adr/0028)。
 class TStrings : public TPersistent
 {
 public:
-    // 所有者のハンドルから中身の TStrings のハンドルを得る C API の関数(no_vcl_TCustomListBox_GetItems 等)。
-    using Accessor = no_vcl_obj_t (NO_VCL_CALL *)(no_vcl_obj_t owner);
+    // 所有者のハンドルから中身の TStrings のハンドルを得る内部層の関数(internal::TCustomListBox_GetItems 等)。
+    using Accessor = ObjectHandle (*)(ObjectHandle owner);
 
     TStrings(TObject* owner, Accessor accessor);
     ~TStrings() override = default;
@@ -500,17 +503,17 @@ public:
     void SaveToFile(const std::string& FileName) const;
 
     // 現在の中身のハンドル。
-    no_vcl_obj_t Current() const { return accessor_(owner_->Handle()); }
+    ObjectHandle Current() const { return accessor_(owner_->Handle()); }
 
 protected:
     // 自分のハンドルそのものを中身とする(TStringList 用)。
-    explicit TStrings(no_vcl_obj_t handle);
+    explicit TStrings(ObjectHandle handle);
 
 private:
     TObject* owner_;
     Accessor accessor_;
 
-    static no_vcl_obj_t NO_VCL_CALL SelfAccessor(no_vcl_obj_t handle) { return handle; }
+    static ObjectHandle SelfAccessor(ObjectHandle handle) { return handle; }
 
     static int         GetCountImpl(TObject* owner);
     static std::string GetStringsImpl(TObject* owner, int Index);
@@ -598,7 +601,7 @@ public:
     Property<TColor> Color;
     Property<int>    Width;
 
-    explicit TPen(no_vcl_obj_t handle);
+    explicit TPen(ObjectHandle handle);
     ~TPen() override = default;
 
 private:
@@ -613,7 +616,7 @@ class TBrush : public TPersistent
 public:
     Property<TColor> Color;
 
-    explicit TBrush(no_vcl_obj_t handle);
+    explicit TBrush(ObjectHandle handle);
     ~TBrush() override = default;
 
 private:
@@ -628,7 +631,7 @@ public:
     Property<int>         Size;
     Property<TColor>      Color;
 
-    explicit TFont(no_vcl_obj_t handle);
+    explicit TFont(ObjectHandle handle);
     ~TFont() override = default;
 
 private:
@@ -651,7 +654,7 @@ public:
     // 1 画素の色(Canvas->Pixels[X][Y]。VCL の Pixels[X, Y])。
     IndexedProperty2<TColor> Pixels;
 
-    explicit TCanvas(no_vcl_obj_t handle);
+    explicit TCanvas(ObjectHandle handle);
     ~TCanvas() override = default;
 
     void MoveTo(int x, int y);
@@ -683,7 +686,7 @@ public:
     CanvasHolder& operator=(const CanvasHolder&) = delete;
 
     // canvas が nullptr なら nullptr を返す。
-    TCanvas* Get(no_vcl_obj_t canvas);
+    TCanvas* Get(ObjectHandle canvas);
 
 private:
     std::unique_ptr<TCanvas> canvas_;
@@ -694,14 +697,14 @@ private:
 //     スタックや値メンバに置いてもよい。
 //   - 所有者の中身のビュー(Image1->Picture->Bitmap・BitBtn1->Glyph 等): TStrings と同じく中身のハンドルを覚えず、
 //     操作のたびに所有者から取得する(TPicture は LoadFromFile 等のたびに中身を作り直すため)。Handle() は nullptr を返す
-//     (C API に渡すハンドルは Current() で得る。保存しないこと)。
+//     (DLL の関数に渡すハンドルは Current() で得る。保存しないこと)。
 // Picture->Graphic・Glyph 等への代入は、LCL と同じく内容のコピーになる(代入したものは代入した側の持ち物のまま)。
 // 読み込めないファイル・形式の違うファイルでは Exception(EFOpenError 等)が送出される。
 class TGraphic : public TPersistent
 {
 public:
-    // 所有者から中身のグラフィックのハンドルを得る C API の関数(no_vcl_TPicture_GetBitmap 等)。
-    using Accessor = no_vcl_obj_t (NO_VCL_CALL *)(no_vcl_obj_t owner);
+    // 所有者から中身のグラフィックのハンドルを得る内部層の関数(internal::TPicture_GetBitmap 等)。
+    using Accessor = ObjectHandle (*)(ObjectHandle owner);
 
     // 利用者が生成したものなら、LCL のオブジェクトも破棄する。ビューなら何もしない。
     ~TGraphic() override;
@@ -720,11 +723,11 @@ public:
     void Clear();
 
     // 現在の中身のハンドル。
-    no_vcl_obj_t Current() const { return accessor_(owner_->Handle()); }
+    ObjectHandle Current() const { return accessor_(owner_->Handle()); }
 
 protected:
     // 利用者が生成したもの(自分のハンドルを持つ)。
-    explicit TGraphic(no_vcl_obj_t handle);
+    explicit TGraphic(ObjectHandle handle);
     // 所有者の中身のビュー。
     TGraphic(TObject* owner, Accessor accessor);
 
@@ -735,7 +738,7 @@ private:
     Accessor accessor_;
     bool     owns_;
 
-    static no_vcl_obj_t NO_VCL_CALL SelfAccessor(no_vcl_obj_t handle) { return handle; }
+    static ObjectHandle SelfAccessor(ObjectHandle handle) { return handle; }
 
     static int  GetWidthImpl(TObject* owner);
     static void SetWidthImpl(TObject* owner, const int& value);
@@ -762,7 +765,7 @@ public:
     Property<TTransparentMode>  TransparentMode;
 
 protected:
-    explicit TRasterImage(no_vcl_obj_t handle);
+    explicit TRasterImage(ObjectHandle handle);
     TRasterImage(TObject* owner, Accessor accessor);
 
 private:
@@ -783,7 +786,7 @@ public:
     void SetSize(int AWidth, int AHeight);
 
 protected:
-    explicit TCustomBitmap(no_vcl_obj_t handle) : TRasterImage(handle) {}
+    explicit TCustomBitmap(ObjectHandle handle) : TRasterImage(handle) {}
     TCustomBitmap(TObject* owner, Accessor accessor) : TRasterImage(owner, accessor) {}
 };
 
@@ -869,7 +872,7 @@ public:
 private:
     friend class TCustomImage;
     // owns が false なら画像コントロールが持つもの(破棄しない)。
-    TPicture(no_vcl_obj_t handle, bool owns);
+    TPicture(ObjectHandle handle, bool owns);
 
     bool                    owns_;
     TGraphic                graphic_;
@@ -907,18 +910,18 @@ public:
     void Free();
 
 protected:
-    explicit TComponent(no_vcl_obj_t handle);
+    explicit TComponent(ObjectHandle handle);
     ~TComponent() override;
 
-    static no_vcl_obj_t HandleOf(const TObject* obj) { return obj ? obj->Handle() : nullptr; }
-    static TComponent*  FromHandle(no_vcl_obj_t handle);
+    static ObjectHandle HandleOf(const TObject* obj) { return obj ? obj->Handle() : nullptr; }
+    static TComponent*  FromHandle(ObjectHandle handle);
 
     // LCL が内部で生成したコンポーネント(TMenu::Items のルート項目等、*_Create を経由しないもの)のハンドルから
     // ラッパーを得る。まだラッパーが無ければ、その場で作ってレジストリに登録する(以降は同じラッパーを返す)。
-    // ハンドルを返す C API の側で破棄通知の対象に登録しておくこと(登録されていないとラッパーが delete されない)。
+    // ハンドルを返す DLL の関数の側で破棄通知の対象に登録しておくこと(登録されていないとラッパーが delete されない)。
     // T は、ハンドルを受け取るコンストラクタを TComponent から呼べるようにしておく(friend class TComponent)。
     template<typename T>
-    static T* WrapExisting(no_vcl_obj_t handle)
+    static T* WrapExisting(ObjectHandle handle)
     {
         if (!handle)
             return nullptr;
@@ -933,8 +936,8 @@ private:
     // そのときは LCL オブジェクトが取り残されないよう、ここで破棄する。
     bool freedByLcl_ = false;
 
-    static void NO_VCL_CALL FreeNotifyTrampoline(no_vcl_obj_t handle, void* data);
-    static std::unordered_map<no_vcl_obj_t, TComponent*>& Registry();
+    static void NO_VCL_CALL FreeNotifyTrampoline(ObjectHandle handle, void* data);
+    static std::unordered_map<ObjectHandle, TComponent*>& Registry();
 };
 
 // ショートカットキー(VCL の TShortCut と同じく、仮想キーコードに修飾キーのビットを OR した値)。
@@ -959,6 +962,7 @@ enum TDrawingStyle { dsFocus, dsSelected, dsNormal, dsTransparent };
 // 画像を受け取るメソッドは、画像を写して加える(渡したグラフィックは呼び出し側の持ち物のまま)。
 // Add・Insert 等は、画像を Width・Height の大きさに伸縮して 1 つとして加える(VCL と違い、幅が Width の倍数でも分けない)。
 // 横に並んだ複数の画像を分けて加えるのは AddSliced。
+// 画像リストを破棄すると(Free()・Owner の破棄)、それを Images 等に設定していたコントロールの Images は LCL が nullptr に戻す。
 class TCustomImageList : public TComponent
 {
 public:
@@ -992,7 +996,7 @@ public:
     void EndUpdate();
 
 protected:
-    explicit TCustomImageList(no_vcl_obj_t handle);
+    explicit TCustomImageList(ObjectHandle handle);
     ~TCustomImageList() override = default;
 
 private:
@@ -1010,7 +1014,7 @@ private:
     static void          SetBkColorImpl(TObject* owner, const TColor& value);
     static TDrawingStyle GetDrawingStyleImpl(TObject* owner);
     static void          SetDrawingStyleImpl(TObject* owner, const TDrawingStyle& value);
-    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL ChangeTrampoline(ObjectHandle sender, void* data);
     static TNotifyEvent  GetOnChangeImpl(TObject* owner);
     static void          SetOnChangeImpl(TObject* owner, const TNotifyEvent& value);
 };
@@ -1043,6 +1047,7 @@ public:
     // true にすると、選ばれるたびに Checked が反転する(RadioItem なら同じ GroupIndex の他の項目が外れる)。
     Property<bool>         AutoCheck;
     Property<bool>         RadioItem;
+    // 0〜255。
     Property<int>          GroupIndex;
     Property<bool>         Default;
     Property<TShortCut>    ShortCut;
@@ -1081,11 +1086,11 @@ protected:
 private:
     static TMenuItem* GetItemsImpl(TObject* owner, int Index);
     friend class TComponent;  // WrapExisting から、下のハンドルを受け取るコンストラクタを呼ぶため
-    explicit TMenuItem(no_vcl_obj_t handle);
+    explicit TMenuItem(ObjectHandle handle);
 
     TNotifyEvent onClick_;
     bool         onClickHooked_ = false;
-    static void NO_VCL_CALL ClickTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL ClickTrampoline(ObjectHandle sender, void* data);
 
     static std::string  GetCaptionImpl(TObject* owner);
     static void         SetCaptionImpl(TObject* owner, const std::string& value);
@@ -1131,7 +1136,7 @@ public:
     Property<TCustomImageList*> Images;
 
 protected:
-    explicit TMenu(no_vcl_obj_t handle);
+    explicit TMenu(ObjectHandle handle);
     ~TMenu() override = default;
 
 private:
@@ -1177,8 +1182,8 @@ private:
     TNotifyEvent onClose_;
     bool         onPopupHooked_ = false;
     bool         onCloseHooked_ = false;
-    static void NO_VCL_CALL PopupTrampoline(no_vcl_obj_t sender, void* data);
-    static void NO_VCL_CALL CloseTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL PopupTrampoline(ObjectHandle sender, void* data);
+    static void NO_VCL_CALL CloseTrampoline(ObjectHandle sender, void* data);
 
     static bool         GetAutoPopupImpl(TObject* owner);
     static void         SetAutoPopupImpl(TObject* owner, const bool& value);
@@ -1228,7 +1233,7 @@ public:
     void Hide();
 
 protected:
-    explicit TControl(no_vcl_obj_t handle);
+    explicit TControl(ObjectHandle handle);
     ~TControl() override = default;
 
     // LCL では TControl の protected。TCustomEdit / TCustomComboBox が公開する。
@@ -1239,7 +1244,7 @@ private:
 
     TNotifyEvent onClick_;
     bool         onClickHooked_ = false;
-    static void NO_VCL_CALL ClickTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL ClickTrampoline(ObjectHandle sender, void* data);
     static TNotifyEvent GetOnClickImpl(TObject* owner);
     static void         SetOnClickImpl(TObject* owner, const TNotifyEvent& value);
 
@@ -1260,14 +1265,14 @@ private:
     bool onMouseLeaveHooked_ = false;
     bool onMouseWheelHooked_ = false;
 
-    static void NO_VCL_CALL DblClickTrampoline(no_vcl_obj_t sender, void* data);
-    static void NO_VCL_CALL ResizeTrampoline(no_vcl_obj_t sender, void* data);
-    static void NO_VCL_CALL MouseEnterTrampoline(no_vcl_obj_t sender, void* data);
-    static void NO_VCL_CALL MouseLeaveTrampoline(no_vcl_obj_t sender, void* data);
-    static void NO_VCL_CALL MouseDownTrampoline(no_vcl_obj_t sender, no_vcl_int_t button, no_vcl_int_t shift, no_vcl_int_t x, no_vcl_int_t y, void* data);
-    static void NO_VCL_CALL MouseUpTrampoline(no_vcl_obj_t sender, no_vcl_int_t button, no_vcl_int_t shift, no_vcl_int_t x, no_vcl_int_t y, void* data);
-    static void NO_VCL_CALL MouseMoveTrampoline(no_vcl_obj_t sender, no_vcl_int_t shift, no_vcl_int_t x, no_vcl_int_t y, void* data);
-    static void NO_VCL_CALL MouseWheelTrampoline(no_vcl_obj_t sender, no_vcl_int_t shift, no_vcl_int_t wheelDelta, no_vcl_int_t x, no_vcl_int_t y, no_vcl_bool_t* handled, void* data);
+    static void NO_VCL_CALL DblClickTrampoline(ObjectHandle sender, void* data);
+    static void NO_VCL_CALL ResizeTrampoline(ObjectHandle sender, void* data);
+    static void NO_VCL_CALL MouseEnterTrampoline(ObjectHandle sender, void* data);
+    static void NO_VCL_CALL MouseLeaveTrampoline(ObjectHandle sender, void* data);
+    static void NO_VCL_CALL MouseDownTrampoline(ObjectHandle sender, internal::int_t button, internal::int_t shift, internal::int_t x, internal::int_t y, void* data);
+    static void NO_VCL_CALL MouseUpTrampoline(ObjectHandle sender, internal::int_t button, internal::int_t shift, internal::int_t x, internal::int_t y, void* data);
+    static void NO_VCL_CALL MouseMoveTrampoline(ObjectHandle sender, internal::int_t shift, internal::int_t x, internal::int_t y, void* data);
+    static void NO_VCL_CALL MouseWheelTrampoline(ObjectHandle sender, internal::int_t shift, internal::int_t wheelDelta, internal::int_t x, internal::int_t y, internal::bool_t* handled, void* data);
 
     static TNotifyEvent GetOnDblClickImpl(TObject* owner);
     static void         SetOnDblClickImpl(TObject* owner, const TNotifyEvent& value);
@@ -1320,7 +1325,7 @@ public:
     Property<TKeyPressEvent> OnKeyPress;
 
 protected:
-    explicit TWinControl(no_vcl_obj_t handle);
+    explicit TWinControl(ObjectHandle handle);
     ~TWinControl() override = default;
 
 private:
@@ -1331,9 +1336,9 @@ private:
     bool onKeyUpHooked_    = false;
     bool onKeyPressHooked_ = false;
 
-    static void NO_VCL_CALL KeyDownTrampoline(no_vcl_obj_t sender, no_vcl_int_t* key, no_vcl_int_t shift, void* data);
-    static void NO_VCL_CALL KeyUpTrampoline(no_vcl_obj_t sender, no_vcl_int_t* key, no_vcl_int_t shift, void* data);
-    static void NO_VCL_CALL KeyPressTrampoline(no_vcl_obj_t sender, no_vcl_int_t* key, void* data);
+    static void NO_VCL_CALL KeyDownTrampoline(ObjectHandle sender, internal::int_t* key, internal::int_t shift, void* data);
+    static void NO_VCL_CALL KeyUpTrampoline(ObjectHandle sender, internal::int_t* key, internal::int_t shift, void* data);
+    static void NO_VCL_CALL KeyPressTrampoline(ObjectHandle sender, internal::int_t* key, void* data);
 
     static TKeyEvent GetOnKeyDownImpl(TObject* owner);
     static void      SetOnKeyDownImpl(TObject* owner, const TKeyEvent& value);
@@ -1357,13 +1362,13 @@ public:
     Property<TNotifyEvent>   OnChange;
 
 protected:
-    explicit TCustomScrollBar(no_vcl_obj_t handle);
+    explicit TCustomScrollBar(ObjectHandle handle);
     ~TCustomScrollBar() override = default;
 
 private:
     TNotifyEvent onChange_;
     bool         onChangeHooked_ = false;
-    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL ChangeTrampoline(ObjectHandle sender, void* data);
 
     static TScrollBarKind GetKindImpl(TObject* owner);
     static void           SetKindImpl(TObject* owner, const TScrollBarKind& value);
@@ -1398,13 +1403,13 @@ public:
     Property<TNotifyEvent> OnChange;
 
 protected:
-    explicit TCustomTrackBar(no_vcl_obj_t handle);
+    explicit TCustomTrackBar(ObjectHandle handle);
     ~TCustomTrackBar() override = default;
 
 private:
     TNotifyEvent onChange_;
     bool         onChangeHooked_ = false;
-    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL ChangeTrampoline(ObjectHandle sender, void* data);
 
     static int          GetMinImpl(TObject* owner);
     static void         SetMinImpl(TObject* owner, const int& value);
@@ -1434,7 +1439,7 @@ public:
     Property<int> Position;
 
 protected:
-    explicit TCustomProgressBar(no_vcl_obj_t handle);
+    explicit TCustomProgressBar(ObjectHandle handle);
     ~TCustomProgressBar() override = default;
 
 private:
@@ -1458,14 +1463,14 @@ protected:
 class TGraphicControl : public TControl
 {
 protected:
-    explicit TGraphicControl(no_vcl_obj_t handle) : TControl(handle) {}
+    explicit TGraphicControl(ObjectHandle handle) : TControl(handle) {}
     ~TGraphicControl() override = default;
 };
 
 class TCustomControl : public TWinControl
 {
 protected:
-    explicit TCustomControl(no_vcl_obj_t handle) : TWinControl(handle) {}
+    explicit TCustomControl(ObjectHandle handle) : TWinControl(handle) {}
     ~TCustomControl() override = default;
 };
 
@@ -1505,7 +1510,7 @@ private:
 class TScrollingWinControl : public TCustomControl
 {
 protected:
-    explicit TScrollingWinControl(no_vcl_obj_t handle) : TCustomControl(handle) {}
+    explicit TScrollingWinControl(ObjectHandle handle) : TCustomControl(handle) {}
     ~TScrollingWinControl() override = default;
 };
 
@@ -1549,7 +1554,7 @@ public:
     Property<TMainMenu*>       Menu;
 
 protected:
-    explicit TCustomForm(no_vcl_obj_t handle);
+    explicit TCustomForm(ObjectHandle handle);
     ~TCustomForm() override = default;
 
 private:
@@ -1574,13 +1579,13 @@ private:
     // OnCreate がまだ呼ばれていなければ呼ぶ。
     void DoCreate();
 
-    static void NO_VCL_CALL ShowTrampoline(no_vcl_obj_t sender, void* data);
-    static void NO_VCL_CALL HideTrampoline(no_vcl_obj_t sender, void* data);
-    static void NO_VCL_CALL ActivateTrampoline(no_vcl_obj_t sender, void* data);
-    static void NO_VCL_CALL DeactivateTrampoline(no_vcl_obj_t sender, void* data);
-    static void NO_VCL_CALL CloseQueryTrampoline(no_vcl_obj_t sender, no_vcl_bool_t* canClose, void* data);
-    static void NO_VCL_CALL CloseTrampoline(no_vcl_obj_t sender, no_vcl_int_t* action, void* data);
-    static void NO_VCL_CALL DestroyTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL ShowTrampoline(ObjectHandle sender, void* data);
+    static void NO_VCL_CALL HideTrampoline(ObjectHandle sender, void* data);
+    static void NO_VCL_CALL ActivateTrampoline(ObjectHandle sender, void* data);
+    static void NO_VCL_CALL DeactivateTrampoline(ObjectHandle sender, void* data);
+    static void NO_VCL_CALL CloseQueryTrampoline(ObjectHandle sender, internal::bool_t* canClose, void* data);
+    static void NO_VCL_CALL CloseTrampoline(ObjectHandle sender, internal::int_t* action, void* data);
+    static void NO_VCL_CALL DestroyTrampoline(ObjectHandle sender, void* data);
 
     static TNotifyEvent     GetOnCreateImpl(TObject* owner);
     static void             SetOnCreateImpl(TObject* owner, const TNotifyEvent& value);
@@ -1615,8 +1620,8 @@ private:
 
     // TApplication::CreateForm が LCL の CreateForm で生成済みの、コンストラクタに引き取られるのを待つハンドル。
     // Owner が Application のときだけ、新たに生成せずこれを使う。
-    static no_vcl_obj_t pendingHandle_;
-    static no_vcl_obj_t CreateHandle(TComponent* AOwner);
+    static ObjectHandle pendingHandle_;
+    static ObjectHandle CreateHandle(TComponent* AOwner);
 };
 
 // C++Builder の TApplication。LCL の TApplication は FCL の TCustomApplication の派生だが、
@@ -1652,7 +1657,7 @@ protected:
 
 private:
     friend TApplication* NewApplication();
-    explicit TApplication(no_vcl_obj_t handle);
+    explicit TApplication(ObjectHandle handle);
 
     void BeginCreateForm();
     void EndCreateForm();
@@ -1696,7 +1701,7 @@ void TApplication::CreateForm(T** Reference)
 class TCustomPanel : public TCustomControl
 {
 protected:
-    explicit TCustomPanel(no_vcl_obj_t handle) : TCustomControl(handle) {}
+    explicit TCustomPanel(ObjectHandle handle) : TCustomControl(handle) {}
     ~TCustomPanel() override = default;
 };
 
@@ -1712,7 +1717,7 @@ protected:
 class TCustomGroupBox : public TWinControl
 {
 protected:
-    explicit TCustomGroupBox(no_vcl_obj_t handle) : TWinControl(handle) {}
+    explicit TCustomGroupBox(ObjectHandle handle) : TWinControl(handle) {}
     ~TCustomGroupBox() override = default;
 };
 
@@ -1737,7 +1742,7 @@ public:
     ReadOnlyProperty<TStrings*> Items;
 
 protected:
-    explicit TCustomRadioGroup(no_vcl_obj_t handle);
+    explicit TCustomRadioGroup(ObjectHandle handle);
     ~TCustomRadioGroup() override = default;
 
 private:
@@ -1745,7 +1750,7 @@ private:
     static TStrings* GetItemsImpl(TObject* owner);
     TNotifyEvent onClick_;
     bool         onClickHooked_ = false;
-    static void NO_VCL_CALL ClickTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL ClickTrampoline(ObjectHandle sender, void* data);
 
     static int           GetItemIndexImpl(TObject* owner);
     static void          SetItemIndexImpl(TObject* owner, const int& value);
@@ -1772,7 +1777,7 @@ public:
     IndexedProperty<bool> Checked;
 
 protected:
-    explicit TCustomCheckGroup(no_vcl_obj_t handle);
+    explicit TCustomCheckGroup(ObjectHandle handle);
     ~TCustomCheckGroup() override = default;
 
 private:
@@ -1794,7 +1799,7 @@ protected:
 class TCustomLabel : public TGraphicControl
 {
 protected:
-    explicit TCustomLabel(no_vcl_obj_t handle) : TGraphicControl(handle) {}
+    explicit TCustomLabel(ObjectHandle handle) : TGraphicControl(handle) {}
     ~TCustomLabel() override = default;
 };
 
@@ -1816,7 +1821,7 @@ protected:
 
 private:
     friend class TComponent;  // WrapExisting から(TCustomLabeledEdit::EditLabel のラップ)
-    explicit TBoundLabel(no_vcl_obj_t handle) : TCustomLabel(handle) {}
+    explicit TBoundLabel(ObjectHandle handle) : TCustomLabel(handle) {}
 };
 
 // 枠線や凹凸の表現に使う、単純な表示専用コントロール(TGraphicControl の直接の派生)。
@@ -1846,7 +1851,7 @@ private:
 class TButtonControl : public TWinControl
 {
 protected:
-    explicit TButtonControl(no_vcl_obj_t handle);
+    explicit TButtonControl(ObjectHandle handle);
     ~TButtonControl() override = default;
 
     // LCL では TButtonControl の protected。TCheckBox / TRadioButton が公開する。
@@ -1860,7 +1865,7 @@ private:
 class TCustomButton : public TButtonControl
 {
 protected:
-    explicit TCustomButton(no_vcl_obj_t handle) : TButtonControl(handle) {}
+    explicit TCustomButton(ObjectHandle handle) : TButtonControl(handle) {}
     ~TCustomButton() override = default;
 };
 
@@ -1903,7 +1908,7 @@ public:
     Property<int> ImageIndex;
 
 protected:
-    explicit TCustomBitBtn(no_vcl_obj_t handle);
+    explicit TCustomBitBtn(ObjectHandle handle);
     ~TCustomBitBtn() override = default;
 
 private:
@@ -1940,7 +1945,7 @@ protected:
 class TCustomCheckBox : public TButtonControl
 {
 protected:
-    explicit TCustomCheckBox(no_vcl_obj_t handle) : TButtonControl(handle) {}
+    explicit TCustomCheckBox(ObjectHandle handle) : TButtonControl(handle) {}
     ~TCustomCheckBox() override = default;
 };
 
@@ -1989,13 +1994,13 @@ public:
     Property<TNotifyEvent> OnChange;
 
 protected:
-    explicit TCustomEdit(no_vcl_obj_t handle);
+    explicit TCustomEdit(ObjectHandle handle);
     ~TCustomEdit() override = default;
 
 private:
     TNotifyEvent onChange_;
     bool         onChangeHooked_ = false;
-    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL ChangeTrampoline(ObjectHandle sender, void* data);
     static TNotifyEvent GetOnChangeImpl(TObject* owner);
     static void         SetOnChangeImpl(TObject* owner, const TNotifyEvent& value);
 
@@ -2025,7 +2030,7 @@ public:
     Property<int>    DecimalPlaces;
 
 protected:
-    explicit TCustomFloatSpinEdit(no_vcl_obj_t handle);
+    explicit TCustomFloatSpinEdit(ObjectHandle handle);
     ~TCustomFloatSpinEdit() override = default;
 
 private:
@@ -2062,7 +2067,7 @@ public:
     Property<int> Increment;
 
 protected:
-    explicit TCustomSpinEdit(no_vcl_obj_t handle);
+    explicit TCustomSpinEdit(ObjectHandle handle);
     ~TCustomSpinEdit() override = default;
 
 private:
@@ -2117,7 +2122,7 @@ public:
     Property<int>                  LabelSpacing;
 
 protected:
-    explicit TCustomLabeledEdit(no_vcl_obj_t handle);
+    explicit TCustomLabeledEdit(ObjectHandle handle);
     ~TCustomLabeledEdit() override = default;
 
 private:
@@ -2158,13 +2163,13 @@ public:
     Property<TCustomImageList*> Images;
 
 protected:
-    explicit TCustomTabControl(no_vcl_obj_t handle);
+    explicit TCustomTabControl(ObjectHandle handle);
     ~TCustomTabControl() override = default;
 
 private:
     TTabChangingEvent onChanging_;
     bool              onChangingHooked_ = false;
-    static void NO_VCL_CALL ChangingTrampoline(no_vcl_obj_t sender, no_vcl_bool_t* allowChange, void* data);
+    static void NO_VCL_CALL ChangingTrampoline(ObjectHandle sender, internal::bool_t* allowChange, void* data);
 
     static int               GetPageCountImpl(TObject* owner);
     static bool              GetMultiLineImpl(TObject* owner);
@@ -2202,7 +2207,7 @@ private:
     static TStrings* GetTabsImpl(TObject* owner);
     TNotifyEvent onChange_;
     bool         onChangeHooked_ = false;
-    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL ChangeTrampoline(ObjectHandle sender, void* data);
 
     static int           GetTabIndexImpl(TObject* owner);
     static void          SetTabIndexImpl(TObject* owner, const int& value);
@@ -2245,7 +2250,7 @@ private:
     static TTabSheet* GetPagesImpl(TObject* owner, int Index);
     TNotifyEvent onChange_;
     bool         onChangeHooked_ = false;
-    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL ChangeTrampoline(ObjectHandle sender, void* data);
 
     static TTabSheet*   GetActivePageImpl(TObject* owner);
     static void         SetActivePageImpl(TObject* owner, TTabSheet* const& value);
@@ -2271,7 +2276,7 @@ public:
     Property<int> ImageIndex;
 
 protected:
-    explicit TCustomPage(no_vcl_obj_t handle);
+    explicit TCustomPage(ObjectHandle handle);
     ~TCustomPage() override = default;
 
 private:
@@ -2279,8 +2284,8 @@ private:
     TNotifyEvent onHide_;
     bool         onShowHooked_ = false;
     bool         onHideHooked_ = false;
-    static void NO_VCL_CALL ShowTrampoline(no_vcl_obj_t sender, void* data);
-    static void NO_VCL_CALL HideTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL ShowTrampoline(ObjectHandle sender, void* data);
+    static void NO_VCL_CALL HideTrampoline(ObjectHandle sender, void* data);
 
     static int          GetPageIndexImpl(TObject* owner);
     static void         SetPageIndexImpl(TObject* owner, const int& value);
@@ -2311,7 +2316,7 @@ protected:
 
 private:
     friend class TComponent;  // WrapExisting から(AddTabSheet 等で LCL が生成したページのラップ)
-    explicit TTabSheet(no_vcl_obj_t handle);
+    explicit TTabSheet(ObjectHandle handle);
 
     static TPageControl* GetPageControlImpl(TObject* owner);
     static void          SetPageControlImpl(TObject* owner, TPageControl* const& value);
@@ -2385,11 +2390,11 @@ private:
     friend class TCustomTreeView;
     friend class TTreeView;
 
-    explicit TTreeNode(no_vcl_obj_t handle);
+    explicit TTreeNode(ObjectHandle handle);
     ~TTreeNode() override = default;
 
     // ハンドルからラッパーを得る(無ければ作る)。nullptr には nullptr を返す。
-    static TTreeNode* Wrap(no_vcl_obj_t handle) { return ItemRegistry::Wrap<TTreeNode>(handle); }
+    static TTreeNode* Wrap(ObjectHandle handle) { return ItemRegistry::Wrap<TTreeNode>(handle); }
 
     static std::string      GetTextImpl(TObject* owner);
     static void             SetTextImpl(TObject* owner, const std::string& value);
@@ -2424,7 +2429,7 @@ private:
 class TTreeNodes : public TPersistent
 {
 public:
-    explicit TTreeNodes(no_vcl_obj_t handle);
+    explicit TTreeNodes(ObjectHandle handle);
     ~TTreeNodes() override = default;
 
     // すべてのノード(子孫を含む)の数。GetItem の Index は、上から順に数えた位置(AbsoluteIndex)。
@@ -2478,7 +2483,7 @@ public:
     TTreeNode* GetNodeAt(int X, int Y) const;
 
 protected:
-    explicit TCustomTreeView(no_vcl_obj_t handle);
+    explicit TCustomTreeView(ObjectHandle handle);
     ~TCustomTreeView() override = default;
 
 private:
@@ -2541,17 +2546,17 @@ private:
     bool onDeletionHooked_  = false;
 
     template<typename Event>
-    static void DispatchNode(no_vcl_obj_t sender, no_vcl_obj_t node, Event TTreeView::*slot);
+    static void DispatchNode(ObjectHandle sender, ObjectHandle node, Event TTreeView::*slot);
     template<typename Event>
-    static void DispatchNodeAllow(no_vcl_obj_t sender, no_vcl_obj_t node, no_vcl_bool_t* allow, Event TTreeView::*slot);
+    static void DispatchNodeAllow(ObjectHandle sender, ObjectHandle node, internal::bool_t* allow, Event TTreeView::*slot);
 
-    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender, no_vcl_obj_t node, void* data);
-    static void NO_VCL_CALL ChangingTrampoline(no_vcl_obj_t sender, no_vcl_obj_t node, no_vcl_bool_t* allow, void* data);
-    static void NO_VCL_CALL ExpandingTrampoline(no_vcl_obj_t sender, no_vcl_obj_t node, no_vcl_bool_t* allow, void* data);
-    static void NO_VCL_CALL ExpandedTrampoline(no_vcl_obj_t sender, no_vcl_obj_t node, void* data);
-    static void NO_VCL_CALL CollapsingTrampoline(no_vcl_obj_t sender, no_vcl_obj_t node, no_vcl_bool_t* allow, void* data);
-    static void NO_VCL_CALL CollapsedTrampoline(no_vcl_obj_t sender, no_vcl_obj_t node, void* data);
-    static void NO_VCL_CALL DeletionTrampoline(no_vcl_obj_t sender, no_vcl_obj_t node, void* data);
+    static void NO_VCL_CALL ChangeTrampoline(ObjectHandle sender, ObjectHandle node, void* data);
+    static void NO_VCL_CALL ChangingTrampoline(ObjectHandle sender, ObjectHandle node, internal::bool_t* allow, void* data);
+    static void NO_VCL_CALL ExpandingTrampoline(ObjectHandle sender, ObjectHandle node, internal::bool_t* allow, void* data);
+    static void NO_VCL_CALL ExpandedTrampoline(ObjectHandle sender, ObjectHandle node, void* data);
+    static void NO_VCL_CALL CollapsingTrampoline(ObjectHandle sender, ObjectHandle node, internal::bool_t* allow, void* data);
+    static void NO_VCL_CALL CollapsedTrampoline(ObjectHandle sender, ObjectHandle node, void* data);
+    static void NO_VCL_CALL DeletionTrampoline(ObjectHandle sender, ObjectHandle node, void* data);
 
     static bool GetReadOnlyImpl(TObject* owner);
     static void SetReadOnlyImpl(TObject* owner, const bool& value);
@@ -2632,9 +2637,9 @@ private:
     friend class TCustomListView;
     friend class TListView;
 
-    explicit TListItem(no_vcl_obj_t handle);
+    explicit TListItem(ObjectHandle handle);
     ~TListItem() override = default;
-    static TListItem* Wrap(no_vcl_obj_t handle) { return ItemRegistry::Wrap<TListItem>(handle); }
+    static TListItem* Wrap(ObjectHandle handle) { return ItemRegistry::Wrap<TListItem>(handle); }
 
     static std::string      GetCaptionImpl(TObject* owner);
     static void             SetCaptionImpl(TObject* owner, const std::string& value);
@@ -2660,7 +2665,7 @@ private:
 class TListItems : public TPersistent
 {
 public:
-    explicit TListItems(no_vcl_obj_t handle);
+    explicit TListItems(ObjectHandle handle);
     ~TListItems() override = default;
 
     ReadOnlyProperty<int> Count;
@@ -2705,9 +2710,9 @@ private:
     friend class TListColumns;
     friend class TListView;
 
-    explicit TListColumn(no_vcl_obj_t handle);
+    explicit TListColumn(ObjectHandle handle);
     ~TListColumn() override = default;
-    static TListColumn* Wrap(no_vcl_obj_t handle) { return ItemRegistry::Wrap<TListColumn>(handle); }
+    static TListColumn* Wrap(ObjectHandle handle) { return ItemRegistry::Wrap<TListColumn>(handle); }
 
     static std::string GetCaptionImpl(TObject* owner);
     static void        SetCaptionImpl(TObject* owner, const std::string& value);
@@ -2730,7 +2735,7 @@ private:
 class TListColumns : public TPersistent
 {
 public:
-    explicit TListColumns(no_vcl_obj_t handle);
+    explicit TListColumns(ObjectHandle handle);
     ~TListColumns() override = default;
 
     ReadOnlyProperty<int> Count;
@@ -2780,7 +2785,7 @@ public:
     void       SelectAll();
 
 protected:
-    explicit TCustomListView(no_vcl_obj_t handle);
+    explicit TCustomListView(ObjectHandle handle);
     ~TCustomListView() override = default;
 
 private:
@@ -2827,6 +2832,8 @@ public:
     // 項目が変わったとき(Change は変更の種類)。
     Property<TLVChangeEvent>      OnChange;
     // 項目が削除される直前(Item はまだ有効。ハンドラから戻った後にラッパーが delete される)。
+    // リストビュー自身の破棄に伴う削除では呼ばれない(LCL はリストビューの破棄通知の後に項目を削除し、
+    // そのときにはリストビューのラッパーが delete されているため)。
     Property<TLVDeletedEvent>     OnDeletion;
     // チェックボックス(Checkboxes)が切り替わったとき。
     Property<TLVCheckedItemEvent> OnItemChecked;
@@ -2854,11 +2861,11 @@ private:
     bool onItemCheckedHooked_ = false;
     bool onColumnClickHooked_ = false;
 
-    static void NO_VCL_CALL SelectItemTrampoline(no_vcl_obj_t sender, no_vcl_obj_t item, no_vcl_int_t selected, void* data);
-    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender, no_vcl_obj_t item, no_vcl_int_t change, void* data);
-    static void NO_VCL_CALL DeletionTrampoline(no_vcl_obj_t sender, no_vcl_obj_t item, void* data);
-    static void NO_VCL_CALL ItemCheckedTrampoline(no_vcl_obj_t sender, no_vcl_obj_t item, void* data);
-    static void NO_VCL_CALL ColumnClickTrampoline(no_vcl_obj_t sender, no_vcl_obj_t column, void* data);
+    static void NO_VCL_CALL SelectItemTrampoline(ObjectHandle sender, ObjectHandle item, internal::int_t selected, void* data);
+    static void NO_VCL_CALL ChangeTrampoline(ObjectHandle sender, ObjectHandle item, internal::int_t change, void* data);
+    static void NO_VCL_CALL DeletionTrampoline(ObjectHandle sender, ObjectHandle item, void* data);
+    static void NO_VCL_CALL ItemCheckedTrampoline(ObjectHandle sender, ObjectHandle item, void* data);
+    static void NO_VCL_CALL ColumnClickTrampoline(ObjectHandle sender, ObjectHandle column, void* data);
 
     static TListColumns*  GetColumnsImpl(TObject* owner);
     static TViewStyle     GetViewStyleImpl(TObject* owner);
@@ -2915,13 +2922,13 @@ public:
     void SetSplitterPosition(int NewPosition);
 
 protected:
-    explicit TCustomSplitter(no_vcl_obj_t handle);
+    explicit TCustomSplitter(ObjectHandle handle);
     ~TCustomSplitter() override = default;
 
 private:
     TNotifyEvent onMoved_;
     bool         onMovedHooked_ = false;
-    static void NO_VCL_CALL MovedTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL MovedTrampoline(ObjectHandle sender, void* data);
 
     static bool         GetAutoSnapImpl(TObject* owner);
     static void         SetAutoSnapImpl(TObject* owner, const bool& value);
@@ -2955,7 +2962,7 @@ public:
     ReadOnlyProperty<TStrings*> Lines;
 
 protected:
-    explicit TCustomMemo(no_vcl_obj_t handle);
+    explicit TCustomMemo(ObjectHandle handle);
     ~TCustomMemo() override = default;
 
 private:
@@ -2986,7 +2993,7 @@ public:
     ReadOnlyProperty<TStrings*> Items;
 
 protected:
-    explicit TCustomComboBox(no_vcl_obj_t handle);
+    explicit TCustomComboBox(ObjectHandle handle);
     ~TCustomComboBox() override = default;
 
 private:
@@ -3010,7 +3017,7 @@ protected:
 private:
     TNotifyEvent onChange_;
     bool         onChangeHooked_ = false;
-    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL ChangeTrampoline(ObjectHandle sender, void* data);
     static TNotifyEvent GetOnChangeImpl(TObject* owner);
     static void         SetOnChangeImpl(TObject* owner, const TNotifyEvent& value);
 };
@@ -3026,7 +3033,7 @@ public:
     ReadOnlyProperty<TStrings*> Items;
 
 protected:
-    explicit TCustomListBox(no_vcl_obj_t handle);
+    explicit TCustomListBox(ObjectHandle handle);
     ~TCustomListBox() override = default;
 
 private:
@@ -3055,7 +3062,7 @@ public:
     IndexedProperty<bool> Checked;
 
 protected:
-    explicit TCustomCheckListBox(no_vcl_obj_t handle);
+    explicit TCustomCheckListBox(ObjectHandle handle);
     ~TCustomCheckListBox() override = default;
 
 private:
@@ -3063,7 +3070,7 @@ private:
     static void SetCheckedImpl(TObject* owner, int index, const bool& value);
     TNotifyEvent onClickCheck_;
     bool         onClickCheckHooked_ = false;
-    static void NO_VCL_CALL ClickCheckTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL ClickCheckTrampoline(ObjectHandle sender, void* data);
 
     static TNotifyEvent GetOnClickCheckImpl(TObject* owner);
     static void         SetOnClickCheckImpl(TObject* owner, const TNotifyEvent& value);
@@ -3087,7 +3094,7 @@ public:
     Property<TStaticBorderStyle> BorderStyle;
 
 protected:
-    explicit TCustomStaticText(no_vcl_obj_t handle);
+    explicit TCustomStaticText(ObjectHandle handle);
     ~TCustomStaticText() override = default;
 
 private:
@@ -3146,7 +3153,7 @@ public:
     Property<TShapeType> Shape;
 
 protected:
-    explicit TCustomShape(no_vcl_obj_t handle);
+    explicit TCustomShape(ObjectHandle handle);
     ~TCustomShape() override = default;
 
 private:
@@ -3183,7 +3190,7 @@ public:
     Property<int> ImageIndex;
 
 protected:
-    explicit TCustomSpeedButton(no_vcl_obj_t handle);
+    explicit TCustomSpeedButton(ObjectHandle handle);
     ~TCustomSpeedButton() override = default;
 
 private:
@@ -3238,7 +3245,7 @@ protected:
 private:
     TNotifyEvent onPaint_;
     bool         onPaintHooked_ = false;
-    static void NO_VCL_CALL PaintTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL PaintTrampoline(ObjectHandle sender, void* data);
     static TNotifyEvent GetOnPaintImpl(TObject* owner);
     static void         SetOnPaintImpl(TObject* owner, const TNotifyEvent& value);
 };
@@ -3268,7 +3275,7 @@ public:
     Property<int> ImageIndex;
 
 protected:
-    explicit TCustomImage(no_vcl_obj_t handle);
+    explicit TCustomImage(ObjectHandle handle);
     ~TCustomImage() override = default;
 
 private:
@@ -3293,7 +3300,7 @@ private:
     static void         SetProportionalImpl(TObject* owner, const bool& value);
     static bool         GetTransparentImpl(TObject* owner);
     static void         SetTransparentImpl(TObject* owner, const bool& value);
-    static void NO_VCL_CALL PictureChangedTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL PictureChangedTrampoline(ObjectHandle sender, void* data);
     static TNotifyEvent GetOnPictureChangedImpl(TObject* owner);
     static void         SetOnPictureChangedImpl(TObject* owner, const TNotifyEvent& value);
 
@@ -3385,7 +3392,7 @@ public:
     void  MouseToCell(int X, int Y, int& ACol, int& ARow) const;
 
 protected:
-    explicit TCustomGrid(no_vcl_obj_t handle) : TCustomControl(handle) {}
+    explicit TCustomGrid(ObjectHandle handle) : TCustomControl(handle) {}
     ~TCustomGrid() override = default;
 };
 
@@ -3434,7 +3441,7 @@ public:
     void SortColRow(bool IsColumn, int Index);
 
 protected:
-    explicit TCustomDrawGrid(no_vcl_obj_t handle);
+    explicit TCustomDrawGrid(ObjectHandle handle);
     ~TCustomDrawGrid() override = default;
 
 private:
@@ -3447,12 +3454,12 @@ private:
     bool onSelectionHooked_   = false;
     bool onHeaderClickHooked_ = false;
 
-    static void NO_VCL_CALL DrawCellTrampoline(no_vcl_obj_t sender, no_vcl_int_t col, no_vcl_int_t row,
-                                               no_vcl_int_t left, no_vcl_int_t top, no_vcl_int_t right, no_vcl_int_t bottom,
-                                               no_vcl_uint_t state, void* data);
-    static void NO_VCL_CALL SelectCellTrampoline(no_vcl_obj_t sender, no_vcl_int_t col, no_vcl_int_t row, no_vcl_bool_t* canSelect, void* data);
-    static void NO_VCL_CALL SelectionTrampoline(no_vcl_obj_t sender, no_vcl_int_t col, no_vcl_int_t row, void* data);
-    static void NO_VCL_CALL HeaderClickTrampoline(no_vcl_obj_t sender, no_vcl_int_t isColumn, no_vcl_int_t index, void* data);
+    static void NO_VCL_CALL DrawCellTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row,
+                                               internal::int_t left, internal::int_t top, internal::int_t right, internal::int_t bottom,
+                                               internal::uint_t state, void* data);
+    static void NO_VCL_CALL SelectCellTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, internal::bool_t* canSelect, void* data);
+    static void NO_VCL_CALL SelectionTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, void* data);
+    static void NO_VCL_CALL HeaderClickTrampoline(ObjectHandle sender, internal::int_t isColumn, internal::int_t index, void* data);
 
     static int          GetColCountImpl(TObject* owner);
     static void         SetColCountImpl(TObject* owner, const int& value);
@@ -3523,7 +3530,7 @@ public:
     void        AutoSizeColumn(int ACol);
 
 protected:
-    explicit TCustomStringGrid(no_vcl_obj_t handle);
+    explicit TCustomStringGrid(ObjectHandle handle);
     ~TCustomStringGrid() override = default;
 
 private:
@@ -3572,9 +3579,9 @@ private:
     friend class THeaderSections;
     friend class TCustomHeaderControl;
 
-    explicit THeaderSection(no_vcl_obj_t handle);
+    explicit THeaderSection(ObjectHandle handle);
     ~THeaderSection() override = default;
-    static THeaderSection* Wrap(no_vcl_obj_t handle) { return ItemRegistry::Wrap<THeaderSection>(handle); }
+    static THeaderSection* Wrap(ObjectHandle handle) { return ItemRegistry::Wrap<THeaderSection>(handle); }
 
     static std::string GetTextImpl(TObject* owner);
     static void        SetTextImpl(TObject* owner, const std::string& value);
@@ -3602,7 +3609,7 @@ private:
 class THeaderSections : public TPersistent
 {
 public:
-    explicit THeaderSections(no_vcl_obj_t handle);
+    explicit THeaderSections(ObjectHandle handle);
     ~THeaderSections() override = default;
 
     ReadOnlyProperty<int> Count;
@@ -3667,7 +3674,7 @@ public:
     int GetSectionAt(const TPoint& P) const;
 
 protected:
-    explicit TCustomHeaderControl(no_vcl_obj_t handle);
+    explicit TCustomHeaderControl(ObjectHandle handle);
     ~TCustomHeaderControl() override = default;
 
 private:
@@ -3685,12 +3692,12 @@ private:
     bool onSectionDragHooked_              = false;
     bool onSectionEndDragHooked_           = false;
 
-    static void NO_VCL_CALL SectionClickTrampoline(no_vcl_obj_t sender, no_vcl_obj_t section, void* data);
-    static void NO_VCL_CALL SectionResizeTrampoline(no_vcl_obj_t sender, no_vcl_obj_t section, void* data);
-    static void NO_VCL_CALL SectionSeparatorDblClickTrampoline(no_vcl_obj_t sender, no_vcl_obj_t section, void* data);
-    static void NO_VCL_CALL SectionTrackTrampoline(no_vcl_obj_t sender, no_vcl_obj_t section, no_vcl_int_t width, no_vcl_int_t state, void* data);
-    static void NO_VCL_CALL SectionDragTrampoline(no_vcl_obj_t sender, no_vcl_obj_t fromSection, no_vcl_obj_t toSection, no_vcl_bool_t* allow, void* data);
-    static void NO_VCL_CALL SectionEndDragTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL SectionClickTrampoline(ObjectHandle sender, ObjectHandle section, void* data);
+    static void NO_VCL_CALL SectionResizeTrampoline(ObjectHandle sender, ObjectHandle section, void* data);
+    static void NO_VCL_CALL SectionSeparatorDblClickTrampoline(ObjectHandle sender, ObjectHandle section, void* data);
+    static void NO_VCL_CALL SectionTrackTrampoline(ObjectHandle sender, ObjectHandle section, internal::int_t width, internal::int_t state, void* data);
+    static void NO_VCL_CALL SectionDragTrampoline(ObjectHandle sender, ObjectHandle fromSection, ObjectHandle toSection, internal::bool_t* allow, void* data);
+    static void NO_VCL_CALL SectionEndDragTrampoline(ObjectHandle sender, void* data);
 
     static THeaderSections* GetSectionsImpl(TObject* owner);
     static bool             GetDragReorderImpl(TObject* owner);
@@ -3764,7 +3771,7 @@ public:
     void EndUpdate();
 
 protected:
-    explicit TToolWindow(no_vcl_obj_t handle);
+    explicit TToolWindow(ObjectHandle handle);
     ~TToolWindow() override = default;
 
 private:
@@ -3886,7 +3893,7 @@ protected:
 private:
     TNotifyEvent onArrowClick_;
     bool         onArrowClickHooked_ = false;
-    static void NO_VCL_CALL ArrowClickTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL ArrowClickTrampoline(ObjectHandle sender, void* data);
 
     static bool             GetAllowAllUpImpl(TObject* owner);
     static void             SetAllowAllUpImpl(TObject* owner, const bool& value);
@@ -3968,9 +3975,9 @@ private:
     friend class ItemRegistry;
     friend class TCoolBands;
 
-    explicit TCoolBand(no_vcl_obj_t handle);
+    explicit TCoolBand(ObjectHandle handle);
     ~TCoolBand() override = default;
-    static TCoolBand* Wrap(no_vcl_obj_t handle) { return ItemRegistry::Wrap<TCoolBand>(handle); }
+    static TCoolBand* Wrap(ObjectHandle handle) { return ItemRegistry::Wrap<TCoolBand>(handle); }
 
     static std::string GetTextImpl(TObject* owner);
     static void        SetTextImpl(TObject* owner, const std::string& value);
@@ -4014,7 +4021,7 @@ private:
 class TCoolBands : public TPersistent
 {
 public:
-    explicit TCoolBands(no_vcl_obj_t handle);
+    explicit TCoolBands(ObjectHandle handle);
     ~TCoolBands() override = default;
 
     ReadOnlyProperty<int> Count;
@@ -4068,14 +4075,14 @@ public:
     void MouseToBandPos(int X, int Y, int& ABand, bool& AGrabber) const;
 
 protected:
-    explicit TCustomCoolBar(no_vcl_obj_t handle);
+    explicit TCustomCoolBar(ObjectHandle handle);
     ~TCustomCoolBar() override = default;
 
 private:
     TCoolBands   bands_;
     TNotifyEvent onChange_;
     bool         onChangeHooked_ = false;
-    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL ChangeTrampoline(ObjectHandle sender, void* data);
 
     static TCoolBands*  GetBandsImpl(TObject* owner);
     static bool         GetFixedSizeImpl(TObject* owner);
@@ -4126,13 +4133,13 @@ public:
     Property<TNotifyEvent> OnTimer;
 
 protected:
-    explicit TCustomTimer(no_vcl_obj_t handle);
+    explicit TCustomTimer(ObjectHandle handle);
     ~TCustomTimer() override = default;
 
 private:
     TNotifyEvent onTimer_;
     bool         onTimerHooked_ = false;
-    static void NO_VCL_CALL TimerTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL TimerTrampoline(ObjectHandle sender, void* data);
     static TNotifyEvent GetOnTimerImpl(TObject* owner);
     static void         SetOnTimerImpl(TObject* owner, const TNotifyEvent& value);
 

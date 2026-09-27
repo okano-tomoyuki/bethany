@@ -95,9 +95,9 @@ TObject
 
 TFPImageBitmap(LCL 固有で、公開するメンバを持たない)は省いた。
 
-文字列を返す C API(`no_vcl_TControl_GetCaption` 等)の戻り値は、DLL 内のスレッドごとのバッファを指し、
+文字列を返す DLL の関数(`TControl_GetCaption` 等)の戻り値は、DLL 内のスレッドごとのバッファを指し、
 同じスレッドで次に文字列を返す関数を呼ぶまで有効([ADR 0013](adr/0013-string-return-bridge-reuse-ctor-exception.md))。
-保持する場合や 2 つの戻り値を同時に使う場合は呼び出し側でコピーすること。
+C++ ラッパーは受け取った時点で std::string にコピーする。DLL の関数の決まりは [dll-abi.md](dll-abi.md) を参照。
 
 具象クラス(TForm・TButton 等)だけが public なコンストラクタ `(TComponent* AOwner)` を持つ。
 TCustomXxx 等の中間クラスのコンストラクタは protected で、直接は生成できない。
@@ -109,11 +109,11 @@ LCL でそのメンバが **公開(public/published)される階層** に置く�
 LCL で protected のメンバを派生クラスが公開している場合は、C++ でも基底では protected にし、
 公開する派生クラスで `using` する(例: `TCheckBox` の `using TButtonControl::Checked;`)。
 
-C API(`no_vcl_c.h`)の関数名も同じ規則で、公開される階層のクラス名を使う。
+DLL の関数名(内部層 `no_vcl::internal` の関数名も同じ。[ADR 0032](adr/0032-internalize-c-api.md))も同じ規則で、公開される階層のクラス名を使う。
 ただし兄弟クラスがそれぞれ公開していて関数が重複する場合は、宣言元の共通祖先の名前で 1 本にし、
 Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同一ユニット内の派生クラス経由)でアクセスする。
 
-| メンバ | LCL の宣言元(公開範囲) | LCL で公開しているクラス | no_vcl C++ | C API |
+| メンバ | LCL の宣言元(公開範囲) | LCL で公開しているクラス | no_vcl C++ | DLL の関数 |
 |---|---|---|---|---|
 | Parent / Left / Top / Width / Height / Visible / Enabled / Caption | TControl(public/published) | TControl | TControl(public) | `TControl_*` |
 | Align | TControl(public。既定値は TStatusBar が alBottom、TCustomSplitter が alLeft に上書き) | TControl | TControl(public) | `TControl_GetAlign` / `SetAlign`([ADR 0016](adr/0016-control-align-and-splitter.md)) |
@@ -194,20 +194,20 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 | Interval / Enabled / OnTimer | TCustomTimer(public) | TCustomTimer | TCustomTimer(public) | `TCustomTimer_*` |
 | Run / Terminate / Terminated / Title | TCustomApplication(public。Run・Terminate・Title は TApplication で再宣言) | TApplication | TApplication(public) | `TApplication_*` |
 | CreateForm / MainForm / ProcessMessages / ShowMainForm | TApplication(public) | TApplication | TApplication(public。CreateForm は型を引数から推論するテンプレート) | `TApplication_*`(CreateForm は素の TForm を返す) |
-| DestroyComponents | TComponent(public) | TComponent | (C API のみ) | `TComponent_DestroyComponents` |
+| DestroyComponents | TComponent(public) | TComponent | (C++ では公開していない。内部層のみ) | `TComponent_DestroyComponents` |
 
 破棄は種類によらず `TComponent_Destroy`(C++ では `TComponent::Free()`)で行う。
 
-修飾キー・マウスボタンの状態(TShiftState)は、C API・C++ とも `no_vcl_ss*` / `ssShift` 等のビット定数を OR した
-単純な整数のビット集合として表す(TColor と同様、Pascal の集合型を素の整数として扱う)。
-マウスボタンは `TMouseButton` の序数と同じ整数(`no_vcl_mb*` / `TMouseButton`)([ADR 0014](adr/0014-control-key-mouse-events.md))。
+修飾キー・マウスボタンの状態(TShiftState)は、`ssShift` 等のビット定数を OR した
+単純な整数のビット集合として表す(TColor と同様、Pascal の集合型を素の整数として扱う。DLL の関数も同じ整数)。
+マウスボタンは `TMouseButton` の序数と同じ整数([ADR 0014](adr/0014-control-key-mouse-events.md))。
 
 イベント(OnClick・OnChange・OnPaint・OnTimer・OnShow 等)は C++ では `Property<TNotifyEvent>`(`TNotifyEvent = std::function<void(TObject* Sender)>`)、
-C API では `no_vcl_Txxx_SetOnXxx(obj, callback, data)` で登録する([ADR 0009](adr/0009-events-as-properties-with-sender.md))。
+DLL の関数では `Txxx_SetOnXxx(obj, callback, data)` で登録する([ADR 0009](adr/0009-events-as-properties-with-sender.md))。
 OnClose は `Property<TCloseEvent>`(`std::function<void(TObject* Sender, TCloseAction& Action)>`)で、
-C API のコールバックは Action へのポインタを受け取る([ADR 0011](adr/0011-form-release-onclose-oncreate.md))。
+DLL のコールバックは Action へのポインタを受け取る([ADR 0011](adr/0011-form-release-onclose-oncreate.md))。
 OnCloseQuery も同じ形で、`Property<TCloseQueryEvent>`(`std::function<void(TObject* Sender, bool& CanClose)>`)、
-C API のコールバックは CanClose へのポインタを受け取る([ADR 0012](adr/0012-remaining-form-events.md))。
+DLL のコールバックは CanClose へのポインタを受け取る([ADR 0012](adr/0012-remaining-form-events.md))。
 
 ## 4. 生存期間([ADR 0008](adr/0008-wrapper-lifetime-follows-lcl.md))
 

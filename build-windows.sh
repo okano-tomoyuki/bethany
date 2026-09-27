@@ -15,7 +15,7 @@ PATH="/c/tool/lazarus/fpc/3.2.2/bin/x86_64-win64:$PATH" \
   -Fu"$LAZARUS_HOME\components\lazutils\lib\x86_64-win64" \
   -Fu"$LAZARUS_HOME\packager\units\x86_64-win64"
 
-# C/C++側(no_vcl_c, no_vcl, test)はCMakeでビルドする。
+# C++側(no_vcl, test)はCMakeでビルドする。
 # MinGW Makefiles生成器はPATH上にsh.exeがあると使えないため、Ninjaを使う。
 cmake -S . -B build -G Ninja
 cmake --build build
@@ -23,4 +23,4 @@ cmake --build build
 # 実行時にDLL探索されるよう、テストexeの隣にno_vcl.dllを置く。
 cp no_vcl.dll build/test/no_vcl.dll
 
-echo "Build OK: no_vcl.dll, build/test/test_c.exe, build/test/test_cpp.exe"
+echo "Build OK: no_vcl.dll, build/test/test_internal.exe, build/test/test_cpp.exe"

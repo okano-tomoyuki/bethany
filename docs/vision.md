@@ -17,7 +17,7 @@ RAD Studio 本体が持つビジュアルデザイナー(フォームデザイ�
 2026-09 に実施した市場調査の要点([todo.md](../todo.md) にも記録):
 
 - [liblcl](https://github.com/ying32/liblcl) が「LCL を DLL 化してフラットな C API として C/Go/Rust/Nim 等に公開する」という、
-  本ライブラリの低レベル層(`no_vcl_c.h`)に相当する取り組みの先行事例として存在する。
+  本ライブラリの DLL の層に相当する取り組みの先行事例として存在する。
 - 一方で liblcl は手続き型のフラット API に留まっており、
   C++Builder のようなオブジェクト指向ラッパー(プロパティ構文、クラス階層)を提供する例は見当たらなかった。
   ここが本ライブラリの独自性になり得る。
@@ -36,8 +36,10 @@ RAD Studio 本体が持つビジュアルデザイナー(フォームデザイ�
 
 1. **C++Builder ライクなプロパティ API**(`form.Caption = "...";` / `canvas.Pen.Color = clRed;` 等)。
    `Property<T>` による軽量プロキシで実現し、`std::function` ベースのイベントハンドラ登録も備える。
-2. **低レベル C API(`no_vcl_c.h`) と 高レベル C++ ラッパー(`no_vcl.hpp`) の二層公開構成**。
-   C/C++ どちらからも直接利用できる。
+2. **VCL の代替としての C++ ラッパー(`no_vcl.hpp`)**。
+   当初は低レベル C API(`no_vcl_c.h`)との二層公開構成だったが、C API の公開は終了し、DLL の呼び出し層は
+   内部層(`no_vcl::internal`)とした([ADR 0032](adr/0032-internalize-c-api.md))。別の言語から使う場合は、DLL の関数を直接呼ぶ層を作る
+   (決まりは [dll-abi.md](dll-abi.md))。
 3. **専用デザイナーアプリケーションによるビジュアル編集**(tk-designer と同様の戦略。ADR 0001)。
    DSL からのコード生成を前提に、C++ 側のオブジェクトモデルを見直す(ADR 0003)。
 

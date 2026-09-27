@@ -1,3 +1,5 @@
+#include "internal/api.h"
+
 #include <cassert>
 #include <mutex>
 #include <string>
@@ -10,9 +12,12 @@ using no_vcl_module_t = HMODULE;
 using no_vcl_module_t = void*;
 #endif
 
-#include "no_vcl_c.h"
+#include "no_vcl.hpp"
 
-#include "no_vcl_funcs.h"
+namespace no_vcl
+{
+namespace internal
+{
 
 namespace
 {
@@ -24,8 +29,8 @@ namespace
 NO_VCL_FUNCS(NO_VCL_DECLARE)
 #undef NO_VCL_DECLARE
 
-/* 直前のエラー(docs/adr/0031)。DLL の公開関数の中で例外が起きると、DLL が OnDllError で知らせる。
-   各関数の呼び出しの最初にクリアするため、「直前の呼び出しが失敗したか」を表す。 */
+/* 直前のエラー(docs/adr/0031)。DLL の公開関数の中で例外が起きると、DLL が OnDllError で知らせる
+   (通知は失敗した呼び出しと同じスレッドで、その呼び出しから戻る前に行われる)。 */
 struct LastError
 {
     bool        set = false;
@@ -34,14 +39,46 @@ struct LastError
 };
 thread_local LastError g_lastError;
 
-typedef void (NO_VCL_CALL *no_vcl_error_callback_t)(no_vcl_str_t className, no_vcl_str_t message);
+typedef void (NO_VCL_CALL *error_callback_t)(str_t className, str_t message);
 
-void NO_VCL_CALL OnDllError(no_vcl_str_t className, no_vcl_str_t message)
+void NO_VCL_CALL OnDllError(str_t className, str_t message)
 {
     g_lastError.set = true;
     g_lastError.className = className ? className : "";
     g_lastError.message = message ? message : "";
 }
+
+// 呼び出しの後に、DLL の中で例外が起きていれば Exception として送出する。
+void ThrowIfLastError()
+{
+    if (!g_lastError.set)
+        return;
+    g_lastError.set = false;
+    throw Exception(g_lastError.className, g_lastError.message);
+}
+
+template<typename R>
+struct Checked
+{
+    template<typename F>
+    static R Call(F f)
+    {
+        R result = f();
+        ThrowIfLastError();
+        return result;
+    }
+};
+
+template<>
+struct Checked<void>
+{
+    template<typename F>
+    static void Call(F f)
+    {
+        f();
+        ThrowIfLastError();
+    }
+};
 
 /* 関数ポインタマッピング */
 template<typename Func>
@@ -68,8 +105,8 @@ void no_vcl_init(void)
 #else
             m = ::dlopen("libno_vcl.so", RTLD_LAZY);
 #endif
-            // エラーの通知先は DLL 全体で 1 つ(通知は失敗した呼び出しと同じスレッドで行われる)。
-            void (NO_VCL_CALL *setErrorCallback)(no_vcl_error_callback_t) = nullptr;
+            // エラーの通知先は DLL 全体で 1 つ。
+            void (NO_VCL_CALL *setErrorCallback)(error_callback_t) = nullptr;
             no_vcl_map(setErrorCallback, m, "Error_SetCallback");
             assert(setErrorCallback != nullptr);
             setErrorCallback(&OnDllError);
@@ -92,21 +129,16 @@ void no_vcl_init(void)
 
 } // namespace
 
-extern "C" {
-
+// 中継関数。呼び出しの最初に直前のエラーをクリアし、戻った後に確かめる。
 #define NO_VCL_DEFINE(ret, name, params, args) \
-    ret NO_VCL_CALL no_vcl_##name params \
+    ret name params \
     { \
         NO_VCL_INIT_CHECK(name##_); \
         g_lastError.set = false; \
-        return name##_ args; \
+        return Checked<ret>::Call([&]() { return name##_ args; }); \
     }
 NO_VCL_FUNCS(NO_VCL_DEFINE)
 #undef NO_VCL_DEFINE
 
-no_vcl_bool_t NO_VCL_CALL no_vcl_HasLastError(void)          { return g_lastError.set ? 1 : 0; }
-no_vcl_str_t  NO_VCL_CALL no_vcl_GetLastErrorClassName(void) { return g_lastError.set ? g_lastError.className.c_str() : ""; }
-no_vcl_str_t  NO_VCL_CALL no_vcl_GetLastErrorMessage(void)   { return g_lastError.set ? g_lastError.message.c_str() : ""; }
-void          NO_VCL_CALL no_vcl_ClearLastError(void)        { g_lastError.set = false; }
-
-} // extern "C"
+} // namespace internal
+} // namespace no_vcl

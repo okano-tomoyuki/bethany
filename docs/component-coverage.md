@@ -97,7 +97,7 @@ Application と同様、C++ 側は値型ではなく生成・破棄が必要な 
 ### Tier 5 — メニュー
 
 VCL アプリらしい UI に必須だが、TMenuItem がツリー構造の TComponent であるため、
-コレクション操作(Items.Add / Items.Count / Items[i])を C API・C++ 双方で新たに設計する必要がある。
+コレクション操作(Items.Add / Items.Count / Items[i])を DLL の関数・C++ 双方で新たに設計する必要がある。
 
 | クラス | LCL 宣言ユニット | LCL での基底 | 備考 |
 |---|---|---|---|
@@ -133,7 +133,7 @@ Tier 1 の 1 バッチ目([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.m
   LCL では Align による配置がフォームの表示まで行われない(VCL と異なる)点に注意。
   Anchors・BorderSpacing・Constraints・AutoSize は未実装。
 - ✅ **LCL が内部で生成する子コンポーネントをラップできない。** → 仕組みとしては解決済み
-  ([ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md))。ハンドルを返す C API の側で破棄通知に登録し、
+  ([ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md))。ハンドルを返す DLL の関数の側で破棄通知に登録し、
   C++ 側は `TComponent::WrapExisting<T>` で初回アクセス時にラッパーを作る。TMenu.Items で初めて使った。
   以下は当初の記述。`TCustomLabeledEdit.EditLabel` のように、
   コンポーネントが自分の子を Pascal 側だけで生成する場合、その子は no_vcl の `*_Create` を経由しないため

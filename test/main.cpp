@@ -163,7 +163,7 @@ public:
     TDrawGrid*      DrawGrid1;
     int             drawnCells_ = 0;
     // ウィンドウを作る前の ListBox1->Items の中身のハンドル(表示後に LCL が差し替えることの確認用)。
-    no_vcl_obj_t    listBoxItemsBeforeShow_ = nullptr;
+    ObjectHandle    listBoxItemsBeforeShow_ = nullptr;
     TTabSheet*      HeaderSheet;
     THeaderControl* HeaderControl1;
     TTabSheet*      ToolsSheet;

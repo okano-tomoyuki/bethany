@@ -1,0 +1,931 @@
+#ifndef NO_VCL_INTERNAL_FUNCS_H
+#define NO_VCL_INTERNAL_FUNCS_H
+
+// DLL(no_vcl.dll / libno_vcl.so)の公開関数の一覧(戻り値型, 名前, 引数リスト, 呼び出し時の引数)。docs/adr/0032。
+// 型は no_vcl::internal の型(internal/api.h)で、この一覧は必ず namespace no_vcl::internal の中で展開する。
+// ここに 1 行追加すると、宣言(internal/api.h)と、関数ポインタ・読み込み・呼び出しの後にエラーを確かめて
+// Exception を送出する中継関数(internal/api.cpp)がまとめて生成される。
+// 名前は DLL の公開名(Pascal 側の exports)と同じ。DLL の関数の決まり(呼び出し規約・文字列・コールバック・例外)は
+// docs/dll-abi.md を参照。
+#define NO_VCL_FUNCS(X) \
+    X(void,          SetCallbackError,                      (str_t c, str_t m),                                            (c, m)) \
+    X(void,          FreeNotify_SetCallback,                (callback_t cb, void* d),                                      (cb, d)) \
+    X(void,          TComponent_Destroy,                    (obj_t o),                                                     (o)) \
+    X(void,          TComponent_DestroyComponents,          (obj_t o),                                                     (o)) \
+    X(obj_t,         TControl_GetParent,                    (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetParent,                    (obj_t o, obj_t p),                                            (o, p)) \
+    X(int_t,         TControl_GetLeft,                      (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetLeft,                      (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TControl_GetTop,                       (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetTop,                       (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TControl_GetWidth,                     (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetWidth,                     (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TControl_GetHeight,                    (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetHeight,                    (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TControl_GetVisible,                   (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetVisible,                   (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TControl_GetEnabled,                   (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetEnabled,                   (obj_t o, bool_t v),                                           (o, v)) \
+    X(str_t,         TControl_GetCaption,                   (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetCaption,                   (obj_t o, str_t v),                                            (o, v)) \
+    X(int_t,         TControl_GetAlign,                     (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetAlign,                     (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TControl_GetAutoSize,                  (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetAutoSize,                  (obj_t o, bool_t v),                                           (o, v)) \
+    X(str_t,         TControl_GetText,                      (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetText,                      (obj_t o, str_t v),                                            (o, v)) \
+    X(void,          TControl_Show,                         (obj_t o),                                                     (o)) \
+    X(void,          TControl_Hide,                         (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetOnClick,                   (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(void,          TControl_SetOnDblClick,                (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(void,          TControl_SetOnResize,                  (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(void,          TControl_SetOnMouseDown,               (obj_t o, mouse_callback_t cb, void* d),                       (o, cb, d)) \
+    X(void,          TControl_SetOnMouseUp,                 (obj_t o, mouse_callback_t cb, void* d),                       (o, cb, d)) \
+    X(void,          TControl_SetOnMouseMove,               (obj_t o, mouse_move_callback_t cb, void* d),                  (o, cb, d)) \
+    X(void,          TControl_SetOnMouseEnter,              (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(void,          TControl_SetOnMouseLeave,              (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(void,          TControl_SetOnMouseWheel,              (obj_t o, mouse_wheel_callback_t cb, void* d),                 (o, cb, d)) \
+    X(void,          TWinControl_SetOnKeyDown,              (obj_t o, key_callback_t cb, void* d),                         (o, cb, d)) \
+    X(void,          TWinControl_SetOnKeyUp,                (obj_t o, key_callback_t cb, void* d),                         (o, cb, d)) \
+    X(void,          TWinControl_SetOnKeyPress,             (obj_t o, key_press_callback_t cb, void* d),                   (o, cb, d)) \
+    X(obj_t,         TForm_Create,                          (obj_t owner),                                                 (owner)) \
+    X(void,          TCustomForm_Show,                      (obj_t o),                                                     (o)) \
+    X(void,          TCustomForm_Hide,                      (obj_t o),                                                     (o)) \
+    X(int_t,         TCustomForm_ShowModal,                 (obj_t o),                                                     (o)) \
+    X(void,          TCustomForm_Close,                     (obj_t o),                                                     (o)) \
+    X(void,          TCustomForm_Release,                   (obj_t o),                                                     (o)) \
+    X(void,          TCustomForm_SetOnClose,                (obj_t o, close_callback_t cb, void* d),                       (o, cb, d)) \
+    X(void,          TCustomForm_SetOnCloseQuery,           (obj_t o, close_query_callback_t cb, void* d),                 (o, cb, d)) \
+    X(void,          TCustomForm_SetOnShow,                 (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(void,          TCustomForm_SetOnHide,                 (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(void,          TCustomForm_SetOnActivate,             (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(void,          TCustomForm_SetOnDeactivate,           (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(void,          TCustomForm_SetOnDestroy,              (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(obj_t,         GetApplication,                        (void),                                                        ()) \
+    X(obj_t,         TApplication_CreateForm,               (obj_t o),                                                     (o)) \
+    X(obj_t,         TApplication_GetMainForm,              (obj_t o),                                                     (o)) \
+    X(void,          TApplication_Run,                      (obj_t o),                                                     (o)) \
+    X(void,          TApplication_ProcessMessages,          (obj_t o),                                                     (o)) \
+    X(void,          TApplication_Terminate,                (obj_t o),                                                     (o)) \
+    X(bool_t,        TApplication_GetTerminated,            (obj_t o),                                                     (o)) \
+    X(str_t,         TApplication_GetTitle,                 (obj_t o),                                                     (o)) \
+    X(void,          TApplication_SetTitle,                 (obj_t o, str_t v),                                            (o, v)) \
+    X(bool_t,        TApplication_GetShowMainForm,          (obj_t o),                                                     (o)) \
+    X(void,          TApplication_SetShowMainForm,          (obj_t o, bool_t v),                                           (o, v)) \
+    X(obj_t,         TPanel_Create,                         (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TGroupBox_Create,                      (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TLabel_Create,                         (obj_t owner),                                                 (owner)) \
+    X(bool_t,        TButtonControl_GetChecked,             (obj_t o),                                                     (o)) \
+    X(void,          TButtonControl_SetChecked,             (obj_t o, bool_t v),                                           (o, v)) \
+    X(obj_t,         TButton_Create,                        (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TCheckBox_Create,                      (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TRadioButton_Create,                   (obj_t owner),                                                 (owner)) \
+    X(int_t,         TCustomEdit_GetMaxLength,              (obj_t o),                                                     (o)) \
+    X(void,          TCustomEdit_SetMaxLength,              (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TCustomEdit_GetReadOnly,               (obj_t o),                                                     (o)) \
+    X(void,          TCustomEdit_SetReadOnly,               (obj_t o, bool_t v),                                           (o, v)) \
+    X(void,          TCustomEdit_SetOnChange,               (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(obj_t,         TEdit_Create,                          (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TCustomMemo_GetLines,                  (obj_t o),                                                     (o)) \
+    X(int_t,         TCustomMemo_GetScrollBars,             (obj_t o),                                                     (o)) \
+    X(void,          TCustomMemo_SetScrollBars,             (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TMemo_Create,                          (obj_t owner),                                                 (owner)) \
+    X(int_t,         TCustomComboBox_GetItemIndex,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomComboBox_SetItemIndex,          (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TCustomComboBox_GetItems,              (obj_t o),                                                     (o)) \
+    X(obj_t,         TComboBox_Create,                      (obj_t owner),                                                 (owner)) \
+    X(void,          TComboBox_SetOnChange,                 (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(int_t,         TCustomListBox_GetItemIndex,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomListBox_SetItemIndex,           (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TCustomListBox_GetItems,               (obj_t o),                                                     (o)) \
+    X(obj_t,         TListBox_Create,                       (obj_t owner),                                                 (owner)) \
+    X(int_t,         TCustomTimer_GetInterval,              (obj_t o),                                                     (o)) \
+    X(void,          TCustomTimer_SetInterval,              (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TCustomTimer_GetEnabled,               (obj_t o),                                                     (o)) \
+    X(void,          TCustomTimer_SetEnabled,               (obj_t o, bool_t v),                                           (o, v)) \
+    X(void,          TCustomTimer_SetOnTimer,               (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(obj_t,         TTimer_Create,                         (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TPaintBox_Create,                      (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TPaintBox_GetCanvas,                   (obj_t o),                                                     (o)) \
+    X(void,          TPaintBox_SetOnPaint,                  (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(void,          TCanvas_MoveTo,                        (obj_t o, int_t x, int_t y),                                   (o, x, y)) \
+    X(void,          TCanvas_LineTo,                        (obj_t o, int_t x, int_t y),                                   (o, x, y)) \
+    X(void,          TCanvas_Rectangle,                     (obj_t o, int_t x1, int_t y1, int_t x2, int_t y2),             (o, x1, y1, x2, y2)) \
+    X(void,          TCanvas_Ellipse,                       (obj_t o, int_t x1, int_t y1, int_t x2, int_t y2),             (o, x1, y1, x2, y2)) \
+    X(void,          TCanvas_TextOut,                       (obj_t o, int_t x, int_t y, str_t s),                          (o, x, y, s)) \
+    X(obj_t,         TCanvas_GetPen,                        (obj_t o),                                                     (o)) \
+    X(obj_t,         TCanvas_GetBrush,                      (obj_t o),                                                     (o)) \
+    X(obj_t,         TCanvas_GetFont,                       (obj_t o),                                                     (o)) \
+    X(void,          TCanvas_Draw,                          (obj_t o, int_t x, int_t y, obj_t graphic),                    (o, x, y, graphic)) \
+    X(void,          TCanvas_StretchDraw,                   (obj_t o, int_t x1, int_t y1, int_t x2, int_t y2, obj_t graphic), (o, x1, y1, x2, y2, graphic)) \
+    X(void,          TCanvas_FillRect,                      (obj_t o, int_t x1, int_t y1, int_t x2, int_t y2),             (o, x1, y1, x2, y2)) \
+    X(int_t,         TCanvas_GetPixels,                     (obj_t o, int_t x, int_t y),                                   (o, x, y)) \
+    X(void,          TCanvas_SetPixels,                     (obj_t o, int_t x, int_t y, int_t v),                          (o, x, y, v)) \
+    X(int_t,         TPen_GetColor,                         (obj_t o),                                                     (o)) \
+    X(void,          TPen_SetColor,                         (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TPen_GetWidth,                         (obj_t o),                                                     (o)) \
+    X(void,          TPen_SetWidth,                         (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TBrush_GetColor,                       (obj_t o),                                                     (o)) \
+    X(void,          TBrush_SetColor,                       (obj_t o, int_t v),                                            (o, v)) \
+    X(str_t,         TFont_GetName,                         (obj_t o),                                                     (o)) \
+    X(void,          TFont_SetName,                         (obj_t o, str_t v),                                            (o, v)) \
+    X(int_t,         TFont_GetSize,                         (obj_t o),                                                     (o)) \
+    X(void,          TFont_SetSize,                         (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TFont_GetColor,                        (obj_t o),                                                     (o)) \
+    X(void,          TFont_SetColor,                        (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TScrollBox_Create,                     (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TToggleBox_Create,                     (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TBevel_Create,                         (obj_t owner),                                                 (owner)) \
+    X(int_t,         TBevel_GetShape,                       (obj_t o),                                                     (o)) \
+    X(void,          TBevel_SetShape,                       (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TBevel_GetStyle,                       (obj_t o),                                                     (o)) \
+    X(void,          TBevel_SetStyle,                       (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TShape_Create,                         (obj_t owner),                                                 (owner)) \
+    X(int_t,         TCustomShape_GetShape,                 (obj_t o),                                                     (o)) \
+    X(void,          TCustomShape_SetShape,                 (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TCustomShape_GetPen,                   (obj_t o),                                                     (o)) \
+    X(obj_t,         TCustomShape_GetBrush,                 (obj_t o),                                                     (o)) \
+    X(obj_t,         TStaticText_Create,                    (obj_t owner),                                                 (owner)) \
+    X(int_t,         TCustomStaticText_GetBorderStyle,      (obj_t o),                                                     (o)) \
+    X(void,          TCustomStaticText_SetBorderStyle,      (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TStatusBar_Create,                     (obj_t owner),                                                 (owner)) \
+    X(str_t,         TStatusBar_GetSimpleText,              (obj_t o),                                                     (o)) \
+    X(void,          TStatusBar_SetSimpleText,              (obj_t o, str_t v),                                            (o, v)) \
+    X(bool_t,        TStatusBar_GetSimplePanel,             (obj_t o),                                                     (o)) \
+    X(void,          TStatusBar_SetSimplePanel,             (obj_t o, bool_t v),                                           (o, v)) \
+    X(obj_t,         TScrollBar_Create,                     (obj_t owner),                                                 (owner)) \
+    X(int_t,         TCustomScrollBar_GetKind,              (obj_t o),                                                     (o)) \
+    X(void,          TCustomScrollBar_SetKind,              (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomScrollBar_GetMin,               (obj_t o),                                                     (o)) \
+    X(void,          TCustomScrollBar_SetMin,               (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomScrollBar_GetMax,               (obj_t o),                                                     (o)) \
+    X(void,          TCustomScrollBar_SetMax,               (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomScrollBar_GetPosition,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomScrollBar_SetPosition,          (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomScrollBar_GetPageSize,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomScrollBar_SetPageSize,          (obj_t o, int_t v),                                            (o, v)) \
+    X(void,          TCustomScrollBar_SetOnChange,          (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(obj_t,         TTrackBar_Create,                      (obj_t owner),                                                 (owner)) \
+    X(int_t,         TCustomTrackBar_GetMin,                (obj_t o),                                                     (o)) \
+    X(void,          TCustomTrackBar_SetMin,                (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomTrackBar_GetMax,                (obj_t o),                                                     (o)) \
+    X(void,          TCustomTrackBar_SetMax,                (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomTrackBar_GetPosition,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomTrackBar_SetPosition,           (obj_t o, int_t v),                                            (o, v)) \
+    X(void,          TCustomTrackBar_SetOnChange,           (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(obj_t,         TProgressBar_Create,                   (obj_t owner),                                                 (owner)) \
+    X(int_t,         TCustomProgressBar_GetMin,             (obj_t o),                                                     (o)) \
+    X(void,          TCustomProgressBar_SetMin,             (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomProgressBar_GetMax,             (obj_t o),                                                     (o)) \
+    X(void,          TCustomProgressBar_SetMax,             (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomProgressBar_GetPosition,        (obj_t o),                                                     (o)) \
+    X(void,          TCustomProgressBar_SetPosition,        (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TUpDown_Create,                        (obj_t owner),                                                 (owner)) \
+    X(int_t,         TUpDown_GetMin,                        (obj_t o),                                                     (o)) \
+    X(void,          TUpDown_SetMin,                        (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TUpDown_GetMax,                        (obj_t o),                                                     (o)) \
+    X(void,          TUpDown_SetMax,                        (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TUpDown_GetPosition,                   (obj_t o),                                                     (o)) \
+    X(void,          TUpDown_SetPosition,                   (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TUpDown_GetIncrement,                  (obj_t o),                                                     (o)) \
+    X(void,          TUpDown_SetIncrement,                  (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TUpDown_GetAssociate,                  (obj_t o),                                                     (o)) \
+    X(void,          TUpDown_SetAssociate,                  (obj_t o, obj_t v),                                            (o, v)) \
+    X(obj_t,         TRadioGroup_Create,                    (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TCustomRadioGroup_GetItems,            (obj_t o),                                                     (o)) \
+    X(int_t,         TCustomRadioGroup_GetItemIndex,        (obj_t o),                                                     (o)) \
+    X(void,          TCustomRadioGroup_SetItemIndex,        (obj_t o, int_t v),                                            (o, v)) \
+    X(void,          TCustomRadioGroup_SetOnClick,          (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(obj_t,         TCheckGroup_Create,                    (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TCustomCheckGroup_GetItems,            (obj_t o),                                                     (o)) \
+    X(bool_t,        TCustomCheckGroup_GetChecked,          (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          TCustomCheckGroup_SetChecked,          (obj_t o, int_t i, bool_t v),                                  (o, i, v)) \
+    X(obj_t,         TCheckListBox_Create,                  (obj_t owner),                                                 (owner)) \
+    X(bool_t,        TCustomCheckListBox_GetChecked,        (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          TCustomCheckListBox_SetChecked,        (obj_t o, int_t i, bool_t v),                                  (o, i, v)) \
+    X(void,          TCustomCheckListBox_SetOnClickCheck,   (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(obj_t,         TSpeedButton_Create,                   (obj_t owner),                                                 (owner)) \
+    X(bool_t,        TCustomSpeedButton_GetDown,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomSpeedButton_SetDown,            (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TCustomSpeedButton_GetGroupIndex,      (obj_t o),                                                     (o)) \
+    X(void,          TCustomSpeedButton_SetGroupIndex,      (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TCustomSpeedButton_GetFlat,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomSpeedButton_SetFlat,            (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomSpeedButton_GetAllowAllUp,      (obj_t o),                                                     (o)) \
+    X(void,          TCustomSpeedButton_SetAllowAllUp,      (obj_t o, bool_t v),                                           (o, v)) \
+    X(obj_t,         TBitBtn_Create,                        (obj_t owner),                                                 (owner)) \
+    X(int_t,         TCustomBitBtn_GetKind,                 (obj_t o),                                                     (o)) \
+    X(void,          TCustomBitBtn_SetKind,                 (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TFloatSpinEdit_Create,                 (obj_t owner),                                                 (owner)) \
+    X(real_t,        TCustomFloatSpinEdit_GetValue,         (obj_t o),                                                     (o)) \
+    X(void,          TCustomFloatSpinEdit_SetValue,         (obj_t o, real_t v),                                           (o, v)) \
+    X(real_t,        TCustomFloatSpinEdit_GetMinValue,      (obj_t o),                                                     (o)) \
+    X(void,          TCustomFloatSpinEdit_SetMinValue,      (obj_t o, real_t v),                                           (o, v)) \
+    X(real_t,        TCustomFloatSpinEdit_GetMaxValue,      (obj_t o),                                                     (o)) \
+    X(void,          TCustomFloatSpinEdit_SetMaxValue,      (obj_t o, real_t v),                                           (o, v)) \
+    X(real_t,        TCustomFloatSpinEdit_GetIncrement,     (obj_t o),                                                     (o)) \
+    X(void,          TCustomFloatSpinEdit_SetIncrement,     (obj_t o, real_t v),                                           (o, v)) \
+    X(int_t,         TCustomFloatSpinEdit_GetDecimalPlaces, (obj_t o),                                                     (o)) \
+    X(void,          TCustomFloatSpinEdit_SetDecimalPlaces, (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TSpinEdit_Create,                      (obj_t owner),                                                 (owner)) \
+    X(int_t,         TCustomSpinEdit_GetValue,              (obj_t o),                                                     (o)) \
+    X(void,          TCustomSpinEdit_SetValue,              (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomSpinEdit_GetMinValue,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomSpinEdit_SetMinValue,           (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomSpinEdit_GetMaxValue,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomSpinEdit_SetMaxValue,           (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomSpinEdit_GetIncrement,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomSpinEdit_SetIncrement,          (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TMaskEdit_Create,                      (obj_t owner),                                                 (owner)) \
+    X(str_t,         TMaskEdit_GetEditMask,                 (obj_t o),                                                     (o)) \
+    X(void,          TMaskEdit_SetEditMask,                 (obj_t o, str_t v),                                            (o, v)) \
+    X(obj_t,         TLabeledEdit_Create,                   (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TCustomLabeledEdit_GetEditLabel,       (obj_t o),                                                     (o)) \
+    X(int_t,         TCustomLabeledEdit_GetLabelPosition,   (obj_t o),                                                     (o)) \
+    X(void,          TCustomLabeledEdit_SetLabelPosition,   (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomLabeledEdit_GetLabelSpacing,    (obj_t o),                                                     (o)) \
+    X(void,          TCustomLabeledEdit_SetLabelSpacing,    (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TTabControl_Create,                    (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TTabControl_GetTabs,                   (obj_t o),                                                     (o)) \
+    X(int_t,         TTabControl_GetTabIndex,               (obj_t o),                                                     (o)) \
+    X(void,          TTabControl_SetTabIndex,               (obj_t o, int_t v),                                            (o, v)) \
+    X(void,          TTabControl_SetOnChange,               (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(obj_t,         TSplitter_Create,                      (obj_t owner),                                                 (owner)) \
+    X(bool_t,        TCustomSplitter_GetAutoSnap,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomSplitter_SetAutoSnap,           (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomSplitter_GetBeveled,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomSplitter_SetBeveled,            (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TCustomSplitter_GetMinSize,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomSplitter_SetMinSize,            (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomSplitter_GetResizeAnchor,       (obj_t o),                                                     (o)) \
+    X(void,          TCustomSplitter_SetResizeAnchor,       (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomSplitter_GetResizeStyle,        (obj_t o),                                                     (o)) \
+    X(void,          TCustomSplitter_SetResizeStyle,        (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomSplitter_GetSplitterPosition,   (obj_t o),                                                     (o)) \
+    X(void,          TCustomSplitter_SetSplitterPosition,   (obj_t o, int_t v),                                            (o, v)) \
+    X(void,          TCustomSplitter_SetOnMoved,            (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(int_t,         ShortCut_Make,                         (int_t k, int_t s),                                            (k, s)) \
+    X(int_t,         ShortCut_FromText,                     (str_t t),                                                     (t)) \
+    X(str_t,         ShortCut_ToText,                       (int_t v),                                                     (v)) \
+    X(obj_t,         TMenuItem_Create,                      (obj_t owner),                                                 (owner)) \
+    X(str_t,         TMenuItem_GetCaption,                  (obj_t o),                                                     (o)) \
+    X(void,          TMenuItem_SetCaption,                  (obj_t o, str_t v),                                            (o, v)) \
+    X(bool_t,        TMenuItem_GetChecked,                  (obj_t o),                                                     (o)) \
+    X(void,          TMenuItem_SetChecked,                  (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TMenuItem_GetEnabled,                  (obj_t o),                                                     (o)) \
+    X(void,          TMenuItem_SetEnabled,                  (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TMenuItem_GetVisible,                  (obj_t o),                                                     (o)) \
+    X(void,          TMenuItem_SetVisible,                  (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TMenuItem_GetAutoCheck,                (obj_t o),                                                     (o)) \
+    X(void,          TMenuItem_SetAutoCheck,                (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TMenuItem_GetRadioItem,                (obj_t o),                                                     (o)) \
+    X(void,          TMenuItem_SetRadioItem,                (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TMenuItem_GetGroupIndex,               (obj_t o),                                                     (o)) \
+    X(void,          TMenuItem_SetGroupIndex,               (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TMenuItem_GetDefault,                  (obj_t o),                                                     (o)) \
+    X(void,          TMenuItem_SetDefault,                  (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TMenuItem_GetShortCut,                 (obj_t o),                                                     (o)) \
+    X(void,          TMenuItem_SetShortCut,                 (obj_t o, int_t v),                                            (o, v)) \
+    X(str_t,         TMenuItem_GetHint,                     (obj_t o),                                                     (o)) \
+    X(void,          TMenuItem_SetHint,                     (obj_t o, str_t v),                                            (o, v)) \
+    X(void,          TMenuItem_SetOnClick,                  (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(int_t,         TMenuItem_GetCount,                    (obj_t o),                                                     (o)) \
+    X(obj_t,         TMenuItem_GetItem,                     (obj_t o, int_t i),                                            (o, i)) \
+    X(obj_t,         TMenuItem_GetParent,                   (obj_t o),                                                     (o)) \
+    X(void,          TMenuItem_Add,                         (obj_t o, obj_t item),                                         (o, item)) \
+    X(void,          TMenuItem_Insert,                      (obj_t o, int_t i, obj_t item),                                (o, i, item)) \
+    X(void,          TMenuItem_Delete,                      (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          TMenuItem_Remove,                      (obj_t o, obj_t item),                                         (o, item)) \
+    X(void,          TMenuItem_Clear,                       (obj_t o),                                                     (o)) \
+    X(int_t,         TMenuItem_IndexOf,                     (obj_t o, obj_t item),                                         (o, item)) \
+    X(void,          TMenuItem_AddSeparator,                (obj_t o),                                                     (o)) \
+    X(bool_t,        TMenuItem_IsLine,                      (obj_t o),                                                     (o)) \
+    X(void,          TMenuItem_Click,                       (obj_t o),                                                     (o)) \
+    X(obj_t,         TMenu_GetItems,                        (obj_t o),                                                     (o)) \
+    X(obj_t,         TMainMenu_Create,                      (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TPopupMenu_Create,                     (obj_t owner),                                                 (owner)) \
+    X(void,          TPopupMenu_Popup,                      (obj_t o, int_t x, int_t y),                                   (o, x, y)) \
+    X(bool_t,        TPopupMenu_GetAutoPopup,               (obj_t o),                                                     (o)) \
+    X(void,          TPopupMenu_SetAutoPopup,               (obj_t o, bool_t v),                                           (o, v)) \
+    X(obj_t,         TPopupMenu_GetPopupComponent,          (obj_t o),                                                     (o)) \
+    X(void,          TPopupMenu_SetPopupComponent,          (obj_t o, obj_t v),                                            (o, v)) \
+    X(void,          TPopupMenu_SetOnPopup,                 (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(void,          TPopupMenu_SetOnClose,                 (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(obj_t,         TCustomForm_GetMenu,                   (obj_t o),                                                     (o)) \
+    X(void,          TCustomForm_SetMenu,                   (obj_t o, obj_t v),                                            (o, v)) \
+    X(obj_t,         TControl_GetPopupMenu,                 (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetPopupMenu,                 (obj_t o, obj_t v),                                            (o, v)) \
+    X(obj_t,         TPageControl_Create,                   (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TPageControl_GetActivePage,            (obj_t o),                                                     (o)) \
+    X(void,          TPageControl_SetActivePage,            (obj_t o, obj_t v),                                            (o, v)) \
+    X(int_t,         TPageControl_GetActivePageIndex,       (obj_t o),                                                     (o)) \
+    X(void,          TPageControl_SetActivePageIndex,       (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TPageControl_GetPage,                  (obj_t o, int_t i),                                            (o, i)) \
+    X(int_t,         TCustomTabControl_GetPageCount,        (obj_t o),                                                     (o)) \
+    X(obj_t,         TPageControl_AddTabSheet,              (obj_t o),                                                     (o)) \
+    X(void,          TPageControl_Clear,                    (obj_t o),                                                     (o)) \
+    X(void,          TPageControl_SelectNextPage,           (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TPageControl_GetTabIndex,              (obj_t o),                                                     (o)) \
+    X(void,          TPageControl_SetTabIndex,              (obj_t o, int_t v),                                            (o, v)) \
+    X(void,          TPageControl_SetOnChange,              (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(void,          TCustomTabControl_SetOnChanging,       (obj_t o, close_query_callback_t cb, void* d),                 (o, cb, d)) \
+    X(bool_t,        TCustomTabControl_GetMultiLine,        (obj_t o),                                                     (o)) \
+    X(void,          TCustomTabControl_SetMultiLine,        (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomTabControl_GetShowTabs,         (obj_t o),                                                     (o)) \
+    X(void,          TCustomTabControl_SetShowTabs,         (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TCustomTabControl_GetTabPosition,      (obj_t o),                                                     (o)) \
+    X(void,          TCustomTabControl_SetTabPosition,      (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TTabSheet_Create,                      (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TTabSheet_GetPageControl,              (obj_t o),                                                     (o)) \
+    X(void,          TTabSheet_SetPageControl,              (obj_t o, obj_t v),                                            (o, v)) \
+    X(int_t,         TTabSheet_GetTabIndex,                 (obj_t o),                                                     (o)) \
+    X(int_t,         TCustomPage_GetPageIndex,              (obj_t o),                                                     (o)) \
+    X(void,          TCustomPage_SetPageIndex,              (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TCustomPage_GetTabVisible,             (obj_t o),                                                     (o)) \
+    X(void,          TCustomPage_SetTabVisible,             (obj_t o, bool_t v),                                           (o, v)) \
+    X(void,          TCustomPage_SetOnShow,                 (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(void,          TCustomPage_SetOnHide,                 (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(void,          ItemFree_SetCallback,                  (callback_t cb, void* d),                                      (cb, d)) \
+    X(obj_t,         TTreeView_Create,                      (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TCustomTreeView_GetItems,              (obj_t o),                                                     (o)) \
+    X(obj_t,         TCustomTreeView_GetSelected,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomTreeView_SetSelected,           (obj_t o, obj_t n),                                            (o, n)) \
+    X(void,          TCustomTreeView_FullExpand,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomTreeView_FullCollapse,          (obj_t o),                                                     (o)) \
+    X(bool_t,        TCustomTreeView_AlphaSort,             (obj_t o),                                                     (o)) \
+    X(obj_t,         TCustomTreeView_GetNodeAt,             (obj_t o, int_t x, int_t y),                                   (o, x, y)) \
+    X(bool_t,        TTreeView_GetReadOnly,                 (obj_t o),                                                     (o)) \
+    X(void,          TTreeView_SetReadOnly,                 (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TTreeView_GetShowLines,                (obj_t o),                                                     (o)) \
+    X(void,          TTreeView_SetShowLines,                (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TTreeView_GetShowRoot,                 (obj_t o),                                                     (o)) \
+    X(void,          TTreeView_SetShowRoot,                 (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TTreeView_GetShowButtons,              (obj_t o),                                                     (o)) \
+    X(void,          TTreeView_SetShowButtons,              (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TTreeView_GetAutoExpand,               (obj_t o),                                                     (o)) \
+    X(void,          TTreeView_SetAutoExpand,               (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TTreeView_GetHideSelection,            (obj_t o),                                                     (o)) \
+    X(void,          TTreeView_SetHideSelection,            (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TTreeView_GetRowSelect,                (obj_t o),                                                     (o)) \
+    X(void,          TTreeView_SetRowSelect,                (obj_t o, bool_t v),                                           (o, v)) \
+    X(void,          TTreeView_SetOnChange,                 (obj_t o, item_callback_t cb, void* d),                        (o, cb, d)) \
+    X(void,          TTreeView_SetOnExpanded,               (obj_t o, item_callback_t cb, void* d),                        (o, cb, d)) \
+    X(void,          TTreeView_SetOnCollapsed,              (obj_t o, item_callback_t cb, void* d),                        (o, cb, d)) \
+    X(void,          TTreeView_SetOnDeletion,               (obj_t o, item_callback_t cb, void* d),                        (o, cb, d)) \
+    X(void,          TTreeView_SetOnChanging,               (obj_t o, item_allow_callback_t cb, void* d),                  (o, cb, d)) \
+    X(void,          TTreeView_SetOnExpanding,              (obj_t o, item_allow_callback_t cb, void* d),                  (o, cb, d)) \
+    X(void,          TTreeView_SetOnCollapsing,             (obj_t o, item_allow_callback_t cb, void* d),                  (o, cb, d)) \
+    X(obj_t,         TTreeNodes_Add,                        (obj_t o, obj_t n, str_t t),                                   (o, n, t)) \
+    X(obj_t,         TTreeNodes_AddFirst,                   (obj_t o, obj_t n, str_t t),                                   (o, n, t)) \
+    X(obj_t,         TTreeNodes_AddChild,                   (obj_t o, obj_t n, str_t t),                                   (o, n, t)) \
+    X(obj_t,         TTreeNodes_AddChildFirst,              (obj_t o, obj_t n, str_t t),                                   (o, n, t)) \
+    X(obj_t,         TTreeNodes_Insert,                     (obj_t o, obj_t n, str_t t),                                   (o, n, t)) \
+    X(void,          TTreeNodes_Clear,                      (obj_t o),                                                     (o)) \
+    X(void,          TTreeNodes_Delete,                     (obj_t o, obj_t n),                                            (o, n)) \
+    X(int_t,         TTreeNodes_GetCount,                   (obj_t o),                                                     (o)) \
+    X(obj_t,         TTreeNodes_GetItem,                    (obj_t o, int_t i),                                            (o, i)) \
+    X(obj_t,         TTreeNodes_GetFirstNode,               (obj_t o),                                                     (o)) \
+    X(obj_t,         TTreeNodes_FindNodeWithText,           (obj_t o, str_t t),                                            (o, t)) \
+    X(void,          TTreeNodes_BeginUpdate,                (obj_t o),                                                     (o)) \
+    X(void,          TTreeNodes_EndUpdate,                  (obj_t o),                                                     (o)) \
+    X(str_t,         TTreeNode_GetText,                     (obj_t o),                                                     (o)) \
+    X(void,          TTreeNode_SetText,                     (obj_t o, str_t v),                                            (o, v)) \
+    X(bool_t,        TTreeNode_GetExpanded,                 (obj_t o),                                                     (o)) \
+    X(void,          TTreeNode_SetExpanded,                 (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TTreeNode_GetSelected,                 (obj_t o),                                                     (o)) \
+    X(void,          TTreeNode_SetSelected,                 (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TTreeNode_GetHasChildren,              (obj_t o),                                                     (o)) \
+    X(void,          TTreeNode_SetHasChildren,              (obj_t o, bool_t v),                                           (o, v)) \
+    X(void*,         TTreeNode_GetData,                     (obj_t o),                                                     (o)) \
+    X(void,          TTreeNode_SetData,                     (obj_t o, void* v),                                            (o, v)) \
+    X(int_t,         TTreeNode_GetCount,                    (obj_t o),                                                     (o)) \
+    X(obj_t,         TTreeNode_GetItem,                     (obj_t o, int_t i),                                            (o, i)) \
+    X(int_t,         TTreeNode_GetIndex,                    (obj_t o),                                                     (o)) \
+    X(int_t,         TTreeNode_GetLevel,                    (obj_t o),                                                     (o)) \
+    X(int_t,         TTreeNode_GetAbsoluteIndex,            (obj_t o),                                                     (o)) \
+    X(obj_t,         TTreeNode_GetParent,                   (obj_t o),                                                     (o)) \
+    X(obj_t,         TTreeNode_GetTreeView,                 (obj_t o),                                                     (o)) \
+    X(obj_t,         TTreeNode_GetFirstChild,               (obj_t o),                                                     (o)) \
+    X(obj_t,         TTreeNode_GetLastChild,                (obj_t o),                                                     (o)) \
+    X(obj_t,         TTreeNode_GetNextSibling,              (obj_t o),                                                     (o)) \
+    X(obj_t,         TTreeNode_GetPrevSibling,              (obj_t o),                                                     (o)) \
+    X(obj_t,         TTreeNode_GetNext,                     (obj_t o),                                                     (o)) \
+    X(obj_t,         TTreeNode_GetPrev,                     (obj_t o),                                                     (o)) \
+    X(int_t,         TTreeNode_IndexOf,                     (obj_t o, obj_t n),                                            (o, n)) \
+    X(void,          TTreeNode_Expand,                      (obj_t o, bool_t r),                                           (o, r)) \
+    X(void,          TTreeNode_Collapse,                    (obj_t o, bool_t r),                                           (o, r)) \
+    X(void,          TTreeNode_Delete,                      (obj_t o),                                                     (o)) \
+    X(void,          TTreeNode_DeleteChildren,              (obj_t o),                                                     (o)) \
+    X(void,          TTreeNode_MakeVisible,                 (obj_t o),                                                     (o)) \
+    X(void,          TTreeNode_MoveTo,                      (obj_t o, obj_t d, int_t m),                                   (o, d, m)) \
+    X(obj_t,         TListView_Create,                      (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TCustomListView_GetItems,              (obj_t o),                                                     (o)) \
+    X(obj_t,         TCustomListView_GetSelected,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomListView_SetSelected,           (obj_t o, obj_t i),                                            (o, i)) \
+    X(int_t,         TCustomListView_GetItemIndex,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomListView_SetItemIndex,          (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomListView_GetSelCount,           (obj_t o),                                                     (o)) \
+    X(bool_t,        TCustomListView_GetCheckboxes,         (obj_t o),                                                     (o)) \
+    X(void,          TCustomListView_SetCheckboxes,         (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomListView_GetGridLines,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomListView_SetGridLines,          (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomListView_GetMultiSelect,        (obj_t o),                                                     (o)) \
+    X(void,          TCustomListView_SetMultiSelect,        (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomListView_GetReadOnly,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomListView_SetReadOnly,           (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomListView_GetRowSelect,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomListView_SetRowSelect,          (obj_t o, bool_t v),                                           (o, v)) \
+    X(void,          TCustomListView_Clear,                 (obj_t o),                                                     (o)) \
+    X(void,          TCustomListView_BeginUpdate,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomListView_EndUpdate,             (obj_t o),                                                     (o)) \
+    X(obj_t,         TCustomListView_GetItemAt,             (obj_t o, int_t x, int_t y),                                   (o, x, y)) \
+    X(void,          TCustomListView_ClearSelection,        (obj_t o),                                                     (o)) \
+    X(void,          TCustomListView_SelectAll,             (obj_t o),                                                     (o)) \
+    X(obj_t,         TListView_GetColumns,                  (obj_t o),                                                     (o)) \
+    X(int_t,         TListView_GetViewStyle,                (obj_t o),                                                     (o)) \
+    X(void,          TListView_SetViewStyle,                (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TListView_GetHideSelection,            (obj_t o),                                                     (o)) \
+    X(void,          TListView_SetHideSelection,            (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TListView_GetSortType,                 (obj_t o),                                                     (o)) \
+    X(void,          TListView_SetSortType,                 (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TListView_GetSortColumn,               (obj_t o),                                                     (o)) \
+    X(void,          TListView_SetSortColumn,               (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TListView_GetSortDirection,            (obj_t o),                                                     (o)) \
+    X(void,          TListView_SetSortDirection,            (obj_t o, int_t v),                                            (o, v)) \
+    X(void,          TListView_SetOnSelectItem,             (obj_t o, item_int_callback_t cb, void* d),                    (o, cb, d)) \
+    X(void,          TListView_SetOnChange,                 (obj_t o, item_int_callback_t cb, void* d),                    (o, cb, d)) \
+    X(void,          TListView_SetOnDeletion,               (obj_t o, item_callback_t cb, void* d),                        (o, cb, d)) \
+    X(void,          TListView_SetOnItemChecked,            (obj_t o, item_callback_t cb, void* d),                        (o, cb, d)) \
+    X(void,          TListView_SetOnColumnClick,            (obj_t o, item_callback_t cb, void* d),                        (o, cb, d)) \
+    X(obj_t,         TListItems_Add,                        (obj_t o),                                                     (o)) \
+    X(obj_t,         TListItems_Insert,                     (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          TListItems_Delete,                     (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          TListItems_Clear,                      (obj_t o),                                                     (o)) \
+    X(int_t,         TListItems_GetCount,                   (obj_t o),                                                     (o)) \
+    X(obj_t,         TListItems_GetItem,                    (obj_t o, int_t i),                                            (o, i)) \
+    X(int_t,         TListItems_IndexOf,                    (obj_t o, obj_t i),                                            (o, i)) \
+    X(obj_t,         TListItems_FindCaption,                (obj_t o, int_t s, str_t v, bool_t p, bool_t inc, bool_t w),   (o, s, v, p, inc, w)) \
+    X(void,          TListItems_Exchange,                   (obj_t o, int_t a, int_t b),                                   (o, a, b)) \
+    X(void,          TListItems_Move,                       (obj_t o, int_t a, int_t b),                                   (o, a, b)) \
+    X(void,          TListItems_BeginUpdate,                (obj_t o),                                                     (o)) \
+    X(void,          TListItems_EndUpdate,                  (obj_t o),                                                     (o)) \
+    X(str_t,         TListItem_GetCaption,                  (obj_t o),                                                     (o)) \
+    X(void,          TListItem_SetCaption,                  (obj_t o, str_t v),                                            (o, v)) \
+    X(bool_t,        TListItem_GetChecked,                  (obj_t o),                                                     (o)) \
+    X(void,          TListItem_SetChecked,                  (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TListItem_GetSelected,                 (obj_t o),                                                     (o)) \
+    X(void,          TListItem_SetSelected,                 (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TListItem_GetFocused,                  (obj_t o),                                                     (o)) \
+    X(void,          TListItem_SetFocused,                  (obj_t o, bool_t v),                                           (o, v)) \
+    X(void*,         TListItem_GetData,                     (obj_t o),                                                     (o)) \
+    X(void,          TListItem_SetData,                     (obj_t o, void* v),                                            (o, v)) \
+    X(int_t,         TListItem_GetIndex,                    (obj_t o),                                                     (o)) \
+    X(obj_t,         TListItem_GetListView,                 (obj_t o),                                                     (o)) \
+    X(obj_t,         TListItem_GetSubItems,                 (obj_t o),                                                     (o)) \
+    X(void,          TListItem_Delete,                      (obj_t o),                                                     (o)) \
+    X(void,          TListItem_MakeVisible,                 (obj_t o, bool_t p),                                           (o, p)) \
+    X(obj_t,         TListColumns_Add,                      (obj_t o),                                                     (o)) \
+    X(int_t,         TListColumns_GetCount,                 (obj_t o),                                                     (o)) \
+    X(obj_t,         TListColumns_GetItem,                  (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          TListColumns_Delete,                   (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          TListColumns_Clear,                    (obj_t o),                                                     (o)) \
+    X(str_t,         TListColumn_GetCaption,                (obj_t o),                                                     (o)) \
+    X(void,          TListColumn_SetCaption,                (obj_t o, str_t v),                                            (o, v)) \
+    X(int_t,         TListColumn_GetWidth,                  (obj_t o),                                                     (o)) \
+    X(void,          TListColumn_SetWidth,                  (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TListColumn_GetAlignment,              (obj_t o),                                                     (o)) \
+    X(void,          TListColumn_SetAlignment,              (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TListColumn_GetAutoSize,               (obj_t o),                                                     (o)) \
+    X(void,          TListColumn_SetAutoSize,               (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TListColumn_GetVisible,                (obj_t o),                                                     (o)) \
+    X(void,          TListColumn_SetVisible,                (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TListColumn_GetIndex,                  (obj_t o),                                                     (o)) \
+    X(void,          TListColumn_SetIndex,                  (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TDrawGrid_Create,                      (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TStringGrid_Create,                    (obj_t owner),                                                 (owner)) \
+    X(void,          TCustomGrid_BeginUpdate,               (obj_t o),                                                     (o)) \
+    X(void,          TCustomGrid_EndUpdate,                 (obj_t o),                                                     (o)) \
+    X(void,          TCustomGrid_Clear,                     (obj_t o),                                                     (o)) \
+    X(void,          TCustomGrid_CellRect,                  (obj_t o, int_t c, int_t r, int_t* l, int_t* t, int_t* rt, int_t* b), (o, c, r, l, t, rt, b)) \
+    X(void,          TCustomGrid_MouseToCell,               (obj_t o, int_t x, int_t y, int_t* c, int_t* r),               (o, x, y, c, r)) \
+    X(obj_t,         TCustomDrawGrid_GetCanvas,             (obj_t o),                                                     (o)) \
+    X(int_t,         TCustomDrawGrid_GetColCount,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomDrawGrid_SetColCount,           (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomDrawGrid_GetRowCount,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomDrawGrid_SetRowCount,           (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomDrawGrid_GetFixedCols,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomDrawGrid_SetFixedCols,          (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomDrawGrid_GetFixedRows,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomDrawGrid_SetFixedRows,          (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomDrawGrid_GetCol,                (obj_t o),                                                     (o)) \
+    X(void,          TCustomDrawGrid_SetCol,                (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomDrawGrid_GetRow,                (obj_t o),                                                     (o)) \
+    X(void,          TCustomDrawGrid_SetRow,                (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomDrawGrid_GetDefaultColWidth,    (obj_t o),                                                     (o)) \
+    X(void,          TCustomDrawGrid_SetDefaultColWidth,    (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomDrawGrid_GetDefaultRowHeight,   (obj_t o),                                                     (o)) \
+    X(void,          TCustomDrawGrid_SetDefaultRowHeight,   (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomDrawGrid_GetColWidths,          (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          TCustomDrawGrid_SetColWidths,          (obj_t o, int_t i, int_t v),                                   (o, i, v)) \
+    X(int_t,         TCustomDrawGrid_GetRowHeights,         (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          TCustomDrawGrid_SetRowHeights,         (obj_t o, int_t i, int_t v),                                   (o, i, v)) \
+    X(uint_t,        TCustomDrawGrid_GetOptions,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomDrawGrid_SetOptions,            (obj_t o, uint_t v),                                           (o, v)) \
+    X(void,          TCustomDrawGrid_GetSelection,          (obj_t o, int_t* l, int_t* t, int_t* r, int_t* b),             (o, l, t, r, b)) \
+    X(void,          TCustomDrawGrid_SetSelection,          (obj_t o, int_t l, int_t t, int_t r, int_t b),                 (o, l, t, r, b)) \
+    X(int_t,         TCustomDrawGrid_GetLeftCol,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomDrawGrid_SetLeftCol,            (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomDrawGrid_GetTopRow,             (obj_t o),                                                     (o)) \
+    X(void,          TCustomDrawGrid_SetTopRow,             (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TCustomDrawGrid_GetDefaultDrawing,     (obj_t o),                                                     (o)) \
+    X(void,          TCustomDrawGrid_SetDefaultDrawing,     (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TCustomDrawGrid_GetFixedColor,         (obj_t o),                                                     (o)) \
+    X(void,          TCustomDrawGrid_SetFixedColor,         (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TCustomDrawGrid_GetEditorMode,         (obj_t o),                                                     (o)) \
+    X(void,          TCustomDrawGrid_SetEditorMode,         (obj_t o, bool_t v),                                           (o, v)) \
+    X(void,          TCustomDrawGrid_InsertColRow,          (obj_t o, bool_t c, int_t i),                                  (o, c, i)) \
+    X(void,          TCustomDrawGrid_DeleteColRow,          (obj_t o, bool_t c, int_t i),                                  (o, c, i)) \
+    X(void,          TCustomDrawGrid_MoveColRow,            (obj_t o, bool_t c, int_t f, int_t t),                         (o, c, f, t)) \
+    X(void,          TCustomDrawGrid_SortColRow,            (obj_t o, bool_t c, int_t i),                                  (o, c, i)) \
+    X(void,          TCustomDrawGrid_SetOnDrawCell,         (obj_t o, draw_cell_callback_t cb, void* d),                   (o, cb, d)) \
+    X(void,          TCustomDrawGrid_SetOnSelectCell,       (obj_t o, cell_allow_callback_t cb, void* d),                  (o, cb, d)) \
+    X(void,          TCustomDrawGrid_SetOnSelection,        (obj_t o, cell_callback_t cb, void* d),                        (o, cb, d)) \
+    X(void,          TCustomDrawGrid_SetOnHeaderClick,      (obj_t o, header_callback_t cb, void* d),                      (o, cb, d)) \
+    X(str_t,         TCustomStringGrid_GetCells,            (obj_t o, int_t c, int_t r),                                   (o, c, r)) \
+    X(void,          TCustomStringGrid_SetCells,            (obj_t o, int_t c, int_t r, str_t v),                          (o, c, r, v)) \
+    X(void,          TCustomStringGrid_Clean,               (obj_t o),                                                     (o)) \
+    X(void,          TCustomStringGrid_AutoSizeColumns,     (obj_t o),                                                     (o)) \
+    X(void,          TCustomStringGrid_AutoSizeColumn,      (obj_t o, int_t c),                                            (o, c)) \
+    X(obj_t,         THeaderControl_Create,                 (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TCustomHeaderControl_GetSections,      (obj_t o),                                                     (o)) \
+    X(bool_t,        TCustomHeaderControl_GetDragReorder,   (obj_t o),                                                     (o)) \
+    X(void,          TCustomHeaderControl_SetDragReorder,   (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TCustomHeaderControl_GetSectionAt,     (obj_t o, int_t x, int_t y),                                   (o, x, y)) \
+    X(obj_t,         TCustomHeaderControl_GetSectionFromOriginalIndex, (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          TCustomHeaderControl_SetOnSectionClick, (obj_t o, item_callback_t cb, void* d),                        (o, cb, d)) \
+    X(void,          TCustomHeaderControl_SetOnSectionResize, (obj_t o, item_callback_t cb, void* d),                        (o, cb, d)) \
+    X(void,          TCustomHeaderControl_SetOnSectionSeparatorDblClick, (obj_t o, item_callback_t cb, void* d),                        (o, cb, d)) \
+    X(void,          TCustomHeaderControl_SetOnSectionTrack, (obj_t o, section_track_callback_t cb, void* d),               (o, cb, d)) \
+    X(void,          TCustomHeaderControl_SetOnSectionDrag, (obj_t o, section_drag_callback_t cb, void* d),                (o, cb, d)) \
+    X(void,          TCustomHeaderControl_SetOnSectionEndDrag, (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(obj_t,         THeaderSections_Add,                   (obj_t o),                                                     (o)) \
+    X(obj_t,         THeaderSections_Insert,                (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          THeaderSections_Delete,                (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          THeaderSections_Clear,                 (obj_t o),                                                     (o)) \
+    X(int_t,         THeaderSections_GetCount,              (obj_t o),                                                     (o)) \
+    X(obj_t,         THeaderSections_GetItem,               (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          THeaderSections_BeginUpdate,           (obj_t o),                                                     (o)) \
+    X(void,          THeaderSections_EndUpdate,             (obj_t o),                                                     (o)) \
+    X(str_t,         THeaderSection_GetText,                (obj_t o),                                                     (o)) \
+    X(void,          THeaderSection_SetText,                (obj_t o, str_t v),                                            (o, v)) \
+    X(int_t,         THeaderSection_GetWidth,               (obj_t o),                                                     (o)) \
+    X(void,          THeaderSection_SetWidth,               (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         THeaderSection_GetMinWidth,            (obj_t o),                                                     (o)) \
+    X(void,          THeaderSection_SetMinWidth,            (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         THeaderSection_GetMaxWidth,            (obj_t o),                                                     (o)) \
+    X(void,          THeaderSection_SetMaxWidth,            (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         THeaderSection_GetAlignment,           (obj_t o),                                                     (o)) \
+    X(void,          THeaderSection_SetAlignment,           (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        THeaderSection_GetVisible,             (obj_t o),                                                     (o)) \
+    X(void,          THeaderSection_SetVisible,             (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         THeaderSection_GetIndex,               (obj_t o),                                                     (o)) \
+    X(void,          THeaderSection_SetIndex,               (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         THeaderSection_GetLeft,                (obj_t o),                                                     (o)) \
+    X(int_t,         THeaderSection_GetRight,               (obj_t o),                                                     (o)) \
+    X(int_t,         THeaderSection_GetOriginalIndex,       (obj_t o),                                                     (o)) \
+    X(uint_t,        TToolWindow_GetEdgeBorders,            (obj_t o),                                                     (o)) \
+    X(void,          TToolWindow_SetEdgeBorders,            (obj_t o, uint_t v),                                           (o, v)) \
+    X(int_t,         TToolWindow_GetEdgeInner,              (obj_t o),                                                     (o)) \
+    X(void,          TToolWindow_SetEdgeInner,              (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TToolWindow_GetEdgeOuter,              (obj_t o),                                                     (o)) \
+    X(void,          TToolWindow_SetEdgeOuter,              (obj_t o, int_t v),                                            (o, v)) \
+    X(void,          TToolWindow_BeginUpdate,               (obj_t o),                                                     (o)) \
+    X(void,          TToolWindow_EndUpdate,                 (obj_t o),                                                     (o)) \
+    X(obj_t,         TToolBar_Create,                       (obj_t owner),                                                 (owner)) \
+    X(int_t,         TToolBar_GetButtonCount,               (obj_t o),                                                     (o)) \
+    X(obj_t,         TToolBar_GetButton,                    (obj_t o, int_t i),                                            (o, i)) \
+    X(int_t,         TToolBar_GetRowCount,                  (obj_t o),                                                     (o)) \
+    X(int_t,         TToolBar_GetButtonHeight,              (obj_t o),                                                     (o)) \
+    X(void,          TToolBar_SetButtonHeight,              (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TToolBar_GetButtonWidth,               (obj_t o),                                                     (o)) \
+    X(void,          TToolBar_SetButtonWidth,               (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TToolBar_GetDropDownWidth,             (obj_t o),                                                     (o)) \
+    X(void,          TToolBar_SetDropDownWidth,             (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TToolBar_GetIndent,                    (obj_t o),                                                     (o)) \
+    X(void,          TToolBar_SetIndent,                    (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TToolBar_GetFlat,                      (obj_t o),                                                     (o)) \
+    X(void,          TToolBar_SetFlat,                      (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TToolBar_GetList,                      (obj_t o),                                                     (o)) \
+    X(void,          TToolBar_SetList,                      (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TToolBar_GetShowCaptions,              (obj_t o),                                                     (o)) \
+    X(void,          TToolBar_SetShowCaptions,              (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TToolBar_GetTransparent,               (obj_t o),                                                     (o)) \
+    X(void,          TToolBar_SetTransparent,               (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TToolBar_GetWrapable,                  (obj_t o),                                                     (o)) \
+    X(void,          TToolBar_SetWrapable,                  (obj_t o, bool_t v),                                           (o, v)) \
+    X(void,          TToolBar_SetButtonSize,                (obj_t o, int_t w, int_t h),                                   (o, w, h)) \
+    X(obj_t,         TToolButton_Create,                    (obj_t owner),                                                 (owner)) \
+    X(bool_t,        TToolButton_GetAllowAllUp,             (obj_t o),                                                     (o)) \
+    X(void,          TToolButton_SetAllowAllUp,             (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TToolButton_GetDown,                   (obj_t o),                                                     (o)) \
+    X(void,          TToolButton_SetDown,                   (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TToolButton_GetGrouped,                (obj_t o),                                                     (o)) \
+    X(void,          TToolButton_SetGrouped,                (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TToolButton_GetIndeterminate,          (obj_t o),                                                     (o)) \
+    X(void,          TToolButton_SetIndeterminate,          (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TToolButton_GetMarked,                 (obj_t o),                                                     (o)) \
+    X(void,          TToolButton_SetMarked,                 (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TToolButton_GetShowCaption,            (obj_t o),                                                     (o)) \
+    X(void,          TToolButton_SetShowCaption,            (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TToolButton_GetWrap,                   (obj_t o),                                                     (o)) \
+    X(void,          TToolButton_SetWrap,                   (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TToolButton_GetStyle,                  (obj_t o),                                                     (o)) \
+    X(void,          TToolButton_SetStyle,                  (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TToolButton_GetDropdownMenu,           (obj_t o),                                                     (o)) \
+    X(void,          TToolButton_SetDropdownMenu,           (obj_t o, obj_t v),                                            (o, v)) \
+    X(obj_t,         TToolButton_GetMenuItem,               (obj_t o),                                                     (o)) \
+    X(void,          TToolButton_SetMenuItem,               (obj_t o, obj_t v),                                            (o, v)) \
+    X(int_t,         TToolButton_GetIndex,                  (obj_t o),                                                     (o)) \
+    X(void,          TToolButton_Click,                     (obj_t o),                                                     (o)) \
+    X(void,          TToolButton_ArrowClick,                (obj_t o),                                                     (o)) \
+    X(bool_t,        TToolButton_PointInArrow,              (obj_t o, int_t x, int_t y),                                   (o, x, y)) \
+    X(void,          TToolButton_SetOnArrowClick,           (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(obj_t,         TCoolBar_Create,                       (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TCustomCoolBar_GetBands,               (obj_t o),                                                     (o)) \
+    X(void,          TCustomCoolBar_AutosizeBands,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomCoolBar_MouseToBandPos,         (obj_t o, int_t x, int_t y, int_t* b, bool_t* g),              (o, x, y, b, g)) \
+    X(bool_t,        TCustomCoolBar_GetFixedSize,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomCoolBar_SetFixedSize,           (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomCoolBar_GetFixedOrder,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomCoolBar_SetFixedOrder,          (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TCustomCoolBar_GetGrabStyle,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomCoolBar_SetGrabStyle,           (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomCoolBar_GetGrabWidth,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomCoolBar_SetGrabWidth,           (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomCoolBar_GetHorizontalSpacing,   (obj_t o),                                                     (o)) \
+    X(void,          TCustomCoolBar_SetHorizontalSpacing,   (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomCoolBar_GetVerticalSpacing,     (obj_t o),                                                     (o)) \
+    X(void,          TCustomCoolBar_SetVerticalSpacing,     (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TCustomCoolBar_GetShowText,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomCoolBar_SetShowText,            (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomCoolBar_GetThemed,              (obj_t o),                                                     (o)) \
+    X(void,          TCustomCoolBar_SetThemed,              (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomCoolBar_GetVertical,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomCoolBar_SetVertical,            (obj_t o, bool_t v),                                           (o, v)) \
+    X(void,          TCustomCoolBar_SetOnChange,            (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(obj_t,         TCoolBands_Add,                        (obj_t o),                                                     (o)) \
+    X(int_t,         TCoolBands_GetCount,                   (obj_t o),                                                     (o)) \
+    X(obj_t,         TCoolBands_GetItem,                    (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          TCoolBands_Delete,                     (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          TCoolBands_Clear,                      (obj_t o),                                                     (o)) \
+    X(void,          TCoolBands_BeginUpdate,                (obj_t o),                                                     (o)) \
+    X(void,          TCoolBands_EndUpdate,                  (obj_t o),                                                     (o)) \
+    X(obj_t,         TCoolBands_FindBand,                   (obj_t o, obj_t c),                                            (o, c)) \
+    X(int_t,         TCoolBands_FindBandIndex,              (obj_t o, obj_t c),                                            (o, c)) \
+    X(str_t,         TCoolBand_GetText,                     (obj_t o),                                                     (o)) \
+    X(void,          TCoolBand_SetText,                     (obj_t o, str_t v),                                            (o, v)) \
+    X(int_t,         TCoolBand_GetWidth,                    (obj_t o),                                                     (o)) \
+    X(void,          TCoolBand_SetWidth,                    (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCoolBand_GetMinWidth,                 (obj_t o),                                                     (o)) \
+    X(void,          TCoolBand_SetMinWidth,                 (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCoolBand_GetMinHeight,                (obj_t o),                                                     (o)) \
+    X(void,          TCoolBand_SetMinHeight,                (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TCoolBand_GetBreak,                    (obj_t o),                                                     (o)) \
+    X(void,          TCoolBand_SetBreak,                    (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCoolBand_GetVisible,                  (obj_t o),                                                     (o)) \
+    X(void,          TCoolBand_SetVisible,                  (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCoolBand_GetFixedSize,                (obj_t o),                                                     (o)) \
+    X(void,          TCoolBand_SetFixedSize,                (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCoolBand_GetFixedBackground,          (obj_t o),                                                     (o)) \
+    X(void,          TCoolBand_SetFixedBackground,          (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCoolBand_GetHorizontalOnly,           (obj_t o),                                                     (o)) \
+    X(void,          TCoolBand_SetHorizontalOnly,           (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TCoolBand_GetColor,                    (obj_t o),                                                     (o)) \
+    X(void,          TCoolBand_SetColor,                    (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TCoolBand_GetParentColor,              (obj_t o),                                                     (o)) \
+    X(void,          TCoolBand_SetParentColor,              (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TCoolBand_GetIndex,                    (obj_t o),                                                     (o)) \
+    X(void,          TCoolBand_SetIndex,                    (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TCoolBand_GetControl,                  (obj_t o),                                                     (o)) \
+    X(void,          TCoolBand_SetControl,                  (obj_t o, obj_t v),                                            (o, v)) \
+    X(int_t,         TCoolBand_GetLeft,                     (obj_t o),                                                     (o)) \
+    X(int_t,         TCoolBand_GetTop,                      (obj_t o),                                                     (o)) \
+    X(int_t,         TCoolBand_GetRight,                    (obj_t o),                                                     (o)) \
+    X(int_t,         TCoolBand_GetHeight,                   (obj_t o),                                                     (o)) \
+    X(void,          TCoolBand_AutosizeWidth,               (obj_t o),                                                     (o)) \
+    X(int_t,         TStrings_GetCount,                     (obj_t o),                                                     (o)) \
+    X(str_t,         TStrings_GetStrings,                   (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          TStrings_SetStrings,                   (obj_t o, int_t i, str_t v),                                   (o, i, v)) \
+    X(void*,         TStrings_GetObjects,                   (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          TStrings_SetObjects,                   (obj_t o, int_t i, void* v),                                   (o, i, v)) \
+    X(int_t,         TStrings_Add,                          (obj_t o, str_t s),                                            (o, s)) \
+    X(int_t,         TStrings_AddObject,                    (obj_t o, str_t s, void* a),                                   (o, s, a)) \
+    X(void,          TStrings_Insert,                       (obj_t o, int_t i, str_t s),                                   (o, i, s)) \
+    X(void,          TStrings_Delete,                       (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          TStrings_Clear,                        (obj_t o),                                                     (o)) \
+    X(int_t,         TStrings_IndexOf,                      (obj_t o, str_t s),                                            (o, s)) \
+    X(void,          TStrings_Exchange,                     (obj_t o, int_t a, int_t b),                                   (o, a, b)) \
+    X(void,          TStrings_Move,                         (obj_t o, int_t a, int_t b),                                   (o, a, b)) \
+    X(void,          TStrings_BeginUpdate,                  (obj_t o),                                                     (o)) \
+    X(void,          TStrings_EndUpdate,                    (obj_t o),                                                     (o)) \
+    X(str_t,         TStrings_GetText,                      (obj_t o),                                                     (o)) \
+    X(void,          TStrings_SetText,                      (obj_t o, str_t v),                                            (o, v)) \
+    X(str_t,         TStrings_GetCommaText,                 (obj_t o),                                                     (o)) \
+    X(void,          TStrings_SetCommaText,                 (obj_t o, str_t v),                                            (o, v)) \
+    X(void,          TStrings_Assign,                       (obj_t o, obj_t s),                                            (o, s)) \
+    X(void,          TStrings_AddStrings,                   (obj_t o, obj_t s),                                            (o, s)) \
+    X(str_t,         TStrings_GetNames,                     (obj_t o, int_t i),                                            (o, i)) \
+    X(str_t,         TStrings_GetValues,                    (obj_t o, str_t n),                                            (o, n)) \
+    X(void,          TStrings_SetValues,                    (obj_t o, str_t n, str_t v),                                   (o, n, v)) \
+    X(str_t,         TStrings_GetValueFromIndex,            (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          TStrings_SetValueFromIndex,            (obj_t o, int_t i, str_t v),                                   (o, i, v)) \
+    X(int_t,         TStrings_IndexOfName,                  (obj_t o, str_t n),                                            (o, n)) \
+    X(char,          TStrings_GetDelimiter,                 (obj_t o),                                                     (o)) \
+    X(void,          TStrings_SetDelimiter,                 (obj_t o, char v),                                             (o, v)) \
+    X(bool_t,        TStrings_GetStrictDelimiter,           (obj_t o),                                                     (o)) \
+    X(void,          TStrings_SetStrictDelimiter,           (obj_t o, bool_t v),                                           (o, v)) \
+    X(str_t,         TStrings_GetDelimitedText,             (obj_t o),                                                     (o)) \
+    X(void,          TStrings_SetDelimitedText,             (obj_t o, str_t v),                                            (o, v)) \
+    X(void,          TStrings_LoadFromFile,                 (obj_t o, str_t f),                                            (o, f)) \
+    X(void,          TStrings_SaveToFile,                   (obj_t o, str_t f),                                            (o, f)) \
+    X(obj_t,         TStringList_Create,                    (void),                                                        ()) \
+    X(void,          TStringList_Destroy,                   (obj_t o),                                                     (o)) \
+    X(void,          TStringList_Sort,                      (obj_t o),                                                     (o)) \
+    X(bool_t,        TStringList_Find,                      (obj_t o, str_t s, int_t* i),                                  (o, s, i)) \
+    X(bool_t,        TStringList_GetSorted,                 (obj_t o),                                                     (o)) \
+    X(void,          TStringList_SetSorted,                 (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TStringList_GetDuplicates,             (obj_t o),                                                     (o)) \
+    X(void,          TStringList_SetDuplicates,             (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TStringList_GetCaseSensitive,          (obj_t o),                                                     (o)) \
+    X(void,          TStringList_SetCaseSensitive,          (obj_t o, bool_t v),                                           (o, v)) \
+    X(void,          TGraphic_Destroy,                      (obj_t o),                                                     (o)) \
+    X(int_t,         TGraphic_GetWidth,                     (obj_t o),                                                     (o)) \
+    X(void,          TGraphic_SetWidth,                     (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TGraphic_GetHeight,                    (obj_t o),                                                     (o)) \
+    X(void,          TGraphic_SetHeight,                    (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TGraphic_GetEmpty,                     (obj_t o),                                                     (o)) \
+    X(bool_t,        TGraphic_GetTransparent,               (obj_t o),                                                     (o)) \
+    X(void,          TGraphic_SetTransparent,               (obj_t o, bool_t v),                                           (o, v)) \
+    X(void,          TGraphic_LoadFromFile,                 (obj_t o, str_t filename),                                     (o, filename)) \
+    X(void,          TGraphic_SaveToFile,                   (obj_t o, str_t filename),                                     (o, filename)) \
+    X(void,          TGraphic_Assign,                       (obj_t o, obj_t source),                                       (o, source)) \
+    X(void,          TGraphic_Clear,                        (obj_t o),                                                     (o)) \
+    X(obj_t,         TRasterImage_GetCanvas,                (obj_t o),                                                     (o)) \
+    X(int_t,         TRasterImage_GetPixelFormat,           (obj_t o),                                                     (o)) \
+    X(void,          TRasterImage_SetPixelFormat,           (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TRasterImage_GetTransparentColor,      (obj_t o),                                                     (o)) \
+    X(void,          TRasterImage_SetTransparentColor,      (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TRasterImage_GetTransparentMode,       (obj_t o),                                                     (o)) \
+    X(void,          TRasterImage_SetTransparentMode,       (obj_t o, int_t v),                                            (o, v)) \
+    X(void,          TCustomBitmap_SetSize,                 (obj_t o, int_t awidth, int_t aheight),                        (o, awidth, aheight)) \
+    X(obj_t,         TBitmap_Create,                        (void),                                                        ()) \
+    X(obj_t,         TPortableNetworkGraphic_Create,        (void),                                                        ()) \
+    X(obj_t,         TJPEGImage_Create,                     (void),                                                        ()) \
+    X(int_t,         TJPEGImage_GetCompressionQuality,      (obj_t o),                                                     (o)) \
+    X(void,          TJPEGImage_SetCompressionQuality,      (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TPicture_Create,                       (void),                                                        ()) \
+    X(void,          TPicture_Destroy,                      (obj_t o),                                                     (o)) \
+    X(obj_t,         TPicture_GetGraphic,                   (obj_t o),                                                     (o)) \
+    X(void,          TPicture_SetGraphic,                   (obj_t o, obj_t v),                                            (o, v)) \
+    X(obj_t,         TPicture_GetBitmap,                    (obj_t o),                                                     (o)) \
+    X(obj_t,         TPicture_GetPNG,                       (obj_t o),                                                     (o)) \
+    X(obj_t,         TPicture_GetJpeg,                      (obj_t o),                                                     (o)) \
+    X(int_t,         TPicture_GetWidth,                     (obj_t o),                                                     (o)) \
+    X(int_t,         TPicture_GetHeight,                    (obj_t o),                                                     (o)) \
+    X(void,          TPicture_LoadFromFile,                 (obj_t o, str_t filename),                                     (o, filename)) \
+    X(void,          TPicture_SaveToFile,                   (obj_t o, str_t filename),                                     (o, filename)) \
+    X(void,          TPicture_Assign,                       (obj_t o, obj_t source),                                       (o, source)) \
+    X(void,          TPicture_Clear,                        (obj_t o),                                                     (o)) \
+    X(obj_t,         TImage_Create,                         (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TCustomImage_GetPicture,               (obj_t o),                                                     (o)) \
+    X(void,          TCustomImage_SetPicture,               (obj_t o, obj_t v),                                            (o, v)) \
+    X(obj_t,         TCustomImage_GetCanvas,                (obj_t o),                                                     (o)) \
+    X(bool_t,        TCustomImage_GetHasGraphic,            (obj_t o),                                                     (o)) \
+    X(bool_t,        TCustomImage_GetCenter,                (obj_t o),                                                     (o)) \
+    X(void,          TCustomImage_SetCenter,                (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomImage_GetStretch,               (obj_t o),                                                     (o)) \
+    X(void,          TCustomImage_SetStretch,               (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomImage_GetStretchOutEnabled,     (obj_t o),                                                     (o)) \
+    X(void,          TCustomImage_SetStretchOutEnabled,     (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomImage_GetStretchInEnabled,      (obj_t o),                                                     (o)) \
+    X(void,          TCustomImage_SetStretchInEnabled,      (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomImage_GetProportional,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomImage_SetProportional,          (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomImage_GetTransparent,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomImage_SetTransparent,           (obj_t o, bool_t v),                                           (o, v)) \
+    X(void,          TCustomImage_SetOnPictureChanged,      (obj_t o, callback_t cb, void* data),                          (o, cb, data)) \
+    X(obj_t,         TCustomBitBtn_GetGlyph,                (obj_t o),                                                     (o)) \
+    X(void,          TCustomBitBtn_SetGlyph,                (obj_t o, obj_t v),                                            (o, v)) \
+    X(int_t,         TCustomBitBtn_GetNumGlyphs,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomBitBtn_SetNumGlyphs,            (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomBitBtn_GetLayout,               (obj_t o),                                                     (o)) \
+    X(void,          TCustomBitBtn_SetLayout,               (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomBitBtn_GetMargin,               (obj_t o),                                                     (o)) \
+    X(void,          TCustomBitBtn_SetMargin,               (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomBitBtn_GetSpacing,              (obj_t o),                                                     (o)) \
+    X(void,          TCustomBitBtn_SetSpacing,              (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TCustomSpeedButton_GetGlyph,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomSpeedButton_SetGlyph,           (obj_t o, obj_t v),                                            (o, v)) \
+    X(int_t,         TCustomSpeedButton_GetNumGlyphs,       (obj_t o),                                                     (o)) \
+    X(void,          TCustomSpeedButton_SetNumGlyphs,       (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomSpeedButton_GetLayout,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomSpeedButton_SetLayout,          (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomSpeedButton_GetMargin,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomSpeedButton_SetMargin,          (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomSpeedButton_GetSpacing,         (obj_t o),                                                     (o)) \
+    X(void,          TCustomSpeedButton_SetSpacing,         (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TImageList_Create,                     (obj_t owner),                                                 (owner)) \
+    X(int_t,         TCustomImageList_GetWidth,             (obj_t o),                                                     (o)) \
+    X(void,          TCustomImageList_SetWidth,             (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomImageList_GetHeight,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomImageList_SetHeight,            (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomImageList_GetCount,             (obj_t o),                                                     (o)) \
+    X(bool_t,        TCustomImageList_GetMasked,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomImageList_SetMasked,            (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TCustomImageList_GetBkColor,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomImageList_SetBkColor,           (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomImageList_GetDrawingStyle,      (obj_t o),                                                     (o)) \
+    X(void,          TCustomImageList_SetDrawingStyle,      (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomImageList_Add,                  (obj_t o, obj_t image, obj_t mask),                            (o, image, mask)) \
+    X(int_t,         TCustomImageList_AddSliced,            (obj_t o, obj_t image, int_t h, int_t v),                      (o, image, h, v)) \
+    X(int_t,         TCustomImageList_AddMasked,            (obj_t o, obj_t image, int_t maskcolor),                       (o, image, maskcolor)) \
+    X(void,          TCustomImageList_Insert,               (obj_t o, int_t index, obj_t image, obj_t mask),               (o, index, image, mask)) \
+    X(void,          TCustomImageList_Replace,              (obj_t o, int_t index, obj_t image, obj_t mask),               (o, index, image, mask)) \
+    X(void,          TCustomImageList_Delete,               (obj_t o, int_t index),                                        (o, index)) \
+    X(void,          TCustomImageList_Clear,                (obj_t o),                                                     (o)) \
+    X(void,          TCustomImageList_Move,                 (obj_t o, int_t curindex, int_t newindex),                     (o, curindex, newindex)) \
+    X(void,          TCustomImageList_GetBitmap,            (obj_t o, int_t index, obj_t image),                           (o, index, image)) \
+    X(void,          TCustomImageList_Draw,                 (obj_t o, obj_t canvas, int_t x, int_t y, int_t index, bool_t enabled), (o, canvas, x, y, index, enabled)) \
+    X(void,          TCustomImageList_BeginUpdate,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomImageList_EndUpdate,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomImageList_SetOnChange,          (obj_t o, callback_t cb, void* data),                          (o, cb, data)) \
+    X(obj_t,         TCustomImage_GetImages,                (obj_t o),                                                     (o)) \
+    X(void,          TCustomImage_SetImages,                (obj_t o, obj_t v),                                            (o, v)) \
+    X(int_t,         TCustomImage_GetImageIndex,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomImage_SetImageIndex,            (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TCustomBitBtn_GetImages,               (obj_t o),                                                     (o)) \
+    X(void,          TCustomBitBtn_SetImages,               (obj_t o, obj_t v),                                            (o, v)) \
+    X(int_t,         TCustomBitBtn_GetImageIndex,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomBitBtn_SetImageIndex,           (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TCustomSpeedButton_GetImages,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomSpeedButton_SetImages,          (obj_t o, obj_t v),                                            (o, v)) \
+    X(int_t,         TCustomSpeedButton_GetImageIndex,      (obj_t o),                                                     (o)) \
+    X(void,          TCustomSpeedButton_SetImageIndex,      (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TCustomTabControl_GetImages,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomTabControl_SetImages,           (obj_t o, obj_t v),                                            (o, v)) \
+    X(int_t,         TCustomPage_GetImageIndex,             (obj_t o),                                                     (o)) \
+    X(void,          TCustomPage_SetImageIndex,             (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TCustomTreeView_GetImages,             (obj_t o),                                                     (o)) \
+    X(void,          TCustomTreeView_SetImages,             (obj_t o, obj_t v),                                            (o, v)) \
+    X(obj_t,         TCustomTreeView_GetStateImages,        (obj_t o),                                                     (o)) \
+    X(void,          TCustomTreeView_SetStateImages,        (obj_t o, obj_t v),                                            (o, v)) \
+    X(int_t,         TTreeNode_GetImageIndex,               (obj_t o),                                                     (o)) \
+    X(void,          TTreeNode_SetImageIndex,               (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TTreeNode_GetSelectedIndex,            (obj_t o),                                                     (o)) \
+    X(void,          TTreeNode_SetSelectedIndex,            (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TTreeNode_GetStateIndex,               (obj_t o),                                                     (o)) \
+    X(void,          TTreeNode_SetStateIndex,               (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TTreeNode_GetOverlayIndex,             (obj_t o),                                                     (o)) \
+    X(void,          TTreeNode_SetOverlayIndex,             (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TListView_GetLargeImages,              (obj_t o),                                                     (o)) \
+    X(void,          TListView_SetLargeImages,              (obj_t o, obj_t v),                                            (o, v)) \
+    X(obj_t,         TListView_GetSmallImages,              (obj_t o),                                                     (o)) \
+    X(void,          TListView_SetSmallImages,              (obj_t o, obj_t v),                                            (o, v)) \
+    X(obj_t,         TListView_GetStateImages,              (obj_t o),                                                     (o)) \
+    X(void,          TListView_SetStateImages,              (obj_t o, obj_t v),                                            (o, v)) \
+    X(int_t,         TListItem_GetImageIndex,               (obj_t o),                                                     (o)) \
+    X(void,          TListItem_SetImageIndex,               (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TListItem_GetStateIndex,               (obj_t o),                                                     (o)) \
+    X(void,          TListItem_SetStateIndex,               (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TListColumn_GetImageIndex,             (obj_t o),                                                     (o)) \
+    X(void,          TListColumn_SetImageIndex,             (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TToolBar_GetImages,                    (obj_t o),                                                     (o)) \
+    X(void,          TToolBar_SetImages,                    (obj_t o, obj_t v),                                            (o, v)) \
+    X(obj_t,         TToolBar_GetHotImages,                 (obj_t o),                                                     (o)) \
+    X(void,          TToolBar_SetHotImages,                 (obj_t o, obj_t v),                                            (o, v)) \
+    X(obj_t,         TToolBar_GetDisabledImages,            (obj_t o),                                                     (o)) \
+    X(void,          TToolBar_SetDisabledImages,            (obj_t o, obj_t v),                                            (o, v)) \
+    X(int_t,         TToolButton_GetImageIndex,             (obj_t o),                                                     (o)) \
+    X(void,          TToolButton_SetImageIndex,             (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TCustomHeaderControl_GetImages,        (obj_t o),                                                     (o)) \
+    X(void,          TCustomHeaderControl_SetImages,        (obj_t o, obj_t v),                                            (o, v)) \
+    X(int_t,         THeaderSection_GetImageIndex,          (obj_t o),                                                     (o)) \
+    X(void,          THeaderSection_SetImageIndex,          (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TCustomCoolBar_GetImages,              (obj_t o),                                                     (o)) \
+    X(void,          TCustomCoolBar_SetImages,              (obj_t o, obj_t v),                                            (o, v)) \
+    X(obj_t,         TCustomCoolBar_GetBitmap,              (obj_t o),                                                     (o)) \
+    X(void,          TCustomCoolBar_SetBitmap,              (obj_t o, obj_t v),                                            (o, v)) \
+    X(int_t,         TCoolBand_GetImageIndex,               (obj_t o),                                                     (o)) \
+    X(void,          TCoolBand_SetImageIndex,               (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TCoolBand_GetBitmap,                   (obj_t o),                                                     (o)) \
+    X(void,          TCoolBand_SetBitmap,                   (obj_t o, obj_t v),                                            (o, v)) \
+    X(obj_t,         TMenu_GetImages,                       (obj_t o),                                                     (o)) \
+    X(void,          TMenu_SetImages,                       (obj_t o, obj_t v),                                            (o, v)) \
+    X(int_t,         TMenuItem_GetImageIndex,               (obj_t o),                                                     (o)) \
+    X(void,          TMenuItem_SetImageIndex,               (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TMenuItem_GetSubMenuImages,            (obj_t o),                                                     (o)) \
+    X(void,          TMenuItem_SetSubMenuImages,            (obj_t o, obj_t v),                                            (o, v)) \
+    X(obj_t,         TMenuItem_GetBitmap,                   (obj_t o),                                                     (o)) \
+    X(void,          TMenuItem_SetBitmap,                   (obj_t o, obj_t v),                                            (o, v))
+
+#endif
