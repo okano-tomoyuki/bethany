@@ -287,6 +287,13 @@ static void NO_VCL_CALL OnListViewDeletion(no_vcl_obj_t sender, no_vcl_obj_t ite
     ++*(int*)data;
 }
 
+static void NO_VCL_CALL OnGridSelection(no_vcl_obj_t sender, no_vcl_int_t col, no_vcl_int_t row, void* data)
+{
+    (void)data;
+    printf("Grid selection: (%d,%d) = %s\n", (int)col, (int)row, no_vcl_TCustomStringGrid_GetCells(sender, col, row));
+    fflush(stdout);
+}
+
 static void NO_VCL_CALL OnListViewSelectItem(no_vcl_obj_t sender, no_vcl_obj_t item, no_vcl_int_t selected, void* data)
 {
     (void)sender; (void)data;
@@ -396,6 +403,9 @@ int main(void)
     no_vcl_obj_t listItems;
     no_vcl_obj_t listItem;
     int listDeletions = 0;
+    no_vcl_obj_t gridSheet;
+    no_vcl_obj_t stringGrid;
+    no_vcl_int_t selLeft, selTop, selRight, selBottom;
 
     no_vcl_FreeNotify_SetCallback(OnComponentFreed, &freedCount);
 
@@ -861,6 +871,41 @@ int main(void)
                listDeletions, itemsFreed - freedBefore);
     }
 
+    /* Tier 2、4 バッチ目(TStringGrid)。pageControl の新しいページ "Grid" の上に置く。 */
+    gridSheet = no_vcl_TTabSheet_Create(form);
+    no_vcl_TTabSheet_SetPageControl(gridSheet, pageControl);
+    no_vcl_TControl_SetCaption(gridSheet, "Grid");
+    stringGrid = Place(no_vcl_TStringGrid_Create(form), gridSheet, 5, 5);
+    no_vcl_TControl_SetWidth(stringGrid, 200);
+    no_vcl_TControl_SetHeight(stringGrid, 120);
+    no_vcl_TCustomDrawGrid_SetColCount(stringGrid, 2);
+    no_vcl_TCustomDrawGrid_SetRowCount(stringGrid, 4);
+    no_vcl_TCustomDrawGrid_SetFixedCols(stringGrid, 0);
+    no_vcl_TCustomDrawGrid_SetOptions(stringGrid, no_vcl_TCustomDrawGrid_GetOptions(stringGrid) | no_vcl_goEditing);
+    no_vcl_TCustomStringGrid_SetCells(stringGrid, 0, 0, "Name");
+    no_vcl_TCustomStringGrid_SetCells(stringGrid, 1, 0, "Qty");
+    no_vcl_TCustomStringGrid_SetCells(stringGrid, 0, 1, "Cherry");
+    no_vcl_TCustomStringGrid_SetCells(stringGrid, 0, 2, "Apple");
+    no_vcl_TCustomStringGrid_SetCells(stringGrid, 0, 3, "Banana");
+    /* 列 0 の値で行を並べ替える(固定行は除く)。 */
+    no_vcl_TCustomDrawGrid_SortColRow(stringGrid, 1, 0);
+    no_vcl_TCustomDrawGrid_SetOnSelection(stringGrid, OnGridSelection, NULL);
+    no_vcl_TCustomDrawGrid_SetSelection(stringGrid, 0, 2, 1, 3);
+    no_vcl_TCustomDrawGrid_GetSelection(stringGrid, &selLeft, &selTop, &selRight, &selBottom);
+    {
+        /* 文字列を返す関数の戻り値は次の呼び出しで上書きされるため、並べて使うときはコピーする。 */
+        char sorted[3][16];
+        int r;
+        for (r = 0; r < 3; ++r)
+            snprintf(sorted[r], sizeof(sorted[r]), "%s", no_vcl_TCustomStringGrid_GetCells(stringGrid, 0, r + 1));
+        printf("StringGrid ColCount/RowCount=%d/%d (expected 2/4), sorted: %s/%s/%s (expected Apple/Banana/Cherry), "
+               "goEditing: %s, Selection=(%d,%d,%d,%d) (expected 0,2,1,3)\n",
+               no_vcl_TCustomDrawGrid_GetColCount(stringGrid), no_vcl_TCustomDrawGrid_GetRowCount(stringGrid),
+               sorted[0], sorted[1], sorted[2],
+               (no_vcl_TCustomDrawGrid_GetOptions(stringGrid) & no_vcl_goEditing) ? "yes" : "no",
+               (int)selLeft, (int)selTop, (int)selRight, (int)selBottom);
+    }
+
     printf("Running (click the button, then close the window twice: the first close is blocked)...\n");
     fflush(stdout);
     /* MainForm を表示してメッセージループに入り、MainForm が閉じられると戻る。 */
@@ -870,7 +915,7 @@ int main(void)
     /* Application が所有するフォーム(と、フォームが所有するコントロール)をまとめて破棄する。
        呼ばなくても DLL の切り離し時に LCL が破棄するが、そのときは破棄通知が呼ばれない。 */
     no_vcl_TComponent_DestroyComponents(app);
-    printf("Clicks: %d, Freed components: %d (expected 61: form + 54 owned + 6 created inside LCL: 2 menu roots, a separator and 3 AddTabSheet pages)\n", clickCount, freedCount);
+    printf("Clicks: %d, Freed components: %d (expected 63: form + 56 owned + 6 created inside LCL: 2 menu roots, a separator and 3 AddTabSheet pages)\n", clickCount, freedCount);
     /* ツリービュー・リストビューの破棄に伴って、残りのノード(4 つ)・リストビューの項目(2 つ)と列(2 つ)も破棄通知が届く。 */
     printf("Items freed: %d (expected 12: tree 2 deleted + 4 with the tree view, list 1 item + 1 column deleted "
            "+ 2 items + 2 columns with the list view)\n", itemsFreed);

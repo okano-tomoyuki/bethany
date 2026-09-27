@@ -2371,6 +2371,235 @@ private:
     static void         SetOnPaintImpl(TObject* owner, const TNotifyEvent& value);
 };
 
+/* ---------------- Grid ---------------- */
+
+// 矩形(VCL の TRect と同じく Left/Top/Right/Bottom)。グリッドの選択範囲(TGridRect)にも使う(Left/Right が列、Top/Bottom が行)。
+struct TRect
+{
+    int Left;
+    int Top;
+    int Right;
+    int Bottom;
+};
+using TGridRect = TRect;
+
+// グリッドの Options(LCL の TGridOptions)。TShiftState と同じく、ビットを OR した集合として扱う。
+using TGridOptions = unsigned int;
+const TGridOptions goFixedVertLine               = 1u << 0;
+const TGridOptions goFixedHorzLine               = 1u << 1;
+const TGridOptions goVertLine                    = 1u << 2;
+const TGridOptions goHorzLine                    = 1u << 3;
+const TGridOptions goRangeSelect                 = 1u << 4;
+const TGridOptions goDrawFocusSelected           = 1u << 5;
+const TGridOptions goRowSizing                   = 1u << 6;
+const TGridOptions goColSizing                   = 1u << 7;
+const TGridOptions goRowMoving                   = 1u << 8;
+const TGridOptions goColMoving                   = 1u << 9;
+const TGridOptions goEditing                     = 1u << 10;
+const TGridOptions goAutoAddRows                 = 1u << 11;
+const TGridOptions goTabs                        = 1u << 12;
+const TGridOptions goRowSelect                   = 1u << 13;
+const TGridOptions goAlwaysShowEditor            = 1u << 14;
+const TGridOptions goThumbTracking               = 1u << 15;
+const TGridOptions goColSpanning                 = 1u << 16;
+const TGridOptions goRelaxedRowSelect            = 1u << 17;
+const TGridOptions goDblClickAutoSize            = 1u << 18;
+const TGridOptions goSmoothScroll                = 1u << 19;
+const TGridOptions goFixedRowNumbering           = 1u << 20;
+const TGridOptions goScrollKeepVisible           = 1u << 21;
+const TGridOptions goHeaderHotTracking           = 1u << 22;
+const TGridOptions goHeaderPushedLook            = 1u << 23;
+const TGridOptions goSelectionActive             = 1u << 24;
+const TGridOptions goFixedColSizing              = 1u << 25;
+const TGridOptions goDontScrollPartCell          = 1u << 26;
+const TGridOptions goCellHints                   = 1u << 27;
+const TGridOptions goTruncCellHints              = 1u << 28;
+const TGridOptions goCellEllipsis                = 1u << 29;
+const TGridOptions goAutoAddRowsSkipContentCheck = 1u << 30;
+const TGridOptions goRowHighlight                = 1u << 31;
+
+// OnDrawCell の AState(LCL の TGridDrawState)。
+using TGridDrawState = unsigned int;
+const TGridDrawState gdSelected     = 0x01;
+const TGridDrawState gdFocused      = 0x02;
+const TGridDrawState gdFixed        = 0x04;
+const TGridDrawState gdHot          = 0x08;
+const TGridDrawState gdPushed       = 0x10;
+const TGridDrawState gdRowHighlight = 0x20;
+
+// セルを描画するとき(ARect はセルのクライアント座標での矩形。描画は TCustomDrawGrid::Canvas に行う)。
+using TOnDrawCell        = std::function<void(TObject* Sender, int ACol, int ARow, TRect ARect, TGridDrawState AState)>;
+// セルが選択される前(CanSelect を false にすると選択させない)。
+using TOnSelectCellEvent = std::function<void(TObject* Sender, int ACol, int ARow, bool& CanSelect)>;
+// セルが選択された後。
+using TOnSelectEvent     = std::function<void(TObject* Sender, int ACol, int ARow)>;
+// 見出し(固定行・固定列)がクリックされたとき(IsColumn は列見出しなら true)。
+using THdrEvent          = std::function<void(TObject* Sender, bool IsColumn, int Index)>;
+
+// グリッドの共通の基底。以下のメンバは LCL の TCustomGrid の public。
+// セルは(列, 行)の位置で指定する(0 始まり。固定行・固定列を含む)。
+class TCustomGrid : public TCustomControl
+{
+public:
+    void  BeginUpdate();
+    void  EndUpdate();
+    // すべての行・列を削除する(ColCount・RowCount が 0 になる)。セルの文字列だけを消すのは TCustomStringGrid::Clean。
+    void  Clear();
+    // セルのクライアント座標での矩形。
+    TRect CellRect(int ACol, int ARow) const;
+    // クライアント座標 X, Y にあるセル。セルの外なら -1。
+    void  MouseToCell(int X, int Y, int& ACol, int& ARow) const;
+
+protected:
+    explicit TCustomGrid(no_vcl_obj_t handle) : TCustomControl(handle) {}
+    ~TCustomGrid() override = default;
+};
+
+// 以下のメンバは LCL では TCustomGrid の protected で、TCustomDrawGrid が public にしている。
+// ColWidths[Col] / RowHeights[Row] は GetColWidths(Col) / SetColWidths(Col, Value) 等(インデックス付きプロパティは Get/Set メソッドで表す)。
+class TCustomDrawGrid : public TCustomGrid
+{
+public:
+    // OnDrawCell の中で描画する先。グリッドが所有する実体への非所有のビュー(TPaintBox::Canvas と同じ)。
+    TCanvas Canvas;
+
+    Property<int>          ColCount;
+    Property<int>          RowCount;
+    // 固定列・固定行(見出し)の数。既定は 1。
+    Property<int>          FixedCols;
+    Property<int>          FixedRows;
+    // 現在のセル(フォーカスのあるセル)の列・行。
+    Property<int>          Col;
+    Property<int>          Row;
+    Property<int>          DefaultColWidth;
+    Property<int>          DefaultRowHeight;
+    Property<TGridOptions> Options;
+    // 選択範囲(単一のセルなら Left = Right、Top = Bottom)。
+    Property<TGridRect>    Selection;
+    // スクロール位置(表示されている最初の列・行)。
+    Property<int>          LeftCol;
+    Property<int>          TopRow;
+    // false にすると、OnDrawCell の前にセルの既定の描画(背景・文字列)を行わない。
+    Property<bool>         DefaultDrawing;
+    Property<TColor>       FixedColor;
+    // セルの編集中か(goEditing のとき)。true を設定すると現在のセルの編集を始める。
+    Property<bool>         EditorMode;
+
+    Property<TOnDrawCell>        OnDrawCell;
+    Property<TOnSelectCellEvent> OnSelectCell;
+    Property<TOnSelectEvent>     OnSelection;
+    Property<THdrEvent>          OnHeaderClick;
+
+    int  GetColWidths(int ACol) const;
+    void SetColWidths(int ACol, int Value);
+    int  GetRowHeights(int ARow) const;
+    void SetRowHeights(int ARow, int Value);
+
+    void InsertColRow(bool IsColumn, int Index);
+    void DeleteColRow(bool IsColumn, int Index);
+    void MoveColRow(bool IsColumn, int FromIndex, int ToIndex);
+    // IsColumn が true なら、列 Index の値で行を並べ替える(固定行は除く)。false なら行 Index の値で列を並べ替える。
+    void SortColRow(bool IsColumn, int Index);
+
+protected:
+    explicit TCustomDrawGrid(no_vcl_obj_t handle);
+    ~TCustomDrawGrid() override = default;
+
+private:
+    TOnDrawCell        onDrawCell_;
+    TOnSelectCellEvent onSelectCell_;
+    TOnSelectEvent     onSelection_;
+    THdrEvent          onHeaderClick_;
+    bool onDrawCellHooked_    = false;
+    bool onSelectCellHooked_  = false;
+    bool onSelectionHooked_   = false;
+    bool onHeaderClickHooked_ = false;
+
+    static void NO_VCL_CALL DrawCellTrampoline(no_vcl_obj_t sender, no_vcl_int_t col, no_vcl_int_t row,
+                                               no_vcl_int_t left, no_vcl_int_t top, no_vcl_int_t right, no_vcl_int_t bottom,
+                                               no_vcl_uint_t state, void* data);
+    static void NO_VCL_CALL SelectCellTrampoline(no_vcl_obj_t sender, no_vcl_int_t col, no_vcl_int_t row, no_vcl_bool_t* canSelect, void* data);
+    static void NO_VCL_CALL SelectionTrampoline(no_vcl_obj_t sender, no_vcl_int_t col, no_vcl_int_t row, void* data);
+    static void NO_VCL_CALL HeaderClickTrampoline(no_vcl_obj_t sender, no_vcl_int_t isColumn, no_vcl_int_t index, void* data);
+
+    static int          GetColCountImpl(TObject* owner);
+    static void         SetColCountImpl(TObject* owner, const int& value);
+    static int          GetRowCountImpl(TObject* owner);
+    static void         SetRowCountImpl(TObject* owner, const int& value);
+    static int          GetFixedColsImpl(TObject* owner);
+    static void         SetFixedColsImpl(TObject* owner, const int& value);
+    static int          GetFixedRowsImpl(TObject* owner);
+    static void         SetFixedRowsImpl(TObject* owner, const int& value);
+    static int          GetColImpl(TObject* owner);
+    static void         SetColImpl(TObject* owner, const int& value);
+    static int          GetRowImpl(TObject* owner);
+    static void         SetRowImpl(TObject* owner, const int& value);
+    static int          GetDefaultColWidthImpl(TObject* owner);
+    static void         SetDefaultColWidthImpl(TObject* owner, const int& value);
+    static int          GetDefaultRowHeightImpl(TObject* owner);
+    static void         SetDefaultRowHeightImpl(TObject* owner, const int& value);
+    static TGridOptions GetOptionsImpl(TObject* owner);
+    static void         SetOptionsImpl(TObject* owner, const TGridOptions& value);
+    static TGridRect    GetSelectionImpl(TObject* owner);
+    static void         SetSelectionImpl(TObject* owner, const TGridRect& value);
+    static int          GetLeftColImpl(TObject* owner);
+    static void         SetLeftColImpl(TObject* owner, const int& value);
+    static int          GetTopRowImpl(TObject* owner);
+    static void         SetTopRowImpl(TObject* owner, const int& value);
+    static bool         GetDefaultDrawingImpl(TObject* owner);
+    static void         SetDefaultDrawingImpl(TObject* owner, const bool& value);
+    static TColor       GetFixedColorImpl(TObject* owner);
+    static void         SetFixedColorImpl(TObject* owner, const TColor& value);
+    static bool         GetEditorModeImpl(TObject* owner);
+    static void         SetEditorModeImpl(TObject* owner, const bool& value);
+
+    static TOnDrawCell        GetOnDrawCellImpl(TObject* owner);
+    static void               SetOnDrawCellImpl(TObject* owner, const TOnDrawCell& value);
+    static TOnSelectCellEvent GetOnSelectCellImpl(TObject* owner);
+    static void               SetOnSelectCellImpl(TObject* owner, const TOnSelectCellEvent& value);
+    static TOnSelectEvent     GetOnSelectionImpl(TObject* owner);
+    static void               SetOnSelectionImpl(TObject* owner, const TOnSelectEvent& value);
+    static THdrEvent          GetOnHeaderClickImpl(TObject* owner);
+    static void               SetOnHeaderClickImpl(TObject* owner, const THdrEvent& value);
+};
+
+// セルの内容を OnDrawCell で利用者が描画するグリッド(セルの文字列は持たない)。
+class TDrawGrid : public TCustomDrawGrid
+{
+public:
+    explicit TDrawGrid(TComponent* AOwner);
+
+protected:
+    ~TDrawGrid() override = default;
+};
+
+// 以下のメンバは LCL の TCustomStringGrid の public。Cells[ACol][ARow] は GetCells(ACol, ARow) / SetCells(ACol, ARow, Value)。
+class TCustomStringGrid : public TCustomDrawGrid
+{
+public:
+    std::string GetCells(int ACol, int ARow) const;
+    void        SetCells(int ACol, int ARow, const std::string& Value);
+    // すべてのセルの文字列を消す(行・列の数は変わらない)。
+    void        Clean();
+    // 列の幅を文字列に合わせる。
+    void        AutoSizeColumns();
+    void        AutoSizeColumn(int ACol);
+
+protected:
+    explicit TCustomStringGrid(no_vcl_obj_t handle) : TCustomDrawGrid(handle) {}
+    ~TCustomStringGrid() override = default;
+};
+
+// セルごとに文字列を持つグリッド。
+class TStringGrid : public TCustomStringGrid
+{
+public:
+    explicit TStringGrid(TComponent* AOwner);
+
+protected:
+    ~TStringGrid() override = default;
+};
+
 /* ---------------- Timer ---------------- */
 
 class TCustomTimer : public TComponent

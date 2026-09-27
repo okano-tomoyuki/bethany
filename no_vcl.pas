@@ -24,6 +24,7 @@ uses
   Buttons,
   Spin,
   MaskEdit,
+  Grids,
   Menus,
   LCLProc,
   Graphics,
@@ -3356,6 +3357,454 @@ begin
   TListColumn(Obj).Index := Value;
 end;
 
+{ docs/component-coverage.md の Tier 2、4 バッチ目(TDrawGrid・TStringGrid)。docs/adr/0021-... を参照。
+  セルは LCL でもオブジェクトではなく、(列, 行)の位置で指定するため、TTreeNode・TListItem のような寿命管理は要らない。
+  主なメンバは TCustomGrid の protected を TCustomDrawGrid が public にしているため、関数名は TCustomDrawGrid_* にする。 }
+
+type
+  { OnSelection(Sender, ACol, ARow)・OnHeaderClick(Sender, IsColumn, Index)用。整数 2 つを渡す。 }
+  TNoVclCellCallback = procedure(Sender: Pointer; A, B: Integer; Data: Pointer); NO_VCL_CALL;
+
+  TCellCallbackBridge = class(TComponent)
+  private
+    FCallback: TNoVclCellCallback;
+    FData: Pointer;
+  public
+    procedure DoSelection(Sender: TObject; aCol, aRow: Integer);
+    procedure DoHeaderClick(Sender: TObject; IsColumn: Boolean; Index: Integer);
+  end;
+
+  { OnSelectCell(Sender, ACol, ARow, var CanSelect)用。CanSelect は書き換え可能(0 = False)。 }
+  TNoVclCellAllowCallback = procedure(Sender: Pointer; ACol, ARow: Integer; Allow: PInteger; Data: Pointer); NO_VCL_CALL;
+
+  TCellAllowCallbackBridge = class(TComponent)
+  private
+    FCallback: TNoVclCellAllowCallback;
+    FData: Pointer;
+  public
+    procedure DoSelectCell(Sender: TObject; aCol, aRow: Integer; var CanSelect: Boolean);
+  end;
+
+  { OnDrawCell(Sender, ACol, ARow, Rect, State)用。State は TGridDrawState のビット集合(no_vcl_gd*)。 }
+  TNoVclDrawCellCallback = procedure(Sender: Pointer; ACol, ARow, Left, Top, Right, Bottom: Integer; State: LongWord; Data: Pointer); NO_VCL_CALL;
+
+  TDrawCellCallbackBridge = class(TComponent)
+  private
+    FCallback: TNoVclDrawCellCallback;
+    FData: Pointer;
+  public
+    procedure DoDrawCell(Sender: TObject; aCol, aRow: Integer; aRect: TRect; aState: TGridDrawState);
+  end;
+
+procedure TCellCallbackBridge.DoSelection(Sender: TObject; aCol, aRow: Integer);
+begin
+  if not Assigned(FCallback) or GDetaching then
+    Exit;
+  FCallback(Pointer(Sender), aCol, aRow, FData);
+end;
+
+procedure TCellCallbackBridge.DoHeaderClick(Sender: TObject; IsColumn: Boolean; Index: Integer);
+begin
+  if not Assigned(FCallback) or GDetaching then
+    Exit;
+  if IsColumn then
+    FCallback(Pointer(Sender), -1, Index, FData)
+  else
+    FCallback(Pointer(Sender), 0, Index, FData);
+end;
+
+procedure TCellAllowCallbackBridge.DoSelectCell(Sender: TObject; aCol, aRow: Integer; var CanSelect: Boolean);
+var
+  A: Integer;
+begin
+  if not Assigned(FCallback) or GDetaching then
+    Exit;
+  if CanSelect then A := -1 else A := 0;
+  FCallback(Pointer(Sender), aCol, aRow, @A, FData);
+  CanSelect := A <> 0;
+end;
+
+procedure TDrawCellCallbackBridge.DoDrawCell(Sender: TObject; aCol, aRow: Integer; aRect: TRect; aState: TGridDrawState);
+var
+  S: LongWord;
+begin
+  if not Assigned(FCallback) or GDetaching then
+    Exit;
+  { TGridDrawState は名前の無い列挙型の集合のため、要素ごとに判定してビットに変換する。 }
+  S := 0;
+  if gdSelected in aState then S := S or $01;
+  if gdFocused in aState then S := S or $02;
+  if gdFixed in aState then S := S or $04;
+  if gdHot in aState then S := S or $08;
+  if gdPushed in aState then S := S or $10;
+  if gdRowHighlight in aState then S := S or $20;
+  FCallback(Pointer(Sender), aCol, aRow, aRect.Left, aRect.Top, aRect.Right, aRect.Bottom, S, FData);
+end;
+
+function CellBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclCellCallback; Data: Pointer): TCellCallbackBridge;
+begin
+  if (Current <> nil) and (TObject(Current) is TCellCallbackBridge) and (TCellCallbackBridge(Current).Owner = Owner) then
+    Result := TCellCallbackBridge(Current)
+  else
+    Result := TCellCallbackBridge.Create(Owner);
+  Result.FCallback := Cb;
+  Result.FData := Data;
+end;
+
+function CellAllowBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclCellAllowCallback; Data: Pointer): TCellAllowCallbackBridge;
+begin
+  if (Current <> nil) and (TObject(Current) is TCellAllowCallbackBridge) and (TCellAllowCallbackBridge(Current).Owner = Owner) then
+    Result := TCellAllowCallbackBridge(Current)
+  else
+    Result := TCellAllowCallbackBridge.Create(Owner);
+  Result.FCallback := Cb;
+  Result.FData := Data;
+end;
+
+function DrawCellBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclDrawCellCallback; Data: Pointer): TDrawCellCallbackBridge;
+begin
+  if (Current <> nil) and (TObject(Current) is TDrawCellCallbackBridge) and (TDrawCellCallbackBridge(Current).Owner = Owner) then
+    Result := TDrawCellCallbackBridge(Current)
+  else
+    Result := TDrawCellCallbackBridge.Create(Owner);
+  Result.FCallback := Cb;
+  Result.FData := Data;
+end;
+
+{ TGridOptions(集合型)と LongWord のビット集合(no_vcl_go* と対応。ビットの位置は TGridOption の序数)の変換。 }
+function GridOptionsToInt(const O: TGridOptions): LongWord;
+var
+  I: TGridOption;
+begin
+  Result := 0;
+  for I := Low(TGridOption) to High(TGridOption) do
+    if I in O then
+      Result := Result or (LongWord(1) shl Ord(I));
+end;
+
+function IntToGridOptions(V: LongWord): TGridOptions;
+var
+  I: TGridOption;
+begin
+  Result := [];
+  for I := Low(TGridOption) to High(TGridOption) do
+    if (V and (LongWord(1) shl Ord(I))) <> 0 then
+      Include(Result, I);
+end;
+
+{ TDrawGrid / TStringGrid }
+
+function TDrawGrid_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TDrawGrid.Create(TComponent(Owner)));
+end;
+
+function TStringGrid_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TStringGrid.Create(TComponent(Owner)));
+end;
+
+{ TCustomGrid の public。 }
+
+procedure TCustomGrid_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
+begin
+  TCustomGrid(Obj).BeginUpdate;
+end;
+
+procedure TCustomGrid_EndUpdate(Obj: Pointer); NO_VCL_CALL;
+begin
+  TCustomGrid(Obj).EndUpdate;
+end;
+
+{ すべての行・列を削除する(ColCount・RowCount が 0 になる)。セルの文字列だけを消すのは TCustomStringGrid_Clean。 }
+procedure TCustomGrid_Clear(Obj: Pointer); NO_VCL_CALL;
+begin
+  TCustomGrid(Obj).Clear;
+end;
+
+{ セルのクライアント座標での矩形。 }
+procedure TCustomGrid_CellRect(Obj: Pointer; ACol, ARow: Integer; Left, Top, Right, Bottom: PInteger); NO_VCL_CALL;
+var
+  R: TRect;
+begin
+  R := TCustomGrid(Obj).CellRect(ACol, ARow);
+  Left^ := R.Left;
+  Top^ := R.Top;
+  Right^ := R.Right;
+  Bottom^ := R.Bottom;
+end;
+
+{ クライアント座標 X, Y にあるセル。セルの外なら -1。 }
+procedure TCustomGrid_MouseToCell(Obj: Pointer; X, Y: Integer; ACol, ARow: PInteger); NO_VCL_CALL;
+var
+  C, R: Longint;
+begin
+  TCustomGrid(Obj).MouseToCell(X, Y, C, R);
+  ACol^ := C;
+  ARow^ := R;
+end;
+
+{ TCustomDrawGrid の public(LCL では TCustomGrid の protected を公開したもの)。 }
+
+function TCustomDrawGrid_GetCanvas(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomDrawGrid(Obj).Canvas);
+end;
+
+function TCustomDrawGrid_GetColCount(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomDrawGrid(Obj).ColCount;
+end;
+
+procedure TCustomDrawGrid_SetColCount(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomDrawGrid(Obj).ColCount := Value;
+end;
+
+function TCustomDrawGrid_GetRowCount(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomDrawGrid(Obj).RowCount;
+end;
+
+procedure TCustomDrawGrid_SetRowCount(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomDrawGrid(Obj).RowCount := Value;
+end;
+
+function TCustomDrawGrid_GetFixedCols(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomDrawGrid(Obj).FixedCols;
+end;
+
+procedure TCustomDrawGrid_SetFixedCols(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomDrawGrid(Obj).FixedCols := Value;
+end;
+
+function TCustomDrawGrid_GetFixedRows(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomDrawGrid(Obj).FixedRows;
+end;
+
+procedure TCustomDrawGrid_SetFixedRows(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomDrawGrid(Obj).FixedRows := Value;
+end;
+
+{ 現在のセル(フォーカスのあるセル)の列・行。 }
+function TCustomDrawGrid_GetCol(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomDrawGrid(Obj).Col;
+end;
+
+procedure TCustomDrawGrid_SetCol(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomDrawGrid(Obj).Col := Value;
+end;
+
+function TCustomDrawGrid_GetRow(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomDrawGrid(Obj).Row;
+end;
+
+procedure TCustomDrawGrid_SetRow(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomDrawGrid(Obj).Row := Value;
+end;
+
+function TCustomDrawGrid_GetDefaultColWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomDrawGrid(Obj).DefaultColWidth;
+end;
+
+procedure TCustomDrawGrid_SetDefaultColWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomDrawGrid(Obj).DefaultColWidth := Value;
+end;
+
+function TCustomDrawGrid_GetDefaultRowHeight(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomDrawGrid(Obj).DefaultRowHeight;
+end;
+
+procedure TCustomDrawGrid_SetDefaultRowHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomDrawGrid(Obj).DefaultRowHeight := Value;
+end;
+
+function TCustomDrawGrid_GetColWidths(Obj: Pointer; ACol: Integer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomDrawGrid(Obj).ColWidths[ACol];
+end;
+
+procedure TCustomDrawGrid_SetColWidths(Obj: Pointer; ACol, Value: Integer); NO_VCL_CALL;
+begin
+  TCustomDrawGrid(Obj).ColWidths[ACol] := Value;
+end;
+
+function TCustomDrawGrid_GetRowHeights(Obj: Pointer; ARow: Integer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomDrawGrid(Obj).RowHeights[ARow];
+end;
+
+procedure TCustomDrawGrid_SetRowHeights(Obj: Pointer; ARow, Value: Integer); NO_VCL_CALL;
+begin
+  TCustomDrawGrid(Obj).RowHeights[ARow] := Value;
+end;
+
+function TCustomDrawGrid_GetOptions(Obj: Pointer): LongWord; NO_VCL_CALL;
+begin
+  Result := GridOptionsToInt(TCustomDrawGrid(Obj).Options);
+end;
+
+procedure TCustomDrawGrid_SetOptions(Obj: Pointer; Value: LongWord); NO_VCL_CALL;
+begin
+  TCustomDrawGrid(Obj).Options := IntToGridOptions(Value);
+end;
+
+{ 選択範囲(Left/Right が列、Top/Bottom が行。単一のセルなら Left = Right、Top = Bottom)。 }
+procedure TCustomDrawGrid_GetSelection(Obj: Pointer; Left, Top, Right, Bottom: PInteger); NO_VCL_CALL;
+var
+  R: TGridRect;
+begin
+  R := TCustomDrawGrid(Obj).Selection;
+  Left^ := R.Left;
+  Top^ := R.Top;
+  Right^ := R.Right;
+  Bottom^ := R.Bottom;
+end;
+
+procedure TCustomDrawGrid_SetSelection(Obj: Pointer; Left, Top, Right, Bottom: Integer); NO_VCL_CALL;
+var
+  R: TGridRect;
+begin
+  { Rect(...) は Win32 では Windows ユニットの型名(TRect の別名)に隠されるため、フィールドで組み立てる。 }
+  R.Left := Left;
+  R.Top := Top;
+  R.Right := Right;
+  R.Bottom := Bottom;
+  TCustomDrawGrid(Obj).Selection := R;
+end;
+
+function TCustomDrawGrid_GetLeftCol(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomDrawGrid(Obj).LeftCol;
+end;
+
+procedure TCustomDrawGrid_SetLeftCol(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomDrawGrid(Obj).LeftCol := Value;
+end;
+
+function TCustomDrawGrid_GetTopRow(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomDrawGrid(Obj).TopRow;
+end;
+
+procedure TCustomDrawGrid_SetTopRow(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomDrawGrid(Obj).TopRow := Value;
+end;
+
+function TCustomDrawGrid_GetDefaultDrawing(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomDrawGrid(Obj).DefaultDrawing;
+end;
+
+procedure TCustomDrawGrid_SetDefaultDrawing(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomDrawGrid(Obj).DefaultDrawing := Value;
+end;
+
+function TCustomDrawGrid_GetFixedColor(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomDrawGrid(Obj).FixedColor;
+end;
+
+procedure TCustomDrawGrid_SetFixedColor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomDrawGrid(Obj).FixedColor := TColor(Value);
+end;
+
+function TCustomDrawGrid_GetEditorMode(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomDrawGrid(Obj).EditorMode;
+end;
+
+procedure TCustomDrawGrid_SetEditorMode(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomDrawGrid(Obj).EditorMode := Value;
+end;
+
+procedure TCustomDrawGrid_InsertColRow(Obj: Pointer; IsColumn: LongBool; Index: Integer); NO_VCL_CALL;
+begin
+  TCustomDrawGrid(Obj).InsertColRow(IsColumn, Index);
+end;
+
+procedure TCustomDrawGrid_DeleteColRow(Obj: Pointer; IsColumn: LongBool; Index: Integer); NO_VCL_CALL;
+begin
+  TCustomDrawGrid(Obj).DeleteColRow(IsColumn, Index);
+end;
+
+procedure TCustomDrawGrid_MoveColRow(Obj: Pointer; IsColumn: LongBool; FromIndex, ToIndex: Integer); NO_VCL_CALL;
+begin
+  TCustomDrawGrid(Obj).MoveColRow(IsColumn, FromIndex, ToIndex);
+end;
+
+{ IsColumn が True なら、列 Index の値で行を並べ替える(固定行は除く)。False なら行 Index の値で列を並べ替える。 }
+procedure TCustomDrawGrid_SortColRow(Obj: Pointer; IsColumn: LongBool; Index: Integer); NO_VCL_CALL;
+begin
+  TCustomDrawGrid(Obj).SortColRow(IsColumn, Index);
+end;
+
+procedure TCustomDrawGrid_SetOnDrawCell(Obj: Pointer; Cb: TNoVclDrawCellCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TCustomDrawGrid(Obj).OnDrawCell := @DrawCellBridgeFor(TCustomDrawGrid(Obj), TMethod(TCustomDrawGrid(Obj).OnDrawCell).Data, Cb, Data).DoDrawCell;
+end;
+
+procedure TCustomDrawGrid_SetOnSelectCell(Obj: Pointer; Cb: TNoVclCellAllowCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TCustomDrawGrid(Obj).OnSelectCell := @CellAllowBridgeFor(TCustomDrawGrid(Obj), TMethod(TCustomDrawGrid(Obj).OnSelectCell).Data, Cb, Data).DoSelectCell;
+end;
+
+procedure TCustomDrawGrid_SetOnSelection(Obj: Pointer; Cb: TNoVclCellCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TCustomDrawGrid(Obj).OnSelection := @CellBridgeFor(TCustomDrawGrid(Obj), TMethod(TCustomDrawGrid(Obj).OnSelection).Data, Cb, Data).DoSelection;
+end;
+
+procedure TCustomDrawGrid_SetOnHeaderClick(Obj: Pointer; Cb: TNoVclCellCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TCustomDrawGrid(Obj).OnHeaderClick := @CellBridgeFor(TCustomDrawGrid(Obj), TMethod(TCustomDrawGrid(Obj).OnHeaderClick).Data, Cb, Data).DoHeaderClick;
+end;
+
+{ TCustomStringGrid の public。 }
+
+function TCustomStringGrid_GetCells(Obj: Pointer; ACol, ARow: Integer): PChar; NO_VCL_CALL;
+begin
+  Result := ReturnStr(TCustomStringGrid(Obj).Cells[ACol, ARow]);
+end;
+
+procedure TCustomStringGrid_SetCells(Obj: Pointer; ACol, ARow: Integer; Value: PChar); NO_VCL_CALL;
+begin
+  TCustomStringGrid(Obj).Cells[ACol, ARow] := Value;
+end;
+
+{ すべてのセルの文字列を消す(行・列の数は変わらない)。 }
+procedure TCustomStringGrid_Clean(Obj: Pointer); NO_VCL_CALL;
+begin
+  TCustomStringGrid(Obj).Clean;
+end;
+
+procedure TCustomStringGrid_AutoSizeColumns(Obj: Pointer); NO_VCL_CALL;
+begin
+  TCustomStringGrid(Obj).AutoSizeColumns;
+end;
+
+procedure TCustomStringGrid_AutoSizeColumn(Obj: Pointer; ACol: Integer); NO_VCL_CALL;
+begin
+  TCustomStringGrid(Obj).AutoSizeColumn(ACol);
+end;
+
 exports
   FreeNotify_SetCallback,
 
@@ -3904,7 +4353,63 @@ exports
   TListColumn_GetVisible,
   TListColumn_SetVisible,
   TListColumn_GetIndex,
-  TListColumn_SetIndex;
+  TListColumn_SetIndex,
+
+  TDrawGrid_Create,
+  TStringGrid_Create,
+  TCustomGrid_BeginUpdate,
+  TCustomGrid_EndUpdate,
+  TCustomGrid_Clear,
+  TCustomGrid_CellRect,
+  TCustomGrid_MouseToCell,
+  TCustomDrawGrid_GetCanvas,
+  TCustomDrawGrid_GetColCount,
+  TCustomDrawGrid_SetColCount,
+  TCustomDrawGrid_GetRowCount,
+  TCustomDrawGrid_SetRowCount,
+  TCustomDrawGrid_GetFixedCols,
+  TCustomDrawGrid_SetFixedCols,
+  TCustomDrawGrid_GetFixedRows,
+  TCustomDrawGrid_SetFixedRows,
+  TCustomDrawGrid_GetCol,
+  TCustomDrawGrid_SetCol,
+  TCustomDrawGrid_GetRow,
+  TCustomDrawGrid_SetRow,
+  TCustomDrawGrid_GetDefaultColWidth,
+  TCustomDrawGrid_SetDefaultColWidth,
+  TCustomDrawGrid_GetDefaultRowHeight,
+  TCustomDrawGrid_SetDefaultRowHeight,
+  TCustomDrawGrid_GetColWidths,
+  TCustomDrawGrid_SetColWidths,
+  TCustomDrawGrid_GetRowHeights,
+  TCustomDrawGrid_SetRowHeights,
+  TCustomDrawGrid_GetOptions,
+  TCustomDrawGrid_SetOptions,
+  TCustomDrawGrid_GetSelection,
+  TCustomDrawGrid_SetSelection,
+  TCustomDrawGrid_GetLeftCol,
+  TCustomDrawGrid_SetLeftCol,
+  TCustomDrawGrid_GetTopRow,
+  TCustomDrawGrid_SetTopRow,
+  TCustomDrawGrid_GetDefaultDrawing,
+  TCustomDrawGrid_SetDefaultDrawing,
+  TCustomDrawGrid_GetFixedColor,
+  TCustomDrawGrid_SetFixedColor,
+  TCustomDrawGrid_GetEditorMode,
+  TCustomDrawGrid_SetEditorMode,
+  TCustomDrawGrid_InsertColRow,
+  TCustomDrawGrid_DeleteColRow,
+  TCustomDrawGrid_MoveColRow,
+  TCustomDrawGrid_SortColRow,
+  TCustomDrawGrid_SetOnDrawCell,
+  TCustomDrawGrid_SetOnSelectCell,
+  TCustomDrawGrid_SetOnSelection,
+  TCustomDrawGrid_SetOnHeaderClick,
+  TCustomStringGrid_GetCells,
+  TCustomStringGrid_SetCells,
+  TCustomStringGrid_Clean,
+  TCustomStringGrid_AutoSizeColumns,
+  TCustomStringGrid_AutoSizeColumn;
 
 begin
   RequireDerivedFormResource := False;

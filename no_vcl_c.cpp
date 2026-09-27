@@ -561,7 +561,63 @@ using no_vcl_module_t = void*;
     X(no_vcl_bool_t, TListColumn_GetVisible,                  (no_vcl_obj_t o),                                     (o)) \
     X(void,          TListColumn_SetVisible,                  (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
     X(no_vcl_int_t,  TListColumn_GetIndex,                    (no_vcl_obj_t o),                                     (o)) \
-    X(void,          TListColumn_SetIndex,                    (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v))
+    X(void,          TListColumn_SetIndex,                    (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    \
+    X(no_vcl_obj_t,  TDrawGrid_Create,                        (no_vcl_obj_t owner),                                 (owner)) \
+    X(no_vcl_obj_t,  TStringGrid_Create,                      (no_vcl_obj_t owner),                                 (owner)) \
+    X(void,          TCustomGrid_BeginUpdate,                 (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomGrid_EndUpdate,                   (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomGrid_Clear,                       (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomGrid_CellRect,                    (no_vcl_obj_t o, no_vcl_int_t c, no_vcl_int_t r, no_vcl_int_t* l, no_vcl_int_t* t, no_vcl_int_t* rt, no_vcl_int_t* b), (o, c, r, l, t, rt, b)) \
+    X(void,          TCustomGrid_MouseToCell,                 (no_vcl_obj_t o, no_vcl_int_t x, no_vcl_int_t y, no_vcl_int_t* c, no_vcl_int_t* r), (o, x, y, c, r)) \
+    X(no_vcl_obj_t,  TCustomDrawGrid_GetCanvas,               (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_int_t,  TCustomDrawGrid_GetColCount,             (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomDrawGrid_SetColCount,             (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TCustomDrawGrid_GetRowCount,             (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomDrawGrid_SetRowCount,             (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TCustomDrawGrid_GetFixedCols,            (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomDrawGrid_SetFixedCols,            (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TCustomDrawGrid_GetFixedRows,            (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomDrawGrid_SetFixedRows,            (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TCustomDrawGrid_GetCol,                  (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomDrawGrid_SetCol,                  (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TCustomDrawGrid_GetRow,                  (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomDrawGrid_SetRow,                  (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TCustomDrawGrid_GetDefaultColWidth,      (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomDrawGrid_SetDefaultColWidth,      (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TCustomDrawGrid_GetDefaultRowHeight,     (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomDrawGrid_SetDefaultRowHeight,     (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TCustomDrawGrid_GetColWidths,            (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(void,          TCustomDrawGrid_SetColWidths,            (no_vcl_obj_t o, no_vcl_int_t i, no_vcl_int_t v),     (o, i, v)) \
+    X(no_vcl_int_t,  TCustomDrawGrid_GetRowHeights,           (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(void,          TCustomDrawGrid_SetRowHeights,           (no_vcl_obj_t o, no_vcl_int_t i, no_vcl_int_t v),     (o, i, v)) \
+    X(no_vcl_uint_t, TCustomDrawGrid_GetOptions,              (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomDrawGrid_SetOptions,              (no_vcl_obj_t o, no_vcl_uint_t v),                    (o, v)) \
+    X(void,          TCustomDrawGrid_GetSelection,            (no_vcl_obj_t o, no_vcl_int_t* l, no_vcl_int_t* t, no_vcl_int_t* r, no_vcl_int_t* b), (o, l, t, r, b)) \
+    X(void,          TCustomDrawGrid_SetSelection,            (no_vcl_obj_t o, no_vcl_int_t l, no_vcl_int_t t, no_vcl_int_t r, no_vcl_int_t b), (o, l, t, r, b)) \
+    X(no_vcl_int_t,  TCustomDrawGrid_GetLeftCol,              (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomDrawGrid_SetLeftCol,              (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TCustomDrawGrid_GetTopRow,               (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomDrawGrid_SetTopRow,               (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_bool_t, TCustomDrawGrid_GetDefaultDrawing,       (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomDrawGrid_SetDefaultDrawing,       (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_int_t,  TCustomDrawGrid_GetFixedColor,           (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomDrawGrid_SetFixedColor,           (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_bool_t, TCustomDrawGrid_GetEditorMode,           (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomDrawGrid_SetEditorMode,           (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(void,          TCustomDrawGrid_InsertColRow,            (no_vcl_obj_t o, no_vcl_bool_t c, no_vcl_int_t i),    (o, c, i)) \
+    X(void,          TCustomDrawGrid_DeleteColRow,            (no_vcl_obj_t o, no_vcl_bool_t c, no_vcl_int_t i),    (o, c, i)) \
+    X(void,          TCustomDrawGrid_MoveColRow,              (no_vcl_obj_t o, no_vcl_bool_t c, no_vcl_int_t f, no_vcl_int_t t), (o, c, f, t)) \
+    X(void,          TCustomDrawGrid_SortColRow,              (no_vcl_obj_t o, no_vcl_bool_t c, no_vcl_int_t i),    (o, c, i)) \
+    X(void,          TCustomDrawGrid_SetOnDrawCell,           (no_vcl_obj_t o, no_vcl_draw_cell_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TCustomDrawGrid_SetOnSelectCell,         (no_vcl_obj_t o, no_vcl_cell_allow_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TCustomDrawGrid_SetOnSelection,          (no_vcl_obj_t o, no_vcl_cell_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TCustomDrawGrid_SetOnHeaderClick,        (no_vcl_obj_t o, no_vcl_header_callback_t cb, void* d), (o, cb, d)) \
+    X(no_vcl_str_t,  TCustomStringGrid_GetCells,              (no_vcl_obj_t o, no_vcl_int_t c, no_vcl_int_t r),     (o, c, r)) \
+    X(void,          TCustomStringGrid_SetCells,              (no_vcl_obj_t o, no_vcl_int_t c, no_vcl_int_t r, no_vcl_str_t v), (o, c, r, v)) \
+    X(void,          TCustomStringGrid_Clean,                 (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomStringGrid_AutoSizeColumns,       (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomStringGrid_AutoSizeColumn,        (no_vcl_obj_t o, no_vcl_int_t c),                     (o, c))
 
 namespace
 {

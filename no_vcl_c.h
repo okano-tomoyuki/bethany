@@ -17,6 +17,8 @@ typedef void*       no_vcl_obj_t;
    呼ぶまで有効(解放は不要)。保持する場合や、2 つの戻り値を同時に使う場合(printf の引数に 2 つ並べる等)はコピーすること。 */
 typedef const char* no_vcl_str_t;
 typedef int         no_vcl_int_t;
+/* ビット集合のうち、32 ビットすべてを使うもの(グリッドの Options)。 */
+typedef unsigned int no_vcl_uint_t;
 typedef int         no_vcl_bool_t;
 typedef double      no_vcl_float_t;
 /* sender はイベントを発生させたオブジェクト、data はコールバック登録時に渡した利用者データ。
@@ -891,6 +893,150 @@ void          NO_VCL_CALL no_vcl_TListColumn_SetVisible(no_vcl_obj_t Obj, no_vcl
 /* 列の並び順。書き換えると列が移動する。 */
 no_vcl_int_t  NO_VCL_CALL no_vcl_TListColumn_GetIndex(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TListColumn_SetIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+/* docs/component-coverage.md の Tier 2、4 バッチ目(TDrawGrid・TStringGrid)。docs/adr/0021-... を参照。
+ *
+ * セルは(列, 行)の位置で指定する(0 始まり。固定行・固定列を含む)。主なメンバは LCL の TCustomGrid の protected を
+ * TCustomDrawGrid が public にしているため no_vcl_TCustomDrawGrid_* で、TDrawGrid・TStringGrid の両方に使える。 */
+
+/* Options(TGridOptions)のビット。複数のビットを OR して渡す/受け取る(ビットの位置は LCL の TGridOption の序数)。 */
+#define no_vcl_goFixedVertLine               0x00000001u
+#define no_vcl_goFixedHorzLine               0x00000002u
+#define no_vcl_goVertLine                    0x00000004u
+#define no_vcl_goHorzLine                    0x00000008u
+#define no_vcl_goRangeSelect                 0x00000010u
+#define no_vcl_goDrawFocusSelected           0x00000020u
+#define no_vcl_goRowSizing                   0x00000040u
+#define no_vcl_goColSizing                   0x00000080u
+#define no_vcl_goRowMoving                   0x00000100u
+#define no_vcl_goColMoving                   0x00000200u
+#define no_vcl_goEditing                     0x00000400u
+#define no_vcl_goAutoAddRows                 0x00000800u
+#define no_vcl_goTabs                        0x00001000u
+#define no_vcl_goRowSelect                   0x00002000u
+#define no_vcl_goAlwaysShowEditor            0x00004000u
+#define no_vcl_goThumbTracking               0x00008000u
+#define no_vcl_goColSpanning                 0x00010000u
+#define no_vcl_goRelaxedRowSelect            0x00020000u
+#define no_vcl_goDblClickAutoSize            0x00040000u
+#define no_vcl_goSmoothScroll                0x00080000u
+#define no_vcl_goFixedRowNumbering           0x00100000u
+#define no_vcl_goScrollKeepVisible           0x00200000u
+#define no_vcl_goHeaderHotTracking           0x00400000u
+#define no_vcl_goHeaderPushedLook            0x00800000u
+#define no_vcl_goSelectionActive             0x01000000u
+#define no_vcl_goFixedColSizing              0x02000000u
+#define no_vcl_goDontScrollPartCell          0x04000000u
+#define no_vcl_goCellHints                   0x08000000u
+#define no_vcl_goTruncCellHints              0x10000000u
+#define no_vcl_goCellEllipsis                0x20000000u
+#define no_vcl_goAutoAddRowsSkipContentCheck 0x40000000u
+#define no_vcl_goRowHighlight                0x80000000u
+
+/* OnDrawCell の state(TGridDrawState)のビット。 */
+enum
+{
+    no_vcl_gdSelected     = 0x01,
+    no_vcl_gdFocused      = 0x02,
+    no_vcl_gdFixed        = 0x04,
+    no_vcl_gdHot          = 0x08,
+    no_vcl_gdPushed       = 0x10,
+    no_vcl_gdRowHighlight = 0x20
+};
+
+/* OnSelection 用(col, row は選択されたセル)。 */
+typedef void (NO_VCL_CALL *no_vcl_cell_callback_t)(no_vcl_obj_t sender, no_vcl_int_t col, no_vcl_int_t row, void* data);
+/* OnHeaderClick 用。isColumn は列見出し(固定行)なら 0 以外、行見出し(固定列)なら 0。index はその列・行。 */
+typedef void (NO_VCL_CALL *no_vcl_header_callback_t)(no_vcl_obj_t sender, no_vcl_int_t isColumn, no_vcl_int_t index, void* data);
+/* OnSelectCell 用。*canSelect は 0 以外が入った状態で呼ばれ、0 を書き込むとそのセルを選択させない。 */
+typedef void (NO_VCL_CALL *no_vcl_cell_allow_callback_t)(no_vcl_obj_t sender, no_vcl_int_t col, no_vcl_int_t row, no_vcl_bool_t* canSelect, void* data);
+/* OnDrawCell 用。left..bottom はセルのクライアント座標での矩形、state は no_vcl_gd* のビット集合。
+ * 描画は no_vcl_TCustomDrawGrid_GetCanvas の Canvas に行う。 */
+typedef void (NO_VCL_CALL *no_vcl_draw_cell_callback_t)(no_vcl_obj_t sender, no_vcl_int_t col, no_vcl_int_t row,
+                                                         no_vcl_int_t left, no_vcl_int_t top, no_vcl_int_t right, no_vcl_int_t bottom,
+                                                         no_vcl_uint_t state, void* data);
+
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TDrawGrid_Create(no_vcl_obj_t Owner);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TStringGrid_Create(no_vcl_obj_t Owner);
+
+/* TCustomGrid の public。 */
+void          NO_VCL_CALL no_vcl_TCustomGrid_BeginUpdate(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomGrid_EndUpdate(no_vcl_obj_t Obj);
+/* すべての行・列を削除する(ColCount・RowCount が 0 になる)。セルの文字列だけを消すのは no_vcl_TCustomStringGrid_Clean。 */
+void          NO_VCL_CALL no_vcl_TCustomGrid_Clear(no_vcl_obj_t Obj);
+/* セルのクライアント座標での矩形。 */
+void          NO_VCL_CALL no_vcl_TCustomGrid_CellRect(no_vcl_obj_t Obj, no_vcl_int_t Col, no_vcl_int_t Row,
+                                                      no_vcl_int_t* Left, no_vcl_int_t* Top, no_vcl_int_t* Right, no_vcl_int_t* Bottom);
+/* クライアント座標 X, Y にあるセル。セルの外なら -1。 */
+void          NO_VCL_CALL no_vcl_TCustomGrid_MouseToCell(no_vcl_obj_t Obj, no_vcl_int_t X, no_vcl_int_t Y, no_vcl_int_t* Col, no_vcl_int_t* Row);
+
+/* TCustomDrawGrid の public。Canvas は no_vcl_TCanvas_* で描画できる非所有のハンドル(グリッドと寿命が一致する)。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomDrawGrid_GetCanvas(no_vcl_obj_t Obj);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomDrawGrid_GetColCount(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_SetColCount(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomDrawGrid_GetRowCount(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_SetRowCount(no_vcl_obj_t Obj, no_vcl_int_t Value);
+/* 固定列・固定行(見出し)の数。既定は 1。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomDrawGrid_GetFixedCols(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_SetFixedCols(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomDrawGrid_GetFixedRows(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_SetFixedRows(no_vcl_obj_t Obj, no_vcl_int_t Value);
+/* 現在のセル(フォーカスのあるセル)の列・行。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomDrawGrid_GetCol(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_SetCol(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomDrawGrid_GetRow(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_SetRow(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomDrawGrid_GetDefaultColWidth(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_SetDefaultColWidth(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomDrawGrid_GetDefaultRowHeight(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_SetDefaultRowHeight(no_vcl_obj_t Obj, no_vcl_int_t Value);
+/* LCL の ColWidths[Col] / RowHeights[Row]。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomDrawGrid_GetColWidths(no_vcl_obj_t Obj, no_vcl_int_t Col);
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_SetColWidths(no_vcl_obj_t Obj, no_vcl_int_t Col, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomDrawGrid_GetRowHeights(no_vcl_obj_t Obj, no_vcl_int_t Row);
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_SetRowHeights(no_vcl_obj_t Obj, no_vcl_int_t Row, no_vcl_int_t Value);
+/* no_vcl_go* のビット集合。 */
+no_vcl_uint_t NO_VCL_CALL no_vcl_TCustomDrawGrid_GetOptions(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_SetOptions(no_vcl_obj_t Obj, no_vcl_uint_t Value);
+/* 選択範囲(Left/Right が列、Top/Bottom が行。単一のセルなら Left = Right、Top = Bottom)。 */
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_GetSelection(no_vcl_obj_t Obj, no_vcl_int_t* Left, no_vcl_int_t* Top, no_vcl_int_t* Right, no_vcl_int_t* Bottom);
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_SetSelection(no_vcl_obj_t Obj, no_vcl_int_t Left, no_vcl_int_t Top, no_vcl_int_t Right, no_vcl_int_t Bottom);
+/* スクロール位置(表示されている最初の列・行)。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomDrawGrid_GetLeftCol(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_SetLeftCol(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomDrawGrid_GetTopRow(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_SetTopRow(no_vcl_obj_t Obj, no_vcl_int_t Value);
+/* 0 にすると、OnDrawCell の前にセルの既定の描画(背景・文字列)を行わない。 */
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomDrawGrid_GetDefaultDrawing(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_SetDefaultDrawing(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomDrawGrid_GetFixedColor(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_SetFixedColor(no_vcl_obj_t Obj, no_vcl_int_t Value);
+/* セルの編集中か(no_vcl_goEditing のとき)。0 以外を設定すると現在のセルの編集を始める。 */
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomDrawGrid_GetEditorMode(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_SetEditorMode(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* IsColumn が 0 以外なら列、0 なら行を対象にする。 */
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_InsertColRow(no_vcl_obj_t Obj, no_vcl_bool_t IsColumn, no_vcl_int_t Index);
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_DeleteColRow(no_vcl_obj_t Obj, no_vcl_bool_t IsColumn, no_vcl_int_t Index);
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_MoveColRow(no_vcl_obj_t Obj, no_vcl_bool_t IsColumn, no_vcl_int_t FromIndex, no_vcl_int_t ToIndex);
+/* IsColumn が 0 以外なら、列 Index の値で行を並べ替える(固定行は除く)。0 なら行 Index の値で列を並べ替える。 */
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_SortColRow(no_vcl_obj_t Obj, no_vcl_bool_t IsColumn, no_vcl_int_t Index);
+/* セルを描画するとき(DefaultDrawing が 0 以外なら既定の描画の後)。 */
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_SetOnDrawCell(no_vcl_obj_t Obj, no_vcl_draw_cell_callback_t Cb, void* Data);
+/* セルが選択される前。 */
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_SetOnSelectCell(no_vcl_obj_t Obj, no_vcl_cell_allow_callback_t Cb, void* Data);
+/* セルが選択された後。 */
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_SetOnSelection(no_vcl_obj_t Obj, no_vcl_cell_callback_t Cb, void* Data);
+/* 見出し(固定行・固定列)がクリックされたとき。 */
+void          NO_VCL_CALL no_vcl_TCustomDrawGrid_SetOnHeaderClick(no_vcl_obj_t Obj, no_vcl_header_callback_t Cb, void* Data);
+
+/* TCustomStringGrid の public。Cells[Col, Row] はセルの文字列。 */
+no_vcl_str_t  NO_VCL_CALL no_vcl_TCustomStringGrid_GetCells(no_vcl_obj_t Obj, no_vcl_int_t Col, no_vcl_int_t Row);
+void          NO_VCL_CALL no_vcl_TCustomStringGrid_SetCells(no_vcl_obj_t Obj, no_vcl_int_t Col, no_vcl_int_t Row, no_vcl_str_t Value);
+/* すべてのセルの文字列を消す(行・列の数は変わらない)。 */
+void          NO_VCL_CALL no_vcl_TCustomStringGrid_Clean(no_vcl_obj_t Obj);
+/* 列の幅を文字列に合わせる。 */
+void          NO_VCL_CALL no_vcl_TCustomStringGrid_AutoSizeColumns(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomStringGrid_AutoSizeColumn(no_vcl_obj_t Obj, no_vcl_int_t Col);
 
 #ifdef __cplusplus
 }

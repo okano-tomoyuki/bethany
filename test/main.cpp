@@ -156,6 +156,10 @@ public:
     TListItem*      BetaItem;
     TListItem*      GammaItem;
     int             deletedListItems_ = 0;
+    TTabSheet*      GridSheet;
+    TStringGrid*    StringGrid1;
+    TDrawGrid*      DrawGrid1;
+    int             drawnCells_ = 0;
 
     // C++Builder と同じく Owner を受け取り、TForm に渡す(Application->CreateForm が Application を渡す)。
     explicit TMainForm(TComponent* AOwner) : TForm(AOwner)
@@ -720,6 +724,84 @@ public:
         };
         ListView1->OnDeletion = [this](TObject*, TListItem*) { ++deletedListItems_; };
 
+        // Tier 2、4 バッチ目(TStringGrid・TDrawGrid)。PageControl1 の "Grids" ページに上下に並べる。
+        GridSheet = new TTabSheet(this);
+        GridSheet->PageControl = PageControl1;
+        GridSheet->Caption = "Grids";
+
+        StringGrid1 = new TStringGrid(this);
+        StringGrid1->Parent = GridSheet;
+        StringGrid1->Left = 5;
+        StringGrid1->Top = 5;
+        StringGrid1->Width = 200;
+        StringGrid1->Height = 62;
+        StringGrid1->ColCount = 3;
+        StringGrid1->RowCount = 4;
+        StringGrid1->FixedCols = 0;
+        StringGrid1->DefaultRowHeight = 18;
+        StringGrid1->Options = (TGridOptions)StringGrid1->Options | goEditing;
+        StringGrid1->SetCells(0, 0, "Name");
+        StringGrid1->SetCells(1, 0, "Qty");
+        StringGrid1->SetCells(2, 0, "Locked");
+        const char* names[] = { "Cherry", "Apple", "Banana" };
+        const char* qtys[]  = { "3", "1", "2" };
+        for (int r = 1; r <= 3; ++r)
+        {
+            StringGrid1->SetCells(0, r, names[r - 1]);
+            StringGrid1->SetCells(1, r, qtys[r - 1]);
+            StringGrid1->SetCells(2, r, "-");
+        }
+        // 3 列目("Locked")のセルは選択させない。
+        StringGrid1->OnSelectCell = [](TObject*, int ACol, int ARow, bool& CanSelect) {
+            if (ACol == 2)
+            {
+                CanSelect = false;
+                std::printf("StringGrid1SelectCell: refused (%d,%d)\n", ACol, ARow);
+                std::fflush(stdout);
+            }
+        };
+        StringGrid1->OnSelection = [this](TObject*, int ACol, int ARow) {
+            std::printf("StringGrid1Selection: (%d,%d) = %s\n", ACol, ARow, StringGrid1->GetCells(ACol, ARow).c_str());
+            std::fflush(stdout);
+        };
+        // 列見出しのクリックで、その列の値で行を並べ替える。
+        StringGrid1->OnHeaderClick = [this](TObject*, bool IsColumn, int Index) {
+            std::printf("StringGrid1HeaderClick: IsColumn=%d Index=%d\n", IsColumn, Index);
+            std::fflush(stdout);
+            if (IsColumn)
+                StringGrid1->SortColRow(true, Index);
+        };
+
+        // DrawGrid1 はセルの内容を OnDrawCell で描く(市松模様と、固定セル以外に列・行の番号)。
+        DrawGrid1 = new TDrawGrid(this);
+        DrawGrid1->Parent = GridSheet;
+        DrawGrid1->Left = 5;
+        DrawGrid1->Top = 70;
+        DrawGrid1->Width = 200;
+        DrawGrid1->Height = 58;
+        DrawGrid1->ColCount = 4;
+        DrawGrid1->RowCount = 3;
+        DrawGrid1->DefaultColWidth = 45;
+        DrawGrid1->DefaultRowHeight = 18;
+        DrawGrid1->OnDrawCell = [this](TObject*, int ACol, int ARow, TRect ARect, TGridDrawState AState) {
+            ++drawnCells_;
+            if (AState & gdFixed)
+                return;  // 見出しは既定の描画のまま
+            TCanvas& canvas = DrawGrid1->Canvas;
+            canvas.Brush.Color = ((ACol + ARow) % 2) ? clYellow : clWhite;
+            canvas.Pen.Color = clBlack;
+            canvas.Rectangle(ARect.Left, ARect.Top, ARect.Right, ARect.Bottom);
+            canvas.TextOut(ARect.Left + 3, ARect.Top + 2, std::to_string(ACol) + "," + std::to_string(ARow));
+        };
+        GridSheet->OnShow = [this](TObject*) {
+            TRect r = DrawGrid1->CellRect(1, 1);
+            int col = -1, row = -1;
+            StringGrid1->MouseToCell(60, 25, col, row);
+            std::printf("GridSheetShow: DrawGrid1->CellRect(1,1)=(%d,%d,%d,%d), StringGrid1->MouseToCell(60,25)=(%d,%d)\n",
+                        r.Left, r.Top, r.Right, r.Bottom, col, row);
+            std::fflush(stdout);
+        };
+
         OnCreate = [this](TObject* Sender) { FormCreate(Sender); };
         OnShow = [this](TObject* Sender) { FormShow(Sender); };
         OnResize = [this](TObject* Sender) { FormResize(Sender); };
@@ -1226,6 +1308,53 @@ int main()
         columns->Add()->Caption = "Temp";
         columns->Delete(2);
         std::printf("After column Delete: Columns->Count=%d (expected 2)\n", (int)columns->Count);
+    }
+
+    // Tier 2、4 バッチ目(TStringGrid・TDrawGrid)。
+    {
+        TStringGrid* sg = Form1->StringGrid1;
+        std::printf("StringGrid1 ColCount/RowCount=%d/%d (expected 3/4), FixedCols/FixedRows=%d/%d (expected 0/1), "
+                    "Cells[0][1]=%s, goEditing in Options: %s\n",
+                    (int)sg->ColCount, (int)sg->RowCount, (int)sg->FixedCols, (int)sg->FixedRows,
+                    sg->GetCells(0, 1).c_str(), ((TGridOptions)sg->Options & goEditing) ? "yes" : "no");
+        sg->SetColWidths(0, 80);
+        std::printf("ColWidths[0]=%d (expected 80)\n", sg->GetColWidths(0));
+
+        // 列 0 の値で行を並べ替える(固定行は除く)。
+        sg->SortColRow(true, 0);
+        std::printf("After SortColRow(true, 0): %s/%s/%s (expected Apple/Banana/Cherry), Qty of Apple=%s (expected 1)\n",
+                    sg->GetCells(0, 1).c_str(), sg->GetCells(0, 2).c_str(), sg->GetCells(0, 3).c_str(), sg->GetCells(1, 1).c_str());
+
+        // 行の挿入・削除・移動。
+        sg->InsertColRow(false, 1);
+        std::printf("After InsertColRow(false, 1): RowCount=%d (expected 5), Cells[0][1]='%s' (expected ''), Cells[0][2]=%s (expected Apple)\n",
+                    (int)sg->RowCount, sg->GetCells(0, 1).c_str(), sg->GetCells(0, 2).c_str());
+        sg->DeleteColRow(false, 1);
+        sg->MoveColRow(false, 3, 1);
+        std::printf("After DeleteColRow and MoveColRow(false, 3, 1): RowCount=%d (expected 4), Cells[0][1]=%s (expected Cherry)\n",
+                    (int)sg->RowCount, sg->GetCells(0, 1).c_str());
+        sg->MoveColRow(false, 1, 3);
+
+        // 選択範囲。
+        sg->Col = 1;
+        sg->Row = 2;
+        TGridRect sel = sg->Selection;
+        std::printf("Col/Row=%d/%d, Selection=(%d,%d,%d,%d) (expected 1,2,1,2)\n",
+                    (int)sg->Col, (int)sg->Row, sel.Left, sel.Top, sel.Right, sel.Bottom);
+
+        TDrawGrid* dg = Form1->DrawGrid1;
+        std::printf("DrawGrid1 ColCount/RowCount=%d/%d (expected 4/3), DefaultColWidth=%d (expected 45)\n",
+                    (int)dg->ColCount, (int)dg->RowCount, (int)dg->DefaultColWidth);
+
+        // Clean は文字列だけを消し、Clear は行・列を削除する。
+        TStringGrid* temp = new TStringGrid(Form1);
+        temp->SetCells(1, 1, "x");
+        temp->Clean();
+        std::printf("temp after Clean: Cells[1][1]='%s' (expected ''), ColCount=%d (expected 5)\n",
+                    temp->GetCells(1, 1).c_str(), (int)temp->ColCount);
+        temp->Clear();
+        std::printf("temp after Clear: ColCount/RowCount=%d/%d (expected 0/0)\n", (int)temp->ColCount, (int)temp->RowCount);
+        temp->Free();
     }
 
     // 2 つ目以降に生成したフォームは MainForm にならない。

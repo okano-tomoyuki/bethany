@@ -2258,4 +2258,196 @@ void NO_VCL_CALL TPopupMenu::CloseTrampoline(no_vcl_obj_t sender, void*)
         CallNotify(self->onClose_, self);
 }
 
+/* ---------------- Grid ---------------- */
+
+void TCustomGrid::BeginUpdate() { no_vcl_TCustomGrid_BeginUpdate(handle_); }
+void TCustomGrid::EndUpdate()   { no_vcl_TCustomGrid_EndUpdate(handle_); }
+void TCustomGrid::Clear()       { no_vcl_TCustomGrid_Clear(handle_); }
+
+TRect TCustomGrid::CellRect(int ACol, int ARow) const
+{
+    TRect r{};
+    no_vcl_TCustomGrid_CellRect(handle_, ACol, ARow, &r.Left, &r.Top, &r.Right, &r.Bottom);
+    return r;
+}
+
+void TCustomGrid::MouseToCell(int X, int Y, int& ACol, int& ARow) const
+{
+    no_vcl_TCustomGrid_MouseToCell(handle_, X, Y, &ACol, &ARow);
+}
+
+TCustomDrawGrid::TCustomDrawGrid(no_vcl_obj_t handle)
+    : TCustomGrid(handle)
+    , Canvas(no_vcl_TCustomDrawGrid_GetCanvas(handle))
+    , ColCount(this, &TCustomDrawGrid::GetColCountImpl, &TCustomDrawGrid::SetColCountImpl)
+    , RowCount(this, &TCustomDrawGrid::GetRowCountImpl, &TCustomDrawGrid::SetRowCountImpl)
+    , FixedCols(this, &TCustomDrawGrid::GetFixedColsImpl, &TCustomDrawGrid::SetFixedColsImpl)
+    , FixedRows(this, &TCustomDrawGrid::GetFixedRowsImpl, &TCustomDrawGrid::SetFixedRowsImpl)
+    , Col(this, &TCustomDrawGrid::GetColImpl, &TCustomDrawGrid::SetColImpl)
+    , Row(this, &TCustomDrawGrid::GetRowImpl, &TCustomDrawGrid::SetRowImpl)
+    , DefaultColWidth(this, &TCustomDrawGrid::GetDefaultColWidthImpl, &TCustomDrawGrid::SetDefaultColWidthImpl)
+    , DefaultRowHeight(this, &TCustomDrawGrid::GetDefaultRowHeightImpl, &TCustomDrawGrid::SetDefaultRowHeightImpl)
+    , Options(this, &TCustomDrawGrid::GetOptionsImpl, &TCustomDrawGrid::SetOptionsImpl)
+    , Selection(this, &TCustomDrawGrid::GetSelectionImpl, &TCustomDrawGrid::SetSelectionImpl)
+    , LeftCol(this, &TCustomDrawGrid::GetLeftColImpl, &TCustomDrawGrid::SetLeftColImpl)
+    , TopRow(this, &TCustomDrawGrid::GetTopRowImpl, &TCustomDrawGrid::SetTopRowImpl)
+    , DefaultDrawing(this, &TCustomDrawGrid::GetDefaultDrawingImpl, &TCustomDrawGrid::SetDefaultDrawingImpl)
+    , FixedColor(this, &TCustomDrawGrid::GetFixedColorImpl, &TCustomDrawGrid::SetFixedColorImpl)
+    , EditorMode(this, &TCustomDrawGrid::GetEditorModeImpl, &TCustomDrawGrid::SetEditorModeImpl)
+    , OnDrawCell(this, &TCustomDrawGrid::GetOnDrawCellImpl, &TCustomDrawGrid::SetOnDrawCellImpl)
+    , OnSelectCell(this, &TCustomDrawGrid::GetOnSelectCellImpl, &TCustomDrawGrid::SetOnSelectCellImpl)
+    , OnSelection(this, &TCustomDrawGrid::GetOnSelectionImpl, &TCustomDrawGrid::SetOnSelectionImpl)
+    , OnHeaderClick(this, &TCustomDrawGrid::GetOnHeaderClickImpl, &TCustomDrawGrid::SetOnHeaderClickImpl)
+{}
+
+int  TCustomDrawGrid::GetColWidths(int ACol) const       { return no_vcl_TCustomDrawGrid_GetColWidths(handle_, ACol); }
+void TCustomDrawGrid::SetColWidths(int ACol, int Value)  { no_vcl_TCustomDrawGrid_SetColWidths(handle_, ACol, Value); }
+int  TCustomDrawGrid::GetRowHeights(int ARow) const      { return no_vcl_TCustomDrawGrid_GetRowHeights(handle_, ARow); }
+void TCustomDrawGrid::SetRowHeights(int ARow, int Value) { no_vcl_TCustomDrawGrid_SetRowHeights(handle_, ARow, Value); }
+
+void TCustomDrawGrid::InsertColRow(bool IsColumn, int Index) { no_vcl_TCustomDrawGrid_InsertColRow(handle_, IsColumn ? 1 : 0, Index); }
+void TCustomDrawGrid::DeleteColRow(bool IsColumn, int Index) { no_vcl_TCustomDrawGrid_DeleteColRow(handle_, IsColumn ? 1 : 0, Index); }
+void TCustomDrawGrid::SortColRow(bool IsColumn, int Index)   { no_vcl_TCustomDrawGrid_SortColRow(handle_, IsColumn ? 1 : 0, Index); }
+
+void TCustomDrawGrid::MoveColRow(bool IsColumn, int FromIndex, int ToIndex)
+{
+    no_vcl_TCustomDrawGrid_MoveColRow(handle_, IsColumn ? 1 : 0, FromIndex, ToIndex);
+}
+
+int  TCustomDrawGrid::GetColCountImpl(TObject* owner)                        { return no_vcl_TCustomDrawGrid_GetColCount(owner->Handle()); }
+void TCustomDrawGrid::SetColCountImpl(TObject* owner, const int& value)       { no_vcl_TCustomDrawGrid_SetColCount(owner->Handle(), value); }
+int  TCustomDrawGrid::GetRowCountImpl(TObject* owner)                        { return no_vcl_TCustomDrawGrid_GetRowCount(owner->Handle()); }
+void TCustomDrawGrid::SetRowCountImpl(TObject* owner, const int& value)       { no_vcl_TCustomDrawGrid_SetRowCount(owner->Handle(), value); }
+int  TCustomDrawGrid::GetFixedColsImpl(TObject* owner)                       { return no_vcl_TCustomDrawGrid_GetFixedCols(owner->Handle()); }
+void TCustomDrawGrid::SetFixedColsImpl(TObject* owner, const int& value)      { no_vcl_TCustomDrawGrid_SetFixedCols(owner->Handle(), value); }
+int  TCustomDrawGrid::GetFixedRowsImpl(TObject* owner)                       { return no_vcl_TCustomDrawGrid_GetFixedRows(owner->Handle()); }
+void TCustomDrawGrid::SetFixedRowsImpl(TObject* owner, const int& value)      { no_vcl_TCustomDrawGrid_SetFixedRows(owner->Handle(), value); }
+int  TCustomDrawGrid::GetColImpl(TObject* owner)                             { return no_vcl_TCustomDrawGrid_GetCol(owner->Handle()); }
+void TCustomDrawGrid::SetColImpl(TObject* owner, const int& value)            { no_vcl_TCustomDrawGrid_SetCol(owner->Handle(), value); }
+int  TCustomDrawGrid::GetRowImpl(TObject* owner)                             { return no_vcl_TCustomDrawGrid_GetRow(owner->Handle()); }
+void TCustomDrawGrid::SetRowImpl(TObject* owner, const int& value)            { no_vcl_TCustomDrawGrid_SetRow(owner->Handle(), value); }
+int  TCustomDrawGrid::GetDefaultColWidthImpl(TObject* owner)                 { return no_vcl_TCustomDrawGrid_GetDefaultColWidth(owner->Handle()); }
+void TCustomDrawGrid::SetDefaultColWidthImpl(TObject* owner, const int& value) { no_vcl_TCustomDrawGrid_SetDefaultColWidth(owner->Handle(), value); }
+int  TCustomDrawGrid::GetDefaultRowHeightImpl(TObject* owner)                { return no_vcl_TCustomDrawGrid_GetDefaultRowHeight(owner->Handle()); }
+void TCustomDrawGrid::SetDefaultRowHeightImpl(TObject* owner, const int& value) { no_vcl_TCustomDrawGrid_SetDefaultRowHeight(owner->Handle(), value); }
+TGridOptions TCustomDrawGrid::GetOptionsImpl(TObject* owner)                  { return no_vcl_TCustomDrawGrid_GetOptions(owner->Handle()); }
+void TCustomDrawGrid::SetOptionsImpl(TObject* owner, const TGridOptions& value) { no_vcl_TCustomDrawGrid_SetOptions(owner->Handle(), value); }
+int  TCustomDrawGrid::GetLeftColImpl(TObject* owner)                         { return no_vcl_TCustomDrawGrid_GetLeftCol(owner->Handle()); }
+void TCustomDrawGrid::SetLeftColImpl(TObject* owner, const int& value)        { no_vcl_TCustomDrawGrid_SetLeftCol(owner->Handle(), value); }
+int  TCustomDrawGrid::GetTopRowImpl(TObject* owner)                          { return no_vcl_TCustomDrawGrid_GetTopRow(owner->Handle()); }
+void TCustomDrawGrid::SetTopRowImpl(TObject* owner, const int& value)         { no_vcl_TCustomDrawGrid_SetTopRow(owner->Handle(), value); }
+bool TCustomDrawGrid::GetDefaultDrawingImpl(TObject* owner)                  { return no_vcl_TCustomDrawGrid_GetDefaultDrawing(owner->Handle()) != 0; }
+void TCustomDrawGrid::SetDefaultDrawingImpl(TObject* owner, const bool& value) { no_vcl_TCustomDrawGrid_SetDefaultDrawing(owner->Handle(), value ? 1 : 0); }
+TColor TCustomDrawGrid::GetFixedColorImpl(TObject* owner)                    { return no_vcl_TCustomDrawGrid_GetFixedColor(owner->Handle()); }
+void TCustomDrawGrid::SetFixedColorImpl(TObject* owner, const TColor& value)  { no_vcl_TCustomDrawGrid_SetFixedColor(owner->Handle(), value); }
+bool TCustomDrawGrid::GetEditorModeImpl(TObject* owner)                      { return no_vcl_TCustomDrawGrid_GetEditorMode(owner->Handle()) != 0; }
+void TCustomDrawGrid::SetEditorModeImpl(TObject* owner, const bool& value)    { no_vcl_TCustomDrawGrid_SetEditorMode(owner->Handle(), value ? 1 : 0); }
+
+TGridRect TCustomDrawGrid::GetSelectionImpl(TObject* owner)
+{
+    TGridRect r{};
+    no_vcl_TCustomDrawGrid_GetSelection(owner->Handle(), &r.Left, &r.Top, &r.Right, &r.Bottom);
+    return r;
+}
+
+void TCustomDrawGrid::SetSelectionImpl(TObject* owner, const TGridRect& value)
+{
+    no_vcl_TCustomDrawGrid_SetSelection(owner->Handle(), value.Left, value.Top, value.Right, value.Bottom);
+}
+
+void NO_VCL_CALL TCustomDrawGrid::DrawCellTrampoline(no_vcl_obj_t sender, no_vcl_int_t col, no_vcl_int_t row,
+                                                     no_vcl_int_t left, no_vcl_int_t top, no_vcl_int_t right, no_vcl_int_t bottom,
+                                                     no_vcl_uint_t state, void*)
+{
+    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
+    if (!self || !self->onDrawCell_)
+        return;
+    TOnDrawCell handler = self->onDrawCell_;
+    handler(self, col, row, TRect{left, top, right, bottom}, state);
+}
+
+void NO_VCL_CALL TCustomDrawGrid::SelectCellTrampoline(no_vcl_obj_t sender, no_vcl_int_t col, no_vcl_int_t row, no_vcl_bool_t* canSelect, void*)
+{
+    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
+    if (!self || !self->onSelectCell_)
+        return;
+    TOnSelectCellEvent handler = self->onSelectCell_;
+    bool value = *canSelect != 0;
+    handler(self, col, row, value);
+    *canSelect = value ? 1 : 0;
+}
+
+void NO_VCL_CALL TCustomDrawGrid::SelectionTrampoline(no_vcl_obj_t sender, no_vcl_int_t col, no_vcl_int_t row, void*)
+{
+    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
+    if (!self || !self->onSelection_)
+        return;
+    TOnSelectEvent handler = self->onSelection_;
+    handler(self, col, row);
+}
+
+void NO_VCL_CALL TCustomDrawGrid::HeaderClickTrampoline(no_vcl_obj_t sender, no_vcl_int_t isColumn, no_vcl_int_t index, void*)
+{
+    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
+    if (!self || !self->onHeaderClick_)
+        return;
+    THdrEvent handler = self->onHeaderClick_;
+    handler(self, isColumn != 0, index);
+}
+
+TOnDrawCell        TCustomDrawGrid::GetOnDrawCellImpl(TObject* owner)    { return static_cast<TCustomDrawGrid*>(owner)->onDrawCell_; }
+TOnSelectCellEvent TCustomDrawGrid::GetOnSelectCellImpl(TObject* owner)  { return static_cast<TCustomDrawGrid*>(owner)->onSelectCell_; }
+TOnSelectEvent     TCustomDrawGrid::GetOnSelectionImpl(TObject* owner)   { return static_cast<TCustomDrawGrid*>(owner)->onSelection_; }
+THdrEvent          TCustomDrawGrid::GetOnHeaderClickImpl(TObject* owner) { return static_cast<TCustomDrawGrid*>(owner)->onHeaderClick_; }
+
+void TCustomDrawGrid::SetOnDrawCellImpl(TObject* owner, const TOnDrawCell& value)
+{
+    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(owner);
+    SetSimpleEvent(self->handle_, self->onDrawCell_, self->onDrawCellHooked_, value,
+                   &no_vcl_TCustomDrawGrid_SetOnDrawCell, &TCustomDrawGrid::DrawCellTrampoline);
+}
+
+void TCustomDrawGrid::SetOnSelectCellImpl(TObject* owner, const TOnSelectCellEvent& value)
+{
+    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(owner);
+    SetSimpleEvent(self->handle_, self->onSelectCell_, self->onSelectCellHooked_, value,
+                   &no_vcl_TCustomDrawGrid_SetOnSelectCell, &TCustomDrawGrid::SelectCellTrampoline);
+}
+
+void TCustomDrawGrid::SetOnSelectionImpl(TObject* owner, const TOnSelectEvent& value)
+{
+    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(owner);
+    SetSimpleEvent(self->handle_, self->onSelection_, self->onSelectionHooked_, value,
+                   &no_vcl_TCustomDrawGrid_SetOnSelection, &TCustomDrawGrid::SelectionTrampoline);
+}
+
+void TCustomDrawGrid::SetOnHeaderClickImpl(TObject* owner, const THdrEvent& value)
+{
+    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(owner);
+    SetSimpleEvent(self->handle_, self->onHeaderClick_, self->onHeaderClickHooked_, value,
+                   &no_vcl_TCustomDrawGrid_SetOnHeaderClick, &TCustomDrawGrid::HeaderClickTrampoline);
+}
+
+TDrawGrid::TDrawGrid(TComponent* AOwner)
+    : TCustomDrawGrid(no_vcl_TDrawGrid_Create(HandleOf(AOwner)))
+{}
+
+std::string TCustomStringGrid::GetCells(int ACol, int ARow) const
+{
+    return std::string(no_vcl_TCustomStringGrid_GetCells(handle_, ACol, ARow));
+}
+
+void TCustomStringGrid::SetCells(int ACol, int ARow, const std::string& Value)
+{
+    no_vcl_TCustomStringGrid_SetCells(handle_, ACol, ARow, Value.c_str());
+}
+
+void TCustomStringGrid::Clean()                   { no_vcl_TCustomStringGrid_Clean(handle_); }
+void TCustomStringGrid::AutoSizeColumns()         { no_vcl_TCustomStringGrid_AutoSizeColumns(handle_); }
+void TCustomStringGrid::AutoSizeColumn(int ACol)  { no_vcl_TCustomStringGrid_AutoSizeColumn(handle_, ACol); }
+
+TStringGrid::TStringGrid(TComponent* AOwner)
+    : TCustomStringGrid(no_vcl_TStringGrid_Create(HandleOf(AOwner)))
+{}
+
 } // namespace no_vcl
