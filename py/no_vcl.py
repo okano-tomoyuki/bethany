@@ -382,6 +382,19 @@ ssExtra1 = TShiftState.ssExtra1
 ssExtra2 = TShiftState.ssExtra2
 
 
+class TFontStyles(enum.IntFlag):
+    fsBold = 1 << 0
+    fsItalic = 1 << 1
+    fsUnderline = 1 << 2
+    fsStrikeOut = 1 << 3
+
+
+fsBold = TFontStyles.fsBold
+fsItalic = TFontStyles.fsItalic
+fsUnderline = TFontStyles.fsUnderline
+fsStrikeOut = TFontStyles.fsStrikeOut
+
+
 class TGridOptions(enum.IntFlag):
     goFixedVertLine = 1 << 0
     goFixedHorzLine = 1 << 1
@@ -481,6 +494,154 @@ ebRight = TEdgeBorders.ebRight
 ebBottom = TEdgeBorders.ebBottom
 
 
+class TOpenOptions(enum.IntFlag):
+    ofReadOnly = 1 << 0
+    ofOverwritePrompt = 1 << 1  # TSaveDialog: 既存のファイルなら上書きを確かめる
+    ofHideReadOnly = 1 << 2
+    ofNoChangeDir = 1 << 3
+    ofShowHelp = 1 << 4
+    ofNoValidate = 1 << 5
+    ofAllowMultiSelect = 1 << 6  # 複数のファイルを選べる(Files で受け取る)
+    ofExtensionDifferent = 1 << 7
+    ofPathMustExist = 1 << 8
+    ofFileMustExist = 1 << 9
+    ofCreatePrompt = 1 << 10
+    ofShareAware = 1 << 11
+    ofNoReadOnlyReturn = 1 << 12
+    ofNoTestFileCreate = 1 << 13
+    ofNoNetworkButton = 1 << 14
+    ofNoLongNames = 1 << 15
+    ofOldStyleDialog = 1 << 16
+    ofNoDereferenceLinks = 1 << 17
+    ofNoResolveLinks = 1 << 18
+    ofEnableIncludeNotify = 1 << 19
+    ofEnableSizing = 1 << 20
+    ofDontAddToRecent = 1 << 21
+    ofForceShowHidden = 1 << 22
+    ofViewDetail = 1 << 23
+    ofAutoPreview = 1 << 24
+
+
+ofReadOnly = TOpenOptions.ofReadOnly
+ofOverwritePrompt = TOpenOptions.ofOverwritePrompt
+ofHideReadOnly = TOpenOptions.ofHideReadOnly
+ofNoChangeDir = TOpenOptions.ofNoChangeDir
+ofShowHelp = TOpenOptions.ofShowHelp
+ofNoValidate = TOpenOptions.ofNoValidate
+ofAllowMultiSelect = TOpenOptions.ofAllowMultiSelect
+ofExtensionDifferent = TOpenOptions.ofExtensionDifferent
+ofPathMustExist = TOpenOptions.ofPathMustExist
+ofFileMustExist = TOpenOptions.ofFileMustExist
+ofCreatePrompt = TOpenOptions.ofCreatePrompt
+ofShareAware = TOpenOptions.ofShareAware
+ofNoReadOnlyReturn = TOpenOptions.ofNoReadOnlyReturn
+ofNoTestFileCreate = TOpenOptions.ofNoTestFileCreate
+ofNoNetworkButton = TOpenOptions.ofNoNetworkButton
+ofNoLongNames = TOpenOptions.ofNoLongNames
+ofOldStyleDialog = TOpenOptions.ofOldStyleDialog
+ofNoDereferenceLinks = TOpenOptions.ofNoDereferenceLinks
+ofNoResolveLinks = TOpenOptions.ofNoResolveLinks
+ofEnableIncludeNotify = TOpenOptions.ofEnableIncludeNotify
+ofEnableSizing = TOpenOptions.ofEnableSizing
+ofDontAddToRecent = TOpenOptions.ofDontAddToRecent
+ofForceShowHidden = TOpenOptions.ofForceShowHidden
+ofViewDetail = TOpenOptions.ofViewDetail
+ofAutoPreview = TOpenOptions.ofAutoPreview
+
+
+class TColorDialogOptions(enum.IntFlag):
+    cdFullOpen = 1 << 0  # 色の作成の部分を最初から開く
+    cdPreventFullOpen = 1 << 1  # 色の作成のボタンを無効にする
+    cdShowHelp = 1 << 2
+    cdSolidColor = 1 << 3
+    cdAnyColor = 1 << 4
+
+
+cdFullOpen = TColorDialogOptions.cdFullOpen
+cdPreventFullOpen = TColorDialogOptions.cdPreventFullOpen
+cdShowHelp = TColorDialogOptions.cdShowHelp
+cdSolidColor = TColorDialogOptions.cdSolidColor
+cdAnyColor = TColorDialogOptions.cdAnyColor
+
+
+class TFontDialogOptions(enum.IntFlag):
+    fdAnsiOnly = 1 << 0
+    fdTrueTypeOnly = 1 << 1
+    fdEffects = 1 << 2
+    fdFixedPitchOnly = 1 << 3
+    fdForceFontExist = 1 << 4
+    fdNoFaceSel = 1 << 5
+    fdNoOEMFonts = 1 << 6
+    fdNoSimulations = 1 << 7
+    fdNoSizeSel = 1 << 8
+    fdNoStyleSel = 1 << 9
+    fdNoVectorFonts = 1 << 10
+    fdShowHelp = 1 << 11
+    fdWysiwyg = 1 << 12
+    fdLimitSize = 1 << 13  # MinFontSize・MaxFontSize で大きさを制限する
+    fdScalableOnly = 1 << 14
+    fdApplyButton = 1 << 15
+
+
+fdAnsiOnly = TFontDialogOptions.fdAnsiOnly
+fdTrueTypeOnly = TFontDialogOptions.fdTrueTypeOnly
+fdEffects = TFontDialogOptions.fdEffects
+fdFixedPitchOnly = TFontDialogOptions.fdFixedPitchOnly
+fdForceFontExist = TFontDialogOptions.fdForceFontExist
+fdNoFaceSel = TFontDialogOptions.fdNoFaceSel
+fdNoOEMFonts = TFontDialogOptions.fdNoOEMFonts
+fdNoSimulations = TFontDialogOptions.fdNoSimulations
+fdNoSizeSel = TFontDialogOptions.fdNoSizeSel
+fdNoStyleSel = TFontDialogOptions.fdNoStyleSel
+fdNoVectorFonts = TFontDialogOptions.fdNoVectorFonts
+fdShowHelp = TFontDialogOptions.fdShowHelp
+fdWysiwyg = TFontDialogOptions.fdWysiwyg
+fdLimitSize = TFontDialogOptions.fdLimitSize
+fdScalableOnly = TFontDialogOptions.fdScalableOnly
+fdApplyButton = TFontDialogOptions.fdApplyButton
+
+
+class TFindOptions(enum.IntFlag):
+    frDown = 1 << 0  # 下へ検索する
+    frFindNext = 1 << 1
+    frHideMatchCase = 1 << 2
+    frHideWholeWord = 1 << 3
+    frHideUpDown = 1 << 4
+    frMatchCase = 1 << 5  # 大文字と小文字を区別する
+    frDisableMatchCase = 1 << 6
+    frDisableUpDown = 1 << 7
+    frDisableWholeWord = 1 << 8
+    frReplace = 1 << 9
+    frReplaceAll = 1 << 10
+    frWholeWord = 1 << 11  # 単語単位で探す
+    frShowHelp = 1 << 12
+    frEntireScope = 1 << 13
+    frHideEntireScope = 1 << 14
+    frPromptOnReplace = 1 << 15
+    frHidePromptOnReplace = 1 << 16
+    frButtonsAtBottom = 1 << 17
+
+
+frDown = TFindOptions.frDown
+frFindNext = TFindOptions.frFindNext
+frHideMatchCase = TFindOptions.frHideMatchCase
+frHideWholeWord = TFindOptions.frHideWholeWord
+frHideUpDown = TFindOptions.frHideUpDown
+frMatchCase = TFindOptions.frMatchCase
+frDisableMatchCase = TFindOptions.frDisableMatchCase
+frDisableUpDown = TFindOptions.frDisableUpDown
+frDisableWholeWord = TFindOptions.frDisableWholeWord
+frReplace = TFindOptions.frReplace
+frReplaceAll = TFindOptions.frReplaceAll
+frWholeWord = TFindOptions.frWholeWord
+frShowHelp = TFindOptions.frShowHelp
+frEntireScope = TFindOptions.frEntireScope
+frHideEntireScope = TFindOptions.frHideEntireScope
+frPromptOnReplace = TFindOptions.frPromptOnReplace
+frHidePromptOnReplace = TFindOptions.frHidePromptOnReplace
+frButtonsAtBottom = TFindOptions.frButtonsAtBottom
+
+
 TColor = int
 clBlack = 0x000000
 clWhite = 0xFFFFFF
@@ -488,6 +649,8 @@ clRed = 0x0000FF
 clGreen = 0x008000
 clBlue = 0xFF0000
 clYellow = 0x00FFFF
+clNone = 0x1FFFFFFF  # 色を持たない(LCL の clNone)。
+clDefault = 0x20000000  # 既定の色(LCL の clDefault)。コントロールの Color の既定値で、実際の色はウィジェットセットが決める。
 
 TShortCut = int
 scShift = 0x2000
@@ -594,9 +757,14 @@ class TBrush(TPersistent):
 
 
 class TFont(TPersistent):
+    """Canvas・コントロール・TFontDialog が持つフォントへの非所有のラッパー(Style・Assign は docs/adr/0033)。"""
     Name = _Prop("TFont_GetName", "TFont_SetName", _str)
     Size = _Prop("TFont_GetSize", "TFont_SetSize", _int)
     Color = _Prop("TFont_GetColor", "TFont_SetColor", _int)
+    Style = _Prop("TFont_GetStyle", "TFont_SetStyle", _enum("TFontStyles"))
+    # Source の内容(Name・Size・Color・Style 等)を写す(VCL の Font->Assign)。nullptr なら何もしない。
+    def Assign(self, Source):
+        lib.TFont_Assign(self._current(), _h(Source))
 
 
 class TCanvas(_mixins["TCanvas"], TPersistent):
@@ -858,6 +1026,11 @@ class TControl(TComponent):
     AutoSize = _Prop("TControl_GetAutoSize", "TControl_SetAutoSize", _bool)
     # 右クリックで開くメニュー。C++ ラッパーを介さずに作られたメニューの場合は nullptr になる。
     PopupMenu = _Prop("TControl_GetPopupMenu", "TControl_SetPopupMenu", _comp("TPopupMenu"))
+    # 背景色(既定は clDefault。docs/adr/0033)。
+    Color = _Prop("TControl_GetColor", "TControl_SetColor", _int)
+    # 文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。
+    # 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。
+    Font = _Prop("TControl_GetFont", "TControl_SetFont", _obj("TFont"))
     OnClick = _Event("TControl_SetOnClick", "TNotifyEvent")
     OnDblClick = _Event("TControl_SetOnDblClick", "TNotifyEvent")
     # LCL では他のウィンドウメッセージへの応答等で発生し、必ずしもユーザー操作直後とは限らない。
@@ -2094,6 +2267,109 @@ class TTimer(TCustomTimer):
         self._attach(lib.TTimer_Create(_h(AOwner)))
 
 
+class TCommonDialog(TComponent):
+    """ダイアログの共通の基底(LCL の TCommonDialog)。VCL と同じく、プロパティを設定して Execute() を呼び、結果を bool で受け取る
+    (if (OpenDialog1->Execute()) Memo1->Lines->LoadFromFile(OpenDialog1->FileName);)。
+    TComponent なので、他のコンポーネントと同じく new で生成し、Owner に任せるか Free() で破棄する。1 つを何度でも Execute できる。"""
+    # ダイアログのタイトル(空なら OS・LCL の既定)。Win32 の TFontDialog では使われない。
+    Title = _Prop("TCommonDialog_GetTitle", "TCommonDialog_SetTitle", _str)
+    # ダイアログが表示されたとき・閉じたとき。
+    OnShow = _Event("TCommonDialog_SetOnShow", "TNotifyEvent")
+    OnClose = _Event("TCommonDialog_SetOnClose", "TNotifyEvent")
+    # OK で閉じようとしたとき(CanClose を false にすると閉じない)。Win32 ではファイルのダイアログでだけ呼ばれる。
+    OnCanClose = _Event("TCommonDialog_SetOnCanClose", "TCloseQueryEvent")
+    # ダイアログを表示する。閉じるまで戻らず、OK で閉じたら true、キャンセルなら false を返す
+    # (TFindDialog・TReplaceDialog はモードレスで、表示してすぐ true を返す)。
+    def Execute(self):
+        _r = lib.TCommonDialog_Execute(self._current())
+        return _r != 0
+
+
+class TFileDialog(TCommonDialog):
+    """ファイルを選ぶダイアログの共通の基底(LCL の TFileDialog)。"""
+    # 選択したファイルのフルパス(Execute の前に設定すると、初期のファイル名になる)。
+    FileName = _Prop("TFileDialog_GetFileName", "TFileDialog_SetFileName", _str)
+    # "テキスト|*.txt|すべて|*.*" のように、表示名とマスクを | で区切って並べる(1 つのマスクに複数のパターンは ; で区切る)。
+    Filter = _Prop("TFileDialog_GetFilter", "TFileDialog_SetFilter", _str)
+    # 選択されているフィルターの位置(1 始まり)。
+    FilterIndex = _Prop("TFileDialog_GetFilterIndex", "TFileDialog_SetFilterIndex", _int)
+    InitialDir = _Prop("TFileDialog_GetInitialDir", "TFileDialog_SetInitialDir", _str)
+    # ファイル名に拡張子が無いときに補う拡張子。LCL は先頭に . を補う("txt" を設定すると ".txt" が返る。VCL は補わない)。
+    DefaultExt = _Prop("TFileDialog_GetDefaultExt", "TFileDialog_SetDefaultExt", _str)
+    # 選択したファイルの一覧(TStrings。ofAllowMultiSelect のとき複数)。
+    Files = _Prop("TFileDialog_GetFiles", None, _view("TStrings"))
+
+
+class TOpenDialog(TFileDialog):
+    """ファイルを開くダイアログ。"""
+    Options = _Prop("TOpenDialog_GetOptions", "TOpenDialog_SetOptions", _enum("TOpenOptions"))
+    def __init__(self, AOwner):
+        self._attach(lib.TOpenDialog_Create(_h(AOwner)))
+
+
+class TSaveDialog(TOpenDialog):
+    """ファイルを保存するダイアログ。"""
+    def __init__(self, AOwner):
+        self._attach(lib.TSaveDialog_Create(_h(AOwner)))
+
+
+class TSelectDirectoryDialog(TOpenDialog):
+    """ディレクトリを選ぶダイアログ(VCL には無く、LCL にある)。選んだディレクトリは FileName で受け取る。"""
+    def __init__(self, AOwner):
+        self._attach(lib.TSelectDirectoryDialog_Create(_h(AOwner)))
+
+
+class TColorDialog(TCommonDialog):
+    """色を選ぶダイアログ。"""
+    # 選択した色(Execute の前に設定すると、初期の色になる)。
+    Color = _Prop("TColorDialog_GetColor", "TColorDialog_SetColor", _int)
+    # 作成した色("ColorA=FFFFFF" のような 名前=値 の行。値は $BBGGRR の 16 進。TStrings)。LCL の既定は ColorA〜ColorT の 20 色。
+    CustomColors = _Prop("TColorDialog_GetCustomColors", None, _view("TStrings"))
+    Options = _Prop("TColorDialog_GetOptions", "TColorDialog_SetOptions", _enum("TColorDialogOptions"))
+    def __init__(self, AOwner):
+        self._attach(lib.TColorDialog_Create(_h(AOwner)))
+
+
+class TFontDialog(TCommonDialog):
+    """フォントを選ぶダイアログ。"""
+    # 選択したフォント。ダイアログが所有する TFont のビューで、ダイアログと寿命が一致する。
+    # 代入は内容のコピー(nullptr なら何もしない)。FontDialog1->Font = Memo1->Font; で初期のフォントにする。
+    Font = _Prop("TFontDialog_GetFont", "TFontDialog_SetFont", _obj("TFont"))
+    # 選べる大きさの範囲(Options に fdLimitSize があるときだけ使われる)。
+    MinFontSize = _Prop("TFontDialog_GetMinFontSize", "TFontDialog_SetMinFontSize", _int)
+    MaxFontSize = _Prop("TFontDialog_GetMaxFontSize", "TFontDialog_SetMaxFontSize", _int)
+    Options = _Prop("TFontDialog_GetOptions", "TFontDialog_SetOptions", _enum("TFontDialogOptions"))
+    def __init__(self, AOwner):
+        self._attach(lib.TFontDialog_Create(_h(AOwner)))
+
+
+class TFindDialog(TCommonDialog):
+    """検索のダイアログ。VCL と同じくモードレスで、Execute() は表示してすぐ戻り、利用者が「次を検索」を押すたびに OnFind が呼ばれる
+    (検索そのものは OnFind で FindText・Options を見て行う)。閉じるのは利用者か CloseDialog()。"""
+    FindText = _Prop("TFindDialog_GetFindText", "TFindDialog_SetFindText", _str)
+    Options = _Prop("TFindDialog_GetOptions", "TFindDialog_SetOptions", _enum("TFindOptions"))
+    # ダイアログの位置(画面の座標)。
+    Left = _Prop("TFindDialog_GetLeft", "TFindDialog_SetLeft", _int)
+    Top = _Prop("TFindDialog_GetTop", "TFindDialog_SetTop", _int)
+    OnFind = _Event("TFindDialog_SetOnFind", "TNotifyEvent")
+    def __init__(self, AOwner):
+        self._attach(lib.TFindDialog_Create(_h(AOwner)))
+    # 表示中のダイアログを閉じる。
+    def CloseDialog(self):
+        lib.TFindDialog_CloseDialog(self._current())
+    # LCL では TFindDialog の protected。TReplaceDialog が公開する。
+    _ReplaceText = _Prop("TFindDialog_GetReplaceText", "TFindDialog_SetReplaceText", _str)
+    _OnReplace = _Event("TFindDialog_SetOnReplace", "TNotifyEvent")
+
+
+class TReplaceDialog(TFindDialog):
+    """置換のダイアログ。「置換」「すべて置換」が押されると OnReplace が呼ばれる(どちらかは Options の frReplace・frReplaceAll で分かる)。"""
+    ReplaceText = TFindDialog._ReplaceText
+    OnReplace = TFindDialog._OnReplace
+    def __init__(self, AOwner):
+        self._attach(lib.TReplaceDialog_Create(_h(AOwner)))
+
+
 # ---------------- イベントの型(Sender 以外の引数) ----------------
 
 _event_types.update({
@@ -2152,31 +2428,45 @@ __all__ = [
     "tbsDropDown", "tbsSeparator", "tbsDivider", "tbsButtonDrop", "TGrabStyle", "gsSimple", "gsDouble",
     "gsHorLines", "gsVerLines", "gsGripper", "gsButton", "TShiftState", "ssShift", "ssAlt", "ssCtrl", "ssLeft",
     "ssRight", "ssMiddle", "ssDouble", "ssMeta", "ssSuper", "ssHyper", "ssAltGr", "ssCaps", "ssNum", "ssScroll",
-    "ssTriple", "ssQuad", "ssExtra1", "ssExtra2", "TGridOptions", "goFixedVertLine", "goFixedHorzLine",
-    "goVertLine", "goHorzLine", "goRangeSelect", "goDrawFocusSelected", "goRowSizing", "goColSizing",
-    "goRowMoving", "goColMoving", "goEditing", "goAutoAddRows", "goTabs", "goRowSelect", "goAlwaysShowEditor",
-    "goThumbTracking", "goColSpanning", "goRelaxedRowSelect", "goDblClickAutoSize", "goSmoothScroll",
-    "goFixedRowNumbering", "goScrollKeepVisible", "goHeaderHotTracking", "goHeaderPushedLook", "goSelectionActive",
-    "goFixedColSizing", "goDontScrollPartCell", "goCellHints", "goTruncCellHints", "goCellEllipsis",
-    "goAutoAddRowsSkipContentCheck", "goRowHighlight", "TGridDrawState", "gdSelected", "gdFocused", "gdFixed",
-    "gdHot", "gdPushed", "gdRowHighlight", "TEdgeBorders", "ebLeft", "ebTop", "ebRight", "ebBottom", "TColor",
-    "clBlack", "clWhite", "clRed", "clGreen", "clBlue", "clYellow", "TShortCut", "scShift", "scCtrl", "scAlt",
-    "TStrings", "TStringList", "TPen", "TBrush", "TFont", "TCanvas", "TGraphic", "TRasterImage", "TCustomBitmap",
-    "TBitmap", "TPortableNetworkGraphic", "TJPEGImage", "TPicture", "TCustomImageList", "TImageList", "TMenuItem",
-    "TMenu", "TMainMenu", "TPopupMenu", "TControl", "TWinControl", "TCustomScrollBar", "TScrollBar",
-    "TCustomTrackBar", "TTrackBar", "TCustomProgressBar", "TProgressBar", "TGraphicControl", "TCustomControl",
-    "TUpDown", "TScrollingWinControl", "TScrollBox", "TCustomForm", "TForm", "TApplication", "TCustomPanel",
-    "TPanel", "TCustomGroupBox", "TGroupBox", "TCustomRadioGroup", "TRadioGroup", "TCustomCheckGroup",
-    "TCheckGroup", "TCustomLabel", "TLabel", "TBoundLabel", "TBevel", "TButtonControl", "TCustomButton", "TButton",
-    "TCustomBitBtn", "TBitBtn", "TCustomCheckBox", "TCheckBox", "TRadioButton", "TToggleBox", "TCustomEdit",
-    "TEdit", "TCustomFloatSpinEdit", "TFloatSpinEdit", "TCustomSpinEdit", "TSpinEdit", "TMaskEdit",
-    "TCustomLabeledEdit", "TLabeledEdit", "TCustomTabControl", "TTabControl", "TPageControl", "TCustomPage",
-    "TTabSheet", "TTreeNode", "TTreeNodes", "TCustomTreeView", "TTreeView", "TListItem", "TListItems",
-    "TListColumn", "TListColumns", "TCustomListView", "TListView", "TCustomSplitter", "TSplitter", "TCustomMemo",
-    "TMemo", "TCustomComboBox", "TComboBox", "TCustomListBox", "TListBox", "TCustomCheckListBox", "TCheckListBox",
-    "TCustomStaticText", "TStaticText", "TStatusBar", "TCustomShape", "TShape", "TCustomSpeedButton",
-    "TSpeedButton", "TPaintBox", "TCustomImage", "TImage", "TCustomGrid", "TCustomDrawGrid", "TDrawGrid",
-    "TCustomStringGrid", "TStringGrid", "THeaderSection", "THeaderSections", "TCustomHeaderControl",
-    "THeaderControl", "TToolWindow", "TToolBar", "TToolButton", "TCoolBand", "TCoolBands", "TCustomCoolBar",
-    "TCoolBar", "TCustomTimer", "TTimer",
+    "ssTriple", "ssQuad", "ssExtra1", "ssExtra2", "TFontStyles", "fsBold", "fsItalic", "fsUnderline",
+    "fsStrikeOut", "TGridOptions", "goFixedVertLine", "goFixedHorzLine", "goVertLine", "goHorzLine",
+    "goRangeSelect", "goDrawFocusSelected", "goRowSizing", "goColSizing", "goRowMoving", "goColMoving",
+    "goEditing", "goAutoAddRows", "goTabs", "goRowSelect", "goAlwaysShowEditor", "goThumbTracking",
+    "goColSpanning", "goRelaxedRowSelect", "goDblClickAutoSize", "goSmoothScroll", "goFixedRowNumbering",
+    "goScrollKeepVisible", "goHeaderHotTracking", "goHeaderPushedLook", "goSelectionActive", "goFixedColSizing",
+    "goDontScrollPartCell", "goCellHints", "goTruncCellHints", "goCellEllipsis", "goAutoAddRowsSkipContentCheck",
+    "goRowHighlight", "TGridDrawState", "gdSelected", "gdFocused", "gdFixed", "gdHot", "gdPushed",
+    "gdRowHighlight", "TEdgeBorders", "ebLeft", "ebTop", "ebRight", "ebBottom", "TOpenOptions", "ofReadOnly",
+    "ofOverwritePrompt", "ofHideReadOnly", "ofNoChangeDir", "ofShowHelp", "ofNoValidate", "ofAllowMultiSelect",
+    "ofExtensionDifferent", "ofPathMustExist", "ofFileMustExist", "ofCreatePrompt", "ofShareAware",
+    "ofNoReadOnlyReturn", "ofNoTestFileCreate", "ofNoNetworkButton", "ofNoLongNames", "ofOldStyleDialog",
+    "ofNoDereferenceLinks", "ofNoResolveLinks", "ofEnableIncludeNotify", "ofEnableSizing", "ofDontAddToRecent",
+    "ofForceShowHidden", "ofViewDetail", "ofAutoPreview", "TColorDialogOptions", "cdFullOpen", "cdPreventFullOpen",
+    "cdShowHelp", "cdSolidColor", "cdAnyColor", "TFontDialogOptions", "fdAnsiOnly", "fdTrueTypeOnly", "fdEffects",
+    "fdFixedPitchOnly", "fdForceFontExist", "fdNoFaceSel", "fdNoOEMFonts", "fdNoSimulations", "fdNoSizeSel",
+    "fdNoStyleSel", "fdNoVectorFonts", "fdShowHelp", "fdWysiwyg", "fdLimitSize", "fdScalableOnly", "fdApplyButton",
+    "TFindOptions", "frDown", "frFindNext", "frHideMatchCase", "frHideWholeWord", "frHideUpDown", "frMatchCase",
+    "frDisableMatchCase", "frDisableUpDown", "frDisableWholeWord", "frReplace", "frReplaceAll", "frWholeWord",
+    "frShowHelp", "frEntireScope", "frHideEntireScope", "frPromptOnReplace", "frHidePromptOnReplace",
+    "frButtonsAtBottom", "TColor", "clBlack", "clWhite", "clRed", "clGreen", "clBlue", "clYellow", "clNone",
+    "clDefault", "TShortCut", "scShift", "scCtrl", "scAlt", "TStrings", "TStringList", "TPen", "TBrush", "TFont",
+    "TCanvas", "TGraphic", "TRasterImage", "TCustomBitmap", "TBitmap", "TPortableNetworkGraphic", "TJPEGImage",
+    "TPicture", "TCustomImageList", "TImageList", "TMenuItem", "TMenu", "TMainMenu", "TPopupMenu", "TControl",
+    "TWinControl", "TCustomScrollBar", "TScrollBar", "TCustomTrackBar", "TTrackBar", "TCustomProgressBar",
+    "TProgressBar", "TGraphicControl", "TCustomControl", "TUpDown", "TScrollingWinControl", "TScrollBox",
+    "TCustomForm", "TForm", "TApplication", "TCustomPanel", "TPanel", "TCustomGroupBox", "TGroupBox",
+    "TCustomRadioGroup", "TRadioGroup", "TCustomCheckGroup", "TCheckGroup", "TCustomLabel", "TLabel",
+    "TBoundLabel", "TBevel", "TButtonControl", "TCustomButton", "TButton", "TCustomBitBtn", "TBitBtn",
+    "TCustomCheckBox", "TCheckBox", "TRadioButton", "TToggleBox", "TCustomEdit", "TEdit", "TCustomFloatSpinEdit",
+    "TFloatSpinEdit", "TCustomSpinEdit", "TSpinEdit", "TMaskEdit", "TCustomLabeledEdit", "TLabeledEdit",
+    "TCustomTabControl", "TTabControl", "TPageControl", "TCustomPage", "TTabSheet", "TTreeNode", "TTreeNodes",
+    "TCustomTreeView", "TTreeView", "TListItem", "TListItems", "TListColumn", "TListColumns", "TCustomListView",
+    "TListView", "TCustomSplitter", "TSplitter", "TCustomMemo", "TMemo", "TCustomComboBox", "TComboBox",
+    "TCustomListBox", "TListBox", "TCustomCheckListBox", "TCheckListBox", "TCustomStaticText", "TStaticText",
+    "TStatusBar", "TCustomShape", "TShape", "TCustomSpeedButton", "TSpeedButton", "TPaintBox", "TCustomImage",
+    "TImage", "TCustomGrid", "TCustomDrawGrid", "TDrawGrid", "TCustomStringGrid", "TStringGrid", "THeaderSection",
+    "THeaderSections", "TCustomHeaderControl", "THeaderControl", "TToolWindow", "TToolBar", "TToolButton",
+    "TCoolBand", "TCoolBands", "TCustomCoolBar", "TCoolBar", "TCustomTimer", "TTimer", "TCommonDialog",
+    "TFileDialog", "TOpenDialog", "TSaveDialog", "TSelectDirectoryDialog", "TColorDialog", "TFontDialog",
+    "TFindDialog", "TReplaceDialog",
 ]

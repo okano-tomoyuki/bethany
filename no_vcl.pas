@@ -31,6 +31,7 @@ uses
   LCLProc,
   SysUtils,
   Graphics,
+  Dialogs,
   ImgList,
   CustomTimer
   {$ifdef LCLwin32}
@@ -10089,6 +10090,700 @@ begin
   end;
 end;
 
+{ TControl の Color・Font と TFont の Style・Assign(ダイアログの結果を適用する先。docs/adr/0033) }
+
+function TControl_GetColor(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  try
+    Result := Integer(TControl(Obj).Color);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TControl_SetColor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  try
+    TControl(Obj).Color := TColor(Value);
+  except
+    ReportException;
+  end;
+end;
+
+{ コントロールが所有する TFont(コントロールと寿命が一致し、差し替わらない)。 }
+function TControl_GetFont(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  try
+    Result := Pointer(TControl(Obj).Font);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+{ Value の内容を写す(LCL の SetFont と同じ)。nil なら何もしない。 }
+procedure TControl_SetFont(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  try
+    if Value <> nil then
+      TControl(Obj).Font := TFont(Value);
+  except
+    ReportException;
+  end;
+end;
+
+{ TFontStyles(集合型)を LongWord のビット集合(fsBold = 1 shl 0 等)に変換する。 }
+function FontStylesToInt(const S: TFontStyles): LongWord;
+var
+  I: TFontStyle;
+begin
+  Result := 0;
+  for I := Low(TFontStyle) to High(TFontStyle) do
+    if I in S then
+      Result := Result or (LongWord(1) shl Ord(I));
+end;
+
+function IntToFontStyles(V: LongWord): TFontStyles;
+var
+  I: TFontStyle;
+begin
+  Result := [];
+  for I := Low(TFontStyle) to High(TFontStyle) do
+    if (V and (LongWord(1) shl Ord(I))) <> 0 then
+      Include(Result, I);
+end;
+
+function TFont_GetStyle(Obj: Pointer): LongWord; NO_VCL_CALL;
+begin
+  try
+    Result := FontStylesToInt(TFont(Obj).Style);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TFont_SetStyle(Obj: Pointer; Value: LongWord); NO_VCL_CALL;
+begin
+  try
+    TFont(Obj).Style := IntToFontStyles(Value);
+  except
+    ReportException;
+  end;
+end;
+
+{ Source の内容(Name・Size・Color・Style 等)を写す。nil なら何もしない。 }
+procedure TFont_Assign(Obj: Pointer; Source: Pointer); NO_VCL_CALL;
+begin
+  try
+    if Source <> nil then
+      TFont(Obj).Assign(TFont(Source));
+  except
+    ReportException;
+  end;
+end;
+
+{ TCommonDialog(docs/adr/0033) }
+
+{ ダイアログを表示する。TFindDialog・TReplaceDialog 以外は閉じるまで戻らず、OK で閉じたら True を返す。 }
+function TCommonDialog_Execute(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  try
+    Result := TCommonDialog(Obj).Execute;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+function TCommonDialog_GetTitle(Obj: Pointer): PChar; NO_VCL_CALL;
+begin
+  try
+    Result := ReturnStr(TCommonDialog(Obj).Title);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TCommonDialog_SetTitle(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+begin
+  try
+    TCommonDialog(Obj).Title := Value;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCommonDialog_SetOnShow(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  try
+    TCommonDialog(Obj).OnShow := @BridgeFor(TCommonDialog(Obj), MethodData(TCommonDialog(Obj).OnShow), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCommonDialog_SetOnClose(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  try
+    TCommonDialog(Obj).OnClose := @BridgeFor(TCommonDialog(Obj), MethodData(TCommonDialog(Obj).OnClose), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
+end;
+
+{ OK で閉じようとしたとき(CanClose を False にすると閉じない)。Value は TNoVclVarCallback の CanClose と同じ。 }
+procedure TCommonDialog_SetOnCanClose(Obj: Pointer; Cb: TNoVclVarCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  try
+    TCommonDialog(Obj).OnCanClose := @VarBridgeFor(TCommonDialog(Obj), MethodData(TCommonDialog(Obj).OnCanClose), Cb, Data).DoCloseQuery;
+  except
+    ReportException;
+  end;
+end;
+
+{ TFileDialog }
+
+function TFileDialog_GetFileName(Obj: Pointer): PChar; NO_VCL_CALL;
+begin
+  try
+    Result := ReturnStr(TFileDialog(Obj).FileName);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TFileDialog_SetFileName(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+begin
+  try
+    TFileDialog(Obj).FileName := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TFileDialog_GetFilter(Obj: Pointer): PChar; NO_VCL_CALL;
+begin
+  try
+    Result := ReturnStr(TFileDialog(Obj).Filter);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TFileDialog_SetFilter(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+begin
+  try
+    TFileDialog(Obj).Filter := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TFileDialog_GetFilterIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  try
+    Result := TFileDialog(Obj).FilterIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TFileDialog_SetFilterIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  try
+    TFileDialog(Obj).FilterIndex := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TFileDialog_GetInitialDir(Obj: Pointer): PChar; NO_VCL_CALL;
+begin
+  try
+    Result := ReturnStr(TFileDialog(Obj).InitialDir);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TFileDialog_SetInitialDir(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+begin
+  try
+    TFileDialog(Obj).InitialDir := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TFileDialog_GetDefaultExt(Obj: Pointer): PChar; NO_VCL_CALL;
+begin
+  try
+    Result := ReturnStr(TFileDialog(Obj).DefaultExt);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TFileDialog_SetDefaultExt(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+begin
+  try
+    TFileDialog(Obj).DefaultExt := Value;
+  except
+    ReportException;
+  end;
+end;
+
+{ 選択したファイルの一覧(ofAllowMultiSelect のとき複数)。ダイアログが所有する TStrings で、差し替わらない。 }
+function TFileDialog_GetFiles(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  try
+    Result := Pointer(TFileDialog(Obj).Files);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+{ TOpenDialog / TSaveDialog / TSelectDirectoryDialog }
+
+function OpenOptionsToInt(const O: TOpenOptions): LongWord;
+var
+  I: TOpenOption;
+begin
+  Result := 0;
+  for I := Low(TOpenOption) to High(TOpenOption) do
+    if I in O then
+      Result := Result or (LongWord(1) shl Ord(I));
+end;
+
+function IntToOpenOptions(V: LongWord): TOpenOptions;
+var
+  I: TOpenOption;
+begin
+  Result := [];
+  for I := Low(TOpenOption) to High(TOpenOption) do
+    if (V and (LongWord(1) shl Ord(I))) <> 0 then
+      Include(Result, I);
+end;
+
+function TOpenDialog_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  try
+    Result := Watch(TOpenDialog.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+function TOpenDialog_GetOptions(Obj: Pointer): LongWord; NO_VCL_CALL;
+begin
+  try
+    Result := OpenOptionsToInt(TOpenDialog(Obj).Options);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TOpenDialog_SetOptions(Obj: Pointer; Value: LongWord); NO_VCL_CALL;
+begin
+  try
+    TOpenDialog(Obj).Options := IntToOpenOptions(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TSaveDialog_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  try
+    Result := Watch(TSaveDialog.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+function TSelectDirectoryDialog_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  try
+    Result := Watch(TSelectDirectoryDialog.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+{ TColorDialog }
+
+function ColorDialogOptionsToInt(const O: TColorDialogOptions): LongWord;
+var
+  I: TColorDialogOption;
+begin
+  Result := 0;
+  for I := Low(TColorDialogOption) to High(TColorDialogOption) do
+    if I in O then
+      Result := Result or (LongWord(1) shl Ord(I));
+end;
+
+function IntToColorDialogOptions(V: LongWord): TColorDialogOptions;
+var
+  I: TColorDialogOption;
+begin
+  Result := [];
+  for I := Low(TColorDialogOption) to High(TColorDialogOption) do
+    if (V and (LongWord(1) shl Ord(I))) <> 0 then
+      Include(Result, I);
+end;
+
+function TColorDialog_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  try
+    Result := Watch(TColorDialog.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+function TColorDialog_GetColor(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  try
+    Result := Integer(TColorDialog(Obj).Color);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TColorDialog_SetColor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  try
+    TColorDialog(Obj).Color := TColor(Value);
+  except
+    ReportException;
+  end;
+end;
+
+{ 作成した色("ColorA=FFFFFF" のような 名前=値 の行)。ダイアログが所有する TStrings で、差し替わらない。 }
+function TColorDialog_GetCustomColors(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  try
+    Result := Pointer(TColorDialog(Obj).CustomColors);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+function TColorDialog_GetOptions(Obj: Pointer): LongWord; NO_VCL_CALL;
+begin
+  try
+    Result := ColorDialogOptionsToInt(TColorDialog(Obj).Options);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TColorDialog_SetOptions(Obj: Pointer; Value: LongWord); NO_VCL_CALL;
+begin
+  try
+    TColorDialog(Obj).Options := IntToColorDialogOptions(Value);
+  except
+    ReportException;
+  end;
+end;
+
+{ TFontDialog }
+
+function FontDialogOptionsToInt(const O: TFontDialogOptions): LongWord;
+var
+  I: TFontDialogOption;
+begin
+  Result := 0;
+  for I := Low(TFontDialogOption) to High(TFontDialogOption) do
+    if I in O then
+      Result := Result or (LongWord(1) shl Ord(I));
+end;
+
+function IntToFontDialogOptions(V: LongWord): TFontDialogOptions;
+var
+  I: TFontDialogOption;
+begin
+  Result := [];
+  for I := Low(TFontDialogOption) to High(TFontDialogOption) do
+    if (V and (LongWord(1) shl Ord(I))) <> 0 then
+      Include(Result, I);
+end;
+
+function TFontDialog_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  try
+    Result := Watch(TFontDialog.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+{ ダイアログが所有する TFont(ダイアログと寿命が一致し、差し替わらない)。 }
+function TFontDialog_GetFont(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  try
+    Result := Pointer(TFontDialog(Obj).Font);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+{ Value の内容を写す(LCL の SetFont と同じ)。nil なら何もしない。 }
+procedure TFontDialog_SetFont(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  try
+    if Value <> nil then
+      TFontDialog(Obj).Font := TFont(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TFontDialog_GetMinFontSize(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  try
+    Result := TFontDialog(Obj).MinFontSize;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TFontDialog_SetMinFontSize(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  try
+    TFontDialog(Obj).MinFontSize := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TFontDialog_GetMaxFontSize(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  try
+    Result := TFontDialog(Obj).MaxFontSize;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TFontDialog_SetMaxFontSize(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  try
+    TFontDialog(Obj).MaxFontSize := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TFontDialog_GetOptions(Obj: Pointer): LongWord; NO_VCL_CALL;
+begin
+  try
+    Result := FontDialogOptionsToInt(TFontDialog(Obj).Options);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TFontDialog_SetOptions(Obj: Pointer; Value: LongWord); NO_VCL_CALL;
+begin
+  try
+    TFontDialog(Obj).Options := IntToFontDialogOptions(Value);
+  except
+    ReportException;
+  end;
+end;
+
+{ TFindDialog / TReplaceDialog }
+
+type
+  { ReplaceText・OnReplace は TFindDialog の protected で、TReplaceDialog が published にしている。 }
+  TFindDialogAccess = class(TFindDialog);
+
+function FindOptionsToInt(const O: TFindOptions): LongWord;
+var
+  I: TFindOption;
+begin
+  Result := 0;
+  for I := Low(TFindOption) to High(TFindOption) do
+    if I in O then
+      Result := Result or (LongWord(1) shl Ord(I));
+end;
+
+function IntToFindOptions(V: LongWord): TFindOptions;
+var
+  I: TFindOption;
+begin
+  Result := [];
+  for I := Low(TFindOption) to High(TFindOption) do
+    if (V and (LongWord(1) shl Ord(I))) <> 0 then
+      Include(Result, I);
+end;
+
+function TFindDialog_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  try
+    Result := Watch(TFindDialog.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+function TReplaceDialog_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  try
+    Result := Watch(TReplaceDialog.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+function TFindDialog_GetFindText(Obj: Pointer): PChar; NO_VCL_CALL;
+begin
+  try
+    Result := ReturnStr(TFindDialog(Obj).FindText);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TFindDialog_SetFindText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+begin
+  try
+    TFindDialog(Obj).FindText := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TFindDialog_GetReplaceText(Obj: Pointer): PChar; NO_VCL_CALL;
+begin
+  try
+    Result := ReturnStr(TFindDialogAccess(Obj).ReplaceText);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TFindDialog_SetReplaceText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+begin
+  try
+    TFindDialogAccess(Obj).ReplaceText := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TFindDialog_GetOptions(Obj: Pointer): LongWord; NO_VCL_CALL;
+begin
+  try
+    Result := FindOptionsToInt(TFindDialog(Obj).Options);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TFindDialog_SetOptions(Obj: Pointer; Value: LongWord); NO_VCL_CALL;
+begin
+  try
+    TFindDialog(Obj).Options := IntToFindOptions(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TFindDialog_GetLeft(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  try
+    Result := TFindDialog(Obj).Left;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TFindDialog_SetLeft(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  try
+    TFindDialog(Obj).Left := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TFindDialog_GetTop(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  try
+    Result := TFindDialog(Obj).Top;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TFindDialog_SetTop(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  try
+    TFindDialog(Obj).Top := Value;
+  except
+    ReportException;
+  end;
+end;
+
+{ 表示中のダイアログを閉じる。 }
+procedure TFindDialog_CloseDialog(Obj: Pointer); NO_VCL_CALL;
+begin
+  try
+    TFindDialog(Obj).CloseDialog;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TFindDialog_SetOnFind(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  try
+    TFindDialog(Obj).OnFind := @BridgeFor(TFindDialog(Obj), MethodData(TFindDialog(Obj).OnFind), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TFindDialog_SetOnReplace(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  try
+    TFindDialogAccess(Obj).OnReplace := @BridgeFor(TFindDialog(Obj), MethodData(TFindDialogAccess(Obj).OnReplace), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
+end;
+
 exports
   FreeNotify_SetCallback,
   Error_SetCallback,
@@ -11058,7 +11753,66 @@ exports
   TMenuItem_GetSubMenuImages,
   TMenuItem_SetSubMenuImages,
   TMenuItem_GetBitmap,
-  TMenuItem_SetBitmap;
+  TMenuItem_SetBitmap,
+  TControl_GetColor,
+  TControl_SetColor,
+  TControl_GetFont,
+  TControl_SetFont,
+  TFont_GetStyle,
+  TFont_SetStyle,
+  TFont_Assign,
+  TCommonDialog_Execute,
+  TCommonDialog_GetTitle,
+  TCommonDialog_SetTitle,
+  TCommonDialog_SetOnShow,
+  TCommonDialog_SetOnClose,
+  TCommonDialog_SetOnCanClose,
+  TFileDialog_GetFileName,
+  TFileDialog_SetFileName,
+  TFileDialog_GetFilter,
+  TFileDialog_SetFilter,
+  TFileDialog_GetFilterIndex,
+  TFileDialog_SetFilterIndex,
+  TFileDialog_GetInitialDir,
+  TFileDialog_SetInitialDir,
+  TFileDialog_GetDefaultExt,
+  TFileDialog_SetDefaultExt,
+  TFileDialog_GetFiles,
+  TOpenDialog_Create,
+  TOpenDialog_GetOptions,
+  TOpenDialog_SetOptions,
+  TSaveDialog_Create,
+  TSelectDirectoryDialog_Create,
+  TColorDialog_Create,
+  TColorDialog_GetColor,
+  TColorDialog_SetColor,
+  TColorDialog_GetCustomColors,
+  TColorDialog_GetOptions,
+  TColorDialog_SetOptions,
+  TFontDialog_Create,
+  TFontDialog_GetFont,
+  TFontDialog_SetFont,
+  TFontDialog_GetMinFontSize,
+  TFontDialog_SetMinFontSize,
+  TFontDialog_GetMaxFontSize,
+  TFontDialog_SetMaxFontSize,
+  TFontDialog_GetOptions,
+  TFontDialog_SetOptions,
+  TFindDialog_Create,
+  TReplaceDialog_Create,
+  TFindDialog_GetFindText,
+  TFindDialog_SetFindText,
+  TFindDialog_GetReplaceText,
+  TFindDialog_SetReplaceText,
+  TFindDialog_GetOptions,
+  TFindDialog_SetOptions,
+  TFindDialog_GetLeft,
+  TFindDialog_SetLeft,
+  TFindDialog_GetTop,
+  TFindDialog_SetTop,
+  TFindDialog_CloseDialog,
+  TFindDialog_SetOnFind,
+  TFindDialog_SetOnReplace;
 
 begin
   RequireDerivedFormResource := False;

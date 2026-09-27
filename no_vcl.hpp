@@ -32,6 +32,10 @@ const TColor clRed    = 0x0000FF;
 const TColor clGreen  = 0x008000;
 const TColor clBlue   = 0xFF0000;
 const TColor clYellow = 0x00FFFF;
+// 色を持たない(LCL の clNone)。
+const TColor clNone    = 0x1FFFFFFF;
+// 既定の色(LCL の clDefault)。コントロールの Color の既定値で、実際の色はウィジェットセットが決める。
+const TColor clDefault = 0x20000000;
 
 // LCL が送出した例外(docs/adr/0031)。VCL の Exception と同じく、catch (Exception& E) で受けて E.Message を使う。
 // - no_vcl の関数・プロパティの中で LCL が例外を送出すると(範囲外の添字・読み込めないファイル等)、その操作は中断し、
@@ -624,17 +628,31 @@ private:
     static void   SetColorImpl(TObject* owner, const TColor& value);
 };
 
+// フォントの修飾(LCL の TFontStyles)。TShiftState と同じく、ビットを OR した集合として扱う。
+using TFontStyles = unsigned int;
+const TFontStyles fsBold      = 1u << 0;
+const TFontStyles fsItalic    = 1u << 1;
+const TFontStyles fsUnderline = 1u << 2;
+const TFontStyles fsStrikeOut = 1u << 3;
+
+// Canvas・コントロール・TFontDialog が持つフォントへの非所有のラッパー(Style・Assign は docs/adr/0033)。
 class TFont : public TPersistent
 {
 public:
     Property<std::string> Name;
     Property<int>         Size;
     Property<TColor>      Color;
+    Property<TFontStyles> Style;
 
     explicit TFont(ObjectHandle handle);
     ~TFont() override = default;
 
+    // Source の内容(Name・Size・Color・Style 等)を写す(VCL の Font->Assign)。nullptr なら何もしない。
+    void Assign(const TFont* Source);
+
 private:
+    static TFontStyles GetStyleImpl(TObject* owner);
+    static void        SetStyleImpl(TObject* owner, const TFontStyles& value);
     static std::string GetNameImpl(TObject* owner);
     static void        SetNameImpl(TObject* owner, const std::string& value);
     static int         GetSizeImpl(TObject* owner);
@@ -1218,6 +1236,11 @@ public:
     Property<bool>         AutoSize;
     // 右クリックで開くメニュー。C++ ラッパーを介さずに作られたメニューの場合は nullptr になる。
     Property<TPopupMenu*>  PopupMenu;
+    // 背景色(既定は clDefault。docs/adr/0033)。
+    Property<TColor>       Color;
+    // 文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。
+    // 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。
+    Property<TFont*>       Font;
     Property<TNotifyEvent> OnClick;
     Property<TNotifyEvent> OnDblClick;
     // LCL では他のウィンドウメッセージへの応答等で発生し、必ずしもユーザー操作直後とは限らない。
@@ -1241,6 +1264,8 @@ protected:
 
 private:
     friend class TCoolBand;  // TCoolBand::Control の Getter から FromHandle を使うため
+
+    TFont font_;
 
     TNotifyEvent onClick_;
     bool         onClickHooked_ = false;
@@ -1313,6 +1338,10 @@ private:
     static void         SetAutoSizeImpl(TObject* owner, const bool& value);
     static TPopupMenu*  GetPopupMenuImpl(TObject* owner);
     static void         SetPopupMenuImpl(TObject* owner, TPopupMenu* const& value);
+    static TColor       GetColorImpl(TObject* owner);
+    static void         SetColorImpl(TObject* owner, const TColor& value);
+    static TFont*       GetFontImpl(TObject* owner);
+    static void         SetFontImpl(TObject* owner, TFont* const& value);
     static std::string  GetTextImpl(TObject* owner);
     static void         SetTextImpl(TObject* owner, const std::string& value);
 };
@@ -4156,6 +4185,325 @@ public:
 
 protected:
     ~TTimer() override = default;
+};
+
+/* ---------------- Dialogs(docs/adr/0033) ---------------- */
+
+// ダイアログの共通の基底(LCL の TCommonDialog)。VCL と同じく、プロパティを設定して Execute() を呼び、結果を bool で受け取る
+// (if (OpenDialog1->Execute()) Memo1->Lines->LoadFromFile(OpenDialog1->FileName);)。
+// TComponent なので、他のコンポーネントと同じく new で生成し、Owner に任せるか Free() で破棄する。1 つを何度でも Execute できる。
+class TCommonDialog : public TComponent
+{
+public:
+    // ダイアログのタイトル(空なら OS・LCL の既定)。Win32 の TFontDialog では使われない。
+    Property<std::string>      Title;
+    // ダイアログが表示されたとき・閉じたとき。
+    Property<TNotifyEvent>     OnShow;
+    Property<TNotifyEvent>     OnClose;
+    // OK で閉じようとしたとき(CanClose を false にすると閉じない)。Win32 ではファイルのダイアログでだけ呼ばれる。
+    Property<TCloseQueryEvent> OnCanClose;
+
+    // ダイアログを表示する。閉じるまで戻らず、OK で閉じたら true、キャンセルなら false を返す
+    // (TFindDialog・TReplaceDialog はモードレスで、表示してすぐ true を返す)。
+    bool Execute();
+
+protected:
+    // 具象クラスの派生(TSaveDialog・TReplaceDialog 等)が、生成したハンドルを基底の具象クラスに渡すための目印。
+    // 公開のコンストラクタ (TComponent* AOwner) と引数の型を変え、new TOpenDialog(nullptr) を曖昧にしない。
+    struct DerivedTag {};
+
+    explicit TCommonDialog(ObjectHandle handle);
+    ~TCommonDialog() override = default;
+
+private:
+    TNotifyEvent     onShow_;
+    TNotifyEvent     onClose_;
+    TCloseQueryEvent onCanClose_;
+    bool onShowHooked_     = false;
+    bool onCloseHooked_    = false;
+    bool onCanCloseHooked_ = false;
+
+    static void NO_VCL_CALL ShowTrampoline(ObjectHandle sender, void* data);
+    static void NO_VCL_CALL CloseTrampoline(ObjectHandle sender, void* data);
+    static void NO_VCL_CALL CanCloseTrampoline(ObjectHandle sender, internal::bool_t* canClose, void* data);
+
+    static std::string      GetTitleImpl(TObject* owner);
+    static void             SetTitleImpl(TObject* owner, const std::string& value);
+    static TNotifyEvent     GetOnShowImpl(TObject* owner);
+    static void             SetOnShowImpl(TObject* owner, const TNotifyEvent& value);
+    static TNotifyEvent     GetOnCloseImpl(TObject* owner);
+    static void             SetOnCloseImpl(TObject* owner, const TNotifyEvent& value);
+    static TCloseQueryEvent GetOnCanCloseImpl(TObject* owner);
+    static void             SetOnCanCloseImpl(TObject* owner, const TCloseQueryEvent& value);
+};
+
+// ファイルを選ぶダイアログの共通の基底(LCL の TFileDialog)。
+class TFileDialog : public TCommonDialog
+{
+public:
+    // 選択したファイルのフルパス(Execute の前に設定すると、初期のファイル名になる)。
+    Property<std::string> FileName;
+    // "テキスト|*.txt|すべて|*.*" のように、表示名とマスクを | で区切って並べる(1 つのマスクに複数のパターンは ; で区切る)。
+    Property<std::string> Filter;
+    // 選択されているフィルターの位置(1 始まり)。
+    Property<int>         FilterIndex;
+    Property<std::string> InitialDir;
+    // ファイル名に拡張子が無いときに補う拡張子。LCL は先頭に . を補う("txt" を設定すると ".txt" が返る。VCL は補わない)。
+    Property<std::string> DefaultExt;
+    // 選択したファイルの一覧(TStrings。ofAllowMultiSelect のとき複数)。
+    ReadOnlyProperty<TStrings*> Files;
+
+protected:
+    explicit TFileDialog(ObjectHandle handle);
+    ~TFileDialog() override = default;
+
+private:
+    TStrings files_;
+
+    static std::string GetFileNameImpl(TObject* owner);
+    static void        SetFileNameImpl(TObject* owner, const std::string& value);
+    static std::string GetFilterImpl(TObject* owner);
+    static void        SetFilterImpl(TObject* owner, const std::string& value);
+    static int         GetFilterIndexImpl(TObject* owner);
+    static void        SetFilterIndexImpl(TObject* owner, const int& value);
+    static std::string GetInitialDirImpl(TObject* owner);
+    static void        SetInitialDirImpl(TObject* owner, const std::string& value);
+    static std::string GetDefaultExtImpl(TObject* owner);
+    static void        SetDefaultExtImpl(TObject* owner, const std::string& value);
+    static TStrings*   GetFilesImpl(TObject* owner);
+};
+
+// TOpenDialog の Options(LCL の TOpenOptions)。TShiftState と同じく、ビットを OR した集合として扱う。
+// 既定は ofEnableSizing | ofViewDetail。Windows だけのもの・古い形式のダイアログだけのものがある(LCL の dialogs.pp を参照)。
+using TOpenOptions = unsigned int;
+const TOpenOptions ofReadOnly            = 1u << 0;
+const TOpenOptions ofOverwritePrompt     = 1u << 1;   // TSaveDialog: 既存のファイルなら上書きを確かめる
+const TOpenOptions ofHideReadOnly        = 1u << 2;
+const TOpenOptions ofNoChangeDir         = 1u << 3;
+const TOpenOptions ofShowHelp            = 1u << 4;
+const TOpenOptions ofNoValidate          = 1u << 5;
+const TOpenOptions ofAllowMultiSelect    = 1u << 6;   // 複数のファイルを選べる(Files で受け取る)
+const TOpenOptions ofExtensionDifferent  = 1u << 7;
+const TOpenOptions ofPathMustExist       = 1u << 8;
+const TOpenOptions ofFileMustExist       = 1u << 9;
+const TOpenOptions ofCreatePrompt        = 1u << 10;
+const TOpenOptions ofShareAware          = 1u << 11;
+const TOpenOptions ofNoReadOnlyReturn    = 1u << 12;
+const TOpenOptions ofNoTestFileCreate    = 1u << 13;
+const TOpenOptions ofNoNetworkButton     = 1u << 14;
+const TOpenOptions ofNoLongNames         = 1u << 15;
+const TOpenOptions ofOldStyleDialog      = 1u << 16;
+const TOpenOptions ofNoDereferenceLinks  = 1u << 17;
+const TOpenOptions ofNoResolveLinks      = 1u << 18;
+const TOpenOptions ofEnableIncludeNotify = 1u << 19;
+const TOpenOptions ofEnableSizing        = 1u << 20;
+const TOpenOptions ofDontAddToRecent     = 1u << 21;
+const TOpenOptions ofForceShowHidden     = 1u << 22;
+const TOpenOptions ofViewDetail          = 1u << 23;
+const TOpenOptions ofAutoPreview         = 1u << 24;
+
+// ファイルを開くダイアログ。
+class TOpenDialog : public TFileDialog
+{
+public:
+    Property<TOpenOptions> Options;
+
+    explicit TOpenDialog(TComponent* AOwner);
+
+protected:
+    TOpenDialog(ObjectHandle handle, DerivedTag);
+    ~TOpenDialog() override = default;
+
+private:
+    static TOpenOptions GetOptionsImpl(TObject* owner);
+    static void         SetOptionsImpl(TObject* owner, const TOpenOptions& value);
+};
+
+// ファイルを保存するダイアログ。
+class TSaveDialog : public TOpenDialog
+{
+public:
+    explicit TSaveDialog(TComponent* AOwner);
+
+protected:
+    ~TSaveDialog() override = default;
+};
+
+// ディレクトリを選ぶダイアログ(VCL には無く、LCL にある)。選んだディレクトリは FileName で受け取る。
+class TSelectDirectoryDialog : public TOpenDialog
+{
+public:
+    explicit TSelectDirectoryDialog(TComponent* AOwner);
+
+protected:
+    ~TSelectDirectoryDialog() override = default;
+};
+
+// TColorDialog の Options(LCL の TColorDialogOptions)。既定は cdFullOpen(VCL は空)。
+using TColorDialogOptions = unsigned int;
+const TColorDialogOptions cdFullOpen        = 1u << 0;   // 色の作成の部分を最初から開く
+const TColorDialogOptions cdPreventFullOpen = 1u << 1;   // 色の作成のボタンを無効にする
+const TColorDialogOptions cdShowHelp        = 1u << 2;
+const TColorDialogOptions cdSolidColor      = 1u << 3;
+const TColorDialogOptions cdAnyColor        = 1u << 4;
+
+// 色を選ぶダイアログ。
+class TColorDialog : public TCommonDialog
+{
+public:
+    // 選択した色(Execute の前に設定すると、初期の色になる)。
+    Property<TColor>              Color;
+    // 作成した色("ColorA=FFFFFF" のような 名前=値 の行。値は $BBGGRR の 16 進。TStrings)。LCL の既定は ColorA〜ColorT の 20 色。
+    ReadOnlyProperty<TStrings*>   CustomColors;
+    Property<TColorDialogOptions> Options;
+
+    explicit TColorDialog(TComponent* AOwner);
+
+protected:
+    ~TColorDialog() override = default;
+
+private:
+    TStrings customColors_;
+
+    static TColor              GetColorImpl(TObject* owner);
+    static void                SetColorImpl(TObject* owner, const TColor& value);
+    static TStrings*           GetCustomColorsImpl(TObject* owner);
+    static TColorDialogOptions GetOptionsImpl(TObject* owner);
+    static void                SetOptionsImpl(TObject* owner, const TColorDialogOptions& value);
+};
+
+// TFontDialog の Options(LCL の TFontDialogOptions)。既定は fdEffects(下線・取り消し線・色を選べる)。
+using TFontDialogOptions = unsigned int;
+const TFontDialogOptions fdAnsiOnly       = 1u << 0;
+const TFontDialogOptions fdTrueTypeOnly   = 1u << 1;
+const TFontDialogOptions fdEffects        = 1u << 2;
+const TFontDialogOptions fdFixedPitchOnly = 1u << 3;
+const TFontDialogOptions fdForceFontExist = 1u << 4;
+const TFontDialogOptions fdNoFaceSel      = 1u << 5;
+const TFontDialogOptions fdNoOEMFonts     = 1u << 6;
+const TFontDialogOptions fdNoSimulations  = 1u << 7;
+const TFontDialogOptions fdNoSizeSel      = 1u << 8;
+const TFontDialogOptions fdNoStyleSel     = 1u << 9;
+const TFontDialogOptions fdNoVectorFonts  = 1u << 10;
+const TFontDialogOptions fdShowHelp       = 1u << 11;
+const TFontDialogOptions fdWysiwyg        = 1u << 12;
+const TFontDialogOptions fdLimitSize      = 1u << 13;  // MinFontSize・MaxFontSize で大きさを制限する
+const TFontDialogOptions fdScalableOnly   = 1u << 14;
+const TFontDialogOptions fdApplyButton    = 1u << 15;
+
+// フォントを選ぶダイアログ。
+class TFontDialog : public TCommonDialog
+{
+public:
+    // 選択したフォント。ダイアログが所有する TFont のビューで、ダイアログと寿命が一致する。
+    // 代入は内容のコピー(nullptr なら何もしない)。FontDialog1->Font = Memo1->Font; で初期のフォントにする。
+    Property<TFont*>             Font;
+    // 選べる大きさの範囲(Options に fdLimitSize があるときだけ使われる)。
+    Property<int>                MinFontSize;
+    Property<int>                MaxFontSize;
+    Property<TFontDialogOptions> Options;
+
+    explicit TFontDialog(TComponent* AOwner);
+
+protected:
+    ~TFontDialog() override = default;
+
+private:
+    TFont font_;
+
+    static TFont*             GetFontImpl(TObject* owner);
+    static void               SetFontImpl(TObject* owner, TFont* const& value);
+    static int                GetMinFontSizeImpl(TObject* owner);
+    static void               SetMinFontSizeImpl(TObject* owner, const int& value);
+    static int                GetMaxFontSizeImpl(TObject* owner);
+    static void               SetMaxFontSizeImpl(TObject* owner, const int& value);
+    static TFontDialogOptions GetOptionsImpl(TObject* owner);
+    static void               SetOptionsImpl(TObject* owner, const TFontDialogOptions& value);
+};
+
+// TFindDialog・TReplaceDialog の Options(LCL の TFindOptions)。ダイアログでの選択(検索の方向・大文字と小文字の区別等)も
+// ここに入る。既定は frDown。frFindNext・frReplace・frReplaceAll は、押されたボタンを LCL が OnFind・OnReplace の前に設定する。
+using TFindOptions = unsigned int;
+const TFindOptions frDown                = 1u << 0;   // 下へ検索する
+const TFindOptions frFindNext            = 1u << 1;
+const TFindOptions frHideMatchCase       = 1u << 2;
+const TFindOptions frHideWholeWord       = 1u << 3;
+const TFindOptions frHideUpDown          = 1u << 4;
+const TFindOptions frMatchCase           = 1u << 5;   // 大文字と小文字を区別する
+const TFindOptions frDisableMatchCase    = 1u << 6;
+const TFindOptions frDisableUpDown       = 1u << 7;
+const TFindOptions frDisableWholeWord    = 1u << 8;
+const TFindOptions frReplace             = 1u << 9;
+const TFindOptions frReplaceAll          = 1u << 10;
+const TFindOptions frWholeWord           = 1u << 11;  // 単語単位で探す
+const TFindOptions frShowHelp            = 1u << 12;
+const TFindOptions frEntireScope         = 1u << 13;
+const TFindOptions frHideEntireScope     = 1u << 14;
+const TFindOptions frPromptOnReplace     = 1u << 15;
+const TFindOptions frHidePromptOnReplace = 1u << 16;
+const TFindOptions frButtonsAtBottom     = 1u << 17;
+
+// 検索のダイアログ。VCL と同じくモードレスで、Execute() は表示してすぐ戻り、利用者が「次を検索」を押すたびに OnFind が呼ばれる
+// (検索そのものは OnFind で FindText・Options を見て行う)。閉じるのは利用者か CloseDialog()。
+class TFindDialog : public TCommonDialog
+{
+public:
+    Property<std::string>  FindText;
+    Property<TFindOptions> Options;
+    // ダイアログの位置(画面の座標)。
+    Property<int>          Left;
+    Property<int>          Top;
+    Property<TNotifyEvent> OnFind;
+
+    explicit TFindDialog(TComponent* AOwner);
+
+    // 表示中のダイアログを閉じる。
+    void CloseDialog();
+
+protected:
+    TFindDialog(ObjectHandle handle, DerivedTag);
+    ~TFindDialog() override = default;
+
+    // LCL では TFindDialog の protected。TReplaceDialog が公開する。
+    Property<std::string>  ReplaceText;
+    Property<TNotifyEvent> OnReplace;
+
+private:
+    TNotifyEvent onFind_;
+    TNotifyEvent onReplace_;
+    bool onFindHooked_    = false;
+    bool onReplaceHooked_ = false;
+
+    static void NO_VCL_CALL FindTrampoline(ObjectHandle sender, void* data);
+    static void NO_VCL_CALL ReplaceTrampoline(ObjectHandle sender, void* data);
+
+    static std::string  GetFindTextImpl(TObject* owner);
+    static void         SetFindTextImpl(TObject* owner, const std::string& value);
+    static std::string  GetReplaceTextImpl(TObject* owner);
+    static void         SetReplaceTextImpl(TObject* owner, const std::string& value);
+    static TFindOptions GetOptionsImpl(TObject* owner);
+    static void         SetOptionsImpl(TObject* owner, const TFindOptions& value);
+    static int          GetLeftImpl(TObject* owner);
+    static void         SetLeftImpl(TObject* owner, const int& value);
+    static int          GetTopImpl(TObject* owner);
+    static void         SetTopImpl(TObject* owner, const int& value);
+    static TNotifyEvent GetOnFindImpl(TObject* owner);
+    static void         SetOnFindImpl(TObject* owner, const TNotifyEvent& value);
+    static TNotifyEvent GetOnReplaceImpl(TObject* owner);
+    static void         SetOnReplaceImpl(TObject* owner, const TNotifyEvent& value);
+};
+
+// 置換のダイアログ。「置換」「すべて置換」が押されると OnReplace が呼ばれる(どちらかは Options の frReplace・frReplaceAll で分かる)。
+class TReplaceDialog : public TFindDialog
+{
+public:
+    using TFindDialog::ReplaceText;
+    using TFindDialog::OnReplace;
+
+    explicit TReplaceDialog(TComponent* AOwner);
+
+protected:
+    ~TReplaceDialog() override = default;
 };
 
 } // namespace no_vcl

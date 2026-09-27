@@ -926,6 +926,65 @@
     X(obj_t,         TMenuItem_GetSubMenuImages,            (obj_t o),                                                     (o)) \
     X(void,          TMenuItem_SetSubMenuImages,            (obj_t o, obj_t v),                                            (o, v)) \
     X(obj_t,         TMenuItem_GetBitmap,                   (obj_t o),                                                     (o)) \
-    X(void,          TMenuItem_SetBitmap,                   (obj_t o, obj_t v),                                            (o, v))
+    X(void,          TMenuItem_SetBitmap,                   (obj_t o, obj_t v),                                            (o, v)) \
+    X(int_t,         TControl_GetColor,                     (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetColor,                     (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TControl_GetFont,                      (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetFont,                      (obj_t o, obj_t v),                                            (o, v)) \
+    X(uint_t,        TFont_GetStyle,                        (obj_t o),                                                     (o)) \
+    X(void,          TFont_SetStyle,                        (obj_t o, uint_t v),                                           (o, v)) \
+    X(void,          TFont_Assign,                          (obj_t o, obj_t s),                                            (o, s)) \
+    X(bool_t,        TCommonDialog_Execute,                 (obj_t o),                                                     (o)) \
+    X(str_t,         TCommonDialog_GetTitle,                (obj_t o),                                                     (o)) \
+    X(void,          TCommonDialog_SetTitle,                (obj_t o, str_t v),                                            (o, v)) \
+    X(void,          TCommonDialog_SetOnShow,               (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(void,          TCommonDialog_SetOnClose,              (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(void,          TCommonDialog_SetOnCanClose,           (obj_t o, close_query_callback_t cb, void* d),                 (o, cb, d)) \
+    X(str_t,         TFileDialog_GetFileName,               (obj_t o),                                                     (o)) \
+    X(void,          TFileDialog_SetFileName,               (obj_t o, str_t v),                                            (o, v)) \
+    X(str_t,         TFileDialog_GetFilter,                 (obj_t o),                                                     (o)) \
+    X(void,          TFileDialog_SetFilter,                 (obj_t o, str_t v),                                            (o, v)) \
+    X(int_t,         TFileDialog_GetFilterIndex,            (obj_t o),                                                     (o)) \
+    X(void,          TFileDialog_SetFilterIndex,            (obj_t o, int_t v),                                            (o, v)) \
+    X(str_t,         TFileDialog_GetInitialDir,             (obj_t o),                                                     (o)) \
+    X(void,          TFileDialog_SetInitialDir,             (obj_t o, str_t v),                                            (o, v)) \
+    X(str_t,         TFileDialog_GetDefaultExt,             (obj_t o),                                                     (o)) \
+    X(void,          TFileDialog_SetDefaultExt,             (obj_t o, str_t v),                                            (o, v)) \
+    X(obj_t,         TFileDialog_GetFiles,                  (obj_t o),                                                     (o)) \
+    X(obj_t,         TOpenDialog_Create,                    (obj_t owner),                                                 (owner)) \
+    X(uint_t,        TOpenDialog_GetOptions,                (obj_t o),                                                     (o)) \
+    X(void,          TOpenDialog_SetOptions,                (obj_t o, uint_t v),                                           (o, v)) \
+    X(obj_t,         TSaveDialog_Create,                    (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TSelectDirectoryDialog_Create,         (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TColorDialog_Create,                   (obj_t owner),                                                 (owner)) \
+    X(int_t,         TColorDialog_GetColor,                 (obj_t o),                                                     (o)) \
+    X(void,          TColorDialog_SetColor,                 (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TColorDialog_GetCustomColors,          (obj_t o),                                                     (o)) \
+    X(uint_t,        TColorDialog_GetOptions,               (obj_t o),                                                     (o)) \
+    X(void,          TColorDialog_SetOptions,               (obj_t o, uint_t v),                                           (o, v)) \
+    X(obj_t,         TFontDialog_Create,                    (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TFontDialog_GetFont,                   (obj_t o),                                                     (o)) \
+    X(void,          TFontDialog_SetFont,                   (obj_t o, obj_t v),                                            (o, v)) \
+    X(int_t,         TFontDialog_GetMinFontSize,            (obj_t o),                                                     (o)) \
+    X(void,          TFontDialog_SetMinFontSize,            (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TFontDialog_GetMaxFontSize,            (obj_t o),                                                     (o)) \
+    X(void,          TFontDialog_SetMaxFontSize,            (obj_t o, int_t v),                                            (o, v)) \
+    X(uint_t,        TFontDialog_GetOptions,                (obj_t o),                                                     (o)) \
+    X(void,          TFontDialog_SetOptions,                (obj_t o, uint_t v),                                           (o, v)) \
+    X(obj_t,         TFindDialog_Create,                    (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TReplaceDialog_Create,                 (obj_t owner),                                                 (owner)) \
+    X(str_t,         TFindDialog_GetFindText,               (obj_t o),                                                     (o)) \
+    X(void,          TFindDialog_SetFindText,               (obj_t o, str_t v),                                            (o, v)) \
+    X(str_t,         TFindDialog_GetReplaceText,            (obj_t o),                                                     (o)) \
+    X(void,          TFindDialog_SetReplaceText,            (obj_t o, str_t v),                                            (o, v)) \
+    X(uint_t,        TFindDialog_GetOptions,                (obj_t o),                                                     (o)) \
+    X(void,          TFindDialog_SetOptions,                (obj_t o, uint_t v),                                           (o, v)) \
+    X(int_t,         TFindDialog_GetLeft,                   (obj_t o),                                                     (o)) \
+    X(void,          TFindDialog_SetLeft,                   (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TFindDialog_GetTop,                    (obj_t o),                                                     (o)) \
+    X(void,          TFindDialog_SetTop,                    (obj_t o, int_t v),                                            (o, v)) \
+    X(void,          TFindDialog_CloseDialog,               (obj_t o),                                                     (o)) \
+    X(void,          TFindDialog_SetOnFind,                 (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(void,          TFindDialog_SetOnReplace,              (obj_t o, callback_t cb, void* d),                             (o, cb, d))
 
 #endif

@@ -17,6 +17,13 @@ TObject
     │   ├── TCustomTimer ── TTimer
     │   └── TLCLComponent                                  ※LCL 固有
     │       ├── TMenu ── TMainMenu / TPopupMenu             ※TControl ではない
+    │       ├── TCommonDialog                              ※dialogs.pp。TControl ではない
+    │       │   ├── TFileDialog ── TOpenDialog
+    │       │   │                  ├── TSaveDialog
+    │       │   │                  └── TSelectDirectoryDialog
+    │       │   ├── TColorDialog
+    │       │   ├── TFontDialog
+    │       │   └── TFindDialog ── TReplaceDialog
     │       └── TControl
     │           ├── TGraphicControl
     │           │   ├── TCustomLabel ── TLabel
@@ -56,6 +63,8 @@ TObject
 - TMemo は **TCustomEdit の派生**で、Text・ReadOnly・MaxLength・OnChange を TEdit と共有する。
 - TPen・TBrush・TFont・TCanvas は TComponent ではなく **TPersistent** の派生。
 - TGraphic の派生(TBitmap 等)と TPicture も **TPersistent** の派生(2026-09-27 に `graphics.pp` で確認。[ADR 0029](adr/0029-graphics-picture-image-glyph.md))。
+- ダイアログ(TCommonDialog の派生)は **TControl ではない**非ビジュアルコンポーネント。TSaveDialog・TSelectDirectoryDialog は
+  **具象クラスの TOpenDialog の派生**、TReplaceDialog は TFindDialog の派生(2026-09-28 に `dialogs.pp` で確認。[ADR 0033](adr/0033-dialogs.md))。
 
 ## 2. no_vcl の階層(実装済みのクラス)
 
@@ -70,6 +79,10 @@ TObject
     ├── TComponent
     │   ├── TApplication
     │   ├── TCustomTimer ── TTimer
+    │   ├── TCommonDialog
+    │   │   ├── TFileDialog ── TOpenDialog ── TSaveDialog / TSelectDirectoryDialog
+    │   │   ├── TColorDialog / TFontDialog
+    │   │   └── TFindDialog ── TReplaceDialog
     │   └── TControl
     │       ├── TGraphicControl
     │       │   ├── TCustomLabel ── TLabel
@@ -102,6 +115,8 @@ C++ ラッパーは受け取った時点で std::string にコピーする。DLL
 具象クラス(TForm・TButton 等)だけが public なコンストラクタ `(TComponent* AOwner)` を持つ。
 TCustomXxx 等の中間クラスのコンストラクタは protected で、直接は生成できない。
 TApplication はグローバル変数 `Application` の 1 つだけで、利用者は生成できない([ADR 0010](adr/0010-application-object.md))。
+具象クラスが派生を持つ場合(TOpenDialog・TFindDialog)は、派生が生成したハンドルを受け取る protected のコンストラクタ
+`(ObjectHandle, DerivedTag)` も持つ(`new TOpenDialog(nullptr)` が曖昧にならないよう、引数の型を変えている。[ADR 0033](adr/0033-dialogs.md))。
 
 ## 3. メンバの配置
 
@@ -192,6 +207,15 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 | ButtonCount / Buttons[i] / RowCount / ButtonHeight / ButtonWidth / DropDownWidth / Indent / Flat / List / ShowCaptions / Transparent / Wrapable / SetButtonSize | TToolBar(public/published) | TToolBar | TToolBar(public。Buttons[i] は `ReadOnlyIndexedProperty`) | `TToolBar_*`(ADR 0025) |
 | AllowAllUp / Down / Grouped / Indeterminate / Marked / ShowCaption / Wrap / Style / DropdownMenu / MenuItem / OnArrowClick / Index / Click / ArrowClick / PointInArrow | TToolButton(public/published) | TToolButton | TToolButton(public) | `TToolButton_*`(ADR 0025) |
 | Interval / Enabled / OnTimer | TCustomTimer(public) | TCustomTimer | TCustomTimer(public) | `TCustomTimer_*` |
+| Color / Font | TControl(public) | TControl | TControl(public。Font は代入で内容を写す `Property<TFont*>`) | `TControl_GetColor` 等([ADR 0033](adr/0033-dialogs.md)) |
+| Style / Assign | TFont(published / public) | TFont | TFont(public。Style はビット集合) | `TFont_GetStyle` / `SetStyle` / `Assign`(ADR 0033) |
+| Execute / Title / OnShow / OnClose / OnCanClose | TCommonDialog(public/published) | TCommonDialog | TCommonDialog(public) | `TCommonDialog_*`(ADR 0033) |
+| FileName / Filter / FilterIndex / InitialDir / DefaultExt / Files | TFileDialog(public/published) | TFileDialog | TFileDialog(public。Files は `ReadOnlyProperty<TStrings*>`) | `TFileDialog_*`(ADR 0033) |
+| Options | TOpenDialog(published) | TOpenDialog | TOpenDialog(public。ビット集合。TSaveDialog・TSelectDirectoryDialog でも使える) | `TOpenDialog_*`(ADR 0033) |
+| Color / CustomColors / Options | TColorDialog(published) | TColorDialog | TColorDialog(public。CustomColors は `ReadOnlyProperty<TStrings*>`) | `TColorDialog_*`(ADR 0033) |
+| Font / MinFontSize / MaxFontSize / Options | TFontDialog(published) | TFontDialog | TFontDialog(public。Font は代入で内容を写す `Property<TFont*>`) | `TFontDialog_*`(ADR 0033) |
+| FindText / Options / Left / Top / OnFind / CloseDialog | TFindDialog(public/published) | TFindDialog | TFindDialog(public) | `TFindDialog_*`(ADR 0033) |
+| ReplaceText / OnReplace | TFindDialog(protected) | TReplaceDialog | TFindDialog(protected)、TReplaceDialog で `using` | `TFindDialog_*ReplaceText` / `SetOnReplace`(protected hack。ADR 0033) |
 | Run / Terminate / Terminated / Title | TCustomApplication(public。Run・Terminate・Title は TApplication で再宣言) | TApplication | TApplication(public) | `TApplication_*` |
 | CreateForm / MainForm / ProcessMessages / ShowMainForm | TApplication(public) | TApplication | TApplication(public。CreateForm は型を引数から推論するテンプレート) | `TApplication_*`(CreateForm は素の TForm を返す) |
 | DestroyComponents | TComponent(public) | TComponent | (C++ では公開していない。内部層のみ) | `TComponent_DestroyComponents` |

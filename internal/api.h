@@ -22,7 +22,7 @@ namespace internal
 using obj_t  = void*;
 using str_t  = const char*;   // UTF-8。DLL が返す文字列は、同じスレッドで次に文字列を返す関数を呼ぶまで有効。
 using int_t  = int;
-using uint_t = unsigned int;  // 32 ビットすべてを使うビット集合(グリッドの Options)。
+using uint_t = unsigned int;  // ビット集合(グリッド・ダイアログの Options、TFont の Style。グリッドの Options は 32 ビットすべてを使う)。
 using bool_t = int;           // Pascal の LongBool。0 以外は真(DLL が返す真は -1)。
 using real_t = double;
 

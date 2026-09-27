@@ -25,7 +25,7 @@ DLL を直接呼ぶ層を作るときにも、これに従う([ADR 0032](adr/003
 | `obj_t` | `Pointer` | LCL のオブジェクト(コンポーネント・項目・TStrings・Canvas 等)を指すハンドル |
 | `str_t` | `PChar` | UTF-8 の文字列(下の「文字列」を参照) |
 | `int_t` | `Integer` | 32 ビットの整数。列挙は LCL の序数(no_vcl.hpp の同名の列挙と同じ値)、色は TColor(`$00BBGGRR`) |
-| `uint_t` | `LongWord` | 32 ビットすべてを使うビット集合(グリッドの Options) |
+| `uint_t` | `LongWord` | ビット集合(グリッド・ダイアログの Options、TFont の Style。グリッドの Options は 32 ビットすべてを使う) |
 | `bool_t` | `LongBool` | 4 バイトの真偽値。0 は偽、0 以外は真。DLL が返す真は -1 |
 | `real_t` | `Double` | 倍精度の実数 |
 

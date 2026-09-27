@@ -87,12 +87,12 @@ Application と同様、C++ 側は値型ではなく生成・破棄が必要な 
 
 | クラス | LCL 宣言ユニット | 主なメンバ |
 |---|---|---|
-| TOpenDialog / TSaveDialog | dialogs.pp(TFileDialog) | FileName/Filter/InitialDir/Execute |
-| TColorDialog | dialogs.pp | Color/Execute |
-| TFontDialog | dialogs.pp | Font(既存の TFont を流用)/Execute |
-| TSelectDirectoryDialog | dialogs.pp(TOpenDialog 派生) | FileName(選択したディレクトリ)/Execute |
-| TFindDialog / TReplaceDialog | dialogs.pp | 優先度低め(検索・置換 UI 自体は自作することが多い) |
-| TPrintDialog / TCustomPrinterSetupDialog | dialogs.pp | 優先度低め(印刷基盤が no_vcl に無い) |
+| ✅ TOpenDialog / TSaveDialog | dialogs.pp(TFileDialog) | Tier 4([ADR 0033](adr/0033-dialogs.md))。Execute/Title/OnShow/OnClose/OnCanClose(TCommonDialog)、FileName/Filter/FilterIndex/InitialDir/DefaultExt/Files(TFileDialog)、Options(ビット集合)。LCL の DefaultExt は先頭に `.` を補う。OnTypeChange/OnSelectionChange/OnFolderChange・OptionsEx は未対応 |
+| ✅ TColorDialog | dialogs.pp | Color/CustomColors/Options(ADR 0033)。Options の既定値は cdFullOpen(VCL は空) |
+| ✅ TFontDialog | dialogs.pp | Font(既存の TFont を流用。代入は内容のコピー)/MinFontSize/MaxFontSize/Options(ADR 0033)。あわせて TControl の Color・Font と、TFont の Style・Assign を追加した |
+| ✅ TSelectDirectoryDialog | dialogs.pp(TOpenDialog 派生) | FileName(選択したディレクトリ)/Execute(ADR 0033) |
+| ✅ TFindDialog / TReplaceDialog | dialogs.pp | FindText/ReplaceText/Options/Left/Top/OnFind/OnReplace/CloseDialog(ADR 0033)。モードレス(Execute はすぐ戻る) |
+| TPrintDialog / TPrinterSetupDialog | printersdlgs.pp(`components/printers`。基底の TCustomPrintDialog 等は dialogs.pp) | 見送り(ADR 0033)。具象クラスが別パッケージにあり、ビルドの `-Fu` に無い。印刷基盤(TPrinter)とあわせて扱う |
 
 ### Tier 5 — メニュー
 
@@ -171,5 +171,6 @@ Tier 1 の 1 バッチ目([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.m
    2 バッチ目で TImageList と各コントロールの Images/ImageIndex を入れ([ADR 0030](adr/0030-imagelist-and-images.md))、Tier 3 は完了した。以下は当初の記述。
    TImage 単体のためというより、Tier 1/2 のいくつか(Glyph・ImageList)の
    完成度を上げるために必要になる。着手するタイミングで独立した ADR を書く。
-6. **Tier 4(ダイアログ)** は他とほぼ独立して進められるので、隙間で着手しやすい。
+6. ✅ **Tier 4(ダイアログ)** は、印刷のダイアログを除いて完了した([ADR 0033](adr/0033-dialogs.md))。
+   ダイアログの結果を適用する先として、TControl の Color・Font と TFont の Style・Assign もあわせて追加した。
 7. **Tier 6** は必要になった時点で個別に対応する。

@@ -259,6 +259,32 @@ def main():
         print(f"TMenuItem_Click with a failing callback raised: class_name={e.class_name} (expected EMyError), "
               f"message={e.message}, cause={type(e.__cause__).__name__}")
 
+    # ---- ダイアログ(docs/adr/0033) ----
+    # モーダルのダイアログの Execute は閉じるまで戻らないため、ここでは呼ばない。プロパティだけ確かめる。
+    openDialog = lib.TOpenDialog_Create(form)
+    lib.TFileDialog_SetFilter(openDialog, b"Text|*.txt|All|*.*")
+    lib.TFileDialog_SetFilterIndex(openDialog, 2)
+    lib.TOpenDialog_SetOptions(openDialog, lib.TOpenDialog_GetOptions(openDialog) | (1 << 6))  # ofAllowMultiSelect
+    print(f"TOpenDialog Filter={lib.TFileDialog_GetFilter(openDialog).decode()} FilterIndex={lib.TFileDialog_GetFilterIndex(openDialog)} "
+          f"(expected 2), Options=0x{lib.TOpenDialog_GetOptions(openDialog):x} (expected 0x900040)")
+    colorDialog = lib.TColorDialog_Create(form)
+    lib.TColorDialog_SetColor(colorDialog, 0x00FF00)
+    print(f"TColorDialog Color={lib.TColorDialog_GetColor(colorDialog):06X} (expected 00FF00), "
+          f"CustomColors Count={lib.TStrings_GetCount(lib.TColorDialog_GetCustomColors(colorDialog))} (expected 20)")
+    fontDialog = lib.TFontDialog_Create(form)
+    dialogFont = lib.TFontDialog_GetFont(fontDialog)
+    lib.TFont_SetName(dialogFont, b"Arial")
+    lib.TFont_SetStyle(dialogFont, 1 | 8)  # fsBold | fsStrikeOut
+    lib.TControl_SetFont(memo, dialogFont)
+    print(f"memo Font after TControl_SetFont: {lib.TFont_GetName(lib.TControl_GetFont(memo)).decode()} "
+          f"Style=0x{lib.TFont_GetStyle(lib.TControl_GetFont(memo)):x} (expected Arial 0x9), "
+          f"memo Color is clDefault: {lib.TControl_GetColor(memo) == 0x20000000}")
+    replaceDialog = lib.TReplaceDialog_Create(form)
+    lib.TFindDialog_SetFindText(replaceDialog, "検索".encode())
+    lib.TFindDialog_SetReplaceText(replaceDialog, "置換".encode())
+    print(f"TReplaceDialog FindText={lib.TFindDialog_GetFindText(replaceDialog).decode()} "
+          f"ReplaceText={lib.TFindDialog_GetReplaceText(replaceDialog).decode()}")
+
     # ---- Show Form ----
     lib.TCustomForm_Show(form)
     lib.TApplication_Run(app)

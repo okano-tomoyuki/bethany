@@ -265,6 +265,8 @@ TControl::TControl(ObjectHandle handle)
     , Align(this, &TControl::GetAlignImpl, &TControl::SetAlignImpl)
     , AutoSize(this, &TControl::GetAutoSizeImpl, &TControl::SetAutoSizeImpl)
     , PopupMenu(this, &TControl::GetPopupMenuImpl, &TControl::SetPopupMenuImpl)
+    , Color(this, &TControl::GetColorImpl, &TControl::SetColorImpl)
+    , Font(this, &TControl::GetFontImpl, &TControl::SetFontImpl)
     , OnClick(this, &TControl::GetOnClickImpl, &TControl::SetOnClickImpl)
     , OnDblClick(this, &TControl::GetOnDblClickImpl, &TControl::SetOnDblClickImpl)
     , OnResize(this, &TControl::GetOnResizeImpl, &TControl::SetOnResizeImpl)
@@ -275,6 +277,7 @@ TControl::TControl(ObjectHandle handle)
     , OnMouseLeave(this, &TControl::GetOnMouseLeaveImpl, &TControl::SetOnMouseLeaveImpl)
     , OnMouseWheel(this, &TControl::GetOnMouseWheelImpl, &TControl::SetOnMouseWheelImpl)
     , Text(this, &TControl::GetTextImpl, &TControl::SetTextImpl)
+    , font_(handle ? internal::TControl_GetFont(handle) : nullptr)
 {}
 
 void TControl::Show() { internal::TControl_Show(handle_); }
@@ -362,6 +365,11 @@ void TControl::SetPopupMenuImpl(TObject* owner, TPopupMenu* const& value)
 {
     internal::TControl_SetPopupMenu(owner->Handle(), HandleOf(value));
 }
+
+TColor TControl::GetColorImpl(TObject* owner)                      { return static_cast<TColor>(internal::TControl_GetColor(owner->Handle())); }
+void   TControl::SetColorImpl(TObject* owner, const TColor& value) { internal::TControl_SetColor(owner->Handle(), value); }
+TFont* TControl::GetFontImpl(TObject* owner)                       { return &static_cast<TControl*>(owner)->font_; }
+void   TControl::SetFontImpl(TObject* owner, TFont* const& value)  { internal::TControl_SetFont(owner->Handle(), value ? value->Handle() : nullptr); }
 
 std::string TControl::GetTextImpl(TObject* owner)
 {
@@ -2322,6 +2330,7 @@ TFont::TFont(ObjectHandle handle)
     , Name(this, &TFont::GetNameImpl, &TFont::SetNameImpl)
     , Size(this, &TFont::GetSizeImpl, &TFont::SetSizeImpl)
     , Color(this, &TFont::GetColorImpl, &TFont::SetColorImpl)
+    , Style(this, &TFont::GetStyleImpl, &TFont::SetStyleImpl)
 {}
 
 std::string TFont::GetNameImpl(TObject* owner)
@@ -2338,6 +2347,13 @@ int    TFont::GetSizeImpl(TObject* owner)                      { return internal
 void   TFont::SetSizeImpl(TObject* owner, const int& value)    { internal::TFont_SetSize(owner->Handle(), value); }
 TColor TFont::GetColorImpl(TObject* owner)                     { return static_cast<TColor>(internal::TFont_GetColor(owner->Handle())); }
 void   TFont::SetColorImpl(TObject* owner, const TColor& value){ internal::TFont_SetColor(owner->Handle(), value); }
+TFontStyles TFont::GetStyleImpl(TObject* owner)                         { return internal::TFont_GetStyle(owner->Handle()); }
+void        TFont::SetStyleImpl(TObject* owner, const TFontStyles& value) { internal::TFont_SetStyle(owner->Handle(), value); }
+
+void TFont::Assign(const TFont* Source)
+{
+    internal::TFont_Assign(handle_, Source ? Source->Handle() : nullptr);
+}
 
 TCanvas::TCanvas(ObjectHandle handle)
     : TPersistent(handle)
@@ -3730,5 +3746,219 @@ void TMenuItem::SetBitmapImpl(TObject* owner, TBitmap* const& value)
 {
     internal::TMenuItem_SetBitmap(owner->Handle(), value ? value->Current() : nullptr);
 }
+
+
+/* ---------------- Dialogs ---------------- */
+
+TCommonDialog::TCommonDialog(ObjectHandle handle)
+    : TComponent(handle)
+    , Title(this, &TCommonDialog::GetTitleImpl, &TCommonDialog::SetTitleImpl)
+    , OnShow(this, &TCommonDialog::GetOnShowImpl, &TCommonDialog::SetOnShowImpl)
+    , OnClose(this, &TCommonDialog::GetOnCloseImpl, &TCommonDialog::SetOnCloseImpl)
+    , OnCanClose(this, &TCommonDialog::GetOnCanCloseImpl, &TCommonDialog::SetOnCanCloseImpl)
+{}
+
+bool TCommonDialog::Execute() { return internal::TCommonDialog_Execute(handle_) != 0; }
+
+std::string TCommonDialog::GetTitleImpl(TObject* owner)                            { return std::string(internal::TCommonDialog_GetTitle(owner->Handle())); }
+void        TCommonDialog::SetTitleImpl(TObject* owner, const std::string& value) { internal::TCommonDialog_SetTitle(owner->Handle(), value.c_str()); }
+
+TNotifyEvent     TCommonDialog::GetOnShowImpl(TObject* owner)     { return static_cast<TCommonDialog*>(owner)->onShow_; }
+TNotifyEvent     TCommonDialog::GetOnCloseImpl(TObject* owner)    { return static_cast<TCommonDialog*>(owner)->onClose_; }
+TCloseQueryEvent TCommonDialog::GetOnCanCloseImpl(TObject* owner) { return static_cast<TCommonDialog*>(owner)->onCanClose_; }
+
+void TCommonDialog::SetOnShowImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCommonDialog* self = static_cast<TCommonDialog*>(owner);
+    SetSimpleEvent(self->handle_, self->onShow_, self->onShowHooked_, value,
+                   &internal::TCommonDialog_SetOnShow, &TCommonDialog::ShowTrampoline);
+}
+
+void TCommonDialog::SetOnCloseImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCommonDialog* self = static_cast<TCommonDialog*>(owner);
+    SetSimpleEvent(self->handle_, self->onClose_, self->onCloseHooked_, value,
+                   &internal::TCommonDialog_SetOnClose, &TCommonDialog::CloseTrampoline);
+}
+
+void TCommonDialog::SetOnCanCloseImpl(TObject* owner, const TCloseQueryEvent& value)
+{
+    TCommonDialog* self = static_cast<TCommonDialog*>(owner);
+    SetSimpleEvent(self->handle_, self->onCanClose_, self->onCanCloseHooked_, value,
+                   &internal::TCommonDialog_SetOnCanClose, &TCommonDialog::CanCloseTrampoline);
+}
+
+void NO_VCL_CALL TCommonDialog::ShowTrampoline(ObjectHandle sender, void*)
+{
+    GuardCallback([&] {
+        TCommonDialog* self = static_cast<TCommonDialog*>(FromHandle(sender));
+        if (self)
+            CallNotify(TNotifyEvent(self->onShow_), self);
+    });
+}
+
+void NO_VCL_CALL TCommonDialog::CloseTrampoline(ObjectHandle sender, void*)
+{
+    GuardCallback([&] {
+        TCommonDialog* self = static_cast<TCommonDialog*>(FromHandle(sender));
+        if (self)
+            CallNotify(TNotifyEvent(self->onClose_), self);
+    });
+}
+
+void NO_VCL_CALL TCommonDialog::CanCloseTrampoline(ObjectHandle sender, internal::bool_t* canClose, void*)
+{
+    GuardCallback([&] {
+        TCommonDialog* self = static_cast<TCommonDialog*>(FromHandle(sender));
+        if (!self || !self->onCanClose_)
+            return;
+        TCloseQueryEvent handler = self->onCanClose_;
+        bool value = *canClose != 0;
+        handler(self, value);
+        *canClose = value ? 1 : 0;
+    });
+}
+
+TFileDialog::TFileDialog(ObjectHandle handle)
+    : TCommonDialog(handle)
+    , FileName(this, &TFileDialog::GetFileNameImpl, &TFileDialog::SetFileNameImpl)
+    , Filter(this, &TFileDialog::GetFilterImpl, &TFileDialog::SetFilterImpl)
+    , FilterIndex(this, &TFileDialog::GetFilterIndexImpl, &TFileDialog::SetFilterIndexImpl)
+    , InitialDir(this, &TFileDialog::GetInitialDirImpl, &TFileDialog::SetInitialDirImpl)
+    , DefaultExt(this, &TFileDialog::GetDefaultExtImpl, &TFileDialog::SetDefaultExtImpl)
+    , Files(this, &TFileDialog::GetFilesImpl)
+    , files_(this, &internal::TFileDialog_GetFiles)
+{}
+
+std::string TFileDialog::GetFileNameImpl(TObject* owner)                              { return std::string(internal::TFileDialog_GetFileName(owner->Handle())); }
+void        TFileDialog::SetFileNameImpl(TObject* owner, const std::string& value)   { internal::TFileDialog_SetFileName(owner->Handle(), value.c_str()); }
+std::string TFileDialog::GetFilterImpl(TObject* owner)                                { return std::string(internal::TFileDialog_GetFilter(owner->Handle())); }
+void        TFileDialog::SetFilterImpl(TObject* owner, const std::string& value)     { internal::TFileDialog_SetFilter(owner->Handle(), value.c_str()); }
+int         TFileDialog::GetFilterIndexImpl(TObject* owner)                           { return internal::TFileDialog_GetFilterIndex(owner->Handle()); }
+void        TFileDialog::SetFilterIndexImpl(TObject* owner, const int& value)        { internal::TFileDialog_SetFilterIndex(owner->Handle(), value); }
+std::string TFileDialog::GetInitialDirImpl(TObject* owner)                            { return std::string(internal::TFileDialog_GetInitialDir(owner->Handle())); }
+void        TFileDialog::SetInitialDirImpl(TObject* owner, const std::string& value) { internal::TFileDialog_SetInitialDir(owner->Handle(), value.c_str()); }
+std::string TFileDialog::GetDefaultExtImpl(TObject* owner)                            { return std::string(internal::TFileDialog_GetDefaultExt(owner->Handle())); }
+void        TFileDialog::SetDefaultExtImpl(TObject* owner, const std::string& value) { internal::TFileDialog_SetDefaultExt(owner->Handle(), value.c_str()); }
+TStrings*   TFileDialog::GetFilesImpl(TObject* owner)                                 { return &static_cast<TFileDialog*>(owner)->files_; }
+
+TOpenDialog::TOpenDialog(TComponent* AOwner)
+    : TOpenDialog(internal::TOpenDialog_Create(HandleOf(AOwner)), DerivedTag())
+{}
+
+TOpenDialog::TOpenDialog(ObjectHandle handle, DerivedTag)
+    : TFileDialog(handle)
+    , Options(this, &TOpenDialog::GetOptionsImpl, &TOpenDialog::SetOptionsImpl)
+{}
+
+TOpenOptions TOpenDialog::GetOptionsImpl(TObject* owner)                         { return internal::TOpenDialog_GetOptions(owner->Handle()); }
+void         TOpenDialog::SetOptionsImpl(TObject* owner, const TOpenOptions& value) { internal::TOpenDialog_SetOptions(owner->Handle(), value); }
+
+TSaveDialog::TSaveDialog(TComponent* AOwner)
+    : TOpenDialog(internal::TSaveDialog_Create(HandleOf(AOwner)), DerivedTag())
+{}
+
+TSelectDirectoryDialog::TSelectDirectoryDialog(TComponent* AOwner)
+    : TOpenDialog(internal::TSelectDirectoryDialog_Create(HandleOf(AOwner)), DerivedTag())
+{}
+
+TColorDialog::TColorDialog(TComponent* AOwner)
+    : TCommonDialog(internal::TColorDialog_Create(HandleOf(AOwner)))
+    , Color(this, &TColorDialog::GetColorImpl, &TColorDialog::SetColorImpl)
+    , CustomColors(this, &TColorDialog::GetCustomColorsImpl)
+    , Options(this, &TColorDialog::GetOptionsImpl, &TColorDialog::SetOptionsImpl)
+    , customColors_(this, &internal::TColorDialog_GetCustomColors)
+{}
+
+TColor              TColorDialog::GetColorImpl(TObject* owner)                                { return static_cast<TColor>(internal::TColorDialog_GetColor(owner->Handle())); }
+void                TColorDialog::SetColorImpl(TObject* owner, const TColor& value)           { internal::TColorDialog_SetColor(owner->Handle(), value); }
+TStrings*           TColorDialog::GetCustomColorsImpl(TObject* owner)                         { return &static_cast<TColorDialog*>(owner)->customColors_; }
+TColorDialogOptions TColorDialog::GetOptionsImpl(TObject* owner)                              { return internal::TColorDialog_GetOptions(owner->Handle()); }
+void                TColorDialog::SetOptionsImpl(TObject* owner, const TColorDialogOptions& value) { internal::TColorDialog_SetOptions(owner->Handle(), value); }
+
+TFontDialog::TFontDialog(TComponent* AOwner)
+    : TCommonDialog(internal::TFontDialog_Create(HandleOf(AOwner)))
+    , Font(this, &TFontDialog::GetFontImpl, &TFontDialog::SetFontImpl)
+    , MinFontSize(this, &TFontDialog::GetMinFontSizeImpl, &TFontDialog::SetMinFontSizeImpl)
+    , MaxFontSize(this, &TFontDialog::GetMaxFontSizeImpl, &TFontDialog::SetMaxFontSizeImpl)
+    , Options(this, &TFontDialog::GetOptionsImpl, &TFontDialog::SetOptionsImpl)
+    , font_(internal::TFontDialog_GetFont(handle_))
+{}
+
+TFont*             TFontDialog::GetFontImpl(TObject* owner)                                  { return &static_cast<TFontDialog*>(owner)->font_; }
+void               TFontDialog::SetFontImpl(TObject* owner, TFont* const& value)             { internal::TFontDialog_SetFont(owner->Handle(), value ? value->Handle() : nullptr); }
+int                TFontDialog::GetMinFontSizeImpl(TObject* owner)                           { return internal::TFontDialog_GetMinFontSize(owner->Handle()); }
+void               TFontDialog::SetMinFontSizeImpl(TObject* owner, const int& value)         { internal::TFontDialog_SetMinFontSize(owner->Handle(), value); }
+int                TFontDialog::GetMaxFontSizeImpl(TObject* owner)                           { return internal::TFontDialog_GetMaxFontSize(owner->Handle()); }
+void               TFontDialog::SetMaxFontSizeImpl(TObject* owner, const int& value)         { internal::TFontDialog_SetMaxFontSize(owner->Handle(), value); }
+TFontDialogOptions TFontDialog::GetOptionsImpl(TObject* owner)                               { return internal::TFontDialog_GetOptions(owner->Handle()); }
+void               TFontDialog::SetOptionsImpl(TObject* owner, const TFontDialogOptions& value) { internal::TFontDialog_SetOptions(owner->Handle(), value); }
+
+TFindDialog::TFindDialog(TComponent* AOwner)
+    : TFindDialog(internal::TFindDialog_Create(HandleOf(AOwner)), DerivedTag())
+{}
+
+TFindDialog::TFindDialog(ObjectHandle handle, DerivedTag)
+    : TCommonDialog(handle)
+    , FindText(this, &TFindDialog::GetFindTextImpl, &TFindDialog::SetFindTextImpl)
+    , Options(this, &TFindDialog::GetOptionsImpl, &TFindDialog::SetOptionsImpl)
+    , Left(this, &TFindDialog::GetLeftImpl, &TFindDialog::SetLeftImpl)
+    , Top(this, &TFindDialog::GetTopImpl, &TFindDialog::SetTopImpl)
+    , OnFind(this, &TFindDialog::GetOnFindImpl, &TFindDialog::SetOnFindImpl)
+    , ReplaceText(this, &TFindDialog::GetReplaceTextImpl, &TFindDialog::SetReplaceTextImpl)
+    , OnReplace(this, &TFindDialog::GetOnReplaceImpl, &TFindDialog::SetOnReplaceImpl)
+{}
+
+void TFindDialog::CloseDialog() { internal::TFindDialog_CloseDialog(handle_); }
+
+std::string  TFindDialog::GetFindTextImpl(TObject* owner)                               { return std::string(internal::TFindDialog_GetFindText(owner->Handle())); }
+void         TFindDialog::SetFindTextImpl(TObject* owner, const std::string& value)    { internal::TFindDialog_SetFindText(owner->Handle(), value.c_str()); }
+std::string  TFindDialog::GetReplaceTextImpl(TObject* owner)                            { return std::string(internal::TFindDialog_GetReplaceText(owner->Handle())); }
+void         TFindDialog::SetReplaceTextImpl(TObject* owner, const std::string& value) { internal::TFindDialog_SetReplaceText(owner->Handle(), value.c_str()); }
+TFindOptions TFindDialog::GetOptionsImpl(TObject* owner)                                { return internal::TFindDialog_GetOptions(owner->Handle()); }
+void         TFindDialog::SetOptionsImpl(TObject* owner, const TFindOptions& value)    { internal::TFindDialog_SetOptions(owner->Handle(), value); }
+int          TFindDialog::GetLeftImpl(TObject* owner)                                   { return internal::TFindDialog_GetLeft(owner->Handle()); }
+void         TFindDialog::SetLeftImpl(TObject* owner, const int& value)                { internal::TFindDialog_SetLeft(owner->Handle(), value); }
+int          TFindDialog::GetTopImpl(TObject* owner)                                    { return internal::TFindDialog_GetTop(owner->Handle()); }
+void         TFindDialog::SetTopImpl(TObject* owner, const int& value)                 { internal::TFindDialog_SetTop(owner->Handle(), value); }
+
+TNotifyEvent TFindDialog::GetOnFindImpl(TObject* owner)    { return static_cast<TFindDialog*>(owner)->onFind_; }
+TNotifyEvent TFindDialog::GetOnReplaceImpl(TObject* owner) { return static_cast<TFindDialog*>(owner)->onReplace_; }
+
+void TFindDialog::SetOnFindImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TFindDialog* self = static_cast<TFindDialog*>(owner);
+    SetSimpleEvent(self->handle_, self->onFind_, self->onFindHooked_, value,
+                   &internal::TFindDialog_SetOnFind, &TFindDialog::FindTrampoline);
+}
+
+void TFindDialog::SetOnReplaceImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TFindDialog* self = static_cast<TFindDialog*>(owner);
+    SetSimpleEvent(self->handle_, self->onReplace_, self->onReplaceHooked_, value,
+                   &internal::TFindDialog_SetOnReplace, &TFindDialog::ReplaceTrampoline);
+}
+
+void NO_VCL_CALL TFindDialog::FindTrampoline(ObjectHandle sender, void*)
+{
+    GuardCallback([&] {
+        TFindDialog* self = static_cast<TFindDialog*>(FromHandle(sender));
+        if (self)
+            CallNotify(TNotifyEvent(self->onFind_), self);
+    });
+}
+
+void NO_VCL_CALL TFindDialog::ReplaceTrampoline(ObjectHandle sender, void*)
+{
+    GuardCallback([&] {
+        TFindDialog* self = static_cast<TFindDialog*>(FromHandle(sender));
+        if (self)
+            CallNotify(TNotifyEvent(self->onReplace_), self);
+    });
+}
+
+TReplaceDialog::TReplaceDialog(TComponent* AOwner)
+    : TFindDialog(internal::TReplaceDialog_Create(HandleOf(AOwner)), DerivedTag())
+{}
 
 } // namespace no_vcl

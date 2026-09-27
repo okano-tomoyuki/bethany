@@ -535,6 +535,41 @@ class TMainForm(TForm):
         self.PopupMenu1.OnPopup = self.PopupMenu1Popup
         self.Panel1.PopupMenu = self.PopupMenu1
 
+        # Tier 4(ダイアログ)。VCL と同じく、フォームを Owner にして生成し、メニューから Execute する。
+        self.OpenDialog1 = TOpenDialog(self)
+        self.OpenDialog1.Title = "Open a text file"
+        self.OpenDialog1.Filter = "Text files (*.txt;*.md)|*.txt;*.md|All files (*.*)|*.*"
+        self.OpenDialog1.Options = self.OpenDialog1.Options | ofFileMustExist
+        self.OpenDialog1.OnShow = lambda Sender: pr(f"OpenDialog1 OnShow: Sender is OpenDialog1: {yn(Sender is self.OpenDialog1)}")
+        self.OpenDialog1.OnClose = lambda Sender: pr("OpenDialog1 OnClose")
+        self.OpenDialog1.OnCanClose = self.OpenDialog1CanClose
+        self.SaveDialog1 = TSaveDialog(self)
+        self.SaveDialog1.Filter = self.OpenDialog1.Filter
+        self.SaveDialog1.DefaultExt = "txt"
+        self.SaveDialog1.Options = self.SaveDialog1.Options | ofOverwritePrompt
+        self.SelectDirectoryDialog1 = TSelectDirectoryDialog(self)
+        self.ColorDialog1 = TColorDialog(self)
+        self.FontDialog1 = TFontDialog(self)
+        self.FindDialog1 = TFindDialog(self)
+        self.FindDialog1.OnFind = self.FindDialog1Find
+        self.ReplaceDialog1 = TReplaceDialog(self)
+        self.ReplaceDialog1.OnFind = self.FindDialog1Find
+        self.ReplaceDialog1.OnReplace = self.ReplaceDialog1Replace
+
+        self.DialogsMenu = TMenuItem(self)
+        self.DialogsMenu.Caption = "&Dialogs"
+        self.MainMenu1.Items.Add(self.DialogsMenu)
+        self.AddDialogItem("&Open... (into Memo1)", self.OpenItemClick)
+        self.AddDialogItem("&Save... (Memo1)", self.SaveItemClick)
+        self.AddDialogItem("Select &directory...", self.SelectDirectoryItemClick)
+        self.DialogsMenu.AddSeparator()
+        self.AddDialogItem("&Color... (Panel1)", self.ColorItemClick)
+        self.AddDialogItem("&Font... (Memo1)", self.FontItemClick)
+        self.DialogsMenu.AddSeparator()
+        # TFindDialog・TReplaceDialog はモードレス(Execute はすぐ戻り、ボタンが押されるたびに OnFind・OnReplace が呼ばれる)。
+        self.AddDialogItem("F&ind in Memo1...", lambda: self.FindDialog1.Execute())
+        self.AddDialogItem("&Replace in Memo1...", lambda: self.ReplaceDialog1.Execute())
+
         # TPageControl + TTabSheet。
         self.PageControl1 = TPageControl(self)
         self.PageControl1.Parent = self
@@ -1114,6 +1149,78 @@ class TMainForm(TForm):
     def PageControl1Change(self, Sender):
         pr(f"PageControl1Change: ActivePageIndex={Sender.ActivePageIndex} Caption={Sender.ActivePage.Caption}")
 
+    def AddDialogItem(self, caption, action):
+        item = TMenuItem(self)
+        item.Caption = caption
+        item.OnClick = lambda Sender: action()
+        self.DialogsMenu.Add(item)
+
+    def OpenDialog1CanClose(self, Sender, CanClose):
+        pr(f"OpenDialog1 OnCanClose: FileName={self.OpenDialog1.FileName}")
+        CanClose.value = True
+
+    def OpenItemClick(self):
+        # VCL と同じく、Execute が true を返したら FileName を使う。
+        if self.OpenDialog1.Execute():
+            self.Memo1.Lines.LoadFromFile(self.OpenDialog1.FileName)
+            pr(f"OpenDialog1: FileName={self.OpenDialog1.FileName}, Files->Count={self.OpenDialog1.Files.Count}, "
+               f"FilterIndex={self.OpenDialog1.FilterIndex}, Memo1 lines={self.Memo1.Lines.Count}")
+        else:
+            pr("OpenDialog1: cancelled")
+
+    def SaveItemClick(self):
+        if self.SaveDialog1.Execute():
+            self.Memo1.Lines.SaveToFile(self.SaveDialog1.FileName)
+            pr(f"SaveDialog1: saved to {self.SaveDialog1.FileName}")
+        else:
+            pr("SaveDialog1: cancelled")
+
+    def SelectDirectoryItemClick(self):
+        if self.SelectDirectoryDialog1.Execute():
+            pr(f"SelectDirectoryDialog1: {self.SelectDirectoryDialog1.FileName}")
+        else:
+            pr("SelectDirectoryDialog1: cancelled")
+
+    def ColorItemClick(self):
+        self.ColorDialog1.Color = self.Panel1.Color
+        if self.ColorDialog1.Execute():
+            self.Panel1.Color = self.ColorDialog1.Color
+            pr(f"ColorDialog1: Color={color(self.ColorDialog1.Color)}")
+        else:
+            pr("ColorDialog1: cancelled")
+
+    def FontItemClick(self):
+        self.FontDialog1.Font = self.Memo1.Font
+        if self.FontDialog1.Execute():
+            self.Memo1.Font = self.FontDialog1.Font
+            f = self.Memo1.Font
+            pr(f"FontDialog1: Name={f.Name} Size={f.Size} Style=0x{int(f.Style):x} Color={color(f.Color)}")
+        else:
+            pr("FontDialog1: cancelled")
+
+    # FindDialog1・ReplaceDialog1 の「次を検索」。Memo1 の文字列を FindText で探す(frMatchCase で大文字と小文字を区別する)。
+    def FindDialog1Find(self, Sender):
+        text = self.Memo1.Text
+        what = Sender.FindText
+        if not (Sender.Options & frMatchCase):
+            text, what = text.lower(), what.lower()
+        pos = text.find(what) if what else -1
+        name = "FindDialog1" if Sender is self.FindDialog1 else "ReplaceDialog1"
+        pr(f"{name} OnFind: FindText={Sender.FindText}, Options=0x{int(Sender.Options):x}, found at {pos}")
+
+    # ReplaceDialog1 の「置換」「すべて置換」。どちらが押されたかは Options の frReplace・frReplaceAll で分かる。
+    def ReplaceDialog1Replace(self, Sender):
+        text = self.Memo1.Text
+        what = self.ReplaceDialog1.FindText
+        with_ = self.ReplaceDialog1.ReplaceText
+        all_ = bool(self.ReplaceDialog1.Options & frReplaceAll)
+        count = 0
+        if what:
+            count = text.count(what) if all_ else min(1, text.count(what))
+            text = text.replace(what, with_, -1 if all_ else 1)
+        self.Memo1.Text = text
+        pr(f"ReplaceDialog1 OnReplace: {'all' if all_ else 'one'}, replaced {count}")
+
     def FileNewItemClick(self, Sender):
         pr(f"FileNewItemClick: Sender is FileNewItem: {yn(Sender is self.FileNewItem)}")
 
@@ -1228,7 +1335,7 @@ def main():
     root = f.MainMenu1.Items
     pr(f"Form1->Menu is MainMenu1: {yn(f.Menu is f.MainMenu1)}, Panel1->PopupMenu is PopupMenu1: {yn(f.Panel1.PopupMenu is f.PopupMenu1)}")
     # ルート項目のラッパーは初回アクセス時に作られ、以降は同じものが返る。
-    pr(f"MainMenu1->Items is the same wrapper each time: {yn(root is f.MainMenu1.Items)}, Count={root.Count} (expected 2)")
+    pr(f"MainMenu1->Items is the same wrapper each time: {yn(root is f.MainMenu1.Items)}, Count={root.Count} (expected 3: File, View, Dialogs)")
     pr(f"FileMenu->Parent is MainMenu1->Items: {yn(f.FileMenu.Parent is root)}, Items->Items[1] is ViewMenu: {yn(root.Items[1] is f.ViewMenu)}")
     # AddSeparator の区切り線も LCL が内部で生成した項目で、Items[i] で初めてラッパーができる。
     sep = f.FileMenu.Items[1]
@@ -1717,6 +1824,50 @@ def main():
     jpg.Free()
     os.remove(pngPath)
     os.remove(jpgPath)
+
+    # Tier 4(ダイアログ。docs/adr/0033)。Execute は "Dialogs" メニューから試す。ここでは既定値とプロパティを確かめる。
+    open_ = Form1.OpenDialog1
+    pr(f"OpenDialog1 Options has ofEnableSizing|ofViewDetail|ofFileMustExist: "
+       f"{yn(open_.Options == (ofEnableSizing | ofViewDetail | ofFileMustExist))}, FilterIndex={open_.FilterIndex} (expected 1), "
+       f"Title={open_.Title}")
+    pr(f"SaveDialog1 DefaultExt={Form1.SaveDialog1.DefaultExt} (expected .txt: LCL adds the dot), "
+       f"Options has ofOverwritePrompt: {yn(Form1.SaveDialog1.Options & ofOverwritePrompt)}, "
+       f"Files->Count={Form1.SaveDialog1.Files.Count} (expected 0)")
+    color_ = Form1.ColorDialog1
+    pr(f"ColorDialog1 Options={int(color_.Options)} (expected cdFullOpen={int(cdFullOpen)}), "
+       f"CustomColors->Count={color_.CustomColors.Count} (expected 20), "
+       f"Values[\"ColorB\"]={color_.CustomColors.Values['ColorB']} (expected 000080)")
+    color_.Color = clBlue
+    pr(f"ColorDialog1 Color={color(color_.Color)} (expected FF0000)")
+
+    # TControl::Color・Font(ダイアログの結果を適用する先)。
+    pr(f"Panel1 Color is clDefault: {yn(Form1.Panel1.Color == clDefault)}")
+    font = Form1.FontDialog1
+    font.Font.Name = "Arial"
+    font.Font.Size = 13
+    font.Font.Style = fsBold | fsItalic
+    Form1.Label1.Font = font.Font
+    lf = Form1.Label1.Font
+    pr(f"FontDialog1 Options={int(font.Options)} (expected fdEffects={int(fdEffects)}); Label1 Font after assignment: "
+       f"{lf.Name} {lf.Size} Style=0x{int(lf.Style):x} (expected Arial 13 0x3)")
+    # 代入(Assign)は内容のコピーなので、後から元を変えても写した先は変わらない。
+    font.Font.Size = 20
+    lf.Style = fsUnderline
+    pr(f"After changing the source: Label1 Font Size={lf.Size} (expected 13), Style=0x{int(lf.Style):x} (expected 0x4), "
+       f"FontDialog1 Font Style=0x{int(font.Font.Style):x} (expected 0x3)")
+    font.Font.Assign(lf)
+    pr(f"FontDialog1 Font->Assign(Label1->Font): Size={font.Font.Size} (expected 13)")
+
+    # TFindDialog・TReplaceDialog はモードレス。Execute はすぐ true を返し、CloseDialog で閉じる。
+    replace = Form1.ReplaceDialog1
+    replace.FindText = "apple"
+    replace.ReplaceText = "orange"
+    pr(f"FindDialog1 Options=0x{int(Form1.FindDialog1.Options):x} (expected frDown=0x1), "
+       f"ReplaceDialog1 Options has frReplace|frReplaceAll: "
+       f"{yn((replace.Options & (frReplace | frReplaceAll)) == (frReplace | frReplaceAll))}, "
+       f"FindText={replace.FindText}, ReplaceText={replace.ReplaceText}")
+    pr(f"FindDialog1 Execute (modeless) returned: {int(Form1.FindDialog1.Execute())} (expected 1)")
+    Form1.FindDialog1.CloseDialog()
 
     # 2 つ目以降に生成したフォームは MainForm にならない。
     subForm = TForm(Application)

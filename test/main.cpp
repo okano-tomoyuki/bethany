@@ -1,3 +1,4 @@
+#include <cctype>
 #include <cstdio>
 #include <stdexcept>
 #include <string>
@@ -185,6 +186,15 @@ public:
     int             pictureChanges_ = 0;
     TImageList*     ImageList1;
     int             imageListChanges_ = 0;
+    // Tier 4(ダイアログ。docs/adr/0033)。"Dialogs" メニューから Execute する。
+    TMenuItem*      DialogsMenu;
+    TOpenDialog*    OpenDialog1;
+    TSaveDialog*    SaveDialog1;
+    TSelectDirectoryDialog* SelectDirectoryDialog1;
+    TColorDialog*   ColorDialog1;
+    TFontDialog*    FontDialog1;
+    TFindDialog*    FindDialog1;
+    TReplaceDialog* ReplaceDialog1;
 
     // C++Builder と同じく Owner を受け取り、TForm に渡す(Application->CreateForm が Application を渡す)。
     explicit TMainForm(TComponent* AOwner) : TForm(AOwner)
@@ -638,6 +648,76 @@ public:
         PopupMenu1->Items->Add(PopupHelloItem);
         PopupMenu1->OnPopup = [this](TObject* Sender) { PopupMenu1Popup(Sender); };
         Panel1->PopupMenu = PopupMenu1;
+
+        // Tier 4(ダイアログ)。VCL と同じく、フォームを Owner にして生成し、メニューから Execute する。
+        OpenDialog1 = new TOpenDialog(this);
+        OpenDialog1->Title = "Open a text file";
+        OpenDialog1->Filter = "Text files (*.txt;*.md)|*.txt;*.md|All files (*.*)|*.*";
+        OpenDialog1->Options = OpenDialog1->Options | ofFileMustExist;
+        OpenDialog1->OnShow = [this](TObject* Sender) {
+            std::printf("OpenDialog1 OnShow: Sender is OpenDialog1: %s\n", Sender == OpenDialog1 ? "yes" : "no");
+            std::fflush(stdout);
+        };
+        OpenDialog1->OnClose = [](TObject*) { std::printf("OpenDialog1 OnClose\n"); std::fflush(stdout); };
+        OpenDialog1->OnCanClose = [this](TObject*, bool& CanClose) {
+            std::printf("OpenDialog1 OnCanClose: FileName=%s\n", std::string(OpenDialog1->FileName).c_str());
+            std::fflush(stdout);
+            CanClose = true;
+        };
+        SaveDialog1 = new TSaveDialog(this);
+        SaveDialog1->Filter = OpenDialog1->Filter;
+        SaveDialog1->DefaultExt = "txt";
+        SaveDialog1->Options = SaveDialog1->Options | ofOverwritePrompt;
+        SelectDirectoryDialog1 = new TSelectDirectoryDialog(this);
+        ColorDialog1 = new TColorDialog(this);
+        FontDialog1 = new TFontDialog(this);
+        FindDialog1 = new TFindDialog(this);
+        FindDialog1->OnFind = [this](TObject* Sender) { FindDialog1Find(Sender); };
+        ReplaceDialog1 = new TReplaceDialog(this);
+        ReplaceDialog1->OnFind = [this](TObject* Sender) { FindDialog1Find(Sender); };
+        ReplaceDialog1->OnReplace = [this](TObject* Sender) { ReplaceDialog1Replace(Sender); };
+
+        DialogsMenu = new TMenuItem(this);
+        DialogsMenu->Caption = "&Dialogs";
+        MainMenu1->Items->Add(DialogsMenu);
+        AddDialogItem("&Open... (into Memo1)", [this] { OpenItemClick(); });
+        AddDialogItem("&Save... (Memo1)", [this] { SaveItemClick(); });
+        AddDialogItem("Select &directory...", [this] {
+            if (SelectDirectoryDialog1->Execute())
+                std::printf("SelectDirectoryDialog1: %s\n", std::string(SelectDirectoryDialog1->FileName).c_str());
+            else
+                std::printf("SelectDirectoryDialog1: cancelled\n");
+            std::fflush(stdout);
+        });
+        DialogsMenu->AddSeparator();
+        AddDialogItem("&Color... (Panel1)", [this] {
+            ColorDialog1->Color = Panel1->Color;
+            if (ColorDialog1->Execute())
+            {
+                Panel1->Color = ColorDialog1->Color;
+                std::printf("ColorDialog1: Color=%06X\n", (unsigned)(TColor)ColorDialog1->Color);
+            }
+            else
+                std::printf("ColorDialog1: cancelled\n");
+            std::fflush(stdout);
+        });
+        AddDialogItem("&Font... (Memo1)", [this] {
+            FontDialog1->Font = Memo1->Font;
+            if (FontDialog1->Execute())
+            {
+                Memo1->Font = FontDialog1->Font;
+                std::printf("FontDialog1: Name=%s Size=%d Style=0x%x Color=%06X\n",
+                            std::string(Memo1->Font->Name).c_str(), (int)Memo1->Font->Size,
+                            (unsigned)(TFontStyles)Memo1->Font->Style, (unsigned)(TColor)Memo1->Font->Color);
+            }
+            else
+                std::printf("FontDialog1: cancelled\n");
+            std::fflush(stdout);
+        });
+        DialogsMenu->AddSeparator();
+        // TFindDialog・TReplaceDialog はモードレス(Execute はすぐ戻り、ボタンが押されるたびに OnFind・OnReplace が呼ばれる)。
+        AddDialogItem("F&ind in Memo1...", [this] { FindDialog1->Execute(); });
+        AddDialogItem("&Replace in Memo1...", [this] { ReplaceDialog1->Execute(); });
 
         // Tier 2、1 バッチ目(TPageControl + TTabSheet)。
         PageControl1 = new TPageControl(this);
@@ -1365,6 +1445,81 @@ private:
         std::fflush(stdout);
     }
 
+    void AddDialogItem(const char* caption, std::function<void()> action)
+    {
+        TMenuItem* item = new TMenuItem(this);
+        item->Caption = caption;
+        item->OnClick = [action](TObject*) { action(); };
+        DialogsMenu->Add(item);
+    }
+
+    void OpenItemClick()
+    {
+        // VCL と同じく、Execute が true を返したら FileName を使う。
+        if (OpenDialog1->Execute())
+        {
+            Memo1->Lines->LoadFromFile(OpenDialog1->FileName);
+            std::printf("OpenDialog1: FileName=%s, Files->Count=%d, FilterIndex=%d, Memo1 lines=%d\n",
+                        std::string(OpenDialog1->FileName).c_str(), (int)OpenDialog1->Files->Count,
+                        (int)OpenDialog1->FilterIndex, (int)Memo1->Lines->Count);
+        }
+        else
+            std::printf("OpenDialog1: cancelled\n");
+        std::fflush(stdout);
+    }
+
+    void SaveItemClick()
+    {
+        if (SaveDialog1->Execute())
+        {
+            Memo1->Lines->SaveToFile(SaveDialog1->FileName);
+            std::printf("SaveDialog1: saved to %s\n", std::string(SaveDialog1->FileName).c_str());
+        }
+        else
+            std::printf("SaveDialog1: cancelled\n");
+        std::fflush(stdout);
+    }
+
+    // FindDialog1・ReplaceDialog1 の「次を検索」。Memo1 の文字列を FindText で探す(frMatchCase で大文字と小文字を区別する)。
+    void FindDialog1Find(TObject* Sender)
+    {
+        TFindDialog* dialog = static_cast<TFindDialog*>(Sender);
+        std::string text = Memo1->Text;
+        std::string what = dialog->FindText;
+        if (!((TFindOptions)dialog->Options & frMatchCase))
+        {
+            for (char& c : text) c = (char)std::tolower((unsigned char)c);
+            for (char& c : what) c = (char)std::tolower((unsigned char)c);
+        }
+        std::string::size_type pos = what.empty() ? std::string::npos : text.find(what);
+        std::printf("%s OnFind: FindText=%s, Options=0x%x, found at %d\n",
+                    Sender == FindDialog1 ? "FindDialog1" : "ReplaceDialog1", std::string(dialog->FindText).c_str(),
+                    (unsigned)(TFindOptions)dialog->Options, pos == std::string::npos ? -1 : (int)pos);
+        std::fflush(stdout);
+    }
+
+    // ReplaceDialog1 の「置換」「すべて置換」。どちらが押されたかは Options の frReplace・frReplaceAll で分かる。
+    void ReplaceDialog1Replace(TObject*)
+    {
+        std::string text = Memo1->Text;
+        std::string what = ReplaceDialog1->FindText;
+        std::string with = ReplaceDialog1->ReplaceText;
+        bool all = ((TFindOptions)ReplaceDialog1->Options & frReplaceAll) != 0;
+        int count = 0;
+        std::string::size_type pos = 0;
+        while (!what.empty() && (pos = text.find(what, pos)) != std::string::npos)
+        {
+            text.replace(pos, what.size(), with);
+            pos += with.size();
+            ++count;
+            if (!all)
+                break;
+        }
+        Memo1->Text = text;
+        std::printf("ReplaceDialog1 OnReplace: %s, replaced %d\n", all ? "all" : "one", count);
+        std::fflush(stdout);
+    }
+
     void FileNewItemClick(TObject* Sender)
     {
         std::printf("FileNewItemClick: Sender is FileNewItem: %s\n", Sender == FileNewItem ? "yes" : "no");
@@ -1547,7 +1702,7 @@ int main()
         std::printf("Form1->Menu is MainMenu1: %s, Panel1->PopupMenu is PopupMenu1: %s\n",
                     f->Menu == f->MainMenu1 ? "yes" : "no", f->Panel1->PopupMenu == f->PopupMenu1 ? "yes" : "no");
         // ルート項目のラッパーは初回アクセス時に作られ、以降は同じものが返る。
-        std::printf("MainMenu1->Items is the same wrapper each time: %s, Count=%d (expected 2)\n",
+        std::printf("MainMenu1->Items is the same wrapper each time: %s, Count=%d (expected 3: File, View, Dialogs)\n",
                     root == (TMenuItem*)f->MainMenu1->Items ? "yes" : "no", (int)root->Count);
         std::printf("FileMenu->Parent is MainMenu1->Items: %s, Items->Items[1] is ViewMenu: %s\n",
                     f->FileMenu->Parent == root ? "yes" : "no", root->Items[1] == f->ViewMenu ? "yes" : "no");
@@ -2115,6 +2270,58 @@ int main()
         delete bmp;
         std::remove(pngPath);
         std::remove(jpgPath);
+    }
+
+    // Tier 4(ダイアログ。docs/adr/0033)。Execute は "Dialogs" メニューから試す。ここでは既定値とプロパティを確かめる。
+    {
+        TOpenDialog* open = Form1->OpenDialog1;
+        std::printf("OpenDialog1 Options has ofEnableSizing|ofViewDetail|ofFileMustExist: %s, FilterIndex=%d (expected 1), Title=%s\n",
+                    (TOpenOptions)open->Options == (ofEnableSizing | ofViewDetail | ofFileMustExist) ? "yes" : "no",
+                    (int)open->FilterIndex, std::string(open->Title).c_str());
+        std::printf("SaveDialog1 DefaultExt=%s (expected .txt: LCL adds the dot), Options has ofOverwritePrompt: %s, Files->Count=%d (expected 0)\n",
+                    std::string(Form1->SaveDialog1->DefaultExt).c_str(),
+                    ((TOpenOptions)Form1->SaveDialog1->Options & ofOverwritePrompt) ? "yes" : "no", (int)Form1->SaveDialog1->Files->Count);
+
+        TColorDialog* color = Form1->ColorDialog1;
+        std::printf("ColorDialog1 Options=%u (expected cdFullOpen=%u), CustomColors->Count=%d (expected 20), Values[\"ColorB\"]=%s (expected 000080)\n",
+                    (unsigned)(TColorDialogOptions)color->Options, (unsigned)cdFullOpen, (int)color->CustomColors->Count,
+                    std::string(color->CustomColors->Values["ColorB"]).c_str());
+        color->Color = clBlue;
+        std::printf("ColorDialog1 Color=%06X (expected FF0000)\n", (unsigned)(TColor)color->Color);
+
+        // TControl::Color・Font(ダイアログの結果を適用する先)。
+        std::printf("Panel1 Color is clDefault: %s\n", (TColor)Form1->Panel1->Color == clDefault ? "yes" : "no");
+        TFontDialog* font = Form1->FontDialog1;
+        font->Font->Name = "Arial";
+        font->Font->Size = 13;
+        font->Font->Style = fsBold | fsItalic;
+        TFont* before = font->Font;
+        Form1->Label1->Font = font->Font;
+        std::printf("FontDialog1 Options=%u (expected fdEffects=%u), same Font wrapper: %s; Label1 Font after assignment: %s %d Style=0x%x (expected Arial 13 0x3)\n",
+                    (unsigned)(TFontDialogOptions)font->Options, (unsigned)fdEffects, before == font->Font ? "yes" : "no",
+                    std::string(Form1->Label1->Font->Name).c_str(), (int)Form1->Label1->Font->Size,
+                    (unsigned)(TFontStyles)Form1->Label1->Font->Style);
+        // 代入(Assign)は内容のコピーなので、後から元を変えても写した先は変わらない。
+        font->Font->Size = 20;
+        Form1->Label1->Font->Style = fsUnderline;
+        std::printf("After changing the source: Label1 Font Size=%d (expected 13), Style=0x%x (expected 0x4), FontDialog1 Font Style=0x%x (expected 0x3)\n",
+                    (int)Form1->Label1->Font->Size, (unsigned)(TFontStyles)Form1->Label1->Font->Style,
+                    (unsigned)(TFontStyles)font->Font->Style);
+        font->Font->Assign(Form1->Label1->Font);
+        std::printf("FontDialog1 Font->Assign(Label1->Font): Size=%d (expected 13)\n", (int)font->Font->Size);
+
+        // TFindDialog・TReplaceDialog はモードレス。Execute はすぐ true を返し、CloseDialog で閉じる。
+        TReplaceDialog* replace = Form1->ReplaceDialog1;
+        replace->FindText = "apple";
+        replace->ReplaceText = "orange";
+        std::printf("FindDialog1 Options=0x%x (expected frDown=0x1), ReplaceDialog1 Options has frReplace|frReplaceAll: %s, "
+                    "FindText=%s, ReplaceText=%s\n",
+                    (unsigned)(TFindOptions)Form1->FindDialog1->Options,
+                    ((TFindOptions)replace->Options & (frReplace | frReplaceAll)) == (frReplace | frReplaceAll) ? "yes" : "no",
+                    std::string(replace->FindText).c_str(), std::string(replace->ReplaceText).c_str());
+        bool shown = Form1->FindDialog1->Execute();
+        std::printf("FindDialog1 Execute (modeless) returned: %d (expected 1)\n", shown);
+        Form1->FindDialog1->CloseDialog();
     }
 
     // 2 つ目以降に生成したフォームは MainForm にならない。

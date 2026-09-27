@@ -1138,6 +1138,58 @@ int main(void)
                itemsFreed - freedBefore);
     }
 
+    /* Tier 4(ダイアログ。docs/adr/0033)。TComponent なので Owner(フォーム)に破棄を任せる。
+       モーダルのダイアログの Execute は閉じるまで戻らないため、ここでは呼ばない(C++ のテストの "Dialogs" メニューから試す)。 */
+    {
+        obj_t openDialog = TOpenDialog_Create(form);
+        obj_t saveDialog = TSaveDialog_Create(form);
+        obj_t dirDialog = TSelectDirectoryDialog_Create(form);
+        obj_t colorDialog = TColorDialog_Create(form);
+        obj_t fontDialog = TFontDialog_Create(form);
+        obj_t findDialog = TFindDialog_Create(form);
+        obj_t replaceDialog = TReplaceDialog_Create(form);
+        obj_t dialogFont = TFontDialog_GetFont(fontDialog);
+
+        TCommonDialog_SetTitle(openDialog, "Open");
+        TFileDialog_SetFilter(openDialog, "Text|*.txt|All|*.*");
+        TFileDialog_SetFilterIndex(openDialog, 2);
+        TOpenDialog_SetOptions(openDialog, TOpenDialog_GetOptions(openDialog) | ofAllowMultiSelect);
+        printf("internal TOpenDialog Title=%s Filter=%s FilterIndex=%d (expected 2), Options=0x%x (expected 0x%x), Files Count=%d (expected 0)\n",
+               TCommonDialog_GetTitle(openDialog), TFileDialog_GetFilter(openDialog), TFileDialog_GetFilterIndex(openDialog),
+               TOpenDialog_GetOptions(openDialog), ofEnableSizing | ofViewDetail | ofAllowMultiSelect,
+               TStrings_GetCount(TFileDialog_GetFiles(openDialog)));
+        TFileDialog_SetDefaultExt(saveDialog, "txt");
+        TFileDialog_SetInitialDir(dirDialog, ".");
+        printf("internal TSaveDialog DefaultExt=%s (expected .txt), TSelectDirectoryDialog InitialDir=%s\n",
+               TFileDialog_GetDefaultExt(saveDialog), TFileDialog_GetInitialDir(dirDialog));
+
+        TColorDialog_SetColor(colorDialog, 0x00FF00);
+        printf("internal TColorDialog Color=%06X (expected 00FF00), Options=%u (expected cdFullOpen=1), CustomColors Count=%d (expected 20)\n",
+               (unsigned)TColorDialog_GetColor(colorDialog), TColorDialog_GetOptions(colorDialog),
+               TStrings_GetCount(TColorDialog_GetCustomColors(colorDialog)));
+
+        /* TFont の Style・Assign と、TControl の Color・Font。フォントの代入は内容のコピー。 */
+        TFont_SetName(dialogFont, "Arial");
+        TFont_SetStyle(dialogFont, fsBold | fsStrikeOut);
+        TFontDialog_SetOptions(fontDialog, TFontDialog_GetOptions(fontDialog) | fdLimitSize);
+        TFontDialog_SetMaxFontSize(fontDialog, 30);
+        TControl_SetFont(label, dialogFont);
+        TFont_SetStyle(dialogFont, 0);
+        printf("internal TFontDialog Options=0x%x (expected 0x%x), MaxFontSize=%d (expected 30); label Font %s Style=0x%x (expected Arial 0x9)\n",
+               TFontDialog_GetOptions(fontDialog), fdEffects | fdLimitSize, TFontDialog_GetMaxFontSize(fontDialog),
+               TFont_GetName(TControl_GetFont(label)), TFont_GetStyle(TControl_GetFont(label)));
+        TFont_Assign(dialogFont, TControl_GetFont(label));
+        TControl_SetColor(panel, clYellow);
+        printf("internal TFont_Assign: Style=0x%x (expected 0x9); panel Color=%06X (expected 00FFFF), button Color is clDefault: %s\n",
+               TFont_GetStyle(dialogFont), (unsigned)TControl_GetColor(panel), TControl_GetColor(button) == clDefault ? "yes" : "no");
+
+        TFindDialog_SetFindText(findDialog, "needle");
+        TFindDialog_SetOptions(findDialog, frDown | frMatchCase);
+        TFindDialog_SetReplaceText(replaceDialog, "thread");
+        printf("internal TFindDialog FindText=%s Options=0x%x (expected 0x21), TReplaceDialog ReplaceText=%s\n",
+               TFindDialog_GetFindText(findDialog), TFindDialog_GetOptions(findDialog), TFindDialog_GetReplaceText(replaceDialog));
+    }
+
     printf("Running (click the button, then close the window twice: the first close is blocked)...\n");
     fflush(stdout);
     /* MainForm を表示してメッセージループに入り、MainForm が閉じられると戻る。 */
@@ -1147,7 +1199,7 @@ int main(void)
     /* Application が所有するフォーム(と、フォームが所有するコントロール)をまとめて破棄する。
        呼ばなくても DLL の切り離し時に LCL が破棄するが、そのときは破棄通知が呼ばれない。 */
     TComponent_DestroyComponents(app);
-    printf("Clicks: %d, Freed components: %d (expected 76: form + 68 owned + 7 created inside LCL: 2 menu roots, a separator, 3 AddTabSheet pages and an EditLabel)\n", clickCount, freedCount);
+    printf("Clicks: %d, Freed components: %d (expected 83: form + 75 owned + 7 created inside LCL: 2 menu roots, a separator, 3 AddTabSheet pages and an EditLabel)\n", clickCount, freedCount);
     /* ツリービュー・リストビュー・ヘッダーコントロールの破棄に伴って、残りのノード(4 つ)・リストビューの項目(2 つ)と列(2 つ)・
        セクション(2 つ)・バンド(1 つ)も破棄通知が届く。 */
     printf("Items freed: %d (expected 17: tree 2 deleted + 4 with the tree view, list 1 item + 1 column deleted "
