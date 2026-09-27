@@ -2,6 +2,8 @@
 
 #include <cstdlib>
 
+#include "no_vcl_funcs.h"
+
 namespace no_vcl
 {
 
@@ -20,6 +22,83 @@ void SetSimpleEvent(no_vcl_obj_t handle, Event& slot, bool& hooked, const Event&
         hooked = true;
     }
 }
+
+// 直前のエラー(no_vcl_c.h)があれば、Exception として送出する(docs/adr/0031)。
+void ThrowIfLastError()
+{
+    if (!no_vcl_HasLastError())
+        return;
+    Exception e(no_vcl_GetLastErrorClassName(), no_vcl_GetLastErrorMessage());
+    no_vcl_ClearLastError();
+    throw e;
+}
+
+template<typename R>
+struct Checked
+{
+    template<typename F>
+    static R Call(F f)
+    {
+        R result = f();
+        ThrowIfLastError();
+        return result;
+    }
+};
+
+template<>
+struct Checked<void>
+{
+    template<typename F>
+    static void Call(F f)
+    {
+        f();
+        ThrowIfLastError();
+    }
+};
+
+// DLL から呼ばれるコールバック(トランポリン)の本体を包む。ハンドラから送出された例外は DLL の関数をまたいで伝えられないため、
+// ここで捕まえて no_vcl_SetCallbackError で知らせ、DLL 側で送出し直させる(docs/adr/0031)。
+// 正常に戻ったときは、ハンドラの中の呼び出しが残した直前のエラーをクリアする(外側の呼び出しの失敗と取り違えないため)。
+template<typename F>
+void GuardCallback(F f)
+{
+    try
+    {
+        f();
+    }
+    catch (const Exception& e)
+    {
+        no_vcl_SetCallbackError(e.ClassName().c_str(), e.Message.c_str());
+        return;
+    }
+    catch (const std::exception& e)
+    {
+        no_vcl_SetCallbackError("std::exception", e.what());
+        return;
+    }
+    catch (...)
+    {
+        no_vcl_SetCallbackError("", "unknown C++ exception");
+        return;
+    }
+    no_vcl_ClearLastError();
+}
+
+} // namespace
+
+// C API の各関数を、呼び出しの後に直前のエラーを確かめる版にしたもの(no_vcl_funcs.h の一覧から生成する)。
+// このファイルでは C API を nv:: 経由で呼ぶ。生の C API を使うのは、例外を送出してはならないデストラクタと、
+// TStrings 等の取得関数(Accessor)として関数ポインタを渡す箇所だけ。
+namespace nv
+{
+#define NO_VCL_CHECKED(ret, name, params, args) \
+    inline ret name params { return Checked<ret>::Call([&]() { return ::no_vcl_##name args; }); }
+NO_VCL_FUNCS(NO_VCL_CHECKED)
+#undef NO_VCL_CHECKED
+} // namespace nv
+
+namespace
+{
 
 // ハンドラの中でハンドラ自身を差し替えても実行中の std::function が破棄されないよう、コピーしてから呼ぶ。
 void CallNotify(const TNotifyEvent& handler, TObject* sender)
@@ -56,77 +135,77 @@ TStrings::TStrings(no_vcl_obj_t handle)
     handle_ = handle;
 }
 
-int  TStrings::Add(const std::string& S)                     { return no_vcl_TStrings_Add(Current(), S.c_str()); }
-int  TStrings::AddObject(const std::string& S, void* AObject) { return no_vcl_TStrings_AddObject(Current(), S.c_str(), AObject); }
-void TStrings::Insert(int Index, const std::string& S)       { no_vcl_TStrings_Insert(Current(), Index, S.c_str()); }
-void TStrings::Delete(int Index)                             { no_vcl_TStrings_Delete(Current(), Index); }
-void TStrings::Clear()                                       { no_vcl_TStrings_Clear(Current()); }
-int  TStrings::IndexOf(const std::string& S) const           { return no_vcl_TStrings_IndexOf(Current(), S.c_str()); }
-void TStrings::Exchange(int Index1, int Index2)              { no_vcl_TStrings_Exchange(Current(), Index1, Index2); }
-void TStrings::Move(int CurIndex, int NewIndex)              { no_vcl_TStrings_Move(Current(), CurIndex, NewIndex); }
-void TStrings::BeginUpdate()                                 { no_vcl_TStrings_BeginUpdate(Current()); }
-void TStrings::EndUpdate()                                   { no_vcl_TStrings_EndUpdate(Current()); }
-void TStrings::Assign(const TStrings* Source)                { no_vcl_TStrings_Assign(Current(), Source ? Source->Current() : nullptr); }
-void TStrings::AddStrings(const TStrings* Source)            { if (Source) no_vcl_TStrings_AddStrings(Current(), Source->Current()); }
-int  TStrings::IndexOfName(const std::string& Name) const     { return no_vcl_TStrings_IndexOfName(Current(), Name.c_str()); }
-void TStrings::LoadFromFile(const std::string& FileName)     { no_vcl_TStrings_LoadFromFile(Current(), FileName.c_str()); }
-void TStrings::SaveToFile(const std::string& FileName) const { no_vcl_TStrings_SaveToFile(Current(), FileName.c_str()); }
+int  TStrings::Add(const std::string& S)                     { return nv::TStrings_Add(Current(), S.c_str()); }
+int  TStrings::AddObject(const std::string& S, void* AObject) { return nv::TStrings_AddObject(Current(), S.c_str(), AObject); }
+void TStrings::Insert(int Index, const std::string& S)       { nv::TStrings_Insert(Current(), Index, S.c_str()); }
+void TStrings::Delete(int Index)                             { nv::TStrings_Delete(Current(), Index); }
+void TStrings::Clear()                                       { nv::TStrings_Clear(Current()); }
+int  TStrings::IndexOf(const std::string& S) const           { return nv::TStrings_IndexOf(Current(), S.c_str()); }
+void TStrings::Exchange(int Index1, int Index2)              { nv::TStrings_Exchange(Current(), Index1, Index2); }
+void TStrings::Move(int CurIndex, int NewIndex)              { nv::TStrings_Move(Current(), CurIndex, NewIndex); }
+void TStrings::BeginUpdate()                                 { nv::TStrings_BeginUpdate(Current()); }
+void TStrings::EndUpdate()                                   { nv::TStrings_EndUpdate(Current()); }
+void TStrings::Assign(const TStrings* Source)                { nv::TStrings_Assign(Current(), Source ? Source->Current() : nullptr); }
+void TStrings::AddStrings(const TStrings* Source)            { if (Source) nv::TStrings_AddStrings(Current(), Source->Current()); }
+int  TStrings::IndexOfName(const std::string& Name) const     { return nv::TStrings_IndexOfName(Current(), Name.c_str()); }
+void TStrings::LoadFromFile(const std::string& FileName)     { nv::TStrings_LoadFromFile(Current(), FileName.c_str()); }
+void TStrings::SaveToFile(const std::string& FileName) const { nv::TStrings_SaveToFile(Current(), FileName.c_str()); }
 
-int TStrings::GetCountImpl(TObject* owner) { return no_vcl_TStrings_GetCount(static_cast<TStrings*>(owner)->Current()); }
+int TStrings::GetCountImpl(TObject* owner) { return nv::TStrings_GetCount(static_cast<TStrings*>(owner)->Current()); }
 std::string TStrings::GetStringsImpl(TObject* owner, int Index)
 {
-    return std::string(no_vcl_TStrings_GetStrings(static_cast<TStrings*>(owner)->Current(), Index));
+    return std::string(nv::TStrings_GetStrings(static_cast<TStrings*>(owner)->Current(), Index));
 }
 void TStrings::SetStringsImpl(TObject* owner, int Index, const std::string& value)
 {
-    no_vcl_TStrings_SetStrings(static_cast<TStrings*>(owner)->Current(), Index, value.c_str());
+    nv::TStrings_SetStrings(static_cast<TStrings*>(owner)->Current(), Index, value.c_str());
 }
-void* TStrings::GetObjectsImpl(TObject* owner, int Index) { return no_vcl_TStrings_GetObjects(static_cast<TStrings*>(owner)->Current(), Index); }
+void* TStrings::GetObjectsImpl(TObject* owner, int Index) { return nv::TStrings_GetObjects(static_cast<TStrings*>(owner)->Current(), Index); }
 void TStrings::SetObjectsImpl(TObject* owner, int Index, void* const& value)
 {
-    no_vcl_TStrings_SetObjects(static_cast<TStrings*>(owner)->Current(), Index, value);
+    nv::TStrings_SetObjects(static_cast<TStrings*>(owner)->Current(), Index, value);
 }
-std::string TStrings::GetTextImpl(TObject* owner) { return std::string(no_vcl_TStrings_GetText(static_cast<TStrings*>(owner)->Current())); }
-void TStrings::SetTextImpl(TObject* owner, const std::string& value) { no_vcl_TStrings_SetText(static_cast<TStrings*>(owner)->Current(), value.c_str()); }
-std::string TStrings::GetCommaTextImpl(TObject* owner) { return std::string(no_vcl_TStrings_GetCommaText(static_cast<TStrings*>(owner)->Current())); }
-void TStrings::SetCommaTextImpl(TObject* owner, const std::string& value) { no_vcl_TStrings_SetCommaText(static_cast<TStrings*>(owner)->Current(), value.c_str()); }
+std::string TStrings::GetTextImpl(TObject* owner) { return std::string(nv::TStrings_GetText(static_cast<TStrings*>(owner)->Current())); }
+void TStrings::SetTextImpl(TObject* owner, const std::string& value) { nv::TStrings_SetText(static_cast<TStrings*>(owner)->Current(), value.c_str()); }
+std::string TStrings::GetCommaTextImpl(TObject* owner) { return std::string(nv::TStrings_GetCommaText(static_cast<TStrings*>(owner)->Current())); }
+void TStrings::SetCommaTextImpl(TObject* owner, const std::string& value) { nv::TStrings_SetCommaText(static_cast<TStrings*>(owner)->Current(), value.c_str()); }
 std::string TStrings::GetNamesImpl(TObject* owner, int Index)
 {
-    return std::string(no_vcl_TStrings_GetNames(static_cast<TStrings*>(owner)->Current(), Index));
+    return std::string(nv::TStrings_GetNames(static_cast<TStrings*>(owner)->Current(), Index));
 }
 std::string TStrings::GetValuesImpl(TObject* owner, std::string Name)
 {
-    return std::string(no_vcl_TStrings_GetValues(static_cast<TStrings*>(owner)->Current(), Name.c_str()));
+    return std::string(nv::TStrings_GetValues(static_cast<TStrings*>(owner)->Current(), Name.c_str()));
 }
 void TStrings::SetValuesImpl(TObject* owner, std::string Name, const std::string& value)
 {
-    no_vcl_TStrings_SetValues(static_cast<TStrings*>(owner)->Current(), Name.c_str(), value.c_str());
+    nv::TStrings_SetValues(static_cast<TStrings*>(owner)->Current(), Name.c_str(), value.c_str());
 }
 std::string TStrings::GetValueFromIndexImpl(TObject* owner, int Index)
 {
-    return std::string(no_vcl_TStrings_GetValueFromIndex(static_cast<TStrings*>(owner)->Current(), Index));
+    return std::string(nv::TStrings_GetValueFromIndex(static_cast<TStrings*>(owner)->Current(), Index));
 }
 void TStrings::SetValueFromIndexImpl(TObject* owner, int Index, const std::string& value)
 {
-    no_vcl_TStrings_SetValueFromIndex(static_cast<TStrings*>(owner)->Current(), Index, value.c_str());
+    nv::TStrings_SetValueFromIndex(static_cast<TStrings*>(owner)->Current(), Index, value.c_str());
 }
-char TStrings::GetDelimiterImpl(TObject* owner) { return no_vcl_TStrings_GetDelimiter(static_cast<TStrings*>(owner)->Current()); }
-void TStrings::SetDelimiterImpl(TObject* owner, const char& value) { no_vcl_TStrings_SetDelimiter(static_cast<TStrings*>(owner)->Current(), value); }
-bool TStrings::GetStrictDelimiterImpl(TObject* owner) { return no_vcl_TStrings_GetStrictDelimiter(static_cast<TStrings*>(owner)->Current()) != 0; }
+char TStrings::GetDelimiterImpl(TObject* owner) { return nv::TStrings_GetDelimiter(static_cast<TStrings*>(owner)->Current()); }
+void TStrings::SetDelimiterImpl(TObject* owner, const char& value) { nv::TStrings_SetDelimiter(static_cast<TStrings*>(owner)->Current(), value); }
+bool TStrings::GetStrictDelimiterImpl(TObject* owner) { return nv::TStrings_GetStrictDelimiter(static_cast<TStrings*>(owner)->Current()) != 0; }
 void TStrings::SetStrictDelimiterImpl(TObject* owner, const bool& value)
 {
-    no_vcl_TStrings_SetStrictDelimiter(static_cast<TStrings*>(owner)->Current(), value ? 1 : 0);
+    nv::TStrings_SetStrictDelimiter(static_cast<TStrings*>(owner)->Current(), value ? 1 : 0);
 }
-std::string TStrings::GetDelimitedTextImpl(TObject* owner) { return std::string(no_vcl_TStrings_GetDelimitedText(static_cast<TStrings*>(owner)->Current())); }
+std::string TStrings::GetDelimitedTextImpl(TObject* owner) { return std::string(nv::TStrings_GetDelimitedText(static_cast<TStrings*>(owner)->Current())); }
 void TStrings::SetDelimitedTextImpl(TObject* owner, const std::string& value)
 {
-    no_vcl_TStrings_SetDelimitedText(static_cast<TStrings*>(owner)->Current(), value.c_str());
+    nv::TStrings_SetDelimitedText(static_cast<TStrings*>(owner)->Current(), value.c_str());
 }
 
 /* ---------------- TStringList ---------------- */
 
 TStringList::TStringList()
-    : TStrings(no_vcl_TStringList_Create())
+    : TStrings(nv::TStringList_Create())
     , Sorted(this, &TStringList::GetSortedImpl, &TStringList::SetSortedImpl)
     , Duplicates(this, &TStringList::GetDuplicatesImpl, &TStringList::SetDuplicatesImpl)
     , CaseSensitive(this, &TStringList::GetCaseSensitiveImpl, &TStringList::SetCaseSensitiveImpl)
@@ -137,22 +216,22 @@ TStringList::~TStringList()
     no_vcl_TStringList_Destroy(handle_);
 }
 
-void TStringList::Sort() { no_vcl_TStringList_Sort(handle_); }
+void TStringList::Sort() { nv::TStringList_Sort(handle_); }
 
 bool TStringList::Find(const std::string& S, int& Index) const
 {
     no_vcl_int_t index = -1;
-    bool found = no_vcl_TStringList_Find(handle_, S.c_str(), &index) != 0;
+    bool found = nv::TStringList_Find(handle_, S.c_str(), &index) != 0;
     Index = index;
     return found;
 }
 
-bool TStringList::GetSortedImpl(TObject* owner) { return no_vcl_TStringList_GetSorted(owner->Handle()) != 0; }
-void TStringList::SetSortedImpl(TObject* owner, const bool& value) { no_vcl_TStringList_SetSorted(owner->Handle(), value ? 1 : 0); }
-TDuplicates TStringList::GetDuplicatesImpl(TObject* owner) { return static_cast<TDuplicates>(no_vcl_TStringList_GetDuplicates(owner->Handle())); }
-void TStringList::SetDuplicatesImpl(TObject* owner, const TDuplicates& value) { no_vcl_TStringList_SetDuplicates(owner->Handle(), value); }
-bool TStringList::GetCaseSensitiveImpl(TObject* owner) { return no_vcl_TStringList_GetCaseSensitive(owner->Handle()) != 0; }
-void TStringList::SetCaseSensitiveImpl(TObject* owner, const bool& value) { no_vcl_TStringList_SetCaseSensitive(owner->Handle(), value ? 1 : 0); }
+bool TStringList::GetSortedImpl(TObject* owner) { return nv::TStringList_GetSorted(owner->Handle()) != 0; }
+void TStringList::SetSortedImpl(TObject* owner, const bool& value) { nv::TStringList_SetSorted(owner->Handle(), value ? 1 : 0); }
+TDuplicates TStringList::GetDuplicatesImpl(TObject* owner) { return static_cast<TDuplicates>(nv::TStringList_GetDuplicates(owner->Handle())); }
+void TStringList::SetDuplicatesImpl(TObject* owner, const TDuplicates& value) { nv::TStringList_SetDuplicates(owner->Handle(), value); }
+bool TStringList::GetCaseSensitiveImpl(TObject* owner) { return nv::TStringList_GetCaseSensitive(owner->Handle()) != 0; }
+void TStringList::SetCaseSensitiveImpl(TObject* owner, const bool& value) { nv::TStringList_SetCaseSensitive(owner->Handle(), value ? 1 : 0); }
 
 /* ---------------- TComponent ---------------- */
 
@@ -162,7 +241,7 @@ TComponent::TComponent(no_vcl_obj_t handle)
     static bool callbackInstalled = false;
     if (!callbackInstalled)
     {
-        no_vcl_FreeNotify_SetCallback(&TComponent::FreeNotifyTrampoline, nullptr);
+        nv::FreeNotify_SetCallback(&TComponent::FreeNotifyTrampoline, nullptr);
         callbackInstalled = true;
     }
 
@@ -183,20 +262,22 @@ TComponent::~TComponent()
 
 void TComponent::Free()
 {
-    no_vcl_TComponent_Destroy(handle_);
+    nv::TComponent_Destroy(handle_);
 }
 
 void NO_VCL_CALL TComponent::FreeNotifyTrampoline(no_vcl_obj_t handle, void*)
 {
-    std::unordered_map<no_vcl_obj_t, TComponent*>& registry = Registry();
-    auto it = registry.find(handle);
-    if (it == registry.end())
-        return;
+    GuardCallback([&] {
+        std::unordered_map<no_vcl_obj_t, TComponent*>& registry = Registry();
+        auto it = registry.find(handle);
+        if (it == registry.end())
+            return;
 
-    TComponent* self = it->second;
-    registry.erase(it);
-    self->freedByLcl_ = true;
-    delete self;
+        TComponent* self = it->second;
+        registry.erase(it);
+        self->freedByLcl_ = true;
+        delete self;
+    });
 }
 
 std::unordered_map<no_vcl_obj_t, TComponent*>& TComponent::Registry()
@@ -239,8 +320,8 @@ TControl::TControl(no_vcl_obj_t handle)
     , Text(this, &TControl::GetTextImpl, &TControl::SetTextImpl)
 {}
 
-void TControl::Show() { no_vcl_TControl_Show(handle_); }
-void TControl::Hide() { no_vcl_TControl_Hide(handle_); }
+void TControl::Show() { nv::TControl_Show(handle_); }
+void TControl::Hide() { nv::TControl_Hide(handle_); }
 
 // イベントの実装はどれも同じ形:
 //   Setter  - ハンドラを保持し、最初に空でないハンドラが設定されたときだけ Pascal 側のブリッジを登録する。
@@ -258,18 +339,20 @@ void TControl::SetOnClickImpl(TObject* owner, const TNotifyEvent& value)
     self->onClick_ = value;
     if (value && !self->onClickHooked_)
     {
-        no_vcl_TControl_SetOnClick(self->handle_, &TControl::ClickTrampoline, nullptr);
+        nv::TControl_SetOnClick(self->handle_, &TControl::ClickTrampoline, nullptr);
         self->onClickHooked_ = true;
     }
 }
 
 void NO_VCL_CALL TControl::ClickTrampoline(no_vcl_obj_t sender, void*)
 {
-    TControl* self = static_cast<TControl*>(FromHandle(sender));
-    if (!self || !self->onClick_)
-        return;
-    TNotifyEvent handler = self->onClick_;
-    handler(self);
+    GuardCallback([&] {
+        TControl* self = static_cast<TControl*>(FromHandle(sender));
+        if (!self || !self->onClick_)
+            return;
+        TNotifyEvent handler = self->onClick_;
+        handler(self);
+    });
 }
 
 TWinControl* TControl::GetParentImpl(TObject* owner)
@@ -277,60 +360,60 @@ TWinControl* TControl::GetParentImpl(TObject* owner)
     // LCL の Parent は常に TWinControl 派生で、C++ 側の階層も LCL の部分列なので、
     // そのハンドルに登録されたラッパーは TWinControl 派生であることが保証される。
     // C++ ラッパーを介さずに作られた親の場合は nullptr になる。
-    return static_cast<TWinControl*>(FromHandle(no_vcl_TControl_GetParent(owner->Handle())));
+    return static_cast<TWinControl*>(FromHandle(nv::TControl_GetParent(owner->Handle())));
 }
 
 void TControl::SetParentImpl(TObject* owner, TWinControl* const& value)
 {
-    no_vcl_TControl_SetParent(owner->Handle(), HandleOf(value));
+    nv::TControl_SetParent(owner->Handle(), HandleOf(value));
 }
 
-int  TControl::GetLeftImpl(TObject* owner)                      { return no_vcl_TControl_GetLeft(owner->Handle()); }
-void TControl::SetLeftImpl(TObject* owner, const int& value)    { no_vcl_TControl_SetLeft(owner->Handle(), value); }
-int  TControl::GetTopImpl(TObject* owner)                       { return no_vcl_TControl_GetTop(owner->Handle()); }
-void TControl::SetTopImpl(TObject* owner, const int& value)     { no_vcl_TControl_SetTop(owner->Handle(), value); }
-int  TControl::GetWidthImpl(TObject* owner)                     { return no_vcl_TControl_GetWidth(owner->Handle()); }
-void TControl::SetWidthImpl(TObject* owner, const int& value)   { no_vcl_TControl_SetWidth(owner->Handle(), value); }
-int  TControl::GetHeightImpl(TObject* owner)                    { return no_vcl_TControl_GetHeight(owner->Handle()); }
-void TControl::SetHeightImpl(TObject* owner, const int& value)  { no_vcl_TControl_SetHeight(owner->Handle(), value); }
-bool TControl::GetVisibleImpl(TObject* owner)                   { return no_vcl_TControl_GetVisible(owner->Handle()) != 0; }
-void TControl::SetVisibleImpl(TObject* owner, const bool& value){ no_vcl_TControl_SetVisible(owner->Handle(), value ? 1 : 0); }
-bool TControl::GetEnabledImpl(TObject* owner)                   { return no_vcl_TControl_GetEnabled(owner->Handle()) != 0; }
-void TControl::SetEnabledImpl(TObject* owner, const bool& value){ no_vcl_TControl_SetEnabled(owner->Handle(), value ? 1 : 0); }
+int  TControl::GetLeftImpl(TObject* owner)                      { return nv::TControl_GetLeft(owner->Handle()); }
+void TControl::SetLeftImpl(TObject* owner, const int& value)    { nv::TControl_SetLeft(owner->Handle(), value); }
+int  TControl::GetTopImpl(TObject* owner)                       { return nv::TControl_GetTop(owner->Handle()); }
+void TControl::SetTopImpl(TObject* owner, const int& value)     { nv::TControl_SetTop(owner->Handle(), value); }
+int  TControl::GetWidthImpl(TObject* owner)                     { return nv::TControl_GetWidth(owner->Handle()); }
+void TControl::SetWidthImpl(TObject* owner, const int& value)   { nv::TControl_SetWidth(owner->Handle(), value); }
+int  TControl::GetHeightImpl(TObject* owner)                    { return nv::TControl_GetHeight(owner->Handle()); }
+void TControl::SetHeightImpl(TObject* owner, const int& value)  { nv::TControl_SetHeight(owner->Handle(), value); }
+bool TControl::GetVisibleImpl(TObject* owner)                   { return nv::TControl_GetVisible(owner->Handle()) != 0; }
+void TControl::SetVisibleImpl(TObject* owner, const bool& value){ nv::TControl_SetVisible(owner->Handle(), value ? 1 : 0); }
+bool TControl::GetEnabledImpl(TObject* owner)                   { return nv::TControl_GetEnabled(owner->Handle()) != 0; }
+void TControl::SetEnabledImpl(TObject* owner, const bool& value){ nv::TControl_SetEnabled(owner->Handle(), value ? 1 : 0); }
 
 std::string TControl::GetCaptionImpl(TObject* owner)
 {
-    return std::string(no_vcl_TControl_GetCaption(owner->Handle()));
+    return std::string(nv::TControl_GetCaption(owner->Handle()));
 }
 
 void TControl::SetCaptionImpl(TObject* owner, const std::string& value)
 {
-    no_vcl_TControl_SetCaption(owner->Handle(), value.c_str());
+    nv::TControl_SetCaption(owner->Handle(), value.c_str());
 }
 
-TAlign TControl::GetAlignImpl(TObject* owner)                  { return static_cast<TAlign>(no_vcl_TControl_GetAlign(owner->Handle())); }
-void   TControl::SetAlignImpl(TObject* owner, const TAlign& value) { no_vcl_TControl_SetAlign(owner->Handle(), value); }
-bool   TControl::GetAutoSizeImpl(TObject* owner)                  { return no_vcl_TControl_GetAutoSize(owner->Handle()) != 0; }
-void   TControl::SetAutoSizeImpl(TObject* owner, const bool& value) { no_vcl_TControl_SetAutoSize(owner->Handle(), value ? 1 : 0); }
+TAlign TControl::GetAlignImpl(TObject* owner)                  { return static_cast<TAlign>(nv::TControl_GetAlign(owner->Handle())); }
+void   TControl::SetAlignImpl(TObject* owner, const TAlign& value) { nv::TControl_SetAlign(owner->Handle(), value); }
+bool   TControl::GetAutoSizeImpl(TObject* owner)                  { return nv::TControl_GetAutoSize(owner->Handle()) != 0; }
+void   TControl::SetAutoSizeImpl(TObject* owner, const bool& value) { nv::TControl_SetAutoSize(owner->Handle(), value ? 1 : 0); }
 
 TPopupMenu* TControl::GetPopupMenuImpl(TObject* owner)
 {
-    return static_cast<TPopupMenu*>(FromHandle(no_vcl_TControl_GetPopupMenu(owner->Handle())));
+    return static_cast<TPopupMenu*>(FromHandle(nv::TControl_GetPopupMenu(owner->Handle())));
 }
 
 void TControl::SetPopupMenuImpl(TObject* owner, TPopupMenu* const& value)
 {
-    no_vcl_TControl_SetPopupMenu(owner->Handle(), HandleOf(value));
+    nv::TControl_SetPopupMenu(owner->Handle(), HandleOf(value));
 }
 
 std::string TControl::GetTextImpl(TObject* owner)
 {
-    return std::string(no_vcl_TControl_GetText(owner->Handle()));
+    return std::string(nv::TControl_GetText(owner->Handle()));
 }
 
 void TControl::SetTextImpl(TObject* owner, const std::string& value)
 {
-    no_vcl_TControl_SetText(owner->Handle(), value.c_str());
+    nv::TControl_SetText(owner->Handle(), value.c_str());
 }
 
 TNotifyEvent TControl::GetOnDblClickImpl(TObject* owner)   { return static_cast<TControl*>(owner)->onDblClick_; }
@@ -376,7 +459,7 @@ void TControl::SetOnMouseDownImpl(TObject* owner, const TMouseEvent& value)
     self->onMouseDown_ = value;
     if (value && !self->onMouseDownHooked_)
     {
-        no_vcl_TControl_SetOnMouseDown(self->handle_, &TControl::MouseDownTrampoline, nullptr);
+        nv::TControl_SetOnMouseDown(self->handle_, &TControl::MouseDownTrampoline, nullptr);
         self->onMouseDownHooked_ = true;
     }
 }
@@ -387,7 +470,7 @@ void TControl::SetOnMouseUpImpl(TObject* owner, const TMouseEvent& value)
     self->onMouseUp_ = value;
     if (value && !self->onMouseUpHooked_)
     {
-        no_vcl_TControl_SetOnMouseUp(self->handle_, &TControl::MouseUpTrampoline, nullptr);
+        nv::TControl_SetOnMouseUp(self->handle_, &TControl::MouseUpTrampoline, nullptr);
         self->onMouseUpHooked_ = true;
     }
 }
@@ -398,7 +481,7 @@ void TControl::SetOnMouseMoveImpl(TObject* owner, const TMouseMoveEvent& value)
     self->onMouseMove_ = value;
     if (value && !self->onMouseMoveHooked_)
     {
-        no_vcl_TControl_SetOnMouseMove(self->handle_, &TControl::MouseMoveTrampoline, nullptr);
+        nv::TControl_SetOnMouseMove(self->handle_, &TControl::MouseMoveTrampoline, nullptr);
         self->onMouseMoveHooked_ = true;
     }
 }
@@ -409,71 +492,87 @@ void TControl::SetOnMouseWheelImpl(TObject* owner, const TMouseWheelEvent& value
     self->onMouseWheel_ = value;
     if (value && !self->onMouseWheelHooked_)
     {
-        no_vcl_TControl_SetOnMouseWheel(self->handle_, &TControl::MouseWheelTrampoline, nullptr);
+        nv::TControl_SetOnMouseWheel(self->handle_, &TControl::MouseWheelTrampoline, nullptr);
         self->onMouseWheelHooked_ = true;
     }
 }
 
 void NO_VCL_CALL TControl::DblClickTrampoline(no_vcl_obj_t sender, void*)
 {
-    if (TControl* self = static_cast<TControl*>(FromHandle(sender)))
-        CallNotify(self->onDblClick_, self);
+    GuardCallback([&] {
+        if (TControl* self = static_cast<TControl*>(FromHandle(sender)))
+            CallNotify(self->onDblClick_, self);
+    });
 }
 
 void NO_VCL_CALL TControl::ResizeTrampoline(no_vcl_obj_t sender, void*)
 {
-    if (TControl* self = static_cast<TControl*>(FromHandle(sender)))
-        CallNotify(self->onResize_, self);
+    GuardCallback([&] {
+        if (TControl* self = static_cast<TControl*>(FromHandle(sender)))
+            CallNotify(self->onResize_, self);
+    });
 }
 
 void NO_VCL_CALL TControl::MouseEnterTrampoline(no_vcl_obj_t sender, void*)
 {
-    if (TControl* self = static_cast<TControl*>(FromHandle(sender)))
-        CallNotify(self->onMouseEnter_, self);
+    GuardCallback([&] {
+        if (TControl* self = static_cast<TControl*>(FromHandle(sender)))
+            CallNotify(self->onMouseEnter_, self);
+    });
 }
 
 void NO_VCL_CALL TControl::MouseLeaveTrampoline(no_vcl_obj_t sender, void*)
 {
-    if (TControl* self = static_cast<TControl*>(FromHandle(sender)))
-        CallNotify(self->onMouseLeave_, self);
+    GuardCallback([&] {
+        if (TControl* self = static_cast<TControl*>(FromHandle(sender)))
+            CallNotify(self->onMouseLeave_, self);
+    });
 }
 
 void NO_VCL_CALL TControl::MouseDownTrampoline(no_vcl_obj_t sender, no_vcl_int_t button, no_vcl_int_t shift, no_vcl_int_t x, no_vcl_int_t y, void*)
 {
-    TControl* self = static_cast<TControl*>(FromHandle(sender));
-    if (!self || !self->onMouseDown_)
-        return;
-    TMouseEvent handler = self->onMouseDown_;
-    handler(self, static_cast<TMouseButton>(button), static_cast<TShiftState>(shift), x, y);
+    GuardCallback([&] {
+        TControl* self = static_cast<TControl*>(FromHandle(sender));
+        if (!self || !self->onMouseDown_)
+            return;
+        TMouseEvent handler = self->onMouseDown_;
+        handler(self, static_cast<TMouseButton>(button), static_cast<TShiftState>(shift), x, y);
+    });
 }
 
 void NO_VCL_CALL TControl::MouseUpTrampoline(no_vcl_obj_t sender, no_vcl_int_t button, no_vcl_int_t shift, no_vcl_int_t x, no_vcl_int_t y, void*)
 {
-    TControl* self = static_cast<TControl*>(FromHandle(sender));
-    if (!self || !self->onMouseUp_)
-        return;
-    TMouseEvent handler = self->onMouseUp_;
-    handler(self, static_cast<TMouseButton>(button), static_cast<TShiftState>(shift), x, y);
+    GuardCallback([&] {
+        TControl* self = static_cast<TControl*>(FromHandle(sender));
+        if (!self || !self->onMouseUp_)
+            return;
+        TMouseEvent handler = self->onMouseUp_;
+        handler(self, static_cast<TMouseButton>(button), static_cast<TShiftState>(shift), x, y);
+    });
 }
 
 void NO_VCL_CALL TControl::MouseMoveTrampoline(no_vcl_obj_t sender, no_vcl_int_t shift, no_vcl_int_t x, no_vcl_int_t y, void*)
 {
-    TControl* self = static_cast<TControl*>(FromHandle(sender));
-    if (!self || !self->onMouseMove_)
-        return;
-    TMouseMoveEvent handler = self->onMouseMove_;
-    handler(self, static_cast<TShiftState>(shift), x, y);
+    GuardCallback([&] {
+        TControl* self = static_cast<TControl*>(FromHandle(sender));
+        if (!self || !self->onMouseMove_)
+            return;
+        TMouseMoveEvent handler = self->onMouseMove_;
+        handler(self, static_cast<TShiftState>(shift), x, y);
+    });
 }
 
 void NO_VCL_CALL TControl::MouseWheelTrampoline(no_vcl_obj_t sender, no_vcl_int_t shift, no_vcl_int_t wheelDelta, no_vcl_int_t x, no_vcl_int_t y, no_vcl_bool_t* handled, void*)
 {
-    TControl* self = static_cast<TControl*>(FromHandle(sender));
-    if (!self || !self->onMouseWheel_)
-        return;
-    TMouseWheelEvent handler = self->onMouseWheel_;
-    bool handledValue = *handled != 0;
-    handler(self, static_cast<TShiftState>(shift), wheelDelta, x, y, handledValue);
-    *handled = handledValue ? 1 : 0;
+    GuardCallback([&] {
+        TControl* self = static_cast<TControl*>(FromHandle(sender));
+        if (!self || !self->onMouseWheel_)
+            return;
+        TMouseWheelEvent handler = self->onMouseWheel_;
+        bool handledValue = *handled != 0;
+        handler(self, static_cast<TShiftState>(shift), wheelDelta, x, y, handledValue);
+        *handled = handledValue ? 1 : 0;
+    });
 }
 
 /* ---------------- TWinControl ---------------- */
@@ -495,7 +594,7 @@ void TWinControl::SetOnKeyDownImpl(TObject* owner, const TKeyEvent& value)
     self->onKeyDown_ = value;
     if (value && !self->onKeyDownHooked_)
     {
-        no_vcl_TWinControl_SetOnKeyDown(self->handle_, &TWinControl::KeyDownTrampoline, nullptr);
+        nv::TWinControl_SetOnKeyDown(self->handle_, &TWinControl::KeyDownTrampoline, nullptr);
         self->onKeyDownHooked_ = true;
     }
 }
@@ -506,7 +605,7 @@ void TWinControl::SetOnKeyUpImpl(TObject* owner, const TKeyEvent& value)
     self->onKeyUp_ = value;
     if (value && !self->onKeyUpHooked_)
     {
-        no_vcl_TWinControl_SetOnKeyUp(self->handle_, &TWinControl::KeyUpTrampoline, nullptr);
+        nv::TWinControl_SetOnKeyUp(self->handle_, &TWinControl::KeyUpTrampoline, nullptr);
         self->onKeyUpHooked_ = true;
     }
 }
@@ -517,42 +616,48 @@ void TWinControl::SetOnKeyPressImpl(TObject* owner, const TKeyPressEvent& value)
     self->onKeyPress_ = value;
     if (value && !self->onKeyPressHooked_)
     {
-        no_vcl_TWinControl_SetOnKeyPress(self->handle_, &TWinControl::KeyPressTrampoline, nullptr);
+        nv::TWinControl_SetOnKeyPress(self->handle_, &TWinControl::KeyPressTrampoline, nullptr);
         self->onKeyPressHooked_ = true;
     }
 }
 
 void NO_VCL_CALL TWinControl::KeyDownTrampoline(no_vcl_obj_t sender, no_vcl_int_t* key, no_vcl_int_t shift, void*)
 {
-    TWinControl* self = static_cast<TWinControl*>(FromHandle(sender));
-    if (!self || !self->onKeyDown_)
-        return;
-    TKeyEvent handler = self->onKeyDown_;
-    int keyValue = *key;
-    handler(self, keyValue, static_cast<TShiftState>(shift));
-    *key = keyValue;
+    GuardCallback([&] {
+        TWinControl* self = static_cast<TWinControl*>(FromHandle(sender));
+        if (!self || !self->onKeyDown_)
+            return;
+        TKeyEvent handler = self->onKeyDown_;
+        int keyValue = *key;
+        handler(self, keyValue, static_cast<TShiftState>(shift));
+        *key = keyValue;
+    });
 }
 
 void NO_VCL_CALL TWinControl::KeyUpTrampoline(no_vcl_obj_t sender, no_vcl_int_t* key, no_vcl_int_t shift, void*)
 {
-    TWinControl* self = static_cast<TWinControl*>(FromHandle(sender));
-    if (!self || !self->onKeyUp_)
-        return;
-    TKeyEvent handler = self->onKeyUp_;
-    int keyValue = *key;
-    handler(self, keyValue, static_cast<TShiftState>(shift));
-    *key = keyValue;
+    GuardCallback([&] {
+        TWinControl* self = static_cast<TWinControl*>(FromHandle(sender));
+        if (!self || !self->onKeyUp_)
+            return;
+        TKeyEvent handler = self->onKeyUp_;
+        int keyValue = *key;
+        handler(self, keyValue, static_cast<TShiftState>(shift));
+        *key = keyValue;
+    });
 }
 
 void NO_VCL_CALL TWinControl::KeyPressTrampoline(no_vcl_obj_t sender, no_vcl_int_t* key, void*)
 {
-    TWinControl* self = static_cast<TWinControl*>(FromHandle(sender));
-    if (!self || !self->onKeyPress_)
-        return;
-    TKeyPressEvent handler = self->onKeyPress_;
-    char keyValue = static_cast<char>(*key);
-    handler(self, keyValue);
-    *key = static_cast<unsigned char>(keyValue);
+    GuardCallback([&] {
+        TWinControl* self = static_cast<TWinControl*>(FromHandle(sender));
+        if (!self || !self->onKeyPress_)
+            return;
+        TKeyPressEvent handler = self->onKeyPress_;
+        char keyValue = static_cast<char>(*key);
+        handler(self, keyValue);
+        *key = static_cast<unsigned char>(keyValue);
+    });
 }
 
 TCustomScrollBar::TCustomScrollBar(no_vcl_obj_t handle)
@@ -565,16 +670,16 @@ TCustomScrollBar::TCustomScrollBar(no_vcl_obj_t handle)
     , OnChange(this, &TCustomScrollBar::GetOnChangeImpl, &TCustomScrollBar::SetOnChangeImpl)
 {}
 
-TScrollBarKind TCustomScrollBar::GetKindImpl(TObject* owner) { return static_cast<TScrollBarKind>(no_vcl_TCustomScrollBar_GetKind(owner->Handle())); }
-void TCustomScrollBar::SetKindImpl(TObject* owner, const TScrollBarKind& value) { no_vcl_TCustomScrollBar_SetKind(owner->Handle(), value); }
-int  TCustomScrollBar::GetMinImpl(TObject* owner)      { return no_vcl_TCustomScrollBar_GetMin(owner->Handle()); }
-void TCustomScrollBar::SetMinImpl(TObject* owner, const int& value)      { no_vcl_TCustomScrollBar_SetMin(owner->Handle(), value); }
-int  TCustomScrollBar::GetMaxImpl(TObject* owner)      { return no_vcl_TCustomScrollBar_GetMax(owner->Handle()); }
-void TCustomScrollBar::SetMaxImpl(TObject* owner, const int& value)      { no_vcl_TCustomScrollBar_SetMax(owner->Handle(), value); }
-int  TCustomScrollBar::GetPositionImpl(TObject* owner) { return no_vcl_TCustomScrollBar_GetPosition(owner->Handle()); }
-void TCustomScrollBar::SetPositionImpl(TObject* owner, const int& value) { no_vcl_TCustomScrollBar_SetPosition(owner->Handle(), value); }
-int  TCustomScrollBar::GetPageSizeImpl(TObject* owner) { return no_vcl_TCustomScrollBar_GetPageSize(owner->Handle()); }
-void TCustomScrollBar::SetPageSizeImpl(TObject* owner, const int& value) { no_vcl_TCustomScrollBar_SetPageSize(owner->Handle(), value); }
+TScrollBarKind TCustomScrollBar::GetKindImpl(TObject* owner) { return static_cast<TScrollBarKind>(nv::TCustomScrollBar_GetKind(owner->Handle())); }
+void TCustomScrollBar::SetKindImpl(TObject* owner, const TScrollBarKind& value) { nv::TCustomScrollBar_SetKind(owner->Handle(), value); }
+int  TCustomScrollBar::GetMinImpl(TObject* owner)      { return nv::TCustomScrollBar_GetMin(owner->Handle()); }
+void TCustomScrollBar::SetMinImpl(TObject* owner, const int& value)      { nv::TCustomScrollBar_SetMin(owner->Handle(), value); }
+int  TCustomScrollBar::GetMaxImpl(TObject* owner)      { return nv::TCustomScrollBar_GetMax(owner->Handle()); }
+void TCustomScrollBar::SetMaxImpl(TObject* owner, const int& value)      { nv::TCustomScrollBar_SetMax(owner->Handle(), value); }
+int  TCustomScrollBar::GetPositionImpl(TObject* owner) { return nv::TCustomScrollBar_GetPosition(owner->Handle()); }
+void TCustomScrollBar::SetPositionImpl(TObject* owner, const int& value) { nv::TCustomScrollBar_SetPosition(owner->Handle(), value); }
+int  TCustomScrollBar::GetPageSizeImpl(TObject* owner) { return nv::TCustomScrollBar_GetPageSize(owner->Handle()); }
+void TCustomScrollBar::SetPageSizeImpl(TObject* owner, const int& value) { nv::TCustomScrollBar_SetPageSize(owner->Handle(), value); }
 TNotifyEvent TCustomScrollBar::GetOnChangeImpl(TObject* owner) { return static_cast<TCustomScrollBar*>(owner)->onChange_; }
 
 void TCustomScrollBar::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value)
@@ -586,12 +691,14 @@ void TCustomScrollBar::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value
 
 void NO_VCL_CALL TCustomScrollBar::ChangeTrampoline(no_vcl_obj_t sender, void*)
 {
-    if (TCustomScrollBar* self = static_cast<TCustomScrollBar*>(FromHandle(sender)))
-        CallNotify(self->onChange_, self);
+    GuardCallback([&] {
+        if (TCustomScrollBar* self = static_cast<TCustomScrollBar*>(FromHandle(sender)))
+            CallNotify(self->onChange_, self);
+    });
 }
 
 TScrollBar::TScrollBar(TComponent* AOwner)
-    : TCustomScrollBar(no_vcl_TScrollBar_Create(HandleOf(AOwner)))
+    : TCustomScrollBar(nv::TScrollBar_Create(HandleOf(AOwner)))
 {}
 
 TCustomTrackBar::TCustomTrackBar(no_vcl_obj_t handle)
@@ -602,12 +709,12 @@ TCustomTrackBar::TCustomTrackBar(no_vcl_obj_t handle)
     , OnChange(this, &TCustomTrackBar::GetOnChangeImpl, &TCustomTrackBar::SetOnChangeImpl)
 {}
 
-int  TCustomTrackBar::GetMinImpl(TObject* owner)      { return no_vcl_TCustomTrackBar_GetMin(owner->Handle()); }
-void TCustomTrackBar::SetMinImpl(TObject* owner, const int& value)      { no_vcl_TCustomTrackBar_SetMin(owner->Handle(), value); }
-int  TCustomTrackBar::GetMaxImpl(TObject* owner)      { return no_vcl_TCustomTrackBar_GetMax(owner->Handle()); }
-void TCustomTrackBar::SetMaxImpl(TObject* owner, const int& value)      { no_vcl_TCustomTrackBar_SetMax(owner->Handle(), value); }
-int  TCustomTrackBar::GetPositionImpl(TObject* owner) { return no_vcl_TCustomTrackBar_GetPosition(owner->Handle()); }
-void TCustomTrackBar::SetPositionImpl(TObject* owner, const int& value) { no_vcl_TCustomTrackBar_SetPosition(owner->Handle(), value); }
+int  TCustomTrackBar::GetMinImpl(TObject* owner)      { return nv::TCustomTrackBar_GetMin(owner->Handle()); }
+void TCustomTrackBar::SetMinImpl(TObject* owner, const int& value)      { nv::TCustomTrackBar_SetMin(owner->Handle(), value); }
+int  TCustomTrackBar::GetMaxImpl(TObject* owner)      { return nv::TCustomTrackBar_GetMax(owner->Handle()); }
+void TCustomTrackBar::SetMaxImpl(TObject* owner, const int& value)      { nv::TCustomTrackBar_SetMax(owner->Handle(), value); }
+int  TCustomTrackBar::GetPositionImpl(TObject* owner) { return nv::TCustomTrackBar_GetPosition(owner->Handle()); }
+void TCustomTrackBar::SetPositionImpl(TObject* owner, const int& value) { nv::TCustomTrackBar_SetPosition(owner->Handle(), value); }
 TNotifyEvent TCustomTrackBar::GetOnChangeImpl(TObject* owner) { return static_cast<TCustomTrackBar*>(owner)->onChange_; }
 
 void TCustomTrackBar::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value)
@@ -619,12 +726,14 @@ void TCustomTrackBar::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value)
 
 void NO_VCL_CALL TCustomTrackBar::ChangeTrampoline(no_vcl_obj_t sender, void*)
 {
-    if (TCustomTrackBar* self = static_cast<TCustomTrackBar*>(FromHandle(sender)))
-        CallNotify(self->onChange_, self);
+    GuardCallback([&] {
+        if (TCustomTrackBar* self = static_cast<TCustomTrackBar*>(FromHandle(sender)))
+            CallNotify(self->onChange_, self);
+    });
 }
 
 TTrackBar::TTrackBar(TComponent* AOwner)
-    : TCustomTrackBar(no_vcl_TTrackBar_Create(HandleOf(AOwner)))
+    : TCustomTrackBar(nv::TTrackBar_Create(HandleOf(AOwner)))
 {}
 
 TCustomProgressBar::TCustomProgressBar(no_vcl_obj_t handle)
@@ -634,23 +743,23 @@ TCustomProgressBar::TCustomProgressBar(no_vcl_obj_t handle)
     , Position(this, &TCustomProgressBar::GetPositionImpl, &TCustomProgressBar::SetPositionImpl)
 {}
 
-int  TCustomProgressBar::GetMinImpl(TObject* owner)      { return no_vcl_TCustomProgressBar_GetMin(owner->Handle()); }
-void TCustomProgressBar::SetMinImpl(TObject* owner, const int& value)      { no_vcl_TCustomProgressBar_SetMin(owner->Handle(), value); }
-int  TCustomProgressBar::GetMaxImpl(TObject* owner)      { return no_vcl_TCustomProgressBar_GetMax(owner->Handle()); }
-void TCustomProgressBar::SetMaxImpl(TObject* owner, const int& value)      { no_vcl_TCustomProgressBar_SetMax(owner->Handle(), value); }
-int  TCustomProgressBar::GetPositionImpl(TObject* owner) { return no_vcl_TCustomProgressBar_GetPosition(owner->Handle()); }
-void TCustomProgressBar::SetPositionImpl(TObject* owner, const int& value) { no_vcl_TCustomProgressBar_SetPosition(owner->Handle(), value); }
+int  TCustomProgressBar::GetMinImpl(TObject* owner)      { return nv::TCustomProgressBar_GetMin(owner->Handle()); }
+void TCustomProgressBar::SetMinImpl(TObject* owner, const int& value)      { nv::TCustomProgressBar_SetMin(owner->Handle(), value); }
+int  TCustomProgressBar::GetMaxImpl(TObject* owner)      { return nv::TCustomProgressBar_GetMax(owner->Handle()); }
+void TCustomProgressBar::SetMaxImpl(TObject* owner, const int& value)      { nv::TCustomProgressBar_SetMax(owner->Handle(), value); }
+int  TCustomProgressBar::GetPositionImpl(TObject* owner) { return nv::TCustomProgressBar_GetPosition(owner->Handle()); }
+void TCustomProgressBar::SetPositionImpl(TObject* owner, const int& value) { nv::TCustomProgressBar_SetPosition(owner->Handle(), value); }
 
 TProgressBar::TProgressBar(TComponent* AOwner)
-    : TCustomProgressBar(no_vcl_TProgressBar_Create(HandleOf(AOwner)))
+    : TCustomProgressBar(nv::TProgressBar_Create(HandleOf(AOwner)))
 {}
 
 TScrollBox::TScrollBox(TComponent* AOwner)
-    : TScrollingWinControl(no_vcl_TScrollBox_Create(HandleOf(AOwner)))
+    : TScrollingWinControl(nv::TScrollBox_Create(HandleOf(AOwner)))
 {}
 
 TUpDown::TUpDown(TComponent* AOwner)
-    : TCustomControl(no_vcl_TUpDown_Create(HandleOf(AOwner)))
+    : TCustomControl(nv::TUpDown_Create(HandleOf(AOwner)))
     , Min(this, &TUpDown::GetMinImpl, &TUpDown::SetMinImpl)
     , Max(this, &TUpDown::GetMaxImpl, &TUpDown::SetMaxImpl)
     , Position(this, &TUpDown::GetPositionImpl, &TUpDown::SetPositionImpl)
@@ -658,32 +767,32 @@ TUpDown::TUpDown(TComponent* AOwner)
     , Associate(this, &TUpDown::GetAssociateImpl, &TUpDown::SetAssociateImpl)
 {}
 
-int  TUpDown::GetMinImpl(TObject* owner)       { return no_vcl_TUpDown_GetMin(owner->Handle()); }
-void TUpDown::SetMinImpl(TObject* owner, const int& value)       { no_vcl_TUpDown_SetMin(owner->Handle(), value); }
-int  TUpDown::GetMaxImpl(TObject* owner)       { return no_vcl_TUpDown_GetMax(owner->Handle()); }
-void TUpDown::SetMaxImpl(TObject* owner, const int& value)       { no_vcl_TUpDown_SetMax(owner->Handle(), value); }
-int  TUpDown::GetPositionImpl(TObject* owner)  { return no_vcl_TUpDown_GetPosition(owner->Handle()); }
-void TUpDown::SetPositionImpl(TObject* owner, const int& value)  { no_vcl_TUpDown_SetPosition(owner->Handle(), value); }
-int  TUpDown::GetIncrementImpl(TObject* owner) { return no_vcl_TUpDown_GetIncrement(owner->Handle()); }
-void TUpDown::SetIncrementImpl(TObject* owner, const int& value) { no_vcl_TUpDown_SetIncrement(owner->Handle(), value); }
+int  TUpDown::GetMinImpl(TObject* owner)       { return nv::TUpDown_GetMin(owner->Handle()); }
+void TUpDown::SetMinImpl(TObject* owner, const int& value)       { nv::TUpDown_SetMin(owner->Handle(), value); }
+int  TUpDown::GetMaxImpl(TObject* owner)       { return nv::TUpDown_GetMax(owner->Handle()); }
+void TUpDown::SetMaxImpl(TObject* owner, const int& value)       { nv::TUpDown_SetMax(owner->Handle(), value); }
+int  TUpDown::GetPositionImpl(TObject* owner)  { return nv::TUpDown_GetPosition(owner->Handle()); }
+void TUpDown::SetPositionImpl(TObject* owner, const int& value)  { nv::TUpDown_SetPosition(owner->Handle(), value); }
+int  TUpDown::GetIncrementImpl(TObject* owner) { return nv::TUpDown_GetIncrement(owner->Handle()); }
+void TUpDown::SetIncrementImpl(TObject* owner, const int& value) { nv::TUpDown_SetIncrement(owner->Handle(), value); }
 
 TWinControl* TUpDown::GetAssociateImpl(TObject* owner)
 {
-    return static_cast<TWinControl*>(FromHandle(no_vcl_TUpDown_GetAssociate(owner->Handle())));
+    return static_cast<TWinControl*>(FromHandle(nv::TUpDown_GetAssociate(owner->Handle())));
 }
 
 void TUpDown::SetAssociateImpl(TObject* owner, TWinControl* const& value)
 {
-    no_vcl_TUpDown_SetAssociate(owner->Handle(), HandleOf(value));
+    nv::TUpDown_SetAssociate(owner->Handle(), HandleOf(value));
 }
 
 /* ---------------- Form ---------------- */
 
-void TCustomForm::Show()      { no_vcl_TCustomForm_Show(handle_); }
-void TCustomForm::Hide()      { no_vcl_TCustomForm_Hide(handle_); }
-int  TCustomForm::ShowModal() { return no_vcl_TCustomForm_ShowModal(handle_); }
-void TCustomForm::Close()     { no_vcl_TCustomForm_Close(handle_); }
-void TCustomForm::Release()   { no_vcl_TCustomForm_Release(handle_); }
+void TCustomForm::Show()      { nv::TCustomForm_Show(handle_); }
+void TCustomForm::Hide()      { nv::TCustomForm_Hide(handle_); }
+int  TCustomForm::ShowModal() { return nv::TCustomForm_ShowModal(handle_); }
+void TCustomForm::Close()     { nv::TCustomForm_Close(handle_); }
+void TCustomForm::Release()   { nv::TCustomForm_Release(handle_); }
 
 TCustomForm::TCustomForm(no_vcl_obj_t handle)
     : TScrollingWinControl(handle)
@@ -698,7 +807,7 @@ TCustomForm::TCustomForm(no_vcl_obj_t handle)
     , Menu(this, &TCustomForm::GetMenuImpl, &TCustomForm::SetMenuImpl)
 {
     // OnShow のブリッジは常に登録する。new で直接生成したフォームの OnCreate を、最初の表示の直前に呼ぶため。
-    no_vcl_TCustomForm_SetOnShow(handle_, &TCustomForm::ShowTrampoline, nullptr);
+    nv::TCustomForm_SetOnShow(handle_, &TCustomForm::ShowTrampoline, nullptr);
 }
 
 void TCustomForm::DoCreate()
@@ -713,24 +822,28 @@ void TCustomForm::DoCreate()
 
 void NO_VCL_CALL TCustomForm::ShowTrampoline(no_vcl_obj_t sender, void*)
 {
-    TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender));
-    if (!self)
-        return;
-    self->DoCreate();
-    TNotifyEvent handler = self->onShow_;
-    if (handler)
-        handler(self);
+    GuardCallback([&] {
+        TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender));
+        if (!self)
+            return;
+        self->DoCreate();
+        TNotifyEvent handler = self->onShow_;
+        if (handler)
+            handler(self);
+    });
 }
 
 void NO_VCL_CALL TCustomForm::CloseTrampoline(no_vcl_obj_t sender, no_vcl_int_t* action, void*)
 {
-    TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender));
-    if (!self || !self->onClose_)
-        return;
-    TCloseEvent handler = self->onClose_;
-    TCloseAction value = static_cast<TCloseAction>(*action);
-    handler(self, value);
-    *action = static_cast<no_vcl_int_t>(value);
+    GuardCallback([&] {
+        TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender));
+        if (!self || !self->onClose_)
+            return;
+        TCloseEvent handler = self->onClose_;
+        TCloseAction value = static_cast<TCloseAction>(*action);
+        handler(self, value);
+        *action = static_cast<no_vcl_int_t>(value);
+    });
 }
 
 TNotifyEvent TCustomForm::GetOnCreateImpl(TObject* owner) { return static_cast<TCustomForm*>(owner)->onCreate_; }
@@ -745,44 +858,54 @@ void TCustomForm::SetOnCloseImpl(TObject* owner, const TCloseEvent& value)
     self->onClose_ = value;
     if (value && !self->onCloseHooked_)
     {
-        no_vcl_TCustomForm_SetOnClose(self->handle_, &TCustomForm::CloseTrampoline, nullptr);
+        nv::TCustomForm_SetOnClose(self->handle_, &TCustomForm::CloseTrampoline, nullptr);
         self->onCloseHooked_ = true;
     }
 }
 
 void NO_VCL_CALL TCustomForm::HideTrampoline(no_vcl_obj_t sender, void*)
 {
-    if (TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender)))
-        CallNotify(self->onHide_, self);
+    GuardCallback([&] {
+        if (TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender)))
+            CallNotify(self->onHide_, self);
+    });
 }
 
 void NO_VCL_CALL TCustomForm::ActivateTrampoline(no_vcl_obj_t sender, void*)
 {
-    if (TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender)))
-        CallNotify(self->onActivate_, self);
+    GuardCallback([&] {
+        if (TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender)))
+            CallNotify(self->onActivate_, self);
+    });
 }
 
 void NO_VCL_CALL TCustomForm::DeactivateTrampoline(no_vcl_obj_t sender, void*)
 {
-    if (TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender)))
-        CallNotify(self->onDeactivate_, self);
+    GuardCallback([&] {
+        if (TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender)))
+            CallNotify(self->onDeactivate_, self);
+    });
 }
 
 void NO_VCL_CALL TCustomForm::DestroyTrampoline(no_vcl_obj_t sender, void*)
 {
-    if (TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender)))
-        CallNotify(self->onDestroy_, self);
+    GuardCallback([&] {
+        if (TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender)))
+            CallNotify(self->onDestroy_, self);
+    });
 }
 
 void NO_VCL_CALL TCustomForm::CloseQueryTrampoline(no_vcl_obj_t sender, no_vcl_bool_t* canClose, void*)
 {
-    TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender));
-    if (!self || !self->onCloseQuery_)
-        return;
-    TCloseQueryEvent handler = self->onCloseQuery_;
-    bool value = *canClose != 0;
-    handler(self, value);
-    *canClose = value ? 1 : 0;
+    GuardCallback([&] {
+        TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender));
+        if (!self || !self->onCloseQuery_)
+            return;
+        TCloseQueryEvent handler = self->onCloseQuery_;
+        bool value = *canClose != 0;
+        handler(self, value);
+        *canClose = value ? 1 : 0;
+    });
 }
 
 TNotifyEvent TCustomForm::GetOnHideImpl(TObject* owner)       { return static_cast<TCustomForm*>(owner)->onHide_; }
@@ -821,12 +944,12 @@ void TCustomForm::SetOnDestroyImpl(TObject* owner, const TNotifyEvent& value)
 
 TMainMenu* TCustomForm::GetMenuImpl(TObject* owner)
 {
-    return static_cast<TMainMenu*>(FromHandle(no_vcl_TCustomForm_GetMenu(owner->Handle())));
+    return static_cast<TMainMenu*>(FromHandle(nv::TCustomForm_GetMenu(owner->Handle())));
 }
 
 void TCustomForm::SetMenuImpl(TObject* owner, TMainMenu* const& value)
 {
-    no_vcl_TCustomForm_SetMenu(owner->Handle(), HandleOf(value));
+    nv::TCustomForm_SetMenu(owner->Handle(), HandleOf(value));
 }
 
 void TCustomForm::SetOnCloseQueryImpl(TObject* owner, const TCloseQueryEvent& value)
@@ -850,14 +973,14 @@ no_vcl_obj_t TForm::CreateHandle(TComponent* AOwner)
         pendingHandle_ = nullptr;
         return handle;
     }
-    return no_vcl_TForm_Create(HandleOf(AOwner));
+    return nv::TForm_Create(HandleOf(AOwner));
 }
 
 /* ---------------- TApplication ---------------- */
 
 TApplication* NewApplication()
 {
-    return new TApplication(no_vcl_GetApplication());
+    return new TApplication(nv::GetApplication());
 }
 
 TApplication* Application = NewApplication();
@@ -880,70 +1003,70 @@ TApplication::TApplication(no_vcl_obj_t handle)
 void TApplication::Shutdown()
 {
     if (Application)
-        no_vcl_TComponent_DestroyComponents(Application->handle_);
-    no_vcl_FreeNotify_SetCallback(nullptr, nullptr);
-    no_vcl_ItemFree_SetCallback(nullptr, nullptr);
+        nv::TComponent_DestroyComponents(Application->handle_);
+    nv::FreeNotify_SetCallback(nullptr, nullptr);
+    nv::ItemFree_SetCallback(nullptr, nullptr);
 }
 
 void TApplication::BeginCreateForm()
 {
     // 前回のハンドルが引き取られていなければ破棄する(T のコンストラクタが Application 以外を Owner にした場合)。
     if (TForm::pendingHandle_)
-        no_vcl_TComponent_Destroy(TForm::pendingHandle_);
-    TForm::pendingHandle_ = no_vcl_TApplication_CreateForm(handle_);
+        nv::TComponent_Destroy(TForm::pendingHandle_);
+    TForm::pendingHandle_ = nv::TApplication_CreateForm(handle_);
 }
 
 void TApplication::EndCreateForm()
 {
     if (TForm::pendingHandle_)
     {
-        no_vcl_TComponent_Destroy(TForm::pendingHandle_);
+        nv::TComponent_Destroy(TForm::pendingHandle_);
         TForm::pendingHandle_ = nullptr;
     }
 }
 
-void TApplication::Run()             { no_vcl_TApplication_Run(handle_); }
-void TApplication::ProcessMessages() { no_vcl_TApplication_ProcessMessages(handle_); }
-void TApplication::Terminate()       { no_vcl_TApplication_Terminate(handle_); }
+void TApplication::Run()             { nv::TApplication_Run(handle_); }
+void TApplication::ProcessMessages() { nv::TApplication_ProcessMessages(handle_); }
+void TApplication::Terminate()       { nv::TApplication_Terminate(handle_); }
 
 TForm* TApplication::GetMainFormImpl(TObject* owner)
 {
-    return dynamic_cast<TForm*>(FromHandle(no_vcl_TApplication_GetMainForm(owner->Handle())));
+    return dynamic_cast<TForm*>(FromHandle(nv::TApplication_GetMainForm(owner->Handle())));
 }
 
 bool TApplication::GetTerminatedImpl(TObject* owner)
 {
-    return no_vcl_TApplication_GetTerminated(owner->Handle()) != 0;
+    return nv::TApplication_GetTerminated(owner->Handle()) != 0;
 }
 
 std::string TApplication::GetTitleImpl(TObject* owner)
 {
-    return std::string(no_vcl_TApplication_GetTitle(owner->Handle()));
+    return std::string(nv::TApplication_GetTitle(owner->Handle()));
 }
 
 void TApplication::SetTitleImpl(TObject* owner, const std::string& value)
 {
-    no_vcl_TApplication_SetTitle(owner->Handle(), value.c_str());
+    nv::TApplication_SetTitle(owner->Handle(), value.c_str());
 }
 
 bool TApplication::GetShowMainFormImpl(TObject* owner)
 {
-    return no_vcl_TApplication_GetShowMainForm(owner->Handle()) != 0;
+    return nv::TApplication_GetShowMainForm(owner->Handle()) != 0;
 }
 
 void TApplication::SetShowMainFormImpl(TObject* owner, const bool& value)
 {
-    no_vcl_TApplication_SetShowMainForm(owner->Handle(), value ? 1 : 0);
+    nv::TApplication_SetShowMainForm(owner->Handle(), value ? 1 : 0);
 }
 
 /* ---------------- Panel / GroupBox / Label ---------------- */
 
 TPanel::TPanel(TComponent* AOwner)
-    : TCustomPanel(no_vcl_TPanel_Create(HandleOf(AOwner)))
+    : TCustomPanel(nv::TPanel_Create(HandleOf(AOwner)))
 {}
 
 TGroupBox::TGroupBox(TComponent* AOwner)
-    : TCustomGroupBox(no_vcl_TGroupBox_Create(HandleOf(AOwner)))
+    : TCustomGroupBox(nv::TGroupBox_Create(HandleOf(AOwner)))
 {}
 
 TCustomRadioGroup::TCustomRadioGroup(no_vcl_obj_t handle)
@@ -956,8 +1079,8 @@ TCustomRadioGroup::TCustomRadioGroup(no_vcl_obj_t handle)
 
 TStrings* TCustomRadioGroup::GetItemsImpl(TObject* owner) { return &static_cast<TCustomRadioGroup*>(owner)->items_; }
 
-int  TCustomRadioGroup::GetItemIndexImpl(TObject* owner)                   { return no_vcl_TCustomRadioGroup_GetItemIndex(owner->Handle()); }
-void TCustomRadioGroup::SetItemIndexImpl(TObject* owner, const int& value) { no_vcl_TCustomRadioGroup_SetItemIndex(owner->Handle(), value); }
+int  TCustomRadioGroup::GetItemIndexImpl(TObject* owner)                   { return nv::TCustomRadioGroup_GetItemIndex(owner->Handle()); }
+void TCustomRadioGroup::SetItemIndexImpl(TObject* owner, const int& value) { nv::TCustomRadioGroup_SetItemIndex(owner->Handle(), value); }
 TNotifyEvent TCustomRadioGroup::GetOnClickImpl(TObject* owner) { return static_cast<TCustomRadioGroup*>(owner)->onClick_; }
 
 void TCustomRadioGroup::SetOnClickImpl(TObject* owner, const TNotifyEvent& value)
@@ -969,12 +1092,14 @@ void TCustomRadioGroup::SetOnClickImpl(TObject* owner, const TNotifyEvent& value
 
 void NO_VCL_CALL TCustomRadioGroup::ClickTrampoline(no_vcl_obj_t sender, void*)
 {
-    if (TCustomRadioGroup* self = static_cast<TCustomRadioGroup*>(FromHandle(sender)))
-        CallNotify(self->onClick_, self);
+    GuardCallback([&] {
+        if (TCustomRadioGroup* self = static_cast<TCustomRadioGroup*>(FromHandle(sender)))
+            CallNotify(self->onClick_, self);
+    });
 }
 
 TRadioGroup::TRadioGroup(TComponent* AOwner)
-    : TCustomRadioGroup(no_vcl_TRadioGroup_Create(HandleOf(AOwner)))
+    : TCustomRadioGroup(nv::TRadioGroup_Create(HandleOf(AOwner)))
 {}
 
 TStrings* TCustomCheckGroup::GetItemsImpl(TObject* owner) { return &static_cast<TCustomCheckGroup*>(owner)->items_; }
@@ -986,40 +1111,40 @@ TCustomCheckGroup::TCustomCheckGroup(no_vcl_obj_t handle)
     , items_(this, &no_vcl_TCustomCheckGroup_GetItems)
 {}
 
-bool TCustomCheckGroup::GetCheckedImpl(TObject* owner, int index)                     { return no_vcl_TCustomCheckGroup_GetChecked(owner->Handle(), index) != 0; }
-void TCustomCheckGroup::SetCheckedImpl(TObject* owner, int index, const bool& value)  { no_vcl_TCustomCheckGroup_SetChecked(owner->Handle(), index, value ? 1 : 0); }
+bool TCustomCheckGroup::GetCheckedImpl(TObject* owner, int index)                     { return nv::TCustomCheckGroup_GetChecked(owner->Handle(), index) != 0; }
+void TCustomCheckGroup::SetCheckedImpl(TObject* owner, int index, const bool& value)  { nv::TCustomCheckGroup_SetChecked(owner->Handle(), index, value ? 1 : 0); }
 
 TCheckGroup::TCheckGroup(TComponent* AOwner)
-    : TCustomCheckGroup(no_vcl_TCheckGroup_Create(HandleOf(AOwner)))
+    : TCustomCheckGroup(nv::TCheckGroup_Create(HandleOf(AOwner)))
 {}
 
 TLabel::TLabel(TComponent* AOwner)
-    : TCustomLabel(no_vcl_TLabel_Create(HandleOf(AOwner)))
+    : TCustomLabel(nv::TLabel_Create(HandleOf(AOwner)))
 {}
 
 TBevel::TBevel(TComponent* AOwner)
-    : TGraphicControl(no_vcl_TBevel_Create(HandleOf(AOwner)))
+    : TGraphicControl(nv::TBevel_Create(HandleOf(AOwner)))
     , Shape(this, &TBevel::GetShapeImpl, &TBevel::SetShapeImpl)
     , Style(this, &TBevel::GetStyleImpl, &TBevel::SetStyleImpl)
 {}
 
-TBevelShape TBevel::GetShapeImpl(TObject* owner) { return static_cast<TBevelShape>(no_vcl_TBevel_GetShape(owner->Handle())); }
-void TBevel::SetShapeImpl(TObject* owner, const TBevelShape& value) { no_vcl_TBevel_SetShape(owner->Handle(), value); }
-TBevelStyle TBevel::GetStyleImpl(TObject* owner) { return static_cast<TBevelStyle>(no_vcl_TBevel_GetStyle(owner->Handle())); }
-void TBevel::SetStyleImpl(TObject* owner, const TBevelStyle& value) { no_vcl_TBevel_SetStyle(owner->Handle(), value); }
+TBevelShape TBevel::GetShapeImpl(TObject* owner) { return static_cast<TBevelShape>(nv::TBevel_GetShape(owner->Handle())); }
+void TBevel::SetShapeImpl(TObject* owner, const TBevelShape& value) { nv::TBevel_SetShape(owner->Handle(), value); }
+TBevelStyle TBevel::GetStyleImpl(TObject* owner) { return static_cast<TBevelStyle>(nv::TBevel_GetStyle(owner->Handle())); }
+void TBevel::SetStyleImpl(TObject* owner, const TBevelStyle& value) { nv::TBevel_SetStyle(owner->Handle(), value); }
 
 TCustomShape::TCustomShape(no_vcl_obj_t handle)
     : TGraphicControl(handle)
-    , Pen(no_vcl_TCustomShape_GetPen(handle))
-    , Brush(no_vcl_TCustomShape_GetBrush(handle))
+    , Pen(nv::TCustomShape_GetPen(handle))
+    , Brush(nv::TCustomShape_GetBrush(handle))
     , Shape(this, &TCustomShape::GetShapeImpl, &TCustomShape::SetShapeImpl)
 {}
 
-TShapeType TCustomShape::GetShapeImpl(TObject* owner) { return static_cast<TShapeType>(no_vcl_TCustomShape_GetShape(owner->Handle())); }
-void TCustomShape::SetShapeImpl(TObject* owner, const TShapeType& value) { no_vcl_TCustomShape_SetShape(owner->Handle(), value); }
+TShapeType TCustomShape::GetShapeImpl(TObject* owner) { return static_cast<TShapeType>(nv::TCustomShape_GetShape(owner->Handle())); }
+void TCustomShape::SetShapeImpl(TObject* owner, const TShapeType& value) { nv::TCustomShape_SetShape(owner->Handle(), value); }
 
 TShape::TShape(TComponent* AOwner)
-    : TCustomShape(no_vcl_TShape_Create(HandleOf(AOwner)))
+    : TCustomShape(nv::TShape_Create(HandleOf(AOwner)))
 {}
 
 TCustomSpeedButton::TCustomSpeedButton(no_vcl_obj_t handle)
@@ -1041,31 +1166,31 @@ TCustomSpeedButton::TCustomSpeedButton(no_vcl_obj_t handle)
 TBitmap* TCustomSpeedButton::GetGlyphImpl(TObject* owner) { return &static_cast<TCustomSpeedButton*>(owner)->glyph_; }
 void TCustomSpeedButton::SetGlyphImpl(TObject* owner, TBitmap* const& value)
 {
-    no_vcl_TCustomSpeedButton_SetGlyph(owner->Handle(), value ? value->Current() : nullptr);
+    nv::TCustomSpeedButton_SetGlyph(owner->Handle(), value ? value->Current() : nullptr);
 }
-int  TCustomSpeedButton::GetNumGlyphsImpl(TObject* owner) { return no_vcl_TCustomSpeedButton_GetNumGlyphs(owner->Handle()); }
-void TCustomSpeedButton::SetNumGlyphsImpl(TObject* owner, const int& value) { no_vcl_TCustomSpeedButton_SetNumGlyphs(owner->Handle(), value); }
+int  TCustomSpeedButton::GetNumGlyphsImpl(TObject* owner) { return nv::TCustomSpeedButton_GetNumGlyphs(owner->Handle()); }
+void TCustomSpeedButton::SetNumGlyphsImpl(TObject* owner, const int& value) { nv::TCustomSpeedButton_SetNumGlyphs(owner->Handle(), value); }
 TButtonLayout TCustomSpeedButton::GetLayoutImpl(TObject* owner)
 {
-    return static_cast<TButtonLayout>(no_vcl_TCustomSpeedButton_GetLayout(owner->Handle()));
+    return static_cast<TButtonLayout>(nv::TCustomSpeedButton_GetLayout(owner->Handle()));
 }
-void TCustomSpeedButton::SetLayoutImpl(TObject* owner, const TButtonLayout& value) { no_vcl_TCustomSpeedButton_SetLayout(owner->Handle(), value); }
-int  TCustomSpeedButton::GetMarginImpl(TObject* owner)    { return no_vcl_TCustomSpeedButton_GetMargin(owner->Handle()); }
-void TCustomSpeedButton::SetMarginImpl(TObject* owner, const int& value) { no_vcl_TCustomSpeedButton_SetMargin(owner->Handle(), value); }
-int  TCustomSpeedButton::GetSpacingImpl(TObject* owner)   { return no_vcl_TCustomSpeedButton_GetSpacing(owner->Handle()); }
-void TCustomSpeedButton::SetSpacingImpl(TObject* owner, const int& value) { no_vcl_TCustomSpeedButton_SetSpacing(owner->Handle(), value); }
+void TCustomSpeedButton::SetLayoutImpl(TObject* owner, const TButtonLayout& value) { nv::TCustomSpeedButton_SetLayout(owner->Handle(), value); }
+int  TCustomSpeedButton::GetMarginImpl(TObject* owner)    { return nv::TCustomSpeedButton_GetMargin(owner->Handle()); }
+void TCustomSpeedButton::SetMarginImpl(TObject* owner, const int& value) { nv::TCustomSpeedButton_SetMargin(owner->Handle(), value); }
+int  TCustomSpeedButton::GetSpacingImpl(TObject* owner)   { return nv::TCustomSpeedButton_GetSpacing(owner->Handle()); }
+void TCustomSpeedButton::SetSpacingImpl(TObject* owner, const int& value) { nv::TCustomSpeedButton_SetSpacing(owner->Handle(), value); }
 
-bool TCustomSpeedButton::GetDownImpl(TObject* owner)       { return no_vcl_TCustomSpeedButton_GetDown(owner->Handle()) != 0; }
-void TCustomSpeedButton::SetDownImpl(TObject* owner, const bool& value)       { no_vcl_TCustomSpeedButton_SetDown(owner->Handle(), value ? 1 : 0); }
-int  TCustomSpeedButton::GetGroupIndexImpl(TObject* owner) { return no_vcl_TCustomSpeedButton_GetGroupIndex(owner->Handle()); }
-void TCustomSpeedButton::SetGroupIndexImpl(TObject* owner, const int& value) { no_vcl_TCustomSpeedButton_SetGroupIndex(owner->Handle(), value); }
-bool TCustomSpeedButton::GetFlatImpl(TObject* owner)       { return no_vcl_TCustomSpeedButton_GetFlat(owner->Handle()) != 0; }
-void TCustomSpeedButton::SetFlatImpl(TObject* owner, const bool& value)       { no_vcl_TCustomSpeedButton_SetFlat(owner->Handle(), value ? 1 : 0); }
-bool TCustomSpeedButton::GetAllowAllUpImpl(TObject* owner) { return no_vcl_TCustomSpeedButton_GetAllowAllUp(owner->Handle()) != 0; }
-void TCustomSpeedButton::SetAllowAllUpImpl(TObject* owner, const bool& value) { no_vcl_TCustomSpeedButton_SetAllowAllUp(owner->Handle(), value ? 1 : 0); }
+bool TCustomSpeedButton::GetDownImpl(TObject* owner)       { return nv::TCustomSpeedButton_GetDown(owner->Handle()) != 0; }
+void TCustomSpeedButton::SetDownImpl(TObject* owner, const bool& value)       { nv::TCustomSpeedButton_SetDown(owner->Handle(), value ? 1 : 0); }
+int  TCustomSpeedButton::GetGroupIndexImpl(TObject* owner) { return nv::TCustomSpeedButton_GetGroupIndex(owner->Handle()); }
+void TCustomSpeedButton::SetGroupIndexImpl(TObject* owner, const int& value) { nv::TCustomSpeedButton_SetGroupIndex(owner->Handle(), value); }
+bool TCustomSpeedButton::GetFlatImpl(TObject* owner)       { return nv::TCustomSpeedButton_GetFlat(owner->Handle()) != 0; }
+void TCustomSpeedButton::SetFlatImpl(TObject* owner, const bool& value)       { nv::TCustomSpeedButton_SetFlat(owner->Handle(), value ? 1 : 0); }
+bool TCustomSpeedButton::GetAllowAllUpImpl(TObject* owner) { return nv::TCustomSpeedButton_GetAllowAllUp(owner->Handle()) != 0; }
+void TCustomSpeedButton::SetAllowAllUpImpl(TObject* owner, const bool& value) { nv::TCustomSpeedButton_SetAllowAllUp(owner->Handle(), value ? 1 : 0); }
 
 TSpeedButton::TSpeedButton(TComponent* AOwner)
-    : TCustomSpeedButton(no_vcl_TSpeedButton_Create(HandleOf(AOwner)))
+    : TCustomSpeedButton(nv::TSpeedButton_Create(HandleOf(AOwner)))
 {}
 
 /* ---------------- Button / CheckBox / RadioButton ---------------- */
@@ -1077,16 +1202,16 @@ TButtonControl::TButtonControl(no_vcl_obj_t handle)
 
 bool TButtonControl::GetCheckedImpl(TObject* owner)
 {
-    return no_vcl_TButtonControl_GetChecked(owner->Handle()) != 0;
+    return nv::TButtonControl_GetChecked(owner->Handle()) != 0;
 }
 
 void TButtonControl::SetCheckedImpl(TObject* owner, const bool& value)
 {
-    no_vcl_TButtonControl_SetChecked(owner->Handle(), value ? 1 : 0);
+    nv::TButtonControl_SetChecked(owner->Handle(), value ? 1 : 0);
 }
 
 TButton::TButton(TComponent* AOwner)
-    : TCustomButton(no_vcl_TButton_Create(HandleOf(AOwner)))
+    : TCustomButton(nv::TButton_Create(HandleOf(AOwner)))
 {}
 
 TCustomBitBtn::TCustomBitBtn(no_vcl_obj_t handle)
@@ -1102,36 +1227,36 @@ TCustomBitBtn::TCustomBitBtn(no_vcl_obj_t handle)
     , glyph_(this, &no_vcl_TCustomBitBtn_GetGlyph)
 {}
 
-TBitBtnKind TCustomBitBtn::GetKindImpl(TObject* owner) { return static_cast<TBitBtnKind>(no_vcl_TCustomBitBtn_GetKind(owner->Handle())); }
-void TCustomBitBtn::SetKindImpl(TObject* owner, const TBitBtnKind& value) { no_vcl_TCustomBitBtn_SetKind(owner->Handle(), value); }
+TBitBtnKind TCustomBitBtn::GetKindImpl(TObject* owner) { return static_cast<TBitBtnKind>(nv::TCustomBitBtn_GetKind(owner->Handle())); }
+void TCustomBitBtn::SetKindImpl(TObject* owner, const TBitBtnKind& value) { nv::TCustomBitBtn_SetKind(owner->Handle(), value); }
 TBitmap* TCustomBitBtn::GetGlyphImpl(TObject* owner) { return &static_cast<TCustomBitBtn*>(owner)->glyph_; }
 void TCustomBitBtn::SetGlyphImpl(TObject* owner, TBitmap* const& value)
 {
-    no_vcl_TCustomBitBtn_SetGlyph(owner->Handle(), value ? value->Current() : nullptr);
+    nv::TCustomBitBtn_SetGlyph(owner->Handle(), value ? value->Current() : nullptr);
 }
-int  TCustomBitBtn::GetNumGlyphsImpl(TObject* owner) { return no_vcl_TCustomBitBtn_GetNumGlyphs(owner->Handle()); }
-void TCustomBitBtn::SetNumGlyphsImpl(TObject* owner, const int& value) { no_vcl_TCustomBitBtn_SetNumGlyphs(owner->Handle(), value); }
-TButtonLayout TCustomBitBtn::GetLayoutImpl(TObject* owner) { return static_cast<TButtonLayout>(no_vcl_TCustomBitBtn_GetLayout(owner->Handle())); }
-void TCustomBitBtn::SetLayoutImpl(TObject* owner, const TButtonLayout& value) { no_vcl_TCustomBitBtn_SetLayout(owner->Handle(), value); }
-int  TCustomBitBtn::GetMarginImpl(TObject* owner)    { return no_vcl_TCustomBitBtn_GetMargin(owner->Handle()); }
-void TCustomBitBtn::SetMarginImpl(TObject* owner, const int& value) { no_vcl_TCustomBitBtn_SetMargin(owner->Handle(), value); }
-int  TCustomBitBtn::GetSpacingImpl(TObject* owner)   { return no_vcl_TCustomBitBtn_GetSpacing(owner->Handle()); }
-void TCustomBitBtn::SetSpacingImpl(TObject* owner, const int& value) { no_vcl_TCustomBitBtn_SetSpacing(owner->Handle(), value); }
+int  TCustomBitBtn::GetNumGlyphsImpl(TObject* owner) { return nv::TCustomBitBtn_GetNumGlyphs(owner->Handle()); }
+void TCustomBitBtn::SetNumGlyphsImpl(TObject* owner, const int& value) { nv::TCustomBitBtn_SetNumGlyphs(owner->Handle(), value); }
+TButtonLayout TCustomBitBtn::GetLayoutImpl(TObject* owner) { return static_cast<TButtonLayout>(nv::TCustomBitBtn_GetLayout(owner->Handle())); }
+void TCustomBitBtn::SetLayoutImpl(TObject* owner, const TButtonLayout& value) { nv::TCustomBitBtn_SetLayout(owner->Handle(), value); }
+int  TCustomBitBtn::GetMarginImpl(TObject* owner)    { return nv::TCustomBitBtn_GetMargin(owner->Handle()); }
+void TCustomBitBtn::SetMarginImpl(TObject* owner, const int& value) { nv::TCustomBitBtn_SetMargin(owner->Handle(), value); }
+int  TCustomBitBtn::GetSpacingImpl(TObject* owner)   { return nv::TCustomBitBtn_GetSpacing(owner->Handle()); }
+void TCustomBitBtn::SetSpacingImpl(TObject* owner, const int& value) { nv::TCustomBitBtn_SetSpacing(owner->Handle(), value); }
 
 TBitBtn::TBitBtn(TComponent* AOwner)
-    : TCustomBitBtn(no_vcl_TBitBtn_Create(HandleOf(AOwner)))
+    : TCustomBitBtn(nv::TBitBtn_Create(HandleOf(AOwner)))
 {}
 
 TCheckBox::TCheckBox(TComponent* AOwner)
-    : TCustomCheckBox(no_vcl_TCheckBox_Create(HandleOf(AOwner)))
+    : TCustomCheckBox(nv::TCheckBox_Create(HandleOf(AOwner)))
 {}
 
 TRadioButton::TRadioButton(TComponent* AOwner)
-    : TCustomCheckBox(no_vcl_TRadioButton_Create(HandleOf(AOwner)))
+    : TCustomCheckBox(nv::TRadioButton_Create(HandleOf(AOwner)))
 {}
 
 TToggleBox::TToggleBox(TComponent* AOwner)
-    : TCustomCheckBox(no_vcl_TToggleBox_Create(HandleOf(AOwner)))
+    : TCustomCheckBox(nv::TToggleBox_Create(HandleOf(AOwner)))
 {}
 
 /* ---------------- Edit / Memo ---------------- */
@@ -1154,27 +1279,29 @@ void TCustomEdit::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value)
     self->onChange_ = value;
     if (value && !self->onChangeHooked_)
     {
-        no_vcl_TCustomEdit_SetOnChange(self->handle_, &TCustomEdit::ChangeTrampoline, nullptr);
+        nv::TCustomEdit_SetOnChange(self->handle_, &TCustomEdit::ChangeTrampoline, nullptr);
         self->onChangeHooked_ = true;
     }
 }
 
 void NO_VCL_CALL TCustomEdit::ChangeTrampoline(no_vcl_obj_t sender, void*)
 {
-    TCustomEdit* self = static_cast<TCustomEdit*>(FromHandle(sender));
-    if (!self || !self->onChange_)
-        return;
-    TNotifyEvent handler = self->onChange_;
-    handler(self);
+    GuardCallback([&] {
+        TCustomEdit* self = static_cast<TCustomEdit*>(FromHandle(sender));
+        if (!self || !self->onChange_)
+            return;
+        TNotifyEvent handler = self->onChange_;
+        handler(self);
+    });
 }
 
-int  TCustomEdit::GetMaxLengthImpl(TObject* owner)                   { return no_vcl_TCustomEdit_GetMaxLength(owner->Handle()); }
-void TCustomEdit::SetMaxLengthImpl(TObject* owner, const int& value) { no_vcl_TCustomEdit_SetMaxLength(owner->Handle(), value); }
-bool TCustomEdit::GetReadOnlyImpl(TObject* owner)                    { return no_vcl_TCustomEdit_GetReadOnly(owner->Handle()) != 0; }
-void TCustomEdit::SetReadOnlyImpl(TObject* owner, const bool& value) { no_vcl_TCustomEdit_SetReadOnly(owner->Handle(), value ? 1 : 0); }
+int  TCustomEdit::GetMaxLengthImpl(TObject* owner)                   { return nv::TCustomEdit_GetMaxLength(owner->Handle()); }
+void TCustomEdit::SetMaxLengthImpl(TObject* owner, const int& value) { nv::TCustomEdit_SetMaxLength(owner->Handle(), value); }
+bool TCustomEdit::GetReadOnlyImpl(TObject* owner)                    { return nv::TCustomEdit_GetReadOnly(owner->Handle()) != 0; }
+void TCustomEdit::SetReadOnlyImpl(TObject* owner, const bool& value) { nv::TCustomEdit_SetReadOnly(owner->Handle(), value ? 1 : 0); }
 
 TEdit::TEdit(TComponent* AOwner)
-    : TCustomEdit(no_vcl_TEdit_Create(HandleOf(AOwner)))
+    : TCustomEdit(nv::TEdit_Create(HandleOf(AOwner)))
 {}
 
 TCustomFloatSpinEdit::TCustomFloatSpinEdit(no_vcl_obj_t handle)
@@ -1186,19 +1313,19 @@ TCustomFloatSpinEdit::TCustomFloatSpinEdit(no_vcl_obj_t handle)
     , DecimalPlaces(this, &TCustomFloatSpinEdit::GetDecimalPlacesImpl, &TCustomFloatSpinEdit::SetDecimalPlacesImpl)
 {}
 
-double TCustomFloatSpinEdit::GetValueImpl(TObject* owner)     { return no_vcl_TCustomFloatSpinEdit_GetValue(owner->Handle()); }
-void   TCustomFloatSpinEdit::SetValueImpl(TObject* owner, const double& value)     { no_vcl_TCustomFloatSpinEdit_SetValue(owner->Handle(), value); }
-double TCustomFloatSpinEdit::GetMinValueImpl(TObject* owner)  { return no_vcl_TCustomFloatSpinEdit_GetMinValue(owner->Handle()); }
-void   TCustomFloatSpinEdit::SetMinValueImpl(TObject* owner, const double& value)  { no_vcl_TCustomFloatSpinEdit_SetMinValue(owner->Handle(), value); }
-double TCustomFloatSpinEdit::GetMaxValueImpl(TObject* owner)  { return no_vcl_TCustomFloatSpinEdit_GetMaxValue(owner->Handle()); }
-void   TCustomFloatSpinEdit::SetMaxValueImpl(TObject* owner, const double& value)  { no_vcl_TCustomFloatSpinEdit_SetMaxValue(owner->Handle(), value); }
-double TCustomFloatSpinEdit::GetIncrementImpl(TObject* owner) { return no_vcl_TCustomFloatSpinEdit_GetIncrement(owner->Handle()); }
-void   TCustomFloatSpinEdit::SetIncrementImpl(TObject* owner, const double& value) { no_vcl_TCustomFloatSpinEdit_SetIncrement(owner->Handle(), value); }
-int    TCustomFloatSpinEdit::GetDecimalPlacesImpl(TObject* owner) { return no_vcl_TCustomFloatSpinEdit_GetDecimalPlaces(owner->Handle()); }
-void   TCustomFloatSpinEdit::SetDecimalPlacesImpl(TObject* owner, const int& value) { no_vcl_TCustomFloatSpinEdit_SetDecimalPlaces(owner->Handle(), value); }
+double TCustomFloatSpinEdit::GetValueImpl(TObject* owner)     { return nv::TCustomFloatSpinEdit_GetValue(owner->Handle()); }
+void   TCustomFloatSpinEdit::SetValueImpl(TObject* owner, const double& value)     { nv::TCustomFloatSpinEdit_SetValue(owner->Handle(), value); }
+double TCustomFloatSpinEdit::GetMinValueImpl(TObject* owner)  { return nv::TCustomFloatSpinEdit_GetMinValue(owner->Handle()); }
+void   TCustomFloatSpinEdit::SetMinValueImpl(TObject* owner, const double& value)  { nv::TCustomFloatSpinEdit_SetMinValue(owner->Handle(), value); }
+double TCustomFloatSpinEdit::GetMaxValueImpl(TObject* owner)  { return nv::TCustomFloatSpinEdit_GetMaxValue(owner->Handle()); }
+void   TCustomFloatSpinEdit::SetMaxValueImpl(TObject* owner, const double& value)  { nv::TCustomFloatSpinEdit_SetMaxValue(owner->Handle(), value); }
+double TCustomFloatSpinEdit::GetIncrementImpl(TObject* owner) { return nv::TCustomFloatSpinEdit_GetIncrement(owner->Handle()); }
+void   TCustomFloatSpinEdit::SetIncrementImpl(TObject* owner, const double& value) { nv::TCustomFloatSpinEdit_SetIncrement(owner->Handle(), value); }
+int    TCustomFloatSpinEdit::GetDecimalPlacesImpl(TObject* owner) { return nv::TCustomFloatSpinEdit_GetDecimalPlaces(owner->Handle()); }
+void   TCustomFloatSpinEdit::SetDecimalPlacesImpl(TObject* owner, const int& value) { nv::TCustomFloatSpinEdit_SetDecimalPlaces(owner->Handle(), value); }
 
 TFloatSpinEdit::TFloatSpinEdit(TComponent* AOwner)
-    : TCustomFloatSpinEdit(no_vcl_TFloatSpinEdit_Create(HandleOf(AOwner)))
+    : TCustomFloatSpinEdit(nv::TFloatSpinEdit_Create(HandleOf(AOwner)))
 {}
 
 TCustomSpinEdit::TCustomSpinEdit(no_vcl_obj_t handle)
@@ -1209,26 +1336,26 @@ TCustomSpinEdit::TCustomSpinEdit(no_vcl_obj_t handle)
     , Increment(this, &TCustomSpinEdit::GetIncrementImpl, &TCustomSpinEdit::SetIncrementImpl)
 {}
 
-int  TCustomSpinEdit::GetValueImpl(TObject* owner)     { return no_vcl_TCustomSpinEdit_GetValue(owner->Handle()); }
-void TCustomSpinEdit::SetValueImpl(TObject* owner, const int& value)     { no_vcl_TCustomSpinEdit_SetValue(owner->Handle(), value); }
-int  TCustomSpinEdit::GetMinValueImpl(TObject* owner)  { return no_vcl_TCustomSpinEdit_GetMinValue(owner->Handle()); }
-void TCustomSpinEdit::SetMinValueImpl(TObject* owner, const int& value)  { no_vcl_TCustomSpinEdit_SetMinValue(owner->Handle(), value); }
-int  TCustomSpinEdit::GetMaxValueImpl(TObject* owner)  { return no_vcl_TCustomSpinEdit_GetMaxValue(owner->Handle()); }
-void TCustomSpinEdit::SetMaxValueImpl(TObject* owner, const int& value)  { no_vcl_TCustomSpinEdit_SetMaxValue(owner->Handle(), value); }
-int  TCustomSpinEdit::GetIncrementImpl(TObject* owner) { return no_vcl_TCustomSpinEdit_GetIncrement(owner->Handle()); }
-void TCustomSpinEdit::SetIncrementImpl(TObject* owner, const int& value) { no_vcl_TCustomSpinEdit_SetIncrement(owner->Handle(), value); }
+int  TCustomSpinEdit::GetValueImpl(TObject* owner)     { return nv::TCustomSpinEdit_GetValue(owner->Handle()); }
+void TCustomSpinEdit::SetValueImpl(TObject* owner, const int& value)     { nv::TCustomSpinEdit_SetValue(owner->Handle(), value); }
+int  TCustomSpinEdit::GetMinValueImpl(TObject* owner)  { return nv::TCustomSpinEdit_GetMinValue(owner->Handle()); }
+void TCustomSpinEdit::SetMinValueImpl(TObject* owner, const int& value)  { nv::TCustomSpinEdit_SetMinValue(owner->Handle(), value); }
+int  TCustomSpinEdit::GetMaxValueImpl(TObject* owner)  { return nv::TCustomSpinEdit_GetMaxValue(owner->Handle()); }
+void TCustomSpinEdit::SetMaxValueImpl(TObject* owner, const int& value)  { nv::TCustomSpinEdit_SetMaxValue(owner->Handle(), value); }
+int  TCustomSpinEdit::GetIncrementImpl(TObject* owner) { return nv::TCustomSpinEdit_GetIncrement(owner->Handle()); }
+void TCustomSpinEdit::SetIncrementImpl(TObject* owner, const int& value) { nv::TCustomSpinEdit_SetIncrement(owner->Handle(), value); }
 
 TSpinEdit::TSpinEdit(TComponent* AOwner)
-    : TCustomSpinEdit(no_vcl_TSpinEdit_Create(HandleOf(AOwner)))
+    : TCustomSpinEdit(nv::TSpinEdit_Create(HandleOf(AOwner)))
 {}
 
 TMaskEdit::TMaskEdit(TComponent* AOwner)
-    : TCustomEdit(no_vcl_TMaskEdit_Create(HandleOf(AOwner)))
+    : TCustomEdit(nv::TMaskEdit_Create(HandleOf(AOwner)))
     , EditMask(this, &TMaskEdit::GetEditMaskImpl, &TMaskEdit::SetEditMaskImpl)
 {}
 
-std::string TMaskEdit::GetEditMaskImpl(TObject* owner) { return std::string(no_vcl_TMaskEdit_GetEditMask(owner->Handle())); }
-void TMaskEdit::SetEditMaskImpl(TObject* owner, const std::string& value) { no_vcl_TMaskEdit_SetEditMask(owner->Handle(), value.c_str()); }
+std::string TMaskEdit::GetEditMaskImpl(TObject* owner) { return std::string(nv::TMaskEdit_GetEditMask(owner->Handle())); }
+void TMaskEdit::SetEditMaskImpl(TObject* owner, const std::string& value) { nv::TMaskEdit_SetEditMask(owner->Handle(), value.c_str()); }
 
 TCustomLabeledEdit::TCustomLabeledEdit(no_vcl_obj_t handle)
     : TCustomEdit(handle)
@@ -1239,25 +1366,25 @@ TCustomLabeledEdit::TCustomLabeledEdit(no_vcl_obj_t handle)
 
 TBoundLabel* TCustomLabeledEdit::GetEditLabelImpl(TObject* owner)
 {
-    return WrapExisting<TBoundLabel>(no_vcl_TCustomLabeledEdit_GetEditLabel(owner->Handle()));
+    return WrapExisting<TBoundLabel>(nv::TCustomLabeledEdit_GetEditLabel(owner->Handle()));
 }
 TLabelPosition TCustomLabeledEdit::GetLabelPositionImpl(TObject* owner)
 {
-    return static_cast<TLabelPosition>(no_vcl_TCustomLabeledEdit_GetLabelPosition(owner->Handle()));
+    return static_cast<TLabelPosition>(nv::TCustomLabeledEdit_GetLabelPosition(owner->Handle()));
 }
 void TCustomLabeledEdit::SetLabelPositionImpl(TObject* owner, const TLabelPosition& value)
 {
-    no_vcl_TCustomLabeledEdit_SetLabelPosition(owner->Handle(), value);
+    nv::TCustomLabeledEdit_SetLabelPosition(owner->Handle(), value);
 }
-int  TCustomLabeledEdit::GetLabelSpacingImpl(TObject* owner) { return no_vcl_TCustomLabeledEdit_GetLabelSpacing(owner->Handle()); }
-void TCustomLabeledEdit::SetLabelSpacingImpl(TObject* owner, const int& value) { no_vcl_TCustomLabeledEdit_SetLabelSpacing(owner->Handle(), value); }
+int  TCustomLabeledEdit::GetLabelSpacingImpl(TObject* owner) { return nv::TCustomLabeledEdit_GetLabelSpacing(owner->Handle()); }
+void TCustomLabeledEdit::SetLabelSpacingImpl(TObject* owner, const int& value) { nv::TCustomLabeledEdit_SetLabelSpacing(owner->Handle(), value); }
 
 TLabeledEdit::TLabeledEdit(TComponent* AOwner)
-    : TCustomLabeledEdit(no_vcl_TLabeledEdit_Create(HandleOf(AOwner)))
+    : TCustomLabeledEdit(nv::TLabeledEdit_Create(HandleOf(AOwner)))
 {}
 
 TTabControl::TTabControl(TComponent* AOwner)
-    : TCustomTabControl(no_vcl_TTabControl_Create(HandleOf(AOwner)))
+    : TCustomTabControl(nv::TTabControl_Create(HandleOf(AOwner)))
     , TabIndex(this, &TTabControl::GetTabIndexImpl, &TTabControl::SetTabIndexImpl)
     , OnChange(this, &TTabControl::GetOnChangeImpl, &TTabControl::SetOnChangeImpl)
     , Tabs(this, &TTabControl::GetTabsImpl)
@@ -1266,8 +1393,8 @@ TTabControl::TTabControl(TComponent* AOwner)
 
 TStrings* TTabControl::GetTabsImpl(TObject* owner) { return &static_cast<TTabControl*>(owner)->tabs_; }
 
-int  TTabControl::GetTabIndexImpl(TObject* owner)                   { return no_vcl_TTabControl_GetTabIndex(owner->Handle()); }
-void TTabControl::SetTabIndexImpl(TObject* owner, const int& value) { no_vcl_TTabControl_SetTabIndex(owner->Handle(), value); }
+int  TTabControl::GetTabIndexImpl(TObject* owner)                   { return nv::TTabControl_GetTabIndex(owner->Handle()); }
+void TTabControl::SetTabIndexImpl(TObject* owner, const int& value) { nv::TTabControl_SetTabIndex(owner->Handle(), value); }
 TNotifyEvent TTabControl::GetOnChangeImpl(TObject* owner) { return static_cast<TTabControl*>(owner)->onChange_; }
 
 void TTabControl::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value)
@@ -1279,8 +1406,10 @@ void TTabControl::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value)
 
 void NO_VCL_CALL TTabControl::ChangeTrampoline(no_vcl_obj_t sender, void*)
 {
-    if (TTabControl* self = static_cast<TTabControl*>(FromHandle(sender)))
-        CallNotify(self->onChange_, self);
+    GuardCallback([&] {
+        if (TTabControl* self = static_cast<TTabControl*>(FromHandle(sender)))
+            CallNotify(self->onChange_, self);
+    });
 }
 
 TCustomTabControl::TCustomTabControl(no_vcl_obj_t handle)
@@ -1293,13 +1422,13 @@ TCustomTabControl::TCustomTabControl(no_vcl_obj_t handle)
     , Images(this, &TCustomTabControl::GetImagesImpl, &TCustomTabControl::SetImagesImpl)
 {}
 
-int  TCustomTabControl::GetPageCountImpl(TObject* owner)                 { return no_vcl_TCustomTabControl_GetPageCount(owner->Handle()); }
-bool TCustomTabControl::GetMultiLineImpl(TObject* owner)                 { return no_vcl_TCustomTabControl_GetMultiLine(owner->Handle()) != 0; }
-void TCustomTabControl::SetMultiLineImpl(TObject* owner, const bool& value) { no_vcl_TCustomTabControl_SetMultiLine(owner->Handle(), value ? 1 : 0); }
-bool TCustomTabControl::GetShowTabsImpl(TObject* owner)                  { return no_vcl_TCustomTabControl_GetShowTabs(owner->Handle()) != 0; }
-void TCustomTabControl::SetShowTabsImpl(TObject* owner, const bool& value)  { no_vcl_TCustomTabControl_SetShowTabs(owner->Handle(), value ? 1 : 0); }
-TTabPosition TCustomTabControl::GetTabPositionImpl(TObject* owner) { return static_cast<TTabPosition>(no_vcl_TCustomTabControl_GetTabPosition(owner->Handle())); }
-void TCustomTabControl::SetTabPositionImpl(TObject* owner, const TTabPosition& value) { no_vcl_TCustomTabControl_SetTabPosition(owner->Handle(), value); }
+int  TCustomTabControl::GetPageCountImpl(TObject* owner)                 { return nv::TCustomTabControl_GetPageCount(owner->Handle()); }
+bool TCustomTabControl::GetMultiLineImpl(TObject* owner)                 { return nv::TCustomTabControl_GetMultiLine(owner->Handle()) != 0; }
+void TCustomTabControl::SetMultiLineImpl(TObject* owner, const bool& value) { nv::TCustomTabControl_SetMultiLine(owner->Handle(), value ? 1 : 0); }
+bool TCustomTabControl::GetShowTabsImpl(TObject* owner)                  { return nv::TCustomTabControl_GetShowTabs(owner->Handle()) != 0; }
+void TCustomTabControl::SetShowTabsImpl(TObject* owner, const bool& value)  { nv::TCustomTabControl_SetShowTabs(owner->Handle(), value ? 1 : 0); }
+TTabPosition TCustomTabControl::GetTabPositionImpl(TObject* owner) { return static_cast<TTabPosition>(nv::TCustomTabControl_GetTabPosition(owner->Handle())); }
+void TCustomTabControl::SetTabPositionImpl(TObject* owner, const TTabPosition& value) { nv::TCustomTabControl_SetTabPosition(owner->Handle(), value); }
 
 TTabChangingEvent TCustomTabControl::GetOnChangingImpl(TObject* owner) { return static_cast<TCustomTabControl*>(owner)->onChanging_; }
 
@@ -1312,17 +1441,19 @@ void TCustomTabControl::SetOnChangingImpl(TObject* owner, const TTabChangingEven
 
 void NO_VCL_CALL TCustomTabControl::ChangingTrampoline(no_vcl_obj_t sender, no_vcl_bool_t* allowChange, void*)
 {
-    TCustomTabControl* self = static_cast<TCustomTabControl*>(FromHandle(sender));
-    if (!self || !self->onChanging_)
-        return;
-    TTabChangingEvent handler = self->onChanging_;
-    bool value = *allowChange != 0;
-    handler(self, value);
-    *allowChange = value ? 1 : 0;
+    GuardCallback([&] {
+        TCustomTabControl* self = static_cast<TCustomTabControl*>(FromHandle(sender));
+        if (!self || !self->onChanging_)
+            return;
+        TTabChangingEvent handler = self->onChanging_;
+        bool value = *allowChange != 0;
+        handler(self, value);
+        *allowChange = value ? 1 : 0;
+    });
 }
 
 TPageControl::TPageControl(TComponent* AOwner)
-    : TCustomTabControl(no_vcl_TPageControl_Create(HandleOf(AOwner)))
+    : TCustomTabControl(nv::TPageControl_Create(HandleOf(AOwner)))
     , ActivePage(this, &TPageControl::GetActivePageImpl, &TPageControl::SetActivePageImpl)
     , ActivePageIndex(this, &TPageControl::GetActivePageIndexImpl, &TPageControl::SetActivePageIndexImpl)
     , TabIndex(this, &TPageControl::GetTabIndexImpl, &TPageControl::SetTabIndexImpl)
@@ -1330,17 +1461,17 @@ TPageControl::TPageControl(TComponent* AOwner)
     , Pages(this, &TPageControl::GetPagesImpl)
 {}
 
-TTabSheet* TPageControl::GetPagesImpl(TObject* owner, int Index) { return WrapExisting<TTabSheet>(no_vcl_TPageControl_GetPage(owner->Handle(), Index)); }
-TTabSheet* TPageControl::AddTabSheet()            { return WrapExisting<TTabSheet>(no_vcl_TPageControl_AddTabSheet(handle_)); }
-void TPageControl::Clear()                        { no_vcl_TPageControl_Clear(handle_); }
-void TPageControl::SelectNextPage(bool GoForward) { no_vcl_TPageControl_SelectNextPage(handle_, GoForward ? 1 : 0); }
+TTabSheet* TPageControl::GetPagesImpl(TObject* owner, int Index) { return WrapExisting<TTabSheet>(nv::TPageControl_GetPage(owner->Handle(), Index)); }
+TTabSheet* TPageControl::AddTabSheet()            { return WrapExisting<TTabSheet>(nv::TPageControl_AddTabSheet(handle_)); }
+void TPageControl::Clear()                        { nv::TPageControl_Clear(handle_); }
+void TPageControl::SelectNextPage(bool GoForward) { nv::TPageControl_SelectNextPage(handle_, GoForward ? 1 : 0); }
 
-TTabSheet* TPageControl::GetActivePageImpl(TObject* owner) { return WrapExisting<TTabSheet>(no_vcl_TPageControl_GetActivePage(owner->Handle())); }
-void TPageControl::SetActivePageImpl(TObject* owner, TTabSheet* const& value) { no_vcl_TPageControl_SetActivePage(owner->Handle(), HandleOf(value)); }
-int  TPageControl::GetActivePageIndexImpl(TObject* owner)                  { return no_vcl_TPageControl_GetActivePageIndex(owner->Handle()); }
-void TPageControl::SetActivePageIndexImpl(TObject* owner, const int& value) { no_vcl_TPageControl_SetActivePageIndex(owner->Handle(), value); }
-int  TPageControl::GetTabIndexImpl(TObject* owner)                         { return no_vcl_TPageControl_GetTabIndex(owner->Handle()); }
-void TPageControl::SetTabIndexImpl(TObject* owner, const int& value)        { no_vcl_TPageControl_SetTabIndex(owner->Handle(), value); }
+TTabSheet* TPageControl::GetActivePageImpl(TObject* owner) { return WrapExisting<TTabSheet>(nv::TPageControl_GetActivePage(owner->Handle())); }
+void TPageControl::SetActivePageImpl(TObject* owner, TTabSheet* const& value) { nv::TPageControl_SetActivePage(owner->Handle(), HandleOf(value)); }
+int  TPageControl::GetActivePageIndexImpl(TObject* owner)                  { return nv::TPageControl_GetActivePageIndex(owner->Handle()); }
+void TPageControl::SetActivePageIndexImpl(TObject* owner, const int& value) { nv::TPageControl_SetActivePageIndex(owner->Handle(), value); }
+int  TPageControl::GetTabIndexImpl(TObject* owner)                         { return nv::TPageControl_GetTabIndex(owner->Handle()); }
+void TPageControl::SetTabIndexImpl(TObject* owner, const int& value)        { nv::TPageControl_SetTabIndex(owner->Handle(), value); }
 
 TNotifyEvent TPageControl::GetOnChangeImpl(TObject* owner) { return static_cast<TPageControl*>(owner)->onChange_; }
 
@@ -1353,8 +1484,10 @@ void TPageControl::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value)
 
 void NO_VCL_CALL TPageControl::ChangeTrampoline(no_vcl_obj_t sender, void*)
 {
-    if (TPageControl* self = static_cast<TPageControl*>(FromHandle(sender)))
-        CallNotify(self->onChange_, self);
+    GuardCallback([&] {
+        if (TPageControl* self = static_cast<TPageControl*>(FromHandle(sender)))
+            CallNotify(self->onChange_, self);
+    });
 }
 
 TCustomPage::TCustomPage(no_vcl_obj_t handle)
@@ -1366,10 +1499,10 @@ TCustomPage::TCustomPage(no_vcl_obj_t handle)
     , ImageIndex(this, &TCustomPage::GetImageIndexImpl, &TCustomPage::SetImageIndexImpl)
 {}
 
-int  TCustomPage::GetPageIndexImpl(TObject* owner)                   { return no_vcl_TCustomPage_GetPageIndex(owner->Handle()); }
-void TCustomPage::SetPageIndexImpl(TObject* owner, const int& value)  { no_vcl_TCustomPage_SetPageIndex(owner->Handle(), value); }
-bool TCustomPage::GetTabVisibleImpl(TObject* owner)                  { return no_vcl_TCustomPage_GetTabVisible(owner->Handle()) != 0; }
-void TCustomPage::SetTabVisibleImpl(TObject* owner, const bool& value) { no_vcl_TCustomPage_SetTabVisible(owner->Handle(), value ? 1 : 0); }
+int  TCustomPage::GetPageIndexImpl(TObject* owner)                   { return nv::TCustomPage_GetPageIndex(owner->Handle()); }
+void TCustomPage::SetPageIndexImpl(TObject* owner, const int& value)  { nv::TCustomPage_SetPageIndex(owner->Handle(), value); }
+bool TCustomPage::GetTabVisibleImpl(TObject* owner)                  { return nv::TCustomPage_GetTabVisible(owner->Handle()) != 0; }
+void TCustomPage::SetTabVisibleImpl(TObject* owner, const bool& value) { nv::TCustomPage_SetTabVisible(owner->Handle(), value ? 1 : 0); }
 
 TNotifyEvent TCustomPage::GetOnShowImpl(TObject* owner) { return static_cast<TCustomPage*>(owner)->onShow_; }
 TNotifyEvent TCustomPage::GetOnHideImpl(TObject* owner) { return static_cast<TCustomPage*>(owner)->onHide_; }
@@ -1390,18 +1523,22 @@ void TCustomPage::SetOnHideImpl(TObject* owner, const TNotifyEvent& value)
 
 void NO_VCL_CALL TCustomPage::ShowTrampoline(no_vcl_obj_t sender, void*)
 {
-    if (TCustomPage* self = static_cast<TCustomPage*>(FromHandle(sender)))
-        CallNotify(self->onShow_, self);
+    GuardCallback([&] {
+        if (TCustomPage* self = static_cast<TCustomPage*>(FromHandle(sender)))
+            CallNotify(self->onShow_, self);
+    });
 }
 
 void NO_VCL_CALL TCustomPage::HideTrampoline(no_vcl_obj_t sender, void*)
 {
-    if (TCustomPage* self = static_cast<TCustomPage*>(FromHandle(sender)))
-        CallNotify(self->onHide_, self);
+    GuardCallback([&] {
+        if (TCustomPage* self = static_cast<TCustomPage*>(FromHandle(sender)))
+            CallNotify(self->onHide_, self);
+    });
 }
 
 TTabSheet::TTabSheet(TComponent* AOwner)
-    : TTabSheet(no_vcl_TTabSheet_Create(HandleOf(AOwner)))
+    : TTabSheet(nv::TTabSheet_Create(HandleOf(AOwner)))
 {}
 
 TTabSheet::TTabSheet(no_vcl_obj_t handle)
@@ -1412,15 +1549,15 @@ TTabSheet::TTabSheet(no_vcl_obj_t handle)
 
 TPageControl* TTabSheet::GetPageControlImpl(TObject* owner)
 {
-    return static_cast<TPageControl*>(FromHandle(no_vcl_TTabSheet_GetPageControl(owner->Handle())));
+    return static_cast<TPageControl*>(FromHandle(nv::TTabSheet_GetPageControl(owner->Handle())));
 }
 
 void TTabSheet::SetPageControlImpl(TObject* owner, TPageControl* const& value)
 {
-    no_vcl_TTabSheet_SetPageControl(owner->Handle(), HandleOf(value));
+    nv::TTabSheet_SetPageControl(owner->Handle(), HandleOf(value));
 }
 
-int TTabSheet::GetTabIndexImpl(TObject* owner) { return no_vcl_TTabSheet_GetTabIndex(owner->Handle()); }
+int TTabSheet::GetTabIndexImpl(TObject* owner) { return nv::TTabSheet_GetTabIndex(owner->Handle()); }
 
 /* ---------------- ItemRegistry ---------------- */
 
@@ -1439,20 +1576,22 @@ void ItemRegistry::InstallCallback()
     static bool installed = false;
     if (!installed)
     {
-        no_vcl_ItemFree_SetCallback(&ItemRegistry::FreeTrampoline, nullptr);
+        nv::ItemFree_SetCallback(&ItemRegistry::FreeTrampoline, nullptr);
         installed = true;
     }
 }
 
 void NO_VCL_CALL ItemRegistry::FreeTrampoline(no_vcl_obj_t handle, void*)
 {
-    std::unordered_map<no_vcl_obj_t, TPersistent*>& registry = Registry();
-    auto it = registry.find(handle);
-    if (it == registry.end())
-        return;
-    TPersistent* item = it->second;
-    registry.erase(it);
-    delete item;
+    GuardCallback([&] {
+        std::unordered_map<no_vcl_obj_t, TPersistent*>& registry = Registry();
+        auto it = registry.find(handle);
+        if (it == registry.end())
+            return;
+        TPersistent* item = it->second;
+        registry.erase(it);
+        delete item;
+    });
 }
 
 /* ---------------- TreeView ---------------- */
@@ -1477,45 +1616,45 @@ TTreeNode::TTreeNode(no_vcl_obj_t handle)
     , OverlayIndex(this, &TTreeNode::GetOverlayIndexImpl, &TTreeNode::SetOverlayIndexImpl)
 {}
 
-TTreeNode* TTreeNode::GetItemsImpl(TObject* owner, int Index) { return Wrap(no_vcl_TTreeNode_GetItem(owner->Handle(), Index)); }
-TTreeNode* TTreeNode::GetFirstChild() const     { return Wrap(no_vcl_TTreeNode_GetFirstChild(handle_)); }
-TTreeNode* TTreeNode::GetLastChild() const      { return Wrap(no_vcl_TTreeNode_GetLastChild(handle_)); }
-TTreeNode* TTreeNode::GetNextSibling() const    { return Wrap(no_vcl_TTreeNode_GetNextSibling(handle_)); }
-TTreeNode* TTreeNode::GetPrevSibling() const    { return Wrap(no_vcl_TTreeNode_GetPrevSibling(handle_)); }
-TTreeNode* TTreeNode::GetNext() const           { return Wrap(no_vcl_TTreeNode_GetNext(handle_)); }
-TTreeNode* TTreeNode::GetPrev() const           { return Wrap(no_vcl_TTreeNode_GetPrev(handle_)); }
-int  TTreeNode::IndexOf(TTreeNode* Node) const  { return no_vcl_TTreeNode_IndexOf(handle_, Node ? Node->Handle() : nullptr); }
-void TTreeNode::Expand(bool Recurse)            { no_vcl_TTreeNode_Expand(handle_, Recurse ? 1 : 0); }
-void TTreeNode::Collapse(bool Recurse)          { no_vcl_TTreeNode_Collapse(handle_, Recurse ? 1 : 0); }
-void TTreeNode::Delete()                        { no_vcl_TTreeNode_Delete(handle_); }
-void TTreeNode::DeleteChildren()                { no_vcl_TTreeNode_DeleteChildren(handle_); }
-void TTreeNode::MakeVisible()                   { no_vcl_TTreeNode_MakeVisible(handle_); }
+TTreeNode* TTreeNode::GetItemsImpl(TObject* owner, int Index) { return Wrap(nv::TTreeNode_GetItem(owner->Handle(), Index)); }
+TTreeNode* TTreeNode::GetFirstChild() const     { return Wrap(nv::TTreeNode_GetFirstChild(handle_)); }
+TTreeNode* TTreeNode::GetLastChild() const      { return Wrap(nv::TTreeNode_GetLastChild(handle_)); }
+TTreeNode* TTreeNode::GetNextSibling() const    { return Wrap(nv::TTreeNode_GetNextSibling(handle_)); }
+TTreeNode* TTreeNode::GetPrevSibling() const    { return Wrap(nv::TTreeNode_GetPrevSibling(handle_)); }
+TTreeNode* TTreeNode::GetNext() const           { return Wrap(nv::TTreeNode_GetNext(handle_)); }
+TTreeNode* TTreeNode::GetPrev() const           { return Wrap(nv::TTreeNode_GetPrev(handle_)); }
+int  TTreeNode::IndexOf(TTreeNode* Node) const  { return nv::TTreeNode_IndexOf(handle_, Node ? Node->Handle() : nullptr); }
+void TTreeNode::Expand(bool Recurse)            { nv::TTreeNode_Expand(handle_, Recurse ? 1 : 0); }
+void TTreeNode::Collapse(bool Recurse)          { nv::TTreeNode_Collapse(handle_, Recurse ? 1 : 0); }
+void TTreeNode::Delete()                        { nv::TTreeNode_Delete(handle_); }
+void TTreeNode::DeleteChildren()                { nv::TTreeNode_DeleteChildren(handle_); }
+void TTreeNode::MakeVisible()                   { nv::TTreeNode_MakeVisible(handle_); }
 
 void TTreeNode::MoveTo(TTreeNode* Destination, TNodeAttachMode Mode)
 {
-    no_vcl_TTreeNode_MoveTo(handle_, Destination ? Destination->Handle() : nullptr, Mode);
+    nv::TTreeNode_MoveTo(handle_, Destination ? Destination->Handle() : nullptr, Mode);
 }
 
-std::string TTreeNode::GetTextImpl(TObject* owner) { return std::string(no_vcl_TTreeNode_GetText(owner->Handle())); }
-void TTreeNode::SetTextImpl(TObject* owner, const std::string& value) { no_vcl_TTreeNode_SetText(owner->Handle(), value.c_str()); }
-bool TTreeNode::GetExpandedImpl(TObject* owner)                      { return no_vcl_TTreeNode_GetExpanded(owner->Handle()) != 0; }
-void TTreeNode::SetExpandedImpl(TObject* owner, const bool& value)    { no_vcl_TTreeNode_SetExpanded(owner->Handle(), value ? 1 : 0); }
-bool TTreeNode::GetSelectedImpl(TObject* owner)                      { return no_vcl_TTreeNode_GetSelected(owner->Handle()) != 0; }
-void TTreeNode::SetSelectedImpl(TObject* owner, const bool& value)    { no_vcl_TTreeNode_SetSelected(owner->Handle(), value ? 1 : 0); }
-bool TTreeNode::GetHasChildrenImpl(TObject* owner)                   { return no_vcl_TTreeNode_GetHasChildren(owner->Handle()) != 0; }
-void TTreeNode::SetHasChildrenImpl(TObject* owner, const bool& value) { no_vcl_TTreeNode_SetHasChildren(owner->Handle(), value ? 1 : 0); }
-void* TTreeNode::GetDataImpl(TObject* owner)                         { return no_vcl_TTreeNode_GetData(owner->Handle()); }
-void TTreeNode::SetDataImpl(TObject* owner, void* const& value)       { no_vcl_TTreeNode_SetData(owner->Handle(), value); }
-int  TTreeNode::GetCountImpl(TObject* owner)                         { return no_vcl_TTreeNode_GetCount(owner->Handle()); }
-int  TTreeNode::GetIndexImpl(TObject* owner)                         { return no_vcl_TTreeNode_GetIndex(owner->Handle()); }
-int  TTreeNode::GetLevelImpl(TObject* owner)                         { return no_vcl_TTreeNode_GetLevel(owner->Handle()); }
-int  TTreeNode::GetAbsoluteIndexImpl(TObject* owner)                 { return no_vcl_TTreeNode_GetAbsoluteIndex(owner->Handle()); }
-TTreeNode* TTreeNode::GetParentImpl(TObject* owner)                  { return Wrap(no_vcl_TTreeNode_GetParent(owner->Handle())); }
+std::string TTreeNode::GetTextImpl(TObject* owner) { return std::string(nv::TTreeNode_GetText(owner->Handle())); }
+void TTreeNode::SetTextImpl(TObject* owner, const std::string& value) { nv::TTreeNode_SetText(owner->Handle(), value.c_str()); }
+bool TTreeNode::GetExpandedImpl(TObject* owner)                      { return nv::TTreeNode_GetExpanded(owner->Handle()) != 0; }
+void TTreeNode::SetExpandedImpl(TObject* owner, const bool& value)    { nv::TTreeNode_SetExpanded(owner->Handle(), value ? 1 : 0); }
+bool TTreeNode::GetSelectedImpl(TObject* owner)                      { return nv::TTreeNode_GetSelected(owner->Handle()) != 0; }
+void TTreeNode::SetSelectedImpl(TObject* owner, const bool& value)    { nv::TTreeNode_SetSelected(owner->Handle(), value ? 1 : 0); }
+bool TTreeNode::GetHasChildrenImpl(TObject* owner)                   { return nv::TTreeNode_GetHasChildren(owner->Handle()) != 0; }
+void TTreeNode::SetHasChildrenImpl(TObject* owner, const bool& value) { nv::TTreeNode_SetHasChildren(owner->Handle(), value ? 1 : 0); }
+void* TTreeNode::GetDataImpl(TObject* owner)                         { return nv::TTreeNode_GetData(owner->Handle()); }
+void TTreeNode::SetDataImpl(TObject* owner, void* const& value)       { nv::TTreeNode_SetData(owner->Handle(), value); }
+int  TTreeNode::GetCountImpl(TObject* owner)                         { return nv::TTreeNode_GetCount(owner->Handle()); }
+int  TTreeNode::GetIndexImpl(TObject* owner)                         { return nv::TTreeNode_GetIndex(owner->Handle()); }
+int  TTreeNode::GetLevelImpl(TObject* owner)                         { return nv::TTreeNode_GetLevel(owner->Handle()); }
+int  TTreeNode::GetAbsoluteIndexImpl(TObject* owner)                 { return nv::TTreeNode_GetAbsoluteIndex(owner->Handle()); }
+TTreeNode* TTreeNode::GetParentImpl(TObject* owner)                  { return Wrap(nv::TTreeNode_GetParent(owner->Handle())); }
 
 TCustomTreeView* TTreeNode::GetTreeViewImpl(TObject* owner)
 {
     // ツリービューは TComponent で、C++ ラッパーを介して作られていればレジストリにある。
-    return static_cast<TCustomTreeView*>(TCustomTreeView::FromHandle(no_vcl_TTreeNode_GetTreeView(owner->Handle())));
+    return static_cast<TCustomTreeView*>(TCustomTreeView::FromHandle(nv::TTreeNode_GetTreeView(owner->Handle())));
 }
 
 TTreeNodes::TTreeNodes(no_vcl_obj_t handle)
@@ -1531,42 +1670,42 @@ no_vcl_obj_t NodeHandle(const TTreeNode* node) { return node ? node->Handle() : 
 
 TTreeNode* TTreeNodes::Add(TTreeNode* Sibling, const std::string& S)
 {
-    return TTreeNode::Wrap(no_vcl_TTreeNodes_Add(handle_, NodeHandle(Sibling), S.c_str()));
+    return TTreeNode::Wrap(nv::TTreeNodes_Add(handle_, NodeHandle(Sibling), S.c_str()));
 }
 
 TTreeNode* TTreeNodes::AddFirst(TTreeNode* Sibling, const std::string& S)
 {
-    return TTreeNode::Wrap(no_vcl_TTreeNodes_AddFirst(handle_, NodeHandle(Sibling), S.c_str()));
+    return TTreeNode::Wrap(nv::TTreeNodes_AddFirst(handle_, NodeHandle(Sibling), S.c_str()));
 }
 
 TTreeNode* TTreeNodes::AddChild(TTreeNode* Parent, const std::string& S)
 {
-    return TTreeNode::Wrap(no_vcl_TTreeNodes_AddChild(handle_, NodeHandle(Parent), S.c_str()));
+    return TTreeNode::Wrap(nv::TTreeNodes_AddChild(handle_, NodeHandle(Parent), S.c_str()));
 }
 
 TTreeNode* TTreeNodes::AddChildFirst(TTreeNode* Parent, const std::string& S)
 {
-    return TTreeNode::Wrap(no_vcl_TTreeNodes_AddChildFirst(handle_, NodeHandle(Parent), S.c_str()));
+    return TTreeNode::Wrap(nv::TTreeNodes_AddChildFirst(handle_, NodeHandle(Parent), S.c_str()));
 }
 
 TTreeNode* TTreeNodes::Insert(TTreeNode* NextNode, const std::string& S)
 {
-    return TTreeNode::Wrap(no_vcl_TTreeNodes_Insert(handle_, NodeHandle(NextNode), S.c_str()));
+    return TTreeNode::Wrap(nv::TTreeNodes_Insert(handle_, NodeHandle(NextNode), S.c_str()));
 }
 
-void TTreeNodes::Clear()                   { no_vcl_TTreeNodes_Clear(handle_); }
-void TTreeNodes::Delete(TTreeNode* Node)   { no_vcl_TTreeNodes_Delete(handle_, NodeHandle(Node)); }
-TTreeNode* TTreeNodes::GetItemImpl(TObject* owner, int Index) { return TTreeNode::Wrap(no_vcl_TTreeNodes_GetItem(owner->Handle(), Index)); }
-TTreeNode* TTreeNodes::GetFirstNode() const     { return TTreeNode::Wrap(no_vcl_TTreeNodes_GetFirstNode(handle_)); }
+void TTreeNodes::Clear()                   { nv::TTreeNodes_Clear(handle_); }
+void TTreeNodes::Delete(TTreeNode* Node)   { nv::TTreeNodes_Delete(handle_, NodeHandle(Node)); }
+TTreeNode* TTreeNodes::GetItemImpl(TObject* owner, int Index) { return TTreeNode::Wrap(nv::TTreeNodes_GetItem(owner->Handle(), Index)); }
+TTreeNode* TTreeNodes::GetFirstNode() const     { return TTreeNode::Wrap(nv::TTreeNodes_GetFirstNode(handle_)); }
 
 TTreeNode* TTreeNodes::FindNodeWithText(const std::string& S) const
 {
-    return TTreeNode::Wrap(no_vcl_TTreeNodes_FindNodeWithText(handle_, S.c_str()));
+    return TTreeNode::Wrap(nv::TTreeNodes_FindNodeWithText(handle_, S.c_str()));
 }
 
-void TTreeNodes::BeginUpdate()             { no_vcl_TTreeNodes_BeginUpdate(handle_); }
-void TTreeNodes::EndUpdate()               { no_vcl_TTreeNodes_EndUpdate(handle_); }
-int  TTreeNodes::GetCountImpl(TObject* owner) { return no_vcl_TTreeNodes_GetCount(owner->Handle()); }
+void TTreeNodes::BeginUpdate()             { nv::TTreeNodes_BeginUpdate(handle_); }
+void TTreeNodes::EndUpdate()               { nv::TTreeNodes_EndUpdate(handle_); }
+int  TTreeNodes::GetCountImpl(TObject* owner) { return nv::TTreeNodes_GetCount(owner->Handle()); }
 
 TCustomTreeView::TCustomTreeView(no_vcl_obj_t handle)
     : TCustomControl(handle)
@@ -1574,28 +1713,28 @@ TCustomTreeView::TCustomTreeView(no_vcl_obj_t handle)
     , Selected(this, &TCustomTreeView::GetSelectedImpl, &TCustomTreeView::SetSelectedImpl)
     , Images(this, &TCustomTreeView::GetImagesImpl, &TCustomTreeView::SetImagesImpl)
     , StateImages(this, &TCustomTreeView::GetStateImagesImpl, &TCustomTreeView::SetStateImagesImpl)
-    , items_(no_vcl_TCustomTreeView_GetItems(handle))
+    , items_(nv::TCustomTreeView_GetItems(handle))
 {}
 
-void TCustomTreeView::FullExpand()   { no_vcl_TCustomTreeView_FullExpand(handle_); }
-void TCustomTreeView::FullCollapse() { no_vcl_TCustomTreeView_FullCollapse(handle_); }
-bool TCustomTreeView::AlphaSort()    { return no_vcl_TCustomTreeView_AlphaSort(handle_) != 0; }
+void TCustomTreeView::FullExpand()   { nv::TCustomTreeView_FullExpand(handle_); }
+void TCustomTreeView::FullCollapse() { nv::TCustomTreeView_FullCollapse(handle_); }
+bool TCustomTreeView::AlphaSort()    { return nv::TCustomTreeView_AlphaSort(handle_) != 0; }
 
 TTreeNode* TCustomTreeView::GetNodeAt(int X, int Y) const
 {
-    return TTreeNode::Wrap(no_vcl_TCustomTreeView_GetNodeAt(handle_, X, Y));
+    return TTreeNode::Wrap(nv::TCustomTreeView_GetNodeAt(handle_, X, Y));
 }
 
 TTreeNodes* TCustomTreeView::GetItemsImpl(TObject* owner) { return &static_cast<TCustomTreeView*>(owner)->items_; }
-TTreeNode*  TCustomTreeView::GetSelectedImpl(TObject* owner) { return TTreeNode::Wrap(no_vcl_TCustomTreeView_GetSelected(owner->Handle())); }
+TTreeNode*  TCustomTreeView::GetSelectedImpl(TObject* owner) { return TTreeNode::Wrap(nv::TCustomTreeView_GetSelected(owner->Handle())); }
 
 void TCustomTreeView::SetSelectedImpl(TObject* owner, TTreeNode* const& value)
 {
-    no_vcl_TCustomTreeView_SetSelected(owner->Handle(), NodeHandle(value));
+    nv::TCustomTreeView_SetSelected(owner->Handle(), NodeHandle(value));
 }
 
 TTreeView::TTreeView(TComponent* AOwner)
-    : TCustomTreeView(no_vcl_TTreeView_Create(HandleOf(AOwner)))
+    : TCustomTreeView(nv::TTreeView_Create(HandleOf(AOwner)))
     , ReadOnly(this, &TTreeView::GetReadOnlyImpl, &TTreeView::SetReadOnlyImpl)
     , ShowLines(this, &TTreeView::GetShowLinesImpl, &TTreeView::SetShowLinesImpl)
     , ShowRoot(this, &TTreeView::GetShowRootImpl, &TTreeView::SetShowRootImpl)
@@ -1612,20 +1751,20 @@ TTreeView::TTreeView(TComponent* AOwner)
     , OnDeletion(this, &TTreeView::GetOnDeletionImpl, &TTreeView::SetOnDeletionImpl)
 {}
 
-bool TTreeView::GetReadOnlyImpl(TObject* owner)                     { return no_vcl_TTreeView_GetReadOnly(owner->Handle()) != 0; }
-void TTreeView::SetReadOnlyImpl(TObject* owner, const bool& value)   { no_vcl_TTreeView_SetReadOnly(owner->Handle(), value ? 1 : 0); }
-bool TTreeView::GetShowLinesImpl(TObject* owner)                    { return no_vcl_TTreeView_GetShowLines(owner->Handle()) != 0; }
-void TTreeView::SetShowLinesImpl(TObject* owner, const bool& value)  { no_vcl_TTreeView_SetShowLines(owner->Handle(), value ? 1 : 0); }
-bool TTreeView::GetShowRootImpl(TObject* owner)                     { return no_vcl_TTreeView_GetShowRoot(owner->Handle()) != 0; }
-void TTreeView::SetShowRootImpl(TObject* owner, const bool& value)   { no_vcl_TTreeView_SetShowRoot(owner->Handle(), value ? 1 : 0); }
-bool TTreeView::GetShowButtonsImpl(TObject* owner)                  { return no_vcl_TTreeView_GetShowButtons(owner->Handle()) != 0; }
-void TTreeView::SetShowButtonsImpl(TObject* owner, const bool& value) { no_vcl_TTreeView_SetShowButtons(owner->Handle(), value ? 1 : 0); }
-bool TTreeView::GetAutoExpandImpl(TObject* owner)                   { return no_vcl_TTreeView_GetAutoExpand(owner->Handle()) != 0; }
-void TTreeView::SetAutoExpandImpl(TObject* owner, const bool& value) { no_vcl_TTreeView_SetAutoExpand(owner->Handle(), value ? 1 : 0); }
-bool TTreeView::GetHideSelectionImpl(TObject* owner)                { return no_vcl_TTreeView_GetHideSelection(owner->Handle()) != 0; }
-void TTreeView::SetHideSelectionImpl(TObject* owner, const bool& value) { no_vcl_TTreeView_SetHideSelection(owner->Handle(), value ? 1 : 0); }
-bool TTreeView::GetRowSelectImpl(TObject* owner)                    { return no_vcl_TTreeView_GetRowSelect(owner->Handle()) != 0; }
-void TTreeView::SetRowSelectImpl(TObject* owner, const bool& value)  { no_vcl_TTreeView_SetRowSelect(owner->Handle(), value ? 1 : 0); }
+bool TTreeView::GetReadOnlyImpl(TObject* owner)                     { return nv::TTreeView_GetReadOnly(owner->Handle()) != 0; }
+void TTreeView::SetReadOnlyImpl(TObject* owner, const bool& value)   { nv::TTreeView_SetReadOnly(owner->Handle(), value ? 1 : 0); }
+bool TTreeView::GetShowLinesImpl(TObject* owner)                    { return nv::TTreeView_GetShowLines(owner->Handle()) != 0; }
+void TTreeView::SetShowLinesImpl(TObject* owner, const bool& value)  { nv::TTreeView_SetShowLines(owner->Handle(), value ? 1 : 0); }
+bool TTreeView::GetShowRootImpl(TObject* owner)                     { return nv::TTreeView_GetShowRoot(owner->Handle()) != 0; }
+void TTreeView::SetShowRootImpl(TObject* owner, const bool& value)   { nv::TTreeView_SetShowRoot(owner->Handle(), value ? 1 : 0); }
+bool TTreeView::GetShowButtonsImpl(TObject* owner)                  { return nv::TTreeView_GetShowButtons(owner->Handle()) != 0; }
+void TTreeView::SetShowButtonsImpl(TObject* owner, const bool& value) { nv::TTreeView_SetShowButtons(owner->Handle(), value ? 1 : 0); }
+bool TTreeView::GetAutoExpandImpl(TObject* owner)                   { return nv::TTreeView_GetAutoExpand(owner->Handle()) != 0; }
+void TTreeView::SetAutoExpandImpl(TObject* owner, const bool& value) { nv::TTreeView_SetAutoExpand(owner->Handle(), value ? 1 : 0); }
+bool TTreeView::GetHideSelectionImpl(TObject* owner)                { return nv::TTreeView_GetHideSelection(owner->Handle()) != 0; }
+void TTreeView::SetHideSelectionImpl(TObject* owner, const bool& value) { nv::TTreeView_SetHideSelection(owner->Handle(), value ? 1 : 0); }
+bool TTreeView::GetRowSelectImpl(TObject* owner)                    { return nv::TTreeView_GetRowSelect(owner->Handle()) != 0; }
+void TTreeView::SetRowSelectImpl(TObject* owner, const bool& value)  { nv::TTreeView_SetRowSelect(owner->Handle(), value ? 1 : 0); }
 
 // ノードを対象とするイベントのトランポリンは、スロット(メンバへのポインタ)だけが異なるため共通化する。
 template<typename Event>
@@ -1650,24 +1789,30 @@ void TTreeView::DispatchNodeAllow(no_vcl_obj_t sender, no_vcl_obj_t node, no_vcl
     *allow = value ? 1 : 0;
 }
 
-void NO_VCL_CALL TTreeView::ChangeTrampoline(no_vcl_obj_t s, no_vcl_obj_t n, void*)    { DispatchNode(s, n, &TTreeView::onChange_); }
-void NO_VCL_CALL TTreeView::ExpandedTrampoline(no_vcl_obj_t s, no_vcl_obj_t n, void*)  { DispatchNode(s, n, &TTreeView::onExpanded_); }
-void NO_VCL_CALL TTreeView::CollapsedTrampoline(no_vcl_obj_t s, no_vcl_obj_t n, void*) { DispatchNode(s, n, &TTreeView::onCollapsed_); }
-void NO_VCL_CALL TTreeView::DeletionTrampoline(no_vcl_obj_t s, no_vcl_obj_t n, void*)  { DispatchNode(s, n, &TTreeView::onDeletion_); }
+void NO_VCL_CALL TTreeView::ChangeTrampoline(no_vcl_obj_t s, no_vcl_obj_t n, void*)    { GuardCallback([&] { DispatchNode(s, n, &TTreeView::onChange_); }); }
+void NO_VCL_CALL TTreeView::ExpandedTrampoline(no_vcl_obj_t s, no_vcl_obj_t n, void*)  { GuardCallback([&] { DispatchNode(s, n, &TTreeView::onExpanded_); }); }
+void NO_VCL_CALL TTreeView::CollapsedTrampoline(no_vcl_obj_t s, no_vcl_obj_t n, void*) { GuardCallback([&] { DispatchNode(s, n, &TTreeView::onCollapsed_); }); }
+void NO_VCL_CALL TTreeView::DeletionTrampoline(no_vcl_obj_t s, no_vcl_obj_t n, void*)  { GuardCallback([&] { DispatchNode(s, n, &TTreeView::onDeletion_); }); }
 
 void NO_VCL_CALL TTreeView::ChangingTrampoline(no_vcl_obj_t s, no_vcl_obj_t n, no_vcl_bool_t* a, void*)
 {
-    DispatchNodeAllow(s, n, a, &TTreeView::onChanging_);
+    GuardCallback([&] {
+        DispatchNodeAllow(s, n, a, &TTreeView::onChanging_);
+    });
 }
 
 void NO_VCL_CALL TTreeView::ExpandingTrampoline(no_vcl_obj_t s, no_vcl_obj_t n, no_vcl_bool_t* a, void*)
 {
-    DispatchNodeAllow(s, n, a, &TTreeView::onExpanding_);
+    GuardCallback([&] {
+        DispatchNodeAllow(s, n, a, &TTreeView::onExpanding_);
+    });
 }
 
 void NO_VCL_CALL TTreeView::CollapsingTrampoline(no_vcl_obj_t s, no_vcl_obj_t n, no_vcl_bool_t* a, void*)
 {
-    DispatchNodeAllow(s, n, a, &TTreeView::onCollapsing_);
+    GuardCallback([&] {
+        DispatchNodeAllow(s, n, a, &TTreeView::onCollapsing_);
+    });
 }
 
 TTVChangedEvent    TTreeView::GetOnChangeImpl(TObject* owner)     { return static_cast<TTreeView*>(owner)->onChange_; }
@@ -1750,24 +1895,24 @@ TListItem::TListItem(no_vcl_obj_t handle)
 {}
 
 TStrings* TListItem::GetSubItemsImpl(TObject* owner) { return &static_cast<TListItem*>(owner)->subItems_; }
-void TListItem::Delete()                               { no_vcl_TListItem_Delete(handle_); }
-void TListItem::MakeVisible(bool PartialOK)            { no_vcl_TListItem_MakeVisible(handle_, PartialOK ? 1 : 0); }
+void TListItem::Delete()                               { nv::TListItem_Delete(handle_); }
+void TListItem::MakeVisible(bool PartialOK)            { nv::TListItem_MakeVisible(handle_, PartialOK ? 1 : 0); }
 
-std::string TListItem::GetCaptionImpl(TObject* owner) { return std::string(no_vcl_TListItem_GetCaption(owner->Handle())); }
-void TListItem::SetCaptionImpl(TObject* owner, const std::string& value) { no_vcl_TListItem_SetCaption(owner->Handle(), value.c_str()); }
-bool TListItem::GetCheckedImpl(TObject* owner)                     { return no_vcl_TListItem_GetChecked(owner->Handle()) != 0; }
-void TListItem::SetCheckedImpl(TObject* owner, const bool& value)   { no_vcl_TListItem_SetChecked(owner->Handle(), value ? 1 : 0); }
-bool TListItem::GetSelectedImpl(TObject* owner)                    { return no_vcl_TListItem_GetSelected(owner->Handle()) != 0; }
-void TListItem::SetSelectedImpl(TObject* owner, const bool& value)  { no_vcl_TListItem_SetSelected(owner->Handle(), value ? 1 : 0); }
-bool TListItem::GetFocusedImpl(TObject* owner)                     { return no_vcl_TListItem_GetFocused(owner->Handle()) != 0; }
-void TListItem::SetFocusedImpl(TObject* owner, const bool& value)   { no_vcl_TListItem_SetFocused(owner->Handle(), value ? 1 : 0); }
-void* TListItem::GetDataImpl(TObject* owner)                       { return no_vcl_TListItem_GetData(owner->Handle()); }
-void TListItem::SetDataImpl(TObject* owner, void* const& value)     { no_vcl_TListItem_SetData(owner->Handle(), value); }
-int  TListItem::GetIndexImpl(TObject* owner)                       { return no_vcl_TListItem_GetIndex(owner->Handle()); }
+std::string TListItem::GetCaptionImpl(TObject* owner) { return std::string(nv::TListItem_GetCaption(owner->Handle())); }
+void TListItem::SetCaptionImpl(TObject* owner, const std::string& value) { nv::TListItem_SetCaption(owner->Handle(), value.c_str()); }
+bool TListItem::GetCheckedImpl(TObject* owner)                     { return nv::TListItem_GetChecked(owner->Handle()) != 0; }
+void TListItem::SetCheckedImpl(TObject* owner, const bool& value)   { nv::TListItem_SetChecked(owner->Handle(), value ? 1 : 0); }
+bool TListItem::GetSelectedImpl(TObject* owner)                    { return nv::TListItem_GetSelected(owner->Handle()) != 0; }
+void TListItem::SetSelectedImpl(TObject* owner, const bool& value)  { nv::TListItem_SetSelected(owner->Handle(), value ? 1 : 0); }
+bool TListItem::GetFocusedImpl(TObject* owner)                     { return nv::TListItem_GetFocused(owner->Handle()) != 0; }
+void TListItem::SetFocusedImpl(TObject* owner, const bool& value)   { nv::TListItem_SetFocused(owner->Handle(), value ? 1 : 0); }
+void* TListItem::GetDataImpl(TObject* owner)                       { return nv::TListItem_GetData(owner->Handle()); }
+void TListItem::SetDataImpl(TObject* owner, void* const& value)     { nv::TListItem_SetData(owner->Handle(), value); }
+int  TListItem::GetIndexImpl(TObject* owner)                       { return nv::TListItem_GetIndex(owner->Handle()); }
 
 TCustomListView* TListItem::GetListViewImpl(TObject* owner)
 {
-    return static_cast<TCustomListView*>(TCustomListView::FromHandle(no_vcl_TListItem_GetListView(owner->Handle())));
+    return static_cast<TCustomListView*>(TCustomListView::FromHandle(nv::TListItem_GetListView(owner->Handle())));
 }
 
 TListItems::TListItems(no_vcl_obj_t handle)
@@ -1776,24 +1921,24 @@ TListItems::TListItems(no_vcl_obj_t handle)
     , Item(this, &TListItems::GetItemImpl)
 {}
 
-TListItem* TListItems::Add()                     { return TListItem::Wrap(no_vcl_TListItems_Add(handle_)); }
-TListItem* TListItems::Insert(int Index)         { return TListItem::Wrap(no_vcl_TListItems_Insert(handle_, Index)); }
-void TListItems::Delete(int Index)               { no_vcl_TListItems_Delete(handle_, Index); }
-void TListItems::Clear()                         { no_vcl_TListItems_Clear(handle_); }
-TListItem* TListItems::GetItemImpl(TObject* owner, int Index) { return TListItem::Wrap(no_vcl_TListItems_GetItem(owner->Handle(), Index)); }
-int  TListItems::IndexOf(TListItem* Item) const  { return no_vcl_TListItems_IndexOf(handle_, ItemHandle(Item)); }
+TListItem* TListItems::Add()                     { return TListItem::Wrap(nv::TListItems_Add(handle_)); }
+TListItem* TListItems::Insert(int Index)         { return TListItem::Wrap(nv::TListItems_Insert(handle_, Index)); }
+void TListItems::Delete(int Index)               { nv::TListItems_Delete(handle_, Index); }
+void TListItems::Clear()                         { nv::TListItems_Clear(handle_); }
+TListItem* TListItems::GetItemImpl(TObject* owner, int Index) { return TListItem::Wrap(nv::TListItems_GetItem(owner->Handle(), Index)); }
+int  TListItems::IndexOf(TListItem* Item) const  { return nv::TListItems_IndexOf(handle_, ItemHandle(Item)); }
 
 TListItem* TListItems::FindCaption(int StartIndex, const std::string& Value, bool Partial, bool Inclusive, bool Wrap) const
 {
-    return TListItem::Wrap(no_vcl_TListItems_FindCaption(handle_, StartIndex, Value.c_str(),
+    return TListItem::Wrap(nv::TListItems_FindCaption(handle_, StartIndex, Value.c_str(),
                                                         Partial ? 1 : 0, Inclusive ? 1 : 0, Wrap ? 1 : 0));
 }
 
-void TListItems::Exchange(int Index1, int Index2) { no_vcl_TListItems_Exchange(handle_, Index1, Index2); }
-void TListItems::Move(int FromIndex, int ToIndex) { no_vcl_TListItems_Move(handle_, FromIndex, ToIndex); }
-void TListItems::BeginUpdate()                    { no_vcl_TListItems_BeginUpdate(handle_); }
-void TListItems::EndUpdate()                      { no_vcl_TListItems_EndUpdate(handle_); }
-int  TListItems::GetCountImpl(TObject* owner)     { return no_vcl_TListItems_GetCount(owner->Handle()); }
+void TListItems::Exchange(int Index1, int Index2) { nv::TListItems_Exchange(handle_, Index1, Index2); }
+void TListItems::Move(int FromIndex, int ToIndex) { nv::TListItems_Move(handle_, FromIndex, ToIndex); }
+void TListItems::BeginUpdate()                    { nv::TListItems_BeginUpdate(handle_); }
+void TListItems::EndUpdate()                      { nv::TListItems_EndUpdate(handle_); }
+int  TListItems::GetCountImpl(TObject* owner)     { return nv::TListItems_GetCount(owner->Handle()); }
 
 TListColumn::TListColumn(no_vcl_obj_t handle)
     : TPersistent(handle)
@@ -1806,18 +1951,18 @@ TListColumn::TListColumn(no_vcl_obj_t handle)
     , ImageIndex(this, &TListColumn::GetImageIndexImpl, &TListColumn::SetImageIndexImpl)
 {}
 
-std::string TListColumn::GetCaptionImpl(TObject* owner) { return std::string(no_vcl_TListColumn_GetCaption(owner->Handle())); }
-void TListColumn::SetCaptionImpl(TObject* owner, const std::string& value) { no_vcl_TListColumn_SetCaption(owner->Handle(), value.c_str()); }
-int  TListColumn::GetWidthImpl(TObject* owner)                    { return no_vcl_TListColumn_GetWidth(owner->Handle()); }
-void TListColumn::SetWidthImpl(TObject* owner, const int& value)   { no_vcl_TListColumn_SetWidth(owner->Handle(), value); }
-TAlignment TListColumn::GetAlignmentImpl(TObject* owner) { return static_cast<TAlignment>(no_vcl_TListColumn_GetAlignment(owner->Handle())); }
-void TListColumn::SetAlignmentImpl(TObject* owner, const TAlignment& value) { no_vcl_TListColumn_SetAlignment(owner->Handle(), value); }
-bool TListColumn::GetAutoSizeImpl(TObject* owner)                 { return no_vcl_TListColumn_GetAutoSize(owner->Handle()) != 0; }
-void TListColumn::SetAutoSizeImpl(TObject* owner, const bool& value) { no_vcl_TListColumn_SetAutoSize(owner->Handle(), value ? 1 : 0); }
-bool TListColumn::GetVisibleImpl(TObject* owner)                  { return no_vcl_TListColumn_GetVisible(owner->Handle()) != 0; }
-void TListColumn::SetVisibleImpl(TObject* owner, const bool& value) { no_vcl_TListColumn_SetVisible(owner->Handle(), value ? 1 : 0); }
-int  TListColumn::GetIndexImpl(TObject* owner)                    { return no_vcl_TListColumn_GetIndex(owner->Handle()); }
-void TListColumn::SetIndexImpl(TObject* owner, const int& value)   { no_vcl_TListColumn_SetIndex(owner->Handle(), value); }
+std::string TListColumn::GetCaptionImpl(TObject* owner) { return std::string(nv::TListColumn_GetCaption(owner->Handle())); }
+void TListColumn::SetCaptionImpl(TObject* owner, const std::string& value) { nv::TListColumn_SetCaption(owner->Handle(), value.c_str()); }
+int  TListColumn::GetWidthImpl(TObject* owner)                    { return nv::TListColumn_GetWidth(owner->Handle()); }
+void TListColumn::SetWidthImpl(TObject* owner, const int& value)   { nv::TListColumn_SetWidth(owner->Handle(), value); }
+TAlignment TListColumn::GetAlignmentImpl(TObject* owner) { return static_cast<TAlignment>(nv::TListColumn_GetAlignment(owner->Handle())); }
+void TListColumn::SetAlignmentImpl(TObject* owner, const TAlignment& value) { nv::TListColumn_SetAlignment(owner->Handle(), value); }
+bool TListColumn::GetAutoSizeImpl(TObject* owner)                 { return nv::TListColumn_GetAutoSize(owner->Handle()) != 0; }
+void TListColumn::SetAutoSizeImpl(TObject* owner, const bool& value) { nv::TListColumn_SetAutoSize(owner->Handle(), value ? 1 : 0); }
+bool TListColumn::GetVisibleImpl(TObject* owner)                  { return nv::TListColumn_GetVisible(owner->Handle()) != 0; }
+void TListColumn::SetVisibleImpl(TObject* owner, const bool& value) { nv::TListColumn_SetVisible(owner->Handle(), value ? 1 : 0); }
+int  TListColumn::GetIndexImpl(TObject* owner)                    { return nv::TListColumn_GetIndex(owner->Handle()); }
+void TListColumn::SetIndexImpl(TObject* owner, const int& value)   { nv::TListColumn_SetIndex(owner->Handle(), value); }
 
 TListColumns::TListColumns(no_vcl_obj_t handle)
     : TPersistent(handle)
@@ -1825,11 +1970,11 @@ TListColumns::TListColumns(no_vcl_obj_t handle)
     , Items(this, &TListColumns::GetItemsImpl)
 {}
 
-TListColumn* TListColumns::Add()                    { return TListColumn::Wrap(no_vcl_TListColumns_Add(handle_)); }
-TListColumn* TListColumns::GetItemsImpl(TObject* owner, int Index) { return TListColumn::Wrap(no_vcl_TListColumns_GetItem(owner->Handle(), Index)); }
-void TListColumns::Delete(int Index)                { no_vcl_TListColumns_Delete(handle_, Index); }
-void TListColumns::Clear()                          { no_vcl_TListColumns_Clear(handle_); }
-int  TListColumns::GetCountImpl(TObject* owner)     { return no_vcl_TListColumns_GetCount(owner->Handle()); }
+TListColumn* TListColumns::Add()                    { return TListColumn::Wrap(nv::TListColumns_Add(handle_)); }
+TListColumn* TListColumns::GetItemsImpl(TObject* owner, int Index) { return TListColumn::Wrap(nv::TListColumns_GetItem(owner->Handle(), Index)); }
+void TListColumns::Delete(int Index)                { nv::TListColumns_Delete(handle_, Index); }
+void TListColumns::Clear()                          { nv::TListColumns_Clear(handle_); }
+int  TListColumns::GetCountImpl(TObject* owner)     { return nv::TListColumns_GetCount(owner->Handle()); }
 
 TCustomListView::TCustomListView(no_vcl_obj_t handle)
     : TWinControl(handle)
@@ -1842,39 +1987,39 @@ TCustomListView::TCustomListView(no_vcl_obj_t handle)
     , MultiSelect(this, &TCustomListView::GetMultiSelectImpl, &TCustomListView::SetMultiSelectImpl)
     , ReadOnly(this, &TCustomListView::GetReadOnlyImpl, &TCustomListView::SetReadOnlyImpl)
     , RowSelect(this, &TCustomListView::GetRowSelectImpl, &TCustomListView::SetRowSelectImpl)
-    , items_(no_vcl_TCustomListView_GetItems(handle))
+    , items_(nv::TCustomListView_GetItems(handle))
 {}
 
-void TCustomListView::Clear()          { no_vcl_TCustomListView_Clear(handle_); }
-void TCustomListView::BeginUpdate()    { no_vcl_TCustomListView_BeginUpdate(handle_); }
-void TCustomListView::EndUpdate()      { no_vcl_TCustomListView_EndUpdate(handle_); }
-void TCustomListView::ClearSelection() { no_vcl_TCustomListView_ClearSelection(handle_); }
-void TCustomListView::SelectAll()      { no_vcl_TCustomListView_SelectAll(handle_); }
+void TCustomListView::Clear()          { nv::TCustomListView_Clear(handle_); }
+void TCustomListView::BeginUpdate()    { nv::TCustomListView_BeginUpdate(handle_); }
+void TCustomListView::EndUpdate()      { nv::TCustomListView_EndUpdate(handle_); }
+void TCustomListView::ClearSelection() { nv::TCustomListView_ClearSelection(handle_); }
+void TCustomListView::SelectAll()      { nv::TCustomListView_SelectAll(handle_); }
 
 TListItem* TCustomListView::GetItemAt(int X, int Y) const
 {
-    return TListItem::Wrap(no_vcl_TCustomListView_GetItemAt(handle_, X, Y));
+    return TListItem::Wrap(nv::TCustomListView_GetItemAt(handle_, X, Y));
 }
 
 TListItems* TCustomListView::GetItemsImpl(TObject* owner)   { return &static_cast<TCustomListView*>(owner)->items_; }
-TListItem*  TCustomListView::GetSelectedImpl(TObject* owner) { return TListItem::Wrap(no_vcl_TCustomListView_GetSelected(owner->Handle())); }
-void TCustomListView::SetSelectedImpl(TObject* owner, TListItem* const& value) { no_vcl_TCustomListView_SetSelected(owner->Handle(), ItemHandle(value)); }
-int  TCustomListView::GetItemIndexImpl(TObject* owner)                   { return no_vcl_TCustomListView_GetItemIndex(owner->Handle()); }
-void TCustomListView::SetItemIndexImpl(TObject* owner, const int& value)  { no_vcl_TCustomListView_SetItemIndex(owner->Handle(), value); }
-int  TCustomListView::GetSelCountImpl(TObject* owner)                    { return no_vcl_TCustomListView_GetSelCount(owner->Handle()); }
-bool TCustomListView::GetCheckboxesImpl(TObject* owner)                  { return no_vcl_TCustomListView_GetCheckboxes(owner->Handle()) != 0; }
-void TCustomListView::SetCheckboxesImpl(TObject* owner, const bool& value) { no_vcl_TCustomListView_SetCheckboxes(owner->Handle(), value ? 1 : 0); }
-bool TCustomListView::GetGridLinesImpl(TObject* owner)                   { return no_vcl_TCustomListView_GetGridLines(owner->Handle()) != 0; }
-void TCustomListView::SetGridLinesImpl(TObject* owner, const bool& value) { no_vcl_TCustomListView_SetGridLines(owner->Handle(), value ? 1 : 0); }
-bool TCustomListView::GetMultiSelectImpl(TObject* owner)                 { return no_vcl_TCustomListView_GetMultiSelect(owner->Handle()) != 0; }
-void TCustomListView::SetMultiSelectImpl(TObject* owner, const bool& value) { no_vcl_TCustomListView_SetMultiSelect(owner->Handle(), value ? 1 : 0); }
-bool TCustomListView::GetReadOnlyImpl(TObject* owner)                    { return no_vcl_TCustomListView_GetReadOnly(owner->Handle()) != 0; }
-void TCustomListView::SetReadOnlyImpl(TObject* owner, const bool& value)  { no_vcl_TCustomListView_SetReadOnly(owner->Handle(), value ? 1 : 0); }
-bool TCustomListView::GetRowSelectImpl(TObject* owner)                   { return no_vcl_TCustomListView_GetRowSelect(owner->Handle()) != 0; }
-void TCustomListView::SetRowSelectImpl(TObject* owner, const bool& value) { no_vcl_TCustomListView_SetRowSelect(owner->Handle(), value ? 1 : 0); }
+TListItem*  TCustomListView::GetSelectedImpl(TObject* owner) { return TListItem::Wrap(nv::TCustomListView_GetSelected(owner->Handle())); }
+void TCustomListView::SetSelectedImpl(TObject* owner, TListItem* const& value) { nv::TCustomListView_SetSelected(owner->Handle(), ItemHandle(value)); }
+int  TCustomListView::GetItemIndexImpl(TObject* owner)                   { return nv::TCustomListView_GetItemIndex(owner->Handle()); }
+void TCustomListView::SetItemIndexImpl(TObject* owner, const int& value)  { nv::TCustomListView_SetItemIndex(owner->Handle(), value); }
+int  TCustomListView::GetSelCountImpl(TObject* owner)                    { return nv::TCustomListView_GetSelCount(owner->Handle()); }
+bool TCustomListView::GetCheckboxesImpl(TObject* owner)                  { return nv::TCustomListView_GetCheckboxes(owner->Handle()) != 0; }
+void TCustomListView::SetCheckboxesImpl(TObject* owner, const bool& value) { nv::TCustomListView_SetCheckboxes(owner->Handle(), value ? 1 : 0); }
+bool TCustomListView::GetGridLinesImpl(TObject* owner)                   { return nv::TCustomListView_GetGridLines(owner->Handle()) != 0; }
+void TCustomListView::SetGridLinesImpl(TObject* owner, const bool& value) { nv::TCustomListView_SetGridLines(owner->Handle(), value ? 1 : 0); }
+bool TCustomListView::GetMultiSelectImpl(TObject* owner)                 { return nv::TCustomListView_GetMultiSelect(owner->Handle()) != 0; }
+void TCustomListView::SetMultiSelectImpl(TObject* owner, const bool& value) { nv::TCustomListView_SetMultiSelect(owner->Handle(), value ? 1 : 0); }
+bool TCustomListView::GetReadOnlyImpl(TObject* owner)                    { return nv::TCustomListView_GetReadOnly(owner->Handle()) != 0; }
+void TCustomListView::SetReadOnlyImpl(TObject* owner, const bool& value)  { nv::TCustomListView_SetReadOnly(owner->Handle(), value ? 1 : 0); }
+bool TCustomListView::GetRowSelectImpl(TObject* owner)                   { return nv::TCustomListView_GetRowSelect(owner->Handle()) != 0; }
+void TCustomListView::SetRowSelectImpl(TObject* owner, const bool& value) { nv::TCustomListView_SetRowSelect(owner->Handle(), value ? 1 : 0); }
 
 TListView::TListView(TComponent* AOwner)
-    : TCustomListView(no_vcl_TListView_Create(HandleOf(AOwner)))
+    : TCustomListView(nv::TListView_Create(HandleOf(AOwner)))
     , Columns(this, &TListView::GetColumnsImpl)
     , ViewStyle(this, &TListView::GetViewStyleImpl, &TListView::SetViewStyleImpl)
     , HideSelection(this, &TListView::GetHideSelectionImpl, &TListView::SetHideSelectionImpl)
@@ -1889,66 +2034,76 @@ TListView::TListView(TComponent* AOwner)
     , LargeImages(this, &TListView::GetLargeImagesImpl, &TListView::SetLargeImagesImpl)
     , SmallImages(this, &TListView::GetSmallImagesImpl, &TListView::SetSmallImagesImpl)
     , StateImages(this, &TListView::GetStateImagesImpl, &TListView::SetStateImagesImpl)
-    , columns_(no_vcl_TListView_GetColumns(handle_))
+    , columns_(nv::TListView_GetColumns(handle_))
 {}
 
 TListColumns* TListView::GetColumnsImpl(TObject* owner) { return &static_cast<TListView*>(owner)->columns_; }
-TViewStyle TListView::GetViewStyleImpl(TObject* owner) { return static_cast<TViewStyle>(no_vcl_TListView_GetViewStyle(owner->Handle())); }
-void TListView::SetViewStyleImpl(TObject* owner, const TViewStyle& value) { no_vcl_TListView_SetViewStyle(owner->Handle(), value); }
-bool TListView::GetHideSelectionImpl(TObject* owner)                    { return no_vcl_TListView_GetHideSelection(owner->Handle()) != 0; }
-void TListView::SetHideSelectionImpl(TObject* owner, const bool& value)  { no_vcl_TListView_SetHideSelection(owner->Handle(), value ? 1 : 0); }
-TSortType TListView::GetSortTypeImpl(TObject* owner) { return static_cast<TSortType>(no_vcl_TListView_GetSortType(owner->Handle())); }
-void TListView::SetSortTypeImpl(TObject* owner, const TSortType& value) { no_vcl_TListView_SetSortType(owner->Handle(), value); }
-int  TListView::GetSortColumnImpl(TObject* owner)                       { return no_vcl_TListView_GetSortColumn(owner->Handle()); }
-void TListView::SetSortColumnImpl(TObject* owner, const int& value)      { no_vcl_TListView_SetSortColumn(owner->Handle(), value); }
-TSortDirection TListView::GetSortDirectionImpl(TObject* owner) { return static_cast<TSortDirection>(no_vcl_TListView_GetSortDirection(owner->Handle())); }
-void TListView::SetSortDirectionImpl(TObject* owner, const TSortDirection& value) { no_vcl_TListView_SetSortDirection(owner->Handle(), value); }
+TViewStyle TListView::GetViewStyleImpl(TObject* owner) { return static_cast<TViewStyle>(nv::TListView_GetViewStyle(owner->Handle())); }
+void TListView::SetViewStyleImpl(TObject* owner, const TViewStyle& value) { nv::TListView_SetViewStyle(owner->Handle(), value); }
+bool TListView::GetHideSelectionImpl(TObject* owner)                    { return nv::TListView_GetHideSelection(owner->Handle()) != 0; }
+void TListView::SetHideSelectionImpl(TObject* owner, const bool& value)  { nv::TListView_SetHideSelection(owner->Handle(), value ? 1 : 0); }
+TSortType TListView::GetSortTypeImpl(TObject* owner) { return static_cast<TSortType>(nv::TListView_GetSortType(owner->Handle())); }
+void TListView::SetSortTypeImpl(TObject* owner, const TSortType& value) { nv::TListView_SetSortType(owner->Handle(), value); }
+int  TListView::GetSortColumnImpl(TObject* owner)                       { return nv::TListView_GetSortColumn(owner->Handle()); }
+void TListView::SetSortColumnImpl(TObject* owner, const int& value)      { nv::TListView_SetSortColumn(owner->Handle(), value); }
+TSortDirection TListView::GetSortDirectionImpl(TObject* owner) { return static_cast<TSortDirection>(nv::TListView_GetSortDirection(owner->Handle())); }
+void TListView::SetSortDirectionImpl(TObject* owner, const TSortDirection& value) { nv::TListView_SetSortDirection(owner->Handle(), value); }
 
 // リストビューの破棄では、リストビュー自身のラッパーが delete された後に項目が破棄される(LCL の順序)。
 // そのときの OnDeletion は FromHandle が nullptr を返すため、ハンドラは呼ばれない。
 void NO_VCL_CALL TListView::SelectItemTrampoline(no_vcl_obj_t sender, no_vcl_obj_t item, no_vcl_int_t selected, void*)
 {
-    TListView* self = static_cast<TListView*>(FromHandle(sender));
-    if (!self || !self->onSelectItem_)
-        return;
-    TLVSelectItemEvent handler = self->onSelectItem_;
-    handler(self, TListItem::Wrap(item), selected != 0);
+    GuardCallback([&] {
+        TListView* self = static_cast<TListView*>(FromHandle(sender));
+        if (!self || !self->onSelectItem_)
+            return;
+        TLVSelectItemEvent handler = self->onSelectItem_;
+        handler(self, TListItem::Wrap(item), selected != 0);
+    });
 }
 
 void NO_VCL_CALL TListView::ChangeTrampoline(no_vcl_obj_t sender, no_vcl_obj_t item, no_vcl_int_t change, void*)
 {
-    TListView* self = static_cast<TListView*>(FromHandle(sender));
-    if (!self || !self->onChange_)
-        return;
-    TLVChangeEvent handler = self->onChange_;
-    handler(self, TListItem::Wrap(item), static_cast<TItemChange>(change));
+    GuardCallback([&] {
+        TListView* self = static_cast<TListView*>(FromHandle(sender));
+        if (!self || !self->onChange_)
+            return;
+        TLVChangeEvent handler = self->onChange_;
+        handler(self, TListItem::Wrap(item), static_cast<TItemChange>(change));
+    });
 }
 
 void NO_VCL_CALL TListView::DeletionTrampoline(no_vcl_obj_t sender, no_vcl_obj_t item, void*)
 {
-    TListView* self = static_cast<TListView*>(FromHandle(sender));
-    if (!self || !self->onDeletion_)
-        return;
-    TLVDeletedEvent handler = self->onDeletion_;
-    handler(self, TListItem::Wrap(item));
+    GuardCallback([&] {
+        TListView* self = static_cast<TListView*>(FromHandle(sender));
+        if (!self || !self->onDeletion_)
+            return;
+        TLVDeletedEvent handler = self->onDeletion_;
+        handler(self, TListItem::Wrap(item));
+    });
 }
 
 void NO_VCL_CALL TListView::ItemCheckedTrampoline(no_vcl_obj_t sender, no_vcl_obj_t item, void*)
 {
-    TListView* self = static_cast<TListView*>(FromHandle(sender));
-    if (!self || !self->onItemChecked_)
-        return;
-    TLVCheckedItemEvent handler = self->onItemChecked_;
-    handler(self, TListItem::Wrap(item));
+    GuardCallback([&] {
+        TListView* self = static_cast<TListView*>(FromHandle(sender));
+        if (!self || !self->onItemChecked_)
+            return;
+        TLVCheckedItemEvent handler = self->onItemChecked_;
+        handler(self, TListItem::Wrap(item));
+    });
 }
 
 void NO_VCL_CALL TListView::ColumnClickTrampoline(no_vcl_obj_t sender, no_vcl_obj_t column, void*)
 {
-    TListView* self = static_cast<TListView*>(FromHandle(sender));
-    if (!self || !self->onColumnClick_)
-        return;
-    TLVColumnClickEvent handler = self->onColumnClick_;
-    handler(self, TListColumn::Wrap(column));
+    GuardCallback([&] {
+        TListView* self = static_cast<TListView*>(FromHandle(sender));
+        if (!self || !self->onColumnClick_)
+            return;
+        TLVColumnClickEvent handler = self->onColumnClick_;
+        handler(self, TListColumn::Wrap(column));
+    });
 }
 
 TLVSelectItemEvent  TListView::GetOnSelectItemImpl(TObject* owner)  { return static_cast<TListView*>(owner)->onSelectItem_; }
@@ -2002,20 +2157,20 @@ TCustomSplitter::TCustomSplitter(no_vcl_obj_t handle)
     , OnMoved(this, &TCustomSplitter::GetOnMovedImpl, &TCustomSplitter::SetOnMovedImpl)
 {}
 
-int  TCustomSplitter::GetSplitterPosition() const  { return no_vcl_TCustomSplitter_GetSplitterPosition(handle_); }
-void TCustomSplitter::SetSplitterPosition(int pos) { no_vcl_TCustomSplitter_SetSplitterPosition(handle_, pos); }
+int  TCustomSplitter::GetSplitterPosition() const  { return nv::TCustomSplitter_GetSplitterPosition(handle_); }
+void TCustomSplitter::SetSplitterPosition(int pos) { nv::TCustomSplitter_SetSplitterPosition(handle_, pos); }
 
-bool TCustomSplitter::GetAutoSnapImpl(TObject* owner)                   { return no_vcl_TCustomSplitter_GetAutoSnap(owner->Handle()) != 0; }
-void TCustomSplitter::SetAutoSnapImpl(TObject* owner, const bool& value) { no_vcl_TCustomSplitter_SetAutoSnap(owner->Handle(), value ? 1 : 0); }
-bool TCustomSplitter::GetBeveledImpl(TObject* owner)                    { return no_vcl_TCustomSplitter_GetBeveled(owner->Handle()) != 0; }
-void TCustomSplitter::SetBeveledImpl(TObject* owner, const bool& value)  { no_vcl_TCustomSplitter_SetBeveled(owner->Handle(), value ? 1 : 0); }
-int  TCustomSplitter::GetMinSizeImpl(TObject* owner)                    { return no_vcl_TCustomSplitter_GetMinSize(owner->Handle()); }
-void TCustomSplitter::SetMinSizeImpl(TObject* owner, const int& value)   { no_vcl_TCustomSplitter_SetMinSize(owner->Handle(), value); }
+bool TCustomSplitter::GetAutoSnapImpl(TObject* owner)                   { return nv::TCustomSplitter_GetAutoSnap(owner->Handle()) != 0; }
+void TCustomSplitter::SetAutoSnapImpl(TObject* owner, const bool& value) { nv::TCustomSplitter_SetAutoSnap(owner->Handle(), value ? 1 : 0); }
+bool TCustomSplitter::GetBeveledImpl(TObject* owner)                    { return nv::TCustomSplitter_GetBeveled(owner->Handle()) != 0; }
+void TCustomSplitter::SetBeveledImpl(TObject* owner, const bool& value)  { nv::TCustomSplitter_SetBeveled(owner->Handle(), value ? 1 : 0); }
+int  TCustomSplitter::GetMinSizeImpl(TObject* owner)                    { return nv::TCustomSplitter_GetMinSize(owner->Handle()); }
+void TCustomSplitter::SetMinSizeImpl(TObject* owner, const int& value)   { nv::TCustomSplitter_SetMinSize(owner->Handle(), value); }
 
-TAnchorKind TCustomSplitter::GetResizeAnchorImpl(TObject* owner) { return static_cast<TAnchorKind>(no_vcl_TCustomSplitter_GetResizeAnchor(owner->Handle())); }
-void TCustomSplitter::SetResizeAnchorImpl(TObject* owner, const TAnchorKind& value) { no_vcl_TCustomSplitter_SetResizeAnchor(owner->Handle(), value); }
-TResizeStyle TCustomSplitter::GetResizeStyleImpl(TObject* owner) { return static_cast<TResizeStyle>(no_vcl_TCustomSplitter_GetResizeStyle(owner->Handle())); }
-void TCustomSplitter::SetResizeStyleImpl(TObject* owner, const TResizeStyle& value) { no_vcl_TCustomSplitter_SetResizeStyle(owner->Handle(), value); }
+TAnchorKind TCustomSplitter::GetResizeAnchorImpl(TObject* owner) { return static_cast<TAnchorKind>(nv::TCustomSplitter_GetResizeAnchor(owner->Handle())); }
+void TCustomSplitter::SetResizeAnchorImpl(TObject* owner, const TAnchorKind& value) { nv::TCustomSplitter_SetResizeAnchor(owner->Handle(), value); }
+TResizeStyle TCustomSplitter::GetResizeStyleImpl(TObject* owner) { return static_cast<TResizeStyle>(nv::TCustomSplitter_GetResizeStyle(owner->Handle())); }
+void TCustomSplitter::SetResizeStyleImpl(TObject* owner, const TResizeStyle& value) { nv::TCustomSplitter_SetResizeStyle(owner->Handle(), value); }
 
 TNotifyEvent TCustomSplitter::GetOnMovedImpl(TObject* owner) { return static_cast<TCustomSplitter*>(owner)->onMoved_; }
 
@@ -2028,12 +2183,14 @@ void TCustomSplitter::SetOnMovedImpl(TObject* owner, const TNotifyEvent& value)
 
 void NO_VCL_CALL TCustomSplitter::MovedTrampoline(no_vcl_obj_t sender, void*)
 {
-    if (TCustomSplitter* self = static_cast<TCustomSplitter*>(FromHandle(sender)))
-        CallNotify(self->onMoved_, self);
+    GuardCallback([&] {
+        if (TCustomSplitter* self = static_cast<TCustomSplitter*>(FromHandle(sender)))
+            CallNotify(self->onMoved_, self);
+    });
 }
 
 TSplitter::TSplitter(TComponent* AOwner)
-    : TCustomSplitter(no_vcl_TSplitter_Create(HandleOf(AOwner)))
+    : TCustomSplitter(nv::TSplitter_Create(HandleOf(AOwner)))
 {}
 
 TCustomMemo::TCustomMemo(no_vcl_obj_t handle)
@@ -2045,11 +2202,11 @@ TCustomMemo::TCustomMemo(no_vcl_obj_t handle)
 
 TStrings* TCustomMemo::GetLinesImpl(TObject* owner) { return &static_cast<TCustomMemo*>(owner)->lines_; }
 
-int  TCustomMemo::GetScrollBarsImpl(TObject* owner)                   { return no_vcl_TCustomMemo_GetScrollBars(owner->Handle()); }
-void TCustomMemo::SetScrollBarsImpl(TObject* owner, const int& value) { no_vcl_TCustomMemo_SetScrollBars(owner->Handle(), value); }
+int  TCustomMemo::GetScrollBarsImpl(TObject* owner)                   { return nv::TCustomMemo_GetScrollBars(owner->Handle()); }
+void TCustomMemo::SetScrollBarsImpl(TObject* owner, const int& value) { nv::TCustomMemo_SetScrollBars(owner->Handle(), value); }
 
 TMemo::TMemo(TComponent* AOwner)
-    : TCustomMemo(no_vcl_TMemo_Create(HandleOf(AOwner)))
+    : TCustomMemo(nv::TMemo_Create(HandleOf(AOwner)))
 {}
 
 /* ---------------- ComboBox / ListBox ---------------- */
@@ -2063,11 +2220,11 @@ TCustomComboBox::TCustomComboBox(no_vcl_obj_t handle)
 
 TStrings* TCustomComboBox::GetItemsImpl(TObject* owner) { return &static_cast<TCustomComboBox*>(owner)->items_; }
 
-int  TCustomComboBox::GetItemIndexImpl(TObject* owner)                   { return no_vcl_TCustomComboBox_GetItemIndex(owner->Handle()); }
-void TCustomComboBox::SetItemIndexImpl(TObject* owner, const int& value) { no_vcl_TCustomComboBox_SetItemIndex(owner->Handle(), value); }
+int  TCustomComboBox::GetItemIndexImpl(TObject* owner)                   { return nv::TCustomComboBox_GetItemIndex(owner->Handle()); }
+void TCustomComboBox::SetItemIndexImpl(TObject* owner, const int& value) { nv::TCustomComboBox_SetItemIndex(owner->Handle(), value); }
 
 TComboBox::TComboBox(TComponent* AOwner)
-    : TCustomComboBox(no_vcl_TComboBox_Create(HandleOf(AOwner)))
+    : TCustomComboBox(nv::TComboBox_Create(HandleOf(AOwner)))
     , OnChange(this, &TComboBox::GetOnChangeImpl, &TComboBox::SetOnChangeImpl)
 {}
 
@@ -2082,18 +2239,20 @@ void TComboBox::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value)
     self->onChange_ = value;
     if (value && !self->onChangeHooked_)
     {
-        no_vcl_TComboBox_SetOnChange(self->handle_, &TComboBox::ChangeTrampoline, nullptr);
+        nv::TComboBox_SetOnChange(self->handle_, &TComboBox::ChangeTrampoline, nullptr);
         self->onChangeHooked_ = true;
     }
 }
 
 void NO_VCL_CALL TComboBox::ChangeTrampoline(no_vcl_obj_t sender, void*)
 {
-    TComboBox* self = static_cast<TComboBox*>(FromHandle(sender));
-    if (!self || !self->onChange_)
-        return;
-    TNotifyEvent handler = self->onChange_;
-    handler(self);
+    GuardCallback([&] {
+        TComboBox* self = static_cast<TComboBox*>(FromHandle(sender));
+        if (!self || !self->onChange_)
+            return;
+        TNotifyEvent handler = self->onChange_;
+        handler(self);
+    });
 }
 
 TCustomListBox::TCustomListBox(no_vcl_obj_t handle)
@@ -2105,11 +2264,11 @@ TCustomListBox::TCustomListBox(no_vcl_obj_t handle)
 
 TStrings* TCustomListBox::GetItemsImpl(TObject* owner) { return &static_cast<TCustomListBox*>(owner)->items_; }
 
-int  TCustomListBox::GetItemIndexImpl(TObject* owner)                   { return no_vcl_TCustomListBox_GetItemIndex(owner->Handle()); }
-void TCustomListBox::SetItemIndexImpl(TObject* owner, const int& value) { no_vcl_TCustomListBox_SetItemIndex(owner->Handle(), value); }
+int  TCustomListBox::GetItemIndexImpl(TObject* owner)                   { return nv::TCustomListBox_GetItemIndex(owner->Handle()); }
+void TCustomListBox::SetItemIndexImpl(TObject* owner, const int& value) { nv::TCustomListBox_SetItemIndex(owner->Handle(), value); }
 
 TListBox::TListBox(TComponent* AOwner)
-    : TCustomListBox(no_vcl_TListBox_Create(HandleOf(AOwner)))
+    : TCustomListBox(nv::TListBox_Create(HandleOf(AOwner)))
 {}
 
 TCustomCheckListBox::TCustomCheckListBox(no_vcl_obj_t handle)
@@ -2118,8 +2277,8 @@ TCustomCheckListBox::TCustomCheckListBox(no_vcl_obj_t handle)
     , Checked(this, &TCustomCheckListBox::GetCheckedImpl, &TCustomCheckListBox::SetCheckedImpl)
 {}
 
-bool TCustomCheckListBox::GetCheckedImpl(TObject* owner, int index)                    { return no_vcl_TCustomCheckListBox_GetChecked(owner->Handle(), index) != 0; }
-void TCustomCheckListBox::SetCheckedImpl(TObject* owner, int index, const bool& value) { no_vcl_TCustomCheckListBox_SetChecked(owner->Handle(), index, value ? 1 : 0); }
+bool TCustomCheckListBox::GetCheckedImpl(TObject* owner, int index)                    { return nv::TCustomCheckListBox_GetChecked(owner->Handle(), index) != 0; }
+void TCustomCheckListBox::SetCheckedImpl(TObject* owner, int index, const bool& value) { nv::TCustomCheckListBox_SetChecked(owner->Handle(), index, value ? 1 : 0); }
 
 TNotifyEvent TCustomCheckListBox::GetOnClickCheckImpl(TObject* owner) { return static_cast<TCustomCheckListBox*>(owner)->onClickCheck_; }
 
@@ -2132,12 +2291,14 @@ void TCustomCheckListBox::SetOnClickCheckImpl(TObject* owner, const TNotifyEvent
 
 void NO_VCL_CALL TCustomCheckListBox::ClickCheckTrampoline(no_vcl_obj_t sender, void*)
 {
-    if (TCustomCheckListBox* self = static_cast<TCustomCheckListBox*>(FromHandle(sender)))
-        CallNotify(self->onClickCheck_, self);
+    GuardCallback([&] {
+        if (TCustomCheckListBox* self = static_cast<TCustomCheckListBox*>(FromHandle(sender)))
+            CallNotify(self->onClickCheck_, self);
+    });
 }
 
 TCheckListBox::TCheckListBox(TComponent* AOwner)
-    : TCustomCheckListBox(no_vcl_TCheckListBox_Create(HandleOf(AOwner)))
+    : TCustomCheckListBox(nv::TCheckListBox_Create(HandleOf(AOwner)))
 {}
 
 TCustomStaticText::TCustomStaticText(no_vcl_obj_t handle)
@@ -2147,36 +2308,36 @@ TCustomStaticText::TCustomStaticText(no_vcl_obj_t handle)
 
 TStaticBorderStyle TCustomStaticText::GetBorderStyleImpl(TObject* owner)
 {
-    return static_cast<TStaticBorderStyle>(no_vcl_TCustomStaticText_GetBorderStyle(owner->Handle()));
+    return static_cast<TStaticBorderStyle>(nv::TCustomStaticText_GetBorderStyle(owner->Handle()));
 }
 
 void TCustomStaticText::SetBorderStyleImpl(TObject* owner, const TStaticBorderStyle& value)
 {
-    no_vcl_TCustomStaticText_SetBorderStyle(owner->Handle(), value);
+    nv::TCustomStaticText_SetBorderStyle(owner->Handle(), value);
 }
 
 TStaticText::TStaticText(TComponent* AOwner)
-    : TCustomStaticText(no_vcl_TStaticText_Create(HandleOf(AOwner)))
+    : TCustomStaticText(nv::TStaticText_Create(HandleOf(AOwner)))
 {}
 
 TStatusBar::TStatusBar(TComponent* AOwner)
-    : TWinControl(no_vcl_TStatusBar_Create(HandleOf(AOwner)))
+    : TWinControl(nv::TStatusBar_Create(HandleOf(AOwner)))
     , SimpleText(this, &TStatusBar::GetSimpleTextImpl, &TStatusBar::SetSimpleTextImpl)
     , SimplePanel(this, &TStatusBar::GetSimplePanelImpl, &TStatusBar::SetSimplePanelImpl)
 {}
 
 std::string TStatusBar::GetSimpleTextImpl(TObject* owner)
 {
-    return std::string(no_vcl_TStatusBar_GetSimpleText(owner->Handle()));
+    return std::string(nv::TStatusBar_GetSimpleText(owner->Handle()));
 }
 
 void TStatusBar::SetSimpleTextImpl(TObject* owner, const std::string& value)
 {
-    no_vcl_TStatusBar_SetSimpleText(owner->Handle(), value.c_str());
+    nv::TStatusBar_SetSimpleText(owner->Handle(), value.c_str());
 }
 
-bool TStatusBar::GetSimplePanelImpl(TObject* owner) { return no_vcl_TStatusBar_GetSimplePanel(owner->Handle()) != 0; }
-void TStatusBar::SetSimplePanelImpl(TObject* owner, const bool& value) { no_vcl_TStatusBar_SetSimplePanel(owner->Handle(), value ? 1 : 0); }
+bool TStatusBar::GetSimplePanelImpl(TObject* owner) { return nv::TStatusBar_GetSimplePanel(owner->Handle()) != 0; }
+void TStatusBar::SetSimplePanelImpl(TObject* owner, const bool& value) { nv::TStatusBar_SetSimplePanel(owner->Handle(), value ? 1 : 0); }
 
 /* ---------------- Canvas ---------------- */
 
@@ -2186,18 +2347,18 @@ TPen::TPen(no_vcl_obj_t handle)
     , Width(this, &TPen::GetWidthImpl, &TPen::SetWidthImpl)
 {}
 
-TColor TPen::GetColorImpl(TObject* owner)                      { return static_cast<TColor>(no_vcl_TPen_GetColor(owner->Handle())); }
-void   TPen::SetColorImpl(TObject* owner, const TColor& value) { no_vcl_TPen_SetColor(owner->Handle(), value); }
-int    TPen::GetWidthImpl(TObject* owner)                      { return no_vcl_TPen_GetWidth(owner->Handle()); }
-void   TPen::SetWidthImpl(TObject* owner, const int& value)    { no_vcl_TPen_SetWidth(owner->Handle(), value); }
+TColor TPen::GetColorImpl(TObject* owner)                      { return static_cast<TColor>(nv::TPen_GetColor(owner->Handle())); }
+void   TPen::SetColorImpl(TObject* owner, const TColor& value) { nv::TPen_SetColor(owner->Handle(), value); }
+int    TPen::GetWidthImpl(TObject* owner)                      { return nv::TPen_GetWidth(owner->Handle()); }
+void   TPen::SetWidthImpl(TObject* owner, const int& value)    { nv::TPen_SetWidth(owner->Handle(), value); }
 
 TBrush::TBrush(no_vcl_obj_t handle)
     : TPersistent(handle)
     , Color(this, &TBrush::GetColorImpl, &TBrush::SetColorImpl)
 {}
 
-TColor TBrush::GetColorImpl(TObject* owner)                      { return static_cast<TColor>(no_vcl_TBrush_GetColor(owner->Handle())); }
-void   TBrush::SetColorImpl(TObject* owner, const TColor& value) { no_vcl_TBrush_SetColor(owner->Handle(), value); }
+TColor TBrush::GetColorImpl(TObject* owner)                      { return static_cast<TColor>(nv::TBrush_GetColor(owner->Handle())); }
+void   TBrush::SetColorImpl(TObject* owner, const TColor& value) { nv::TBrush_SetColor(owner->Handle(), value); }
 
 TFont::TFont(no_vcl_obj_t handle)
     : TPersistent(handle)
@@ -2208,48 +2369,48 @@ TFont::TFont(no_vcl_obj_t handle)
 
 std::string TFont::GetNameImpl(TObject* owner)
 {
-    return std::string(no_vcl_TFont_GetName(owner->Handle()));
+    return std::string(nv::TFont_GetName(owner->Handle()));
 }
 
 void TFont::SetNameImpl(TObject* owner, const std::string& value)
 {
-    no_vcl_TFont_SetName(owner->Handle(), value.c_str());
+    nv::TFont_SetName(owner->Handle(), value.c_str());
 }
 
-int    TFont::GetSizeImpl(TObject* owner)                      { return no_vcl_TFont_GetSize(owner->Handle()); }
-void   TFont::SetSizeImpl(TObject* owner, const int& value)    { no_vcl_TFont_SetSize(owner->Handle(), value); }
-TColor TFont::GetColorImpl(TObject* owner)                     { return static_cast<TColor>(no_vcl_TFont_GetColor(owner->Handle())); }
-void   TFont::SetColorImpl(TObject* owner, const TColor& value){ no_vcl_TFont_SetColor(owner->Handle(), value); }
+int    TFont::GetSizeImpl(TObject* owner)                      { return nv::TFont_GetSize(owner->Handle()); }
+void   TFont::SetSizeImpl(TObject* owner, const int& value)    { nv::TFont_SetSize(owner->Handle(), value); }
+TColor TFont::GetColorImpl(TObject* owner)                     { return static_cast<TColor>(nv::TFont_GetColor(owner->Handle())); }
+void   TFont::SetColorImpl(TObject* owner, const TColor& value){ nv::TFont_SetColor(owner->Handle(), value); }
 
 TCanvas::TCanvas(no_vcl_obj_t handle)
     : TPersistent(handle)
-    , Pen(no_vcl_TCanvas_GetPen(handle))
-    , Brush(no_vcl_TCanvas_GetBrush(handle))
-    , Font(no_vcl_TCanvas_GetFont(handle))
+    , Pen(nv::TCanvas_GetPen(handle))
+    , Brush(nv::TCanvas_GetBrush(handle))
+    , Font(nv::TCanvas_GetFont(handle))
     , Pixels(this, &TCanvas::GetPixelsImpl, &TCanvas::SetPixelsImpl)
 {}
 
-void TCanvas::MoveTo(int x, int y)                        { no_vcl_TCanvas_MoveTo(handle_, x, y); }
-void TCanvas::LineTo(int x, int y)                        { no_vcl_TCanvas_LineTo(handle_, x, y); }
-void TCanvas::Rectangle(int x1, int y1, int x2, int y2)   { no_vcl_TCanvas_Rectangle(handle_, x1, y1, x2, y2); }
-void TCanvas::Ellipse(int x1, int y1, int x2, int y2)     { no_vcl_TCanvas_Ellipse(handle_, x1, y1, x2, y2); }
-void TCanvas::TextOut(int x, int y, const std::string& t) { no_vcl_TCanvas_TextOut(handle_, x, y, t.c_str()); }
-void TCanvas::FillRect(const TRect& Rect)                 { no_vcl_TCanvas_FillRect(handle_, Rect.Left, Rect.Top, Rect.Right, Rect.Bottom); }
+void TCanvas::MoveTo(int x, int y)                        { nv::TCanvas_MoveTo(handle_, x, y); }
+void TCanvas::LineTo(int x, int y)                        { nv::TCanvas_LineTo(handle_, x, y); }
+void TCanvas::Rectangle(int x1, int y1, int x2, int y2)   { nv::TCanvas_Rectangle(handle_, x1, y1, x2, y2); }
+void TCanvas::Ellipse(int x1, int y1, int x2, int y2)     { nv::TCanvas_Ellipse(handle_, x1, y1, x2, y2); }
+void TCanvas::TextOut(int x, int y, const std::string& t) { nv::TCanvas_TextOut(handle_, x, y, t.c_str()); }
+void TCanvas::FillRect(const TRect& Rect)                 { nv::TCanvas_FillRect(handle_, Rect.Left, Rect.Top, Rect.Right, Rect.Bottom); }
 
 void TCanvas::Draw(int X, int Y, const TGraphic* Graphic)
 {
     if (Graphic)
-        no_vcl_TCanvas_Draw(handle_, X, Y, Graphic->Current());
+        nv::TCanvas_Draw(handle_, X, Y, Graphic->Current());
 }
 
 void TCanvas::StretchDraw(const TRect& Rect, const TGraphic* Graphic)
 {
     if (Graphic)
-        no_vcl_TCanvas_StretchDraw(handle_, Rect.Left, Rect.Top, Rect.Right, Rect.Bottom, Graphic->Current());
+        nv::TCanvas_StretchDraw(handle_, Rect.Left, Rect.Top, Rect.Right, Rect.Bottom, Graphic->Current());
 }
 
-TColor TCanvas::GetPixelsImpl(TObject* owner, int X, int Y) { return static_cast<TColor>(no_vcl_TCanvas_GetPixels(owner->Handle(), X, Y)); }
-void   TCanvas::SetPixelsImpl(TObject* owner, int X, int Y, const TColor& value) { no_vcl_TCanvas_SetPixels(owner->Handle(), X, Y, value); }
+TColor TCanvas::GetPixelsImpl(TObject* owner, int X, int Y) { return static_cast<TColor>(nv::TCanvas_GetPixels(owner->Handle(), X, Y)); }
+void   TCanvas::SetPixelsImpl(TObject* owner, int X, int Y, const TColor& value) { nv::TCanvas_SetPixels(owner->Handle(), X, Y, value); }
 
 /* ---------------- Graphics ---------------- */
 
@@ -2259,9 +2420,9 @@ TCanvas* CanvasHolder::Get(no_vcl_obj_t canvas)
         return nullptr;
     // 同じアドレスに別の Canvas が作られることもあるため、Pen・Brush・Font のハンドルも確かめる。
     if (!canvas_ || canvas_->Handle() != canvas
-        || canvas_->Pen.Handle() != no_vcl_TCanvas_GetPen(canvas)
-        || canvas_->Brush.Handle() != no_vcl_TCanvas_GetBrush(canvas)
-        || canvas_->Font.Handle() != no_vcl_TCanvas_GetFont(canvas))
+        || canvas_->Pen.Handle() != nv::TCanvas_GetPen(canvas)
+        || canvas_->Brush.Handle() != nv::TCanvas_GetBrush(canvas)
+        || canvas_->Font.Handle() != nv::TCanvas_GetFont(canvas))
         canvas_.reset(new TCanvas(canvas));
     return canvas_.get();
 }
@@ -2290,20 +2451,20 @@ TGraphic::~TGraphic()
         no_vcl_TGraphic_Destroy(handle_);
 }
 
-void TGraphic::LoadFromFile(const std::string& FileName)     { no_vcl_TGraphic_LoadFromFile(Current(), FileName.c_str()); }
-void TGraphic::SaveToFile(const std::string& FileName) const { no_vcl_TGraphic_SaveToFile(Current(), FileName.c_str()); }
-void TGraphic::Assign(const TGraphic* Source)                { no_vcl_TGraphic_Assign(Current(), Source ? Source->Current() : nullptr); }
-void TGraphic::Clear()                                       { no_vcl_TGraphic_Clear(Current()); }
+void TGraphic::LoadFromFile(const std::string& FileName)     { nv::TGraphic_LoadFromFile(Current(), FileName.c_str()); }
+void TGraphic::SaveToFile(const std::string& FileName) const { nv::TGraphic_SaveToFile(Current(), FileName.c_str()); }
+void TGraphic::Assign(const TGraphic* Source)                { nv::TGraphic_Assign(Current(), Source ? Source->Current() : nullptr); }
+void TGraphic::Clear()                                       { nv::TGraphic_Clear(Current()); }
 
-int  TGraphic::GetWidthImpl(TObject* owner)                   { return no_vcl_TGraphic_GetWidth(static_cast<TGraphic*>(owner)->Current()); }
-void TGraphic::SetWidthImpl(TObject* owner, const int& value) { no_vcl_TGraphic_SetWidth(static_cast<TGraphic*>(owner)->Current(), value); }
-int  TGraphic::GetHeightImpl(TObject* owner)                  { return no_vcl_TGraphic_GetHeight(static_cast<TGraphic*>(owner)->Current()); }
-void TGraphic::SetHeightImpl(TObject* owner, const int& value) { no_vcl_TGraphic_SetHeight(static_cast<TGraphic*>(owner)->Current(), value); }
-bool TGraphic::GetEmptyImpl(TObject* owner)                   { return no_vcl_TGraphic_GetEmpty(static_cast<TGraphic*>(owner)->Current()) != 0; }
-bool TGraphic::GetTransparentImpl(TObject* owner)             { return no_vcl_TGraphic_GetTransparent(static_cast<TGraphic*>(owner)->Current()) != 0; }
+int  TGraphic::GetWidthImpl(TObject* owner)                   { return nv::TGraphic_GetWidth(static_cast<TGraphic*>(owner)->Current()); }
+void TGraphic::SetWidthImpl(TObject* owner, const int& value) { nv::TGraphic_SetWidth(static_cast<TGraphic*>(owner)->Current(), value); }
+int  TGraphic::GetHeightImpl(TObject* owner)                  { return nv::TGraphic_GetHeight(static_cast<TGraphic*>(owner)->Current()); }
+void TGraphic::SetHeightImpl(TObject* owner, const int& value) { nv::TGraphic_SetHeight(static_cast<TGraphic*>(owner)->Current(), value); }
+bool TGraphic::GetEmptyImpl(TObject* owner)                   { return nv::TGraphic_GetEmpty(static_cast<TGraphic*>(owner)->Current()) != 0; }
+bool TGraphic::GetTransparentImpl(TObject* owner)             { return nv::TGraphic_GetTransparent(static_cast<TGraphic*>(owner)->Current()) != 0; }
 void TGraphic::SetTransparentImpl(TObject* owner, const bool& value)
 {
-    no_vcl_TGraphic_SetTransparent(static_cast<TGraphic*>(owner)->Current(), value ? 1 : 0);
+    nv::TGraphic_SetTransparent(static_cast<TGraphic*>(owner)->Current(), value ? 1 : 0);
 }
 
 TRasterImage::TRasterImage(no_vcl_obj_t handle)
@@ -2325,42 +2486,42 @@ TRasterImage::TRasterImage(TObject* owner, Accessor accessor)
 TCanvas* TRasterImage::GetCanvasImpl(TObject* owner)
 {
     TRasterImage* self = static_cast<TRasterImage*>(owner);
-    return self->canvas_.Get(no_vcl_TRasterImage_GetCanvas(self->Current()));
+    return self->canvas_.Get(nv::TRasterImage_GetCanvas(self->Current()));
 }
 
 TPixelFormat TRasterImage::GetPixelFormatImpl(TObject* owner)
 {
-    return static_cast<TPixelFormat>(no_vcl_TRasterImage_GetPixelFormat(static_cast<TRasterImage*>(owner)->Current()));
+    return static_cast<TPixelFormat>(nv::TRasterImage_GetPixelFormat(static_cast<TRasterImage*>(owner)->Current()));
 }
 void TRasterImage::SetPixelFormatImpl(TObject* owner, const TPixelFormat& value)
 {
-    no_vcl_TRasterImage_SetPixelFormat(static_cast<TRasterImage*>(owner)->Current(), value);
+    nv::TRasterImage_SetPixelFormat(static_cast<TRasterImage*>(owner)->Current(), value);
 }
 TColor TRasterImage::GetTransparentColorImpl(TObject* owner)
 {
-    return static_cast<TColor>(no_vcl_TRasterImage_GetTransparentColor(static_cast<TRasterImage*>(owner)->Current()));
+    return static_cast<TColor>(nv::TRasterImage_GetTransparentColor(static_cast<TRasterImage*>(owner)->Current()));
 }
 void TRasterImage::SetTransparentColorImpl(TObject* owner, const TColor& value)
 {
-    no_vcl_TRasterImage_SetTransparentColor(static_cast<TRasterImage*>(owner)->Current(), value);
+    nv::TRasterImage_SetTransparentColor(static_cast<TRasterImage*>(owner)->Current(), value);
 }
 TTransparentMode TRasterImage::GetTransparentModeImpl(TObject* owner)
 {
-    return static_cast<TTransparentMode>(no_vcl_TRasterImage_GetTransparentMode(static_cast<TRasterImage*>(owner)->Current()));
+    return static_cast<TTransparentMode>(nv::TRasterImage_GetTransparentMode(static_cast<TRasterImage*>(owner)->Current()));
 }
 void TRasterImage::SetTransparentModeImpl(TObject* owner, const TTransparentMode& value)
 {
-    no_vcl_TRasterImage_SetTransparentMode(static_cast<TRasterImage*>(owner)->Current(), value);
+    nv::TRasterImage_SetTransparentMode(static_cast<TRasterImage*>(owner)->Current(), value);
 }
 
-void TCustomBitmap::SetSize(int AWidth, int AHeight) { no_vcl_TCustomBitmap_SetSize(Current(), AWidth, AHeight); }
+void TCustomBitmap::SetSize(int AWidth, int AHeight) { nv::TCustomBitmap_SetSize(Current(), AWidth, AHeight); }
 
-TBitmap::TBitmap() : TCustomBitmap(no_vcl_TBitmap_Create()) {}
+TBitmap::TBitmap() : TCustomBitmap(nv::TBitmap_Create()) {}
 
-TPortableNetworkGraphic::TPortableNetworkGraphic() : TCustomBitmap(no_vcl_TPortableNetworkGraphic_Create()) {}
+TPortableNetworkGraphic::TPortableNetworkGraphic() : TCustomBitmap(nv::TPortableNetworkGraphic_Create()) {}
 
 TJPEGImage::TJPEGImage()
-    : TCustomBitmap(no_vcl_TJPEGImage_Create())
+    : TCustomBitmap(nv::TJPEGImage_Create())
     , CompressionQuality(this, &TJPEGImage::GetCompressionQualityImpl, &TJPEGImage::SetCompressionQualityImpl)
 {}
 
@@ -2371,14 +2532,14 @@ TJPEGImage::TJPEGImage(TObject* owner, Accessor accessor)
 
 int TJPEGImage::GetCompressionQualityImpl(TObject* owner)
 {
-    return no_vcl_TJPEGImage_GetCompressionQuality(static_cast<TJPEGImage*>(owner)->Current());
+    return nv::TJPEGImage_GetCompressionQuality(static_cast<TJPEGImage*>(owner)->Current());
 }
 void TJPEGImage::SetCompressionQualityImpl(TObject* owner, const int& value)
 {
-    no_vcl_TJPEGImage_SetCompressionQuality(static_cast<TJPEGImage*>(owner)->Current(), value);
+    nv::TJPEGImage_SetCompressionQuality(static_cast<TJPEGImage*>(owner)->Current(), value);
 }
 
-TPicture::TPicture() : TPicture(no_vcl_TPicture_Create(), true) {}
+TPicture::TPicture() : TPicture(nv::TPicture_Create(), true) {}
 
 TPicture::TPicture(no_vcl_obj_t handle, bool owns)
     : TPersistent(handle)
@@ -2401,43 +2562,43 @@ TPicture::~TPicture()
         no_vcl_TPicture_Destroy(handle_);
 }
 
-void TPicture::LoadFromFile(const std::string& FileName)     { no_vcl_TPicture_LoadFromFile(handle_, FileName.c_str()); }
-void TPicture::SaveToFile(const std::string& FileName) const { no_vcl_TPicture_SaveToFile(handle_, FileName.c_str()); }
-void TPicture::Assign(const TPicture* Source)                { no_vcl_TPicture_Assign(handle_, Source ? Source->Handle() : nullptr); }
-void TPicture::Clear()                                       { no_vcl_TPicture_Clear(handle_); }
+void TPicture::LoadFromFile(const std::string& FileName)     { nv::TPicture_LoadFromFile(handle_, FileName.c_str()); }
+void TPicture::SaveToFile(const std::string& FileName) const { nv::TPicture_SaveToFile(handle_, FileName.c_str()); }
+void TPicture::Assign(const TPicture* Source)                { nv::TPicture_Assign(handle_, Source ? Source->Handle() : nullptr); }
+void TPicture::Clear()                                       { nv::TPicture_Clear(handle_); }
 
 // 空の TPicture の Graphic は nullptr(VCL と同じ)。それ以外は、クラスを問わないビューを返す。
 TGraphic* TPicture::GetGraphicImpl(TObject* owner)
 {
     TPicture* self = static_cast<TPicture*>(owner);
-    return no_vcl_TPicture_GetGraphic(self->handle_) ? &self->graphic_ : nullptr;
+    return nv::TPicture_GetGraphic(self->handle_) ? &self->graphic_ : nullptr;
 }
 void TPicture::SetGraphicImpl(TObject* owner, TGraphic* const& value)
 {
-    no_vcl_TPicture_SetGraphic(owner->Handle(), value ? value->Current() : nullptr);
+    nv::TPicture_SetGraphic(owner->Handle(), value ? value->Current() : nullptr);
 }
 // Bitmap・PNG・Jpeg は、ビューを返すだけで中身には触れない(変換はビューを操作したときに LCL が行う)。
 TBitmap* TPicture::GetBitmapImpl(TObject* owner) { return &static_cast<TPicture*>(owner)->bitmap_; }
 void TPicture::SetBitmapImpl(TObject* owner, TBitmap* const& value)
 {
-    no_vcl_TPicture_SetGraphic(owner->Handle(), value ? value->Current() : nullptr);
+    nv::TPicture_SetGraphic(owner->Handle(), value ? value->Current() : nullptr);
 }
 TPortableNetworkGraphic* TPicture::GetPNGImpl(TObject* owner) { return &static_cast<TPicture*>(owner)->png_; }
 void TPicture::SetPNGImpl(TObject* owner, TPortableNetworkGraphic* const& value)
 {
-    no_vcl_TPicture_SetGraphic(owner->Handle(), value ? value->Current() : nullptr);
+    nv::TPicture_SetGraphic(owner->Handle(), value ? value->Current() : nullptr);
 }
 TJPEGImage* TPicture::GetJpegImpl(TObject* owner) { return &static_cast<TPicture*>(owner)->jpeg_; }
 void TPicture::SetJpegImpl(TObject* owner, TJPEGImage* const& value)
 {
-    no_vcl_TPicture_SetGraphic(owner->Handle(), value ? value->Current() : nullptr);
+    nv::TPicture_SetGraphic(owner->Handle(), value ? value->Current() : nullptr);
 }
-int TPicture::GetWidthImpl(TObject* owner)  { return no_vcl_TPicture_GetWidth(owner->Handle()); }
-int TPicture::GetHeightImpl(TObject* owner) { return no_vcl_TPicture_GetHeight(owner->Handle()); }
+int TPicture::GetWidthImpl(TObject* owner)  { return nv::TPicture_GetWidth(owner->Handle()); }
+int TPicture::GetHeightImpl(TObject* owner) { return nv::TPicture_GetHeight(owner->Handle()); }
 
 TPaintBox::TPaintBox(TComponent* AOwner)
-    : TGraphicControl(no_vcl_TPaintBox_Create(HandleOf(AOwner)))
-    , Canvas(no_vcl_TPaintBox_GetCanvas(handle_))
+    : TGraphicControl(nv::TPaintBox_Create(HandleOf(AOwner)))
+    , Canvas(nv::TPaintBox_GetCanvas(handle_))
     , OnPaint(this, &TPaintBox::GetOnPaintImpl, &TPaintBox::SetOnPaintImpl)
 {}
 
@@ -2452,18 +2613,20 @@ void TPaintBox::SetOnPaintImpl(TObject* owner, const TNotifyEvent& value)
     self->onPaint_ = value;
     if (value && !self->onPaintHooked_)
     {
-        no_vcl_TPaintBox_SetOnPaint(self->handle_, &TPaintBox::PaintTrampoline, nullptr);
+        nv::TPaintBox_SetOnPaint(self->handle_, &TPaintBox::PaintTrampoline, nullptr);
         self->onPaintHooked_ = true;
     }
 }
 
 void NO_VCL_CALL TPaintBox::PaintTrampoline(no_vcl_obj_t sender, void*)
 {
-    TPaintBox* self = static_cast<TPaintBox*>(FromHandle(sender));
-    if (!self || !self->onPaint_)
-        return;
-    TNotifyEvent handler = self->onPaint_;
-    handler(self);
+    GuardCallback([&] {
+        TPaintBox* self = static_cast<TPaintBox*>(FromHandle(sender));
+        if (!self || !self->onPaint_)
+            return;
+        TNotifyEvent handler = self->onPaint_;
+        handler(self);
+    });
 }
 
 /* ---------------- Image ---------------- */
@@ -2482,43 +2645,45 @@ TCustomImage::TCustomImage(no_vcl_obj_t handle)
     , OnPictureChanged(this, &TCustomImage::GetOnPictureChangedImpl, &TCustomImage::SetOnPictureChangedImpl)
     , Images(this, &TCustomImage::GetImagesImpl, &TCustomImage::SetImagesImpl)
     , ImageIndex(this, &TCustomImage::GetImageIndexImpl, &TCustomImage::SetImageIndexImpl)
-    , picture_(no_vcl_TCustomImage_GetPicture(handle), false)
+    , picture_(nv::TCustomImage_GetPicture(handle), false)
 {}
 
 TPicture* TCustomImage::GetPictureImpl(TObject* owner) { return &static_cast<TCustomImage*>(owner)->picture_; }
 void TCustomImage::SetPictureImpl(TObject* owner, TPicture* const& value)
 {
-    no_vcl_TCustomImage_SetPicture(owner->Handle(), value ? value->Handle() : nullptr);
+    nv::TCustomImage_SetPicture(owner->Handle(), value ? value->Handle() : nullptr);
 }
 TCanvas* TCustomImage::GetCanvasImpl(TObject* owner)
 {
     TCustomImage* self = static_cast<TCustomImage*>(owner);
-    return self->canvas_.Get(no_vcl_TCustomImage_GetCanvas(self->handle_));
+    return self->canvas_.Get(nv::TCustomImage_GetCanvas(self->handle_));
 }
-bool TCustomImage::GetHasGraphicImpl(TObject* owner) { return no_vcl_TCustomImage_GetHasGraphic(owner->Handle()) != 0; }
-bool TCustomImage::GetCenterImpl(TObject* owner)     { return no_vcl_TCustomImage_GetCenter(owner->Handle()) != 0; }
-void TCustomImage::SetCenterImpl(TObject* owner, const bool& value) { no_vcl_TCustomImage_SetCenter(owner->Handle(), value ? 1 : 0); }
-bool TCustomImage::GetStretchImpl(TObject* owner)    { return no_vcl_TCustomImage_GetStretch(owner->Handle()) != 0; }
-void TCustomImage::SetStretchImpl(TObject* owner, const bool& value) { no_vcl_TCustomImage_SetStretch(owner->Handle(), value ? 1 : 0); }
-bool TCustomImage::GetStretchOutEnabledImpl(TObject* owner) { return no_vcl_TCustomImage_GetStretchOutEnabled(owner->Handle()) != 0; }
+bool TCustomImage::GetHasGraphicImpl(TObject* owner) { return nv::TCustomImage_GetHasGraphic(owner->Handle()) != 0; }
+bool TCustomImage::GetCenterImpl(TObject* owner)     { return nv::TCustomImage_GetCenter(owner->Handle()) != 0; }
+void TCustomImage::SetCenterImpl(TObject* owner, const bool& value) { nv::TCustomImage_SetCenter(owner->Handle(), value ? 1 : 0); }
+bool TCustomImage::GetStretchImpl(TObject* owner)    { return nv::TCustomImage_GetStretch(owner->Handle()) != 0; }
+void TCustomImage::SetStretchImpl(TObject* owner, const bool& value) { nv::TCustomImage_SetStretch(owner->Handle(), value ? 1 : 0); }
+bool TCustomImage::GetStretchOutEnabledImpl(TObject* owner) { return nv::TCustomImage_GetStretchOutEnabled(owner->Handle()) != 0; }
 void TCustomImage::SetStretchOutEnabledImpl(TObject* owner, const bool& value)
 {
-    no_vcl_TCustomImage_SetStretchOutEnabled(owner->Handle(), value ? 1 : 0);
+    nv::TCustomImage_SetStretchOutEnabled(owner->Handle(), value ? 1 : 0);
 }
-bool TCustomImage::GetStretchInEnabledImpl(TObject* owner) { return no_vcl_TCustomImage_GetStretchInEnabled(owner->Handle()) != 0; }
+bool TCustomImage::GetStretchInEnabledImpl(TObject* owner) { return nv::TCustomImage_GetStretchInEnabled(owner->Handle()) != 0; }
 void TCustomImage::SetStretchInEnabledImpl(TObject* owner, const bool& value)
 {
-    no_vcl_TCustomImage_SetStretchInEnabled(owner->Handle(), value ? 1 : 0);
+    nv::TCustomImage_SetStretchInEnabled(owner->Handle(), value ? 1 : 0);
 }
-bool TCustomImage::GetProportionalImpl(TObject* owner) { return no_vcl_TCustomImage_GetProportional(owner->Handle()) != 0; }
-void TCustomImage::SetProportionalImpl(TObject* owner, const bool& value) { no_vcl_TCustomImage_SetProportional(owner->Handle(), value ? 1 : 0); }
-bool TCustomImage::GetTransparentImpl(TObject* owner)  { return no_vcl_TCustomImage_GetTransparent(owner->Handle()) != 0; }
-void TCustomImage::SetTransparentImpl(TObject* owner, const bool& value) { no_vcl_TCustomImage_SetTransparent(owner->Handle(), value ? 1 : 0); }
+bool TCustomImage::GetProportionalImpl(TObject* owner) { return nv::TCustomImage_GetProportional(owner->Handle()) != 0; }
+void TCustomImage::SetProportionalImpl(TObject* owner, const bool& value) { nv::TCustomImage_SetProportional(owner->Handle(), value ? 1 : 0); }
+bool TCustomImage::GetTransparentImpl(TObject* owner)  { return nv::TCustomImage_GetTransparent(owner->Handle()) != 0; }
+void TCustomImage::SetTransparentImpl(TObject* owner, const bool& value) { nv::TCustomImage_SetTransparent(owner->Handle(), value ? 1 : 0); }
 
 void NO_VCL_CALL TCustomImage::PictureChangedTrampoline(no_vcl_obj_t sender, void*)
 {
-    if (TCustomImage* self = static_cast<TCustomImage*>(FromHandle(sender)))
-        CallNotify(self->onPictureChanged_, self);
+    GuardCallback([&] {
+        if (TCustomImage* self = static_cast<TCustomImage*>(FromHandle(sender)))
+            CallNotify(self->onPictureChanged_, self);
+    });
 }
 
 TNotifyEvent TCustomImage::GetOnPictureChangedImpl(TObject* owner) { return static_cast<TCustomImage*>(owner)->onPictureChanged_; }
@@ -2531,7 +2696,7 @@ void TCustomImage::SetOnPictureChangedImpl(TObject* owner, const TNotifyEvent& v
 }
 
 TImage::TImage(TComponent* AOwner)
-    : TCustomImage(no_vcl_TImage_Create(HandleOf(AOwner)))
+    : TCustomImage(nv::TImage_Create(HandleOf(AOwner)))
 {}
 
 /* ---------------- Timer ---------------- */
@@ -2554,27 +2719,29 @@ void TCustomTimer::SetOnTimerImpl(TObject* owner, const TNotifyEvent& value)
     self->onTimer_ = value;
     if (value && !self->onTimerHooked_)
     {
-        no_vcl_TCustomTimer_SetOnTimer(self->handle_, &TCustomTimer::TimerTrampoline, nullptr);
+        nv::TCustomTimer_SetOnTimer(self->handle_, &TCustomTimer::TimerTrampoline, nullptr);
         self->onTimerHooked_ = true;
     }
 }
 
 void NO_VCL_CALL TCustomTimer::TimerTrampoline(no_vcl_obj_t sender, void*)
 {
-    TCustomTimer* self = static_cast<TCustomTimer*>(FromHandle(sender));
-    if (!self || !self->onTimer_)
-        return;
-    TNotifyEvent handler = self->onTimer_;
-    handler(self);
+    GuardCallback([&] {
+        TCustomTimer* self = static_cast<TCustomTimer*>(FromHandle(sender));
+        if (!self || !self->onTimer_)
+            return;
+        TNotifyEvent handler = self->onTimer_;
+        handler(self);
+    });
 }
 
-int  TCustomTimer::GetIntervalImpl(TObject* owner)                   { return no_vcl_TCustomTimer_GetInterval(owner->Handle()); }
-void TCustomTimer::SetIntervalImpl(TObject* owner, const int& value) { no_vcl_TCustomTimer_SetInterval(owner->Handle(), value); }
-bool TCustomTimer::GetEnabledImpl(TObject* owner)                    { return no_vcl_TCustomTimer_GetEnabled(owner->Handle()) != 0; }
-void TCustomTimer::SetEnabledImpl(TObject* owner, const bool& value) { no_vcl_TCustomTimer_SetEnabled(owner->Handle(), value ? 1 : 0); }
+int  TCustomTimer::GetIntervalImpl(TObject* owner)                   { return nv::TCustomTimer_GetInterval(owner->Handle()); }
+void TCustomTimer::SetIntervalImpl(TObject* owner, const int& value) { nv::TCustomTimer_SetInterval(owner->Handle(), value); }
+bool TCustomTimer::GetEnabledImpl(TObject* owner)                    { return nv::TCustomTimer_GetEnabled(owner->Handle()) != 0; }
+void TCustomTimer::SetEnabledImpl(TObject* owner, const bool& value) { nv::TCustomTimer_SetEnabled(owner->Handle(), value ? 1 : 0); }
 
 TTimer::TTimer(TComponent* AOwner)
-    : TCustomTimer(no_vcl_TTimer_Create(HandleOf(AOwner)))
+    : TCustomTimer(nv::TTimer_Create(HandleOf(AOwner)))
 {}
 
 /* ---------------- ImageList ---------------- */
@@ -2592,62 +2759,64 @@ TCustomImageList::TCustomImageList(no_vcl_obj_t handle)
 
 int TCustomImageList::Add(const TCustomBitmap* Image, const TCustomBitmap* Mask)
 {
-    return no_vcl_TCustomImageList_Add(handle_, Image ? Image->Current() : nullptr, Mask ? Mask->Current() : nullptr);
+    return nv::TCustomImageList_Add(handle_, Image ? Image->Current() : nullptr, Mask ? Mask->Current() : nullptr);
 }
 int TCustomImageList::AddSliced(const TCustomBitmap* Image, int AHorizontalCount, int AVerticalCount)
 {
-    return no_vcl_TCustomImageList_AddSliced(handle_, Image ? Image->Current() : nullptr, AHorizontalCount, AVerticalCount);
+    return nv::TCustomImageList_AddSliced(handle_, Image ? Image->Current() : nullptr, AHorizontalCount, AVerticalCount);
 }
 int TCustomImageList::AddMasked(const TBitmap* Image, TColor MaskColor)
 {
-    return no_vcl_TCustomImageList_AddMasked(handle_, Image ? Image->Current() : nullptr, MaskColor);
+    return nv::TCustomImageList_AddMasked(handle_, Image ? Image->Current() : nullptr, MaskColor);
 }
 void TCustomImageList::Insert(int Index, const TCustomBitmap* Image, const TCustomBitmap* Mask)
 {
-    no_vcl_TCustomImageList_Insert(handle_, Index, Image ? Image->Current() : nullptr, Mask ? Mask->Current() : nullptr);
+    nv::TCustomImageList_Insert(handle_, Index, Image ? Image->Current() : nullptr, Mask ? Mask->Current() : nullptr);
 }
 void TCustomImageList::Replace(int Index, const TCustomBitmap* Image, const TCustomBitmap* Mask)
 {
-    no_vcl_TCustomImageList_Replace(handle_, Index, Image ? Image->Current() : nullptr, Mask ? Mask->Current() : nullptr);
+    nv::TCustomImageList_Replace(handle_, Index, Image ? Image->Current() : nullptr, Mask ? Mask->Current() : nullptr);
 }
-void TCustomImageList::Delete(int Index)                  { no_vcl_TCustomImageList_Delete(handle_, Index); }
-void TCustomImageList::Clear()                            { no_vcl_TCustomImageList_Clear(handle_); }
-void TCustomImageList::Move(int CurIndex, int NewIndex)   { no_vcl_TCustomImageList_Move(handle_, CurIndex, NewIndex); }
+void TCustomImageList::Delete(int Index)                  { nv::TCustomImageList_Delete(handle_, Index); }
+void TCustomImageList::Clear()                            { nv::TCustomImageList_Clear(handle_); }
+void TCustomImageList::Move(int CurIndex, int NewIndex)   { nv::TCustomImageList_Move(handle_, CurIndex, NewIndex); }
 void TCustomImageList::GetBitmap(int Index, TCustomBitmap* Image) const
 {
     if (Image)
-        no_vcl_TCustomImageList_GetBitmap(handle_, Index, Image->Current());
+        nv::TCustomImageList_GetBitmap(handle_, Index, Image->Current());
 }
 void TCustomImageList::Draw(TCanvas* Canvas, int X, int Y, int Index, bool Enabled) const
 {
     if (Canvas)
-        no_vcl_TCustomImageList_Draw(handle_, Canvas->Handle(), X, Y, Index, Enabled ? 1 : 0);
+        nv::TCustomImageList_Draw(handle_, Canvas->Handle(), X, Y, Index, Enabled ? 1 : 0);
 }
-void TCustomImageList::BeginUpdate() { no_vcl_TCustomImageList_BeginUpdate(handle_); }
-void TCustomImageList::EndUpdate()   { no_vcl_TCustomImageList_EndUpdate(handle_); }
+void TCustomImageList::BeginUpdate() { nv::TCustomImageList_BeginUpdate(handle_); }
+void TCustomImageList::EndUpdate()   { nv::TCustomImageList_EndUpdate(handle_); }
 
-int    TCustomImageList::GetWidthImpl(TObject* owner)                   { return no_vcl_TCustomImageList_GetWidth(owner->Handle()); }
-void   TCustomImageList::SetWidthImpl(TObject* owner, const int& value) { no_vcl_TCustomImageList_SetWidth(owner->Handle(), value); }
-int    TCustomImageList::GetHeightImpl(TObject* owner)                  { return no_vcl_TCustomImageList_GetHeight(owner->Handle()); }
-void   TCustomImageList::SetHeightImpl(TObject* owner, const int& value) { no_vcl_TCustomImageList_SetHeight(owner->Handle(), value); }
-int    TCustomImageList::GetCountImpl(TObject* owner)                   { return no_vcl_TCustomImageList_GetCount(owner->Handle()); }
-bool   TCustomImageList::GetMaskedImpl(TObject* owner)                  { return no_vcl_TCustomImageList_GetMasked(owner->Handle()) != 0; }
-void   TCustomImageList::SetMaskedImpl(TObject* owner, const bool& value) { no_vcl_TCustomImageList_SetMasked(owner->Handle(), value ? 1 : 0); }
-TColor TCustomImageList::GetBkColorImpl(TObject* owner)                 { return static_cast<TColor>(no_vcl_TCustomImageList_GetBkColor(owner->Handle())); }
-void   TCustomImageList::SetBkColorImpl(TObject* owner, const TColor& value) { no_vcl_TCustomImageList_SetBkColor(owner->Handle(), value); }
+int    TCustomImageList::GetWidthImpl(TObject* owner)                   { return nv::TCustomImageList_GetWidth(owner->Handle()); }
+void   TCustomImageList::SetWidthImpl(TObject* owner, const int& value) { nv::TCustomImageList_SetWidth(owner->Handle(), value); }
+int    TCustomImageList::GetHeightImpl(TObject* owner)                  { return nv::TCustomImageList_GetHeight(owner->Handle()); }
+void   TCustomImageList::SetHeightImpl(TObject* owner, const int& value) { nv::TCustomImageList_SetHeight(owner->Handle(), value); }
+int    TCustomImageList::GetCountImpl(TObject* owner)                   { return nv::TCustomImageList_GetCount(owner->Handle()); }
+bool   TCustomImageList::GetMaskedImpl(TObject* owner)                  { return nv::TCustomImageList_GetMasked(owner->Handle()) != 0; }
+void   TCustomImageList::SetMaskedImpl(TObject* owner, const bool& value) { nv::TCustomImageList_SetMasked(owner->Handle(), value ? 1 : 0); }
+TColor TCustomImageList::GetBkColorImpl(TObject* owner)                 { return static_cast<TColor>(nv::TCustomImageList_GetBkColor(owner->Handle())); }
+void   TCustomImageList::SetBkColorImpl(TObject* owner, const TColor& value) { nv::TCustomImageList_SetBkColor(owner->Handle(), value); }
 TDrawingStyle TCustomImageList::GetDrawingStyleImpl(TObject* owner)
 {
-    return static_cast<TDrawingStyle>(no_vcl_TCustomImageList_GetDrawingStyle(owner->Handle()));
+    return static_cast<TDrawingStyle>(nv::TCustomImageList_GetDrawingStyle(owner->Handle()));
 }
 void TCustomImageList::SetDrawingStyleImpl(TObject* owner, const TDrawingStyle& value)
 {
-    no_vcl_TCustomImageList_SetDrawingStyle(owner->Handle(), value);
+    nv::TCustomImageList_SetDrawingStyle(owner->Handle(), value);
 }
 
 void NO_VCL_CALL TCustomImageList::ChangeTrampoline(no_vcl_obj_t sender, void*)
 {
-    if (TCustomImageList* self = static_cast<TCustomImageList*>(FromHandle(sender)))
-        CallNotify(self->onChange_, self);
+    GuardCallback([&] {
+        if (TCustomImageList* self = static_cast<TCustomImageList*>(FromHandle(sender)))
+            CallNotify(self->onChange_, self);
+    });
 }
 
 TNotifyEvent TCustomImageList::GetOnChangeImpl(TObject* owner) { return static_cast<TCustomImageList*>(owner)->onChange_; }
@@ -2660,28 +2829,28 @@ void TCustomImageList::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value
 }
 
 TImageList::TImageList(TComponent* AOwner)
-    : TCustomImageList(no_vcl_TImageList_Create(HandleOf(AOwner)))
+    : TCustomImageList(nv::TImageList_Create(HandleOf(AOwner)))
 {}
 
 /* ---------------- メニュー ---------------- */
 
 TShortCut ShortCut(unsigned short Key, TShiftState Shift)
 {
-    return static_cast<TShortCut>(no_vcl_ShortCut_Make(Key, static_cast<no_vcl_int_t>(Shift)));
+    return static_cast<TShortCut>(nv::ShortCut_Make(Key, static_cast<no_vcl_int_t>(Shift)));
 }
 
 TShortCut TextToShortCut(const std::string& Text)
 {
-    return static_cast<TShortCut>(no_vcl_ShortCut_FromText(Text.c_str()));
+    return static_cast<TShortCut>(nv::ShortCut_FromText(Text.c_str()));
 }
 
 std::string ShortCutToText(TShortCut ShortCut)
 {
-    return std::string(no_vcl_ShortCut_ToText(ShortCut));
+    return std::string(nv::ShortCut_ToText(ShortCut));
 }
 
 TMenuItem::TMenuItem(TComponent* AOwner)
-    : TMenuItem(no_vcl_TMenuItem_Create(HandleOf(AOwner)))
+    : TMenuItem(nv::TMenuItem_Create(HandleOf(AOwner)))
 {}
 
 TMenuItem::TMenuItem(no_vcl_obj_t handle)
@@ -2706,39 +2875,39 @@ TMenuItem::TMenuItem(no_vcl_obj_t handle)
     , bitmap_(this, &no_vcl_TMenuItem_GetBitmap)
 {}
 
-TMenuItem* TMenuItem::GetItemsImpl(TObject* owner, int Index) { return WrapExisting<TMenuItem>(no_vcl_TMenuItem_GetItem(owner->Handle(), Index)); }
-void TMenuItem::Add(TMenuItem* Item)              { no_vcl_TMenuItem_Add(handle_, HandleOf(Item)); }
-void TMenuItem::Insert(int Index, TMenuItem* Item) { no_vcl_TMenuItem_Insert(handle_, Index, HandleOf(Item)); }
-void TMenuItem::Delete(int Index)                 { no_vcl_TMenuItem_Delete(handle_, Index); }
-void TMenuItem::Remove(TMenuItem* Item)           { no_vcl_TMenuItem_Remove(handle_, HandleOf(Item)); }
-void TMenuItem::Clear()                           { no_vcl_TMenuItem_Clear(handle_); }
-int  TMenuItem::IndexOf(TMenuItem* Item) const    { return no_vcl_TMenuItem_IndexOf(handle_, HandleOf(Item)); }
-void TMenuItem::AddSeparator()                    { no_vcl_TMenuItem_AddSeparator(handle_); }
-bool TMenuItem::IsLine() const                    { return no_vcl_TMenuItem_IsLine(handle_) != 0; }
-void TMenuItem::Click()                           { no_vcl_TMenuItem_Click(handle_); }
+TMenuItem* TMenuItem::GetItemsImpl(TObject* owner, int Index) { return WrapExisting<TMenuItem>(nv::TMenuItem_GetItem(owner->Handle(), Index)); }
+void TMenuItem::Add(TMenuItem* Item)              { nv::TMenuItem_Add(handle_, HandleOf(Item)); }
+void TMenuItem::Insert(int Index, TMenuItem* Item) { nv::TMenuItem_Insert(handle_, Index, HandleOf(Item)); }
+void TMenuItem::Delete(int Index)                 { nv::TMenuItem_Delete(handle_, Index); }
+void TMenuItem::Remove(TMenuItem* Item)           { nv::TMenuItem_Remove(handle_, HandleOf(Item)); }
+void TMenuItem::Clear()                           { nv::TMenuItem_Clear(handle_); }
+int  TMenuItem::IndexOf(TMenuItem* Item) const    { return nv::TMenuItem_IndexOf(handle_, HandleOf(Item)); }
+void TMenuItem::AddSeparator()                    { nv::TMenuItem_AddSeparator(handle_); }
+bool TMenuItem::IsLine() const                    { return nv::TMenuItem_IsLine(handle_) != 0; }
+void TMenuItem::Click()                           { nv::TMenuItem_Click(handle_); }
 
-std::string TMenuItem::GetCaptionImpl(TObject* owner) { return std::string(no_vcl_TMenuItem_GetCaption(owner->Handle())); }
-void TMenuItem::SetCaptionImpl(TObject* owner, const std::string& value) { no_vcl_TMenuItem_SetCaption(owner->Handle(), value.c_str()); }
-bool TMenuItem::GetCheckedImpl(TObject* owner)                     { return no_vcl_TMenuItem_GetChecked(owner->Handle()) != 0; }
-void TMenuItem::SetCheckedImpl(TObject* owner, const bool& value)   { no_vcl_TMenuItem_SetChecked(owner->Handle(), value ? 1 : 0); }
-bool TMenuItem::GetEnabledImpl(TObject* owner)                     { return no_vcl_TMenuItem_GetEnabled(owner->Handle()) != 0; }
-void TMenuItem::SetEnabledImpl(TObject* owner, const bool& value)   { no_vcl_TMenuItem_SetEnabled(owner->Handle(), value ? 1 : 0); }
-bool TMenuItem::GetVisibleImpl(TObject* owner)                     { return no_vcl_TMenuItem_GetVisible(owner->Handle()) != 0; }
-void TMenuItem::SetVisibleImpl(TObject* owner, const bool& value)   { no_vcl_TMenuItem_SetVisible(owner->Handle(), value ? 1 : 0); }
-bool TMenuItem::GetAutoCheckImpl(TObject* owner)                   { return no_vcl_TMenuItem_GetAutoCheck(owner->Handle()) != 0; }
-void TMenuItem::SetAutoCheckImpl(TObject* owner, const bool& value) { no_vcl_TMenuItem_SetAutoCheck(owner->Handle(), value ? 1 : 0); }
-bool TMenuItem::GetRadioItemImpl(TObject* owner)                   { return no_vcl_TMenuItem_GetRadioItem(owner->Handle()) != 0; }
-void TMenuItem::SetRadioItemImpl(TObject* owner, const bool& value) { no_vcl_TMenuItem_SetRadioItem(owner->Handle(), value ? 1 : 0); }
-int  TMenuItem::GetGroupIndexImpl(TObject* owner)                  { return no_vcl_TMenuItem_GetGroupIndex(owner->Handle()); }
-void TMenuItem::SetGroupIndexImpl(TObject* owner, const int& value) { no_vcl_TMenuItem_SetGroupIndex(owner->Handle(), value); }
-bool TMenuItem::GetDefaultImpl(TObject* owner)                     { return no_vcl_TMenuItem_GetDefault(owner->Handle()) != 0; }
-void TMenuItem::SetDefaultImpl(TObject* owner, const bool& value)   { no_vcl_TMenuItem_SetDefault(owner->Handle(), value ? 1 : 0); }
-TShortCut TMenuItem::GetShortCutImpl(TObject* owner) { return static_cast<TShortCut>(no_vcl_TMenuItem_GetShortCut(owner->Handle())); }
-void TMenuItem::SetShortCutImpl(TObject* owner, const TShortCut& value) { no_vcl_TMenuItem_SetShortCut(owner->Handle(), value); }
-std::string TMenuItem::GetHintImpl(TObject* owner) { return std::string(no_vcl_TMenuItem_GetHint(owner->Handle())); }
-void TMenuItem::SetHintImpl(TObject* owner, const std::string& value) { no_vcl_TMenuItem_SetHint(owner->Handle(), value.c_str()); }
-int  TMenuItem::GetCountImpl(TObject* owner) { return no_vcl_TMenuItem_GetCount(owner->Handle()); }
-TMenuItem* TMenuItem::GetParentImpl(TObject* owner) { return WrapExisting<TMenuItem>(no_vcl_TMenuItem_GetParent(owner->Handle())); }
+std::string TMenuItem::GetCaptionImpl(TObject* owner) { return std::string(nv::TMenuItem_GetCaption(owner->Handle())); }
+void TMenuItem::SetCaptionImpl(TObject* owner, const std::string& value) { nv::TMenuItem_SetCaption(owner->Handle(), value.c_str()); }
+bool TMenuItem::GetCheckedImpl(TObject* owner)                     { return nv::TMenuItem_GetChecked(owner->Handle()) != 0; }
+void TMenuItem::SetCheckedImpl(TObject* owner, const bool& value)   { nv::TMenuItem_SetChecked(owner->Handle(), value ? 1 : 0); }
+bool TMenuItem::GetEnabledImpl(TObject* owner)                     { return nv::TMenuItem_GetEnabled(owner->Handle()) != 0; }
+void TMenuItem::SetEnabledImpl(TObject* owner, const bool& value)   { nv::TMenuItem_SetEnabled(owner->Handle(), value ? 1 : 0); }
+bool TMenuItem::GetVisibleImpl(TObject* owner)                     { return nv::TMenuItem_GetVisible(owner->Handle()) != 0; }
+void TMenuItem::SetVisibleImpl(TObject* owner, const bool& value)   { nv::TMenuItem_SetVisible(owner->Handle(), value ? 1 : 0); }
+bool TMenuItem::GetAutoCheckImpl(TObject* owner)                   { return nv::TMenuItem_GetAutoCheck(owner->Handle()) != 0; }
+void TMenuItem::SetAutoCheckImpl(TObject* owner, const bool& value) { nv::TMenuItem_SetAutoCheck(owner->Handle(), value ? 1 : 0); }
+bool TMenuItem::GetRadioItemImpl(TObject* owner)                   { return nv::TMenuItem_GetRadioItem(owner->Handle()) != 0; }
+void TMenuItem::SetRadioItemImpl(TObject* owner, const bool& value) { nv::TMenuItem_SetRadioItem(owner->Handle(), value ? 1 : 0); }
+int  TMenuItem::GetGroupIndexImpl(TObject* owner)                  { return nv::TMenuItem_GetGroupIndex(owner->Handle()); }
+void TMenuItem::SetGroupIndexImpl(TObject* owner, const int& value) { nv::TMenuItem_SetGroupIndex(owner->Handle(), value); }
+bool TMenuItem::GetDefaultImpl(TObject* owner)                     { return nv::TMenuItem_GetDefault(owner->Handle()) != 0; }
+void TMenuItem::SetDefaultImpl(TObject* owner, const bool& value)   { nv::TMenuItem_SetDefault(owner->Handle(), value ? 1 : 0); }
+TShortCut TMenuItem::GetShortCutImpl(TObject* owner) { return static_cast<TShortCut>(nv::TMenuItem_GetShortCut(owner->Handle())); }
+void TMenuItem::SetShortCutImpl(TObject* owner, const TShortCut& value) { nv::TMenuItem_SetShortCut(owner->Handle(), value); }
+std::string TMenuItem::GetHintImpl(TObject* owner) { return std::string(nv::TMenuItem_GetHint(owner->Handle())); }
+void TMenuItem::SetHintImpl(TObject* owner, const std::string& value) { nv::TMenuItem_SetHint(owner->Handle(), value.c_str()); }
+int  TMenuItem::GetCountImpl(TObject* owner) { return nv::TMenuItem_GetCount(owner->Handle()); }
+TMenuItem* TMenuItem::GetParentImpl(TObject* owner) { return WrapExisting<TMenuItem>(nv::TMenuItem_GetParent(owner->Handle())); }
 
 TNotifyEvent TMenuItem::GetOnClickImpl(TObject* owner) { return static_cast<TMenuItem*>(owner)->onClick_; }
 
@@ -2751,8 +2920,10 @@ void TMenuItem::SetOnClickImpl(TObject* owner, const TNotifyEvent& value)
 
 void NO_VCL_CALL TMenuItem::ClickTrampoline(no_vcl_obj_t sender, void*)
 {
-    if (TMenuItem* self = static_cast<TMenuItem*>(FromHandle(sender)))
-        CallNotify(self->onClick_, self);
+    GuardCallback([&] {
+        if (TMenuItem* self = static_cast<TMenuItem*>(FromHandle(sender)))
+            CallNotify(self->onClick_, self);
+    });
 }
 
 TMenu::TMenu(no_vcl_obj_t handle)
@@ -2761,26 +2932,26 @@ TMenu::TMenu(no_vcl_obj_t handle)
     , Images(this, &TMenu::GetImagesImpl, &TMenu::SetImagesImpl)
 {}
 
-TMenuItem* TMenu::GetItemsImpl(TObject* owner) { return WrapExisting<TMenuItem>(no_vcl_TMenu_GetItems(owner->Handle())); }
+TMenuItem* TMenu::GetItemsImpl(TObject* owner) { return WrapExisting<TMenuItem>(nv::TMenu_GetItems(owner->Handle())); }
 
 TMainMenu::TMainMenu(TComponent* AOwner)
-    : TMenu(no_vcl_TMainMenu_Create(HandleOf(AOwner)))
+    : TMenu(nv::TMainMenu_Create(HandleOf(AOwner)))
 {}
 
 TPopupMenu::TPopupMenu(TComponent* AOwner)
-    : TMenu(no_vcl_TPopupMenu_Create(HandleOf(AOwner)))
+    : TMenu(nv::TPopupMenu_Create(HandleOf(AOwner)))
     , AutoPopup(this, &TPopupMenu::GetAutoPopupImpl, &TPopupMenu::SetAutoPopupImpl)
     , PopupComponent(this, &TPopupMenu::GetPopupComponentImpl, &TPopupMenu::SetPopupComponentImpl)
     , OnPopup(this, &TPopupMenu::GetOnPopupImpl, &TPopupMenu::SetOnPopupImpl)
     , OnClose(this, &TPopupMenu::GetOnCloseImpl, &TPopupMenu::SetOnCloseImpl)
 {}
 
-void TPopupMenu::Popup(int X, int Y) { no_vcl_TPopupMenu_Popup(handle_, X, Y); }
+void TPopupMenu::Popup(int X, int Y) { nv::TPopupMenu_Popup(handle_, X, Y); }
 
-bool TPopupMenu::GetAutoPopupImpl(TObject* owner)                   { return no_vcl_TPopupMenu_GetAutoPopup(owner->Handle()) != 0; }
-void TPopupMenu::SetAutoPopupImpl(TObject* owner, const bool& value) { no_vcl_TPopupMenu_SetAutoPopup(owner->Handle(), value ? 1 : 0); }
-TComponent* TPopupMenu::GetPopupComponentImpl(TObject* owner) { return FromHandle(no_vcl_TPopupMenu_GetPopupComponent(owner->Handle())); }
-void TPopupMenu::SetPopupComponentImpl(TObject* owner, TComponent* const& value) { no_vcl_TPopupMenu_SetPopupComponent(owner->Handle(), HandleOf(value)); }
+bool TPopupMenu::GetAutoPopupImpl(TObject* owner)                   { return nv::TPopupMenu_GetAutoPopup(owner->Handle()) != 0; }
+void TPopupMenu::SetAutoPopupImpl(TObject* owner, const bool& value) { nv::TPopupMenu_SetAutoPopup(owner->Handle(), value ? 1 : 0); }
+TComponent* TPopupMenu::GetPopupComponentImpl(TObject* owner) { return FromHandle(nv::TPopupMenu_GetPopupComponent(owner->Handle())); }
+void TPopupMenu::SetPopupComponentImpl(TObject* owner, TComponent* const& value) { nv::TPopupMenu_SetPopupComponent(owner->Handle(), HandleOf(value)); }
 
 TNotifyEvent TPopupMenu::GetOnPopupImpl(TObject* owner) { return static_cast<TPopupMenu*>(owner)->onPopup_; }
 TNotifyEvent TPopupMenu::GetOnCloseImpl(TObject* owner) { return static_cast<TPopupMenu*>(owner)->onClose_; }
@@ -2801,37 +2972,41 @@ void TPopupMenu::SetOnCloseImpl(TObject* owner, const TNotifyEvent& value)
 
 void NO_VCL_CALL TPopupMenu::PopupTrampoline(no_vcl_obj_t sender, void*)
 {
-    if (TPopupMenu* self = static_cast<TPopupMenu*>(FromHandle(sender)))
-        CallNotify(self->onPopup_, self);
+    GuardCallback([&] {
+        if (TPopupMenu* self = static_cast<TPopupMenu*>(FromHandle(sender)))
+            CallNotify(self->onPopup_, self);
+    });
 }
 
 void NO_VCL_CALL TPopupMenu::CloseTrampoline(no_vcl_obj_t sender, void*)
 {
-    if (TPopupMenu* self = static_cast<TPopupMenu*>(FromHandle(sender)))
-        CallNotify(self->onClose_, self);
+    GuardCallback([&] {
+        if (TPopupMenu* self = static_cast<TPopupMenu*>(FromHandle(sender)))
+            CallNotify(self->onClose_, self);
+    });
 }
 
 /* ---------------- Grid ---------------- */
 
-void TCustomGrid::BeginUpdate() { no_vcl_TCustomGrid_BeginUpdate(handle_); }
-void TCustomGrid::EndUpdate()   { no_vcl_TCustomGrid_EndUpdate(handle_); }
-void TCustomGrid::Clear()       { no_vcl_TCustomGrid_Clear(handle_); }
+void TCustomGrid::BeginUpdate() { nv::TCustomGrid_BeginUpdate(handle_); }
+void TCustomGrid::EndUpdate()   { nv::TCustomGrid_EndUpdate(handle_); }
+void TCustomGrid::Clear()       { nv::TCustomGrid_Clear(handle_); }
 
 TRect TCustomGrid::CellRect(int ACol, int ARow) const
 {
     TRect r{};
-    no_vcl_TCustomGrid_CellRect(handle_, ACol, ARow, &r.Left, &r.Top, &r.Right, &r.Bottom);
+    nv::TCustomGrid_CellRect(handle_, ACol, ARow, &r.Left, &r.Top, &r.Right, &r.Bottom);
     return r;
 }
 
 void TCustomGrid::MouseToCell(int X, int Y, int& ACol, int& ARow) const
 {
-    no_vcl_TCustomGrid_MouseToCell(handle_, X, Y, &ACol, &ARow);
+    nv::TCustomGrid_MouseToCell(handle_, X, Y, &ACol, &ARow);
 }
 
 TCustomDrawGrid::TCustomDrawGrid(no_vcl_obj_t handle)
     : TCustomGrid(handle)
-    , Canvas(no_vcl_TCustomDrawGrid_GetCanvas(handle))
+    , Canvas(nv::TCustomDrawGrid_GetCanvas(handle))
     , ColCount(this, &TCustomDrawGrid::GetColCountImpl, &TCustomDrawGrid::SetColCountImpl)
     , RowCount(this, &TCustomDrawGrid::GetRowCountImpl, &TCustomDrawGrid::SetRowCountImpl)
     , FixedCols(this, &TCustomDrawGrid::GetFixedColsImpl, &TCustomDrawGrid::SetFixedColsImpl)
@@ -2855,99 +3030,107 @@ TCustomDrawGrid::TCustomDrawGrid(no_vcl_obj_t handle)
     , RowHeights(this, &TCustomDrawGrid::GetRowHeightsImpl, &TCustomDrawGrid::SetRowHeightsImpl)
 {}
 
-int  TCustomDrawGrid::GetColWidthsImpl(TObject* owner, int ACol)                     { return no_vcl_TCustomDrawGrid_GetColWidths(owner->Handle(), ACol); }
-void TCustomDrawGrid::SetColWidthsImpl(TObject* owner, int ACol, const int& value)   { no_vcl_TCustomDrawGrid_SetColWidths(owner->Handle(), ACol, value); }
-int  TCustomDrawGrid::GetRowHeightsImpl(TObject* owner, int ARow)                    { return no_vcl_TCustomDrawGrid_GetRowHeights(owner->Handle(), ARow); }
-void TCustomDrawGrid::SetRowHeightsImpl(TObject* owner, int ARow, const int& value)  { no_vcl_TCustomDrawGrid_SetRowHeights(owner->Handle(), ARow, value); }
+int  TCustomDrawGrid::GetColWidthsImpl(TObject* owner, int ACol)                     { return nv::TCustomDrawGrid_GetColWidths(owner->Handle(), ACol); }
+void TCustomDrawGrid::SetColWidthsImpl(TObject* owner, int ACol, const int& value)   { nv::TCustomDrawGrid_SetColWidths(owner->Handle(), ACol, value); }
+int  TCustomDrawGrid::GetRowHeightsImpl(TObject* owner, int ARow)                    { return nv::TCustomDrawGrid_GetRowHeights(owner->Handle(), ARow); }
+void TCustomDrawGrid::SetRowHeightsImpl(TObject* owner, int ARow, const int& value)  { nv::TCustomDrawGrid_SetRowHeights(owner->Handle(), ARow, value); }
 
-void TCustomDrawGrid::InsertColRow(bool IsColumn, int Index) { no_vcl_TCustomDrawGrid_InsertColRow(handle_, IsColumn ? 1 : 0, Index); }
-void TCustomDrawGrid::DeleteColRow(bool IsColumn, int Index) { no_vcl_TCustomDrawGrid_DeleteColRow(handle_, IsColumn ? 1 : 0, Index); }
-void TCustomDrawGrid::SortColRow(bool IsColumn, int Index)   { no_vcl_TCustomDrawGrid_SortColRow(handle_, IsColumn ? 1 : 0, Index); }
+void TCustomDrawGrid::InsertColRow(bool IsColumn, int Index) { nv::TCustomDrawGrid_InsertColRow(handle_, IsColumn ? 1 : 0, Index); }
+void TCustomDrawGrid::DeleteColRow(bool IsColumn, int Index) { nv::TCustomDrawGrid_DeleteColRow(handle_, IsColumn ? 1 : 0, Index); }
+void TCustomDrawGrid::SortColRow(bool IsColumn, int Index)   { nv::TCustomDrawGrid_SortColRow(handle_, IsColumn ? 1 : 0, Index); }
 
 void TCustomDrawGrid::MoveColRow(bool IsColumn, int FromIndex, int ToIndex)
 {
-    no_vcl_TCustomDrawGrid_MoveColRow(handle_, IsColumn ? 1 : 0, FromIndex, ToIndex);
+    nv::TCustomDrawGrid_MoveColRow(handle_, IsColumn ? 1 : 0, FromIndex, ToIndex);
 }
 
-int  TCustomDrawGrid::GetColCountImpl(TObject* owner)                        { return no_vcl_TCustomDrawGrid_GetColCount(owner->Handle()); }
-void TCustomDrawGrid::SetColCountImpl(TObject* owner, const int& value)       { no_vcl_TCustomDrawGrid_SetColCount(owner->Handle(), value); }
-int  TCustomDrawGrid::GetRowCountImpl(TObject* owner)                        { return no_vcl_TCustomDrawGrid_GetRowCount(owner->Handle()); }
-void TCustomDrawGrid::SetRowCountImpl(TObject* owner, const int& value)       { no_vcl_TCustomDrawGrid_SetRowCount(owner->Handle(), value); }
-int  TCustomDrawGrid::GetFixedColsImpl(TObject* owner)                       { return no_vcl_TCustomDrawGrid_GetFixedCols(owner->Handle()); }
-void TCustomDrawGrid::SetFixedColsImpl(TObject* owner, const int& value)      { no_vcl_TCustomDrawGrid_SetFixedCols(owner->Handle(), value); }
-int  TCustomDrawGrid::GetFixedRowsImpl(TObject* owner)                       { return no_vcl_TCustomDrawGrid_GetFixedRows(owner->Handle()); }
-void TCustomDrawGrid::SetFixedRowsImpl(TObject* owner, const int& value)      { no_vcl_TCustomDrawGrid_SetFixedRows(owner->Handle(), value); }
-int  TCustomDrawGrid::GetColImpl(TObject* owner)                             { return no_vcl_TCustomDrawGrid_GetCol(owner->Handle()); }
-void TCustomDrawGrid::SetColImpl(TObject* owner, const int& value)            { no_vcl_TCustomDrawGrid_SetCol(owner->Handle(), value); }
-int  TCustomDrawGrid::GetRowImpl(TObject* owner)                             { return no_vcl_TCustomDrawGrid_GetRow(owner->Handle()); }
-void TCustomDrawGrid::SetRowImpl(TObject* owner, const int& value)            { no_vcl_TCustomDrawGrid_SetRow(owner->Handle(), value); }
-int  TCustomDrawGrid::GetDefaultColWidthImpl(TObject* owner)                 { return no_vcl_TCustomDrawGrid_GetDefaultColWidth(owner->Handle()); }
-void TCustomDrawGrid::SetDefaultColWidthImpl(TObject* owner, const int& value) { no_vcl_TCustomDrawGrid_SetDefaultColWidth(owner->Handle(), value); }
-int  TCustomDrawGrid::GetDefaultRowHeightImpl(TObject* owner)                { return no_vcl_TCustomDrawGrid_GetDefaultRowHeight(owner->Handle()); }
-void TCustomDrawGrid::SetDefaultRowHeightImpl(TObject* owner, const int& value) { no_vcl_TCustomDrawGrid_SetDefaultRowHeight(owner->Handle(), value); }
-TGridOptions TCustomDrawGrid::GetOptionsImpl(TObject* owner)                  { return no_vcl_TCustomDrawGrid_GetOptions(owner->Handle()); }
-void TCustomDrawGrid::SetOptionsImpl(TObject* owner, const TGridOptions& value) { no_vcl_TCustomDrawGrid_SetOptions(owner->Handle(), value); }
-int  TCustomDrawGrid::GetLeftColImpl(TObject* owner)                         { return no_vcl_TCustomDrawGrid_GetLeftCol(owner->Handle()); }
-void TCustomDrawGrid::SetLeftColImpl(TObject* owner, const int& value)        { no_vcl_TCustomDrawGrid_SetLeftCol(owner->Handle(), value); }
-int  TCustomDrawGrid::GetTopRowImpl(TObject* owner)                          { return no_vcl_TCustomDrawGrid_GetTopRow(owner->Handle()); }
-void TCustomDrawGrid::SetTopRowImpl(TObject* owner, const int& value)         { no_vcl_TCustomDrawGrid_SetTopRow(owner->Handle(), value); }
-bool TCustomDrawGrid::GetDefaultDrawingImpl(TObject* owner)                  { return no_vcl_TCustomDrawGrid_GetDefaultDrawing(owner->Handle()) != 0; }
-void TCustomDrawGrid::SetDefaultDrawingImpl(TObject* owner, const bool& value) { no_vcl_TCustomDrawGrid_SetDefaultDrawing(owner->Handle(), value ? 1 : 0); }
-TColor TCustomDrawGrid::GetFixedColorImpl(TObject* owner)                    { return no_vcl_TCustomDrawGrid_GetFixedColor(owner->Handle()); }
-void TCustomDrawGrid::SetFixedColorImpl(TObject* owner, const TColor& value)  { no_vcl_TCustomDrawGrid_SetFixedColor(owner->Handle(), value); }
-bool TCustomDrawGrid::GetEditorModeImpl(TObject* owner)                      { return no_vcl_TCustomDrawGrid_GetEditorMode(owner->Handle()) != 0; }
-void TCustomDrawGrid::SetEditorModeImpl(TObject* owner, const bool& value)    { no_vcl_TCustomDrawGrid_SetEditorMode(owner->Handle(), value ? 1 : 0); }
+int  TCustomDrawGrid::GetColCountImpl(TObject* owner)                        { return nv::TCustomDrawGrid_GetColCount(owner->Handle()); }
+void TCustomDrawGrid::SetColCountImpl(TObject* owner, const int& value)       { nv::TCustomDrawGrid_SetColCount(owner->Handle(), value); }
+int  TCustomDrawGrid::GetRowCountImpl(TObject* owner)                        { return nv::TCustomDrawGrid_GetRowCount(owner->Handle()); }
+void TCustomDrawGrid::SetRowCountImpl(TObject* owner, const int& value)       { nv::TCustomDrawGrid_SetRowCount(owner->Handle(), value); }
+int  TCustomDrawGrid::GetFixedColsImpl(TObject* owner)                       { return nv::TCustomDrawGrid_GetFixedCols(owner->Handle()); }
+void TCustomDrawGrid::SetFixedColsImpl(TObject* owner, const int& value)      { nv::TCustomDrawGrid_SetFixedCols(owner->Handle(), value); }
+int  TCustomDrawGrid::GetFixedRowsImpl(TObject* owner)                       { return nv::TCustomDrawGrid_GetFixedRows(owner->Handle()); }
+void TCustomDrawGrid::SetFixedRowsImpl(TObject* owner, const int& value)      { nv::TCustomDrawGrid_SetFixedRows(owner->Handle(), value); }
+int  TCustomDrawGrid::GetColImpl(TObject* owner)                             { return nv::TCustomDrawGrid_GetCol(owner->Handle()); }
+void TCustomDrawGrid::SetColImpl(TObject* owner, const int& value)            { nv::TCustomDrawGrid_SetCol(owner->Handle(), value); }
+int  TCustomDrawGrid::GetRowImpl(TObject* owner)                             { return nv::TCustomDrawGrid_GetRow(owner->Handle()); }
+void TCustomDrawGrid::SetRowImpl(TObject* owner, const int& value)            { nv::TCustomDrawGrid_SetRow(owner->Handle(), value); }
+int  TCustomDrawGrid::GetDefaultColWidthImpl(TObject* owner)                 { return nv::TCustomDrawGrid_GetDefaultColWidth(owner->Handle()); }
+void TCustomDrawGrid::SetDefaultColWidthImpl(TObject* owner, const int& value) { nv::TCustomDrawGrid_SetDefaultColWidth(owner->Handle(), value); }
+int  TCustomDrawGrid::GetDefaultRowHeightImpl(TObject* owner)                { return nv::TCustomDrawGrid_GetDefaultRowHeight(owner->Handle()); }
+void TCustomDrawGrid::SetDefaultRowHeightImpl(TObject* owner, const int& value) { nv::TCustomDrawGrid_SetDefaultRowHeight(owner->Handle(), value); }
+TGridOptions TCustomDrawGrid::GetOptionsImpl(TObject* owner)                  { return nv::TCustomDrawGrid_GetOptions(owner->Handle()); }
+void TCustomDrawGrid::SetOptionsImpl(TObject* owner, const TGridOptions& value) { nv::TCustomDrawGrid_SetOptions(owner->Handle(), value); }
+int  TCustomDrawGrid::GetLeftColImpl(TObject* owner)                         { return nv::TCustomDrawGrid_GetLeftCol(owner->Handle()); }
+void TCustomDrawGrid::SetLeftColImpl(TObject* owner, const int& value)        { nv::TCustomDrawGrid_SetLeftCol(owner->Handle(), value); }
+int  TCustomDrawGrid::GetTopRowImpl(TObject* owner)                          { return nv::TCustomDrawGrid_GetTopRow(owner->Handle()); }
+void TCustomDrawGrid::SetTopRowImpl(TObject* owner, const int& value)         { nv::TCustomDrawGrid_SetTopRow(owner->Handle(), value); }
+bool TCustomDrawGrid::GetDefaultDrawingImpl(TObject* owner)                  { return nv::TCustomDrawGrid_GetDefaultDrawing(owner->Handle()) != 0; }
+void TCustomDrawGrid::SetDefaultDrawingImpl(TObject* owner, const bool& value) { nv::TCustomDrawGrid_SetDefaultDrawing(owner->Handle(), value ? 1 : 0); }
+TColor TCustomDrawGrid::GetFixedColorImpl(TObject* owner)                    { return nv::TCustomDrawGrid_GetFixedColor(owner->Handle()); }
+void TCustomDrawGrid::SetFixedColorImpl(TObject* owner, const TColor& value)  { nv::TCustomDrawGrid_SetFixedColor(owner->Handle(), value); }
+bool TCustomDrawGrid::GetEditorModeImpl(TObject* owner)                      { return nv::TCustomDrawGrid_GetEditorMode(owner->Handle()) != 0; }
+void TCustomDrawGrid::SetEditorModeImpl(TObject* owner, const bool& value)    { nv::TCustomDrawGrid_SetEditorMode(owner->Handle(), value ? 1 : 0); }
 
 TGridRect TCustomDrawGrid::GetSelectionImpl(TObject* owner)
 {
     TGridRect r{};
-    no_vcl_TCustomDrawGrid_GetSelection(owner->Handle(), &r.Left, &r.Top, &r.Right, &r.Bottom);
+    nv::TCustomDrawGrid_GetSelection(owner->Handle(), &r.Left, &r.Top, &r.Right, &r.Bottom);
     return r;
 }
 
 void TCustomDrawGrid::SetSelectionImpl(TObject* owner, const TGridRect& value)
 {
-    no_vcl_TCustomDrawGrid_SetSelection(owner->Handle(), value.Left, value.Top, value.Right, value.Bottom);
+    nv::TCustomDrawGrid_SetSelection(owner->Handle(), value.Left, value.Top, value.Right, value.Bottom);
 }
 
 void NO_VCL_CALL TCustomDrawGrid::DrawCellTrampoline(no_vcl_obj_t sender, no_vcl_int_t col, no_vcl_int_t row,
                                                      no_vcl_int_t left, no_vcl_int_t top, no_vcl_int_t right, no_vcl_int_t bottom,
                                                      no_vcl_uint_t state, void*)
 {
-    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
-    if (!self || !self->onDrawCell_)
-        return;
-    TOnDrawCell handler = self->onDrawCell_;
-    handler(self, col, row, TRect{left, top, right, bottom}, state);
+    GuardCallback([&] {
+        TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
+        if (!self || !self->onDrawCell_)
+            return;
+        TOnDrawCell handler = self->onDrawCell_;
+        handler(self, col, row, TRect{left, top, right, bottom}, state);
+    });
 }
 
 void NO_VCL_CALL TCustomDrawGrid::SelectCellTrampoline(no_vcl_obj_t sender, no_vcl_int_t col, no_vcl_int_t row, no_vcl_bool_t* canSelect, void*)
 {
-    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
-    if (!self || !self->onSelectCell_)
-        return;
-    TOnSelectCellEvent handler = self->onSelectCell_;
-    bool value = *canSelect != 0;
-    handler(self, col, row, value);
-    *canSelect = value ? 1 : 0;
+    GuardCallback([&] {
+        TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
+        if (!self || !self->onSelectCell_)
+            return;
+        TOnSelectCellEvent handler = self->onSelectCell_;
+        bool value = *canSelect != 0;
+        handler(self, col, row, value);
+        *canSelect = value ? 1 : 0;
+    });
 }
 
 void NO_VCL_CALL TCustomDrawGrid::SelectionTrampoline(no_vcl_obj_t sender, no_vcl_int_t col, no_vcl_int_t row, void*)
 {
-    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
-    if (!self || !self->onSelection_)
-        return;
-    TOnSelectEvent handler = self->onSelection_;
-    handler(self, col, row);
+    GuardCallback([&] {
+        TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
+        if (!self || !self->onSelection_)
+            return;
+        TOnSelectEvent handler = self->onSelection_;
+        handler(self, col, row);
+    });
 }
 
 void NO_VCL_CALL TCustomDrawGrid::HeaderClickTrampoline(no_vcl_obj_t sender, no_vcl_int_t isColumn, no_vcl_int_t index, void*)
 {
-    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
-    if (!self || !self->onHeaderClick_)
-        return;
-    THdrEvent handler = self->onHeaderClick_;
-    handler(self, isColumn != 0, index);
+    GuardCallback([&] {
+        TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
+        if (!self || !self->onHeaderClick_)
+            return;
+        THdrEvent handler = self->onHeaderClick_;
+        handler(self, isColumn != 0, index);
+    });
 }
 
 TOnDrawCell        TCustomDrawGrid::GetOnDrawCellImpl(TObject* owner)    { return static_cast<TCustomDrawGrid*>(owner)->onDrawCell_; }
@@ -2984,7 +3167,7 @@ void TCustomDrawGrid::SetOnHeaderClickImpl(TObject* owner, const THdrEvent& valu
 }
 
 TDrawGrid::TDrawGrid(TComponent* AOwner)
-    : TCustomDrawGrid(no_vcl_TDrawGrid_Create(HandleOf(AOwner)))
+    : TCustomDrawGrid(nv::TDrawGrid_Create(HandleOf(AOwner)))
 {}
 
 TCustomStringGrid::TCustomStringGrid(no_vcl_obj_t handle)
@@ -2994,20 +3177,20 @@ TCustomStringGrid::TCustomStringGrid(no_vcl_obj_t handle)
 
 std::string TCustomStringGrid::GetCellsImpl(TObject* owner, int ACol, int ARow)
 {
-    return std::string(no_vcl_TCustomStringGrid_GetCells(owner->Handle(), ACol, ARow));
+    return std::string(nv::TCustomStringGrid_GetCells(owner->Handle(), ACol, ARow));
 }
 
 void TCustomStringGrid::SetCellsImpl(TObject* owner, int ACol, int ARow, const std::string& value)
 {
-    no_vcl_TCustomStringGrid_SetCells(owner->Handle(), ACol, ARow, value.c_str());
+    nv::TCustomStringGrid_SetCells(owner->Handle(), ACol, ARow, value.c_str());
 }
 
-void TCustomStringGrid::Clean()                   { no_vcl_TCustomStringGrid_Clean(handle_); }
-void TCustomStringGrid::AutoSizeColumns()         { no_vcl_TCustomStringGrid_AutoSizeColumns(handle_); }
-void TCustomStringGrid::AutoSizeColumn(int ACol)  { no_vcl_TCustomStringGrid_AutoSizeColumn(handle_, ACol); }
+void TCustomStringGrid::Clean()                   { nv::TCustomStringGrid_Clean(handle_); }
+void TCustomStringGrid::AutoSizeColumns()         { nv::TCustomStringGrid_AutoSizeColumns(handle_); }
+void TCustomStringGrid::AutoSizeColumn(int ACol)  { nv::TCustomStringGrid_AutoSizeColumn(handle_, ACol); }
 
 TStringGrid::TStringGrid(TComponent* AOwner)
-    : TCustomStringGrid(no_vcl_TStringGrid_Create(HandleOf(AOwner)))
+    : TCustomStringGrid(nv::TStringGrid_Create(HandleOf(AOwner)))
 {}
 
 /* ---------------- HeaderControl ---------------- */
@@ -3027,23 +3210,23 @@ THeaderSection::THeaderSection(no_vcl_obj_t handle)
     , ImageIndex(this, &THeaderSection::GetImageIndexImpl, &THeaderSection::SetImageIndexImpl)
 {}
 
-std::string THeaderSection::GetTextImpl(TObject* owner) { return std::string(no_vcl_THeaderSection_GetText(owner->Handle())); }
-void THeaderSection::SetTextImpl(TObject* owner, const std::string& value) { no_vcl_THeaderSection_SetText(owner->Handle(), value.c_str()); }
-int  THeaderSection::GetWidthImpl(TObject* owner)                     { return no_vcl_THeaderSection_GetWidth(owner->Handle()); }
-void THeaderSection::SetWidthImpl(TObject* owner, const int& value)    { no_vcl_THeaderSection_SetWidth(owner->Handle(), value); }
-int  THeaderSection::GetMinWidthImpl(TObject* owner)                  { return no_vcl_THeaderSection_GetMinWidth(owner->Handle()); }
-void THeaderSection::SetMinWidthImpl(TObject* owner, const int& value) { no_vcl_THeaderSection_SetMinWidth(owner->Handle(), value); }
-int  THeaderSection::GetMaxWidthImpl(TObject* owner)                  { return no_vcl_THeaderSection_GetMaxWidth(owner->Handle()); }
-void THeaderSection::SetMaxWidthImpl(TObject* owner, const int& value) { no_vcl_THeaderSection_SetMaxWidth(owner->Handle(), value); }
-TAlignment THeaderSection::GetAlignmentImpl(TObject* owner) { return static_cast<TAlignment>(no_vcl_THeaderSection_GetAlignment(owner->Handle())); }
-void THeaderSection::SetAlignmentImpl(TObject* owner, const TAlignment& value) { no_vcl_THeaderSection_SetAlignment(owner->Handle(), value); }
-bool THeaderSection::GetVisibleImpl(TObject* owner)                   { return no_vcl_THeaderSection_GetVisible(owner->Handle()) != 0; }
-void THeaderSection::SetVisibleImpl(TObject* owner, const bool& value) { no_vcl_THeaderSection_SetVisible(owner->Handle(), value ? 1 : 0); }
-int  THeaderSection::GetIndexImpl(TObject* owner)                     { return no_vcl_THeaderSection_GetIndex(owner->Handle()); }
-void THeaderSection::SetIndexImpl(TObject* owner, const int& value)    { no_vcl_THeaderSection_SetIndex(owner->Handle(), value); }
-int  THeaderSection::GetLeftImpl(TObject* owner)                      { return no_vcl_THeaderSection_GetLeft(owner->Handle()); }
-int  THeaderSection::GetRightImpl(TObject* owner)                     { return no_vcl_THeaderSection_GetRight(owner->Handle()); }
-int  THeaderSection::GetOriginalIndexImpl(TObject* owner)             { return no_vcl_THeaderSection_GetOriginalIndex(owner->Handle()); }
+std::string THeaderSection::GetTextImpl(TObject* owner) { return std::string(nv::THeaderSection_GetText(owner->Handle())); }
+void THeaderSection::SetTextImpl(TObject* owner, const std::string& value) { nv::THeaderSection_SetText(owner->Handle(), value.c_str()); }
+int  THeaderSection::GetWidthImpl(TObject* owner)                     { return nv::THeaderSection_GetWidth(owner->Handle()); }
+void THeaderSection::SetWidthImpl(TObject* owner, const int& value)    { nv::THeaderSection_SetWidth(owner->Handle(), value); }
+int  THeaderSection::GetMinWidthImpl(TObject* owner)                  { return nv::THeaderSection_GetMinWidth(owner->Handle()); }
+void THeaderSection::SetMinWidthImpl(TObject* owner, const int& value) { nv::THeaderSection_SetMinWidth(owner->Handle(), value); }
+int  THeaderSection::GetMaxWidthImpl(TObject* owner)                  { return nv::THeaderSection_GetMaxWidth(owner->Handle()); }
+void THeaderSection::SetMaxWidthImpl(TObject* owner, const int& value) { nv::THeaderSection_SetMaxWidth(owner->Handle(), value); }
+TAlignment THeaderSection::GetAlignmentImpl(TObject* owner) { return static_cast<TAlignment>(nv::THeaderSection_GetAlignment(owner->Handle())); }
+void THeaderSection::SetAlignmentImpl(TObject* owner, const TAlignment& value) { nv::THeaderSection_SetAlignment(owner->Handle(), value); }
+bool THeaderSection::GetVisibleImpl(TObject* owner)                   { return nv::THeaderSection_GetVisible(owner->Handle()) != 0; }
+void THeaderSection::SetVisibleImpl(TObject* owner, const bool& value) { nv::THeaderSection_SetVisible(owner->Handle(), value ? 1 : 0); }
+int  THeaderSection::GetIndexImpl(TObject* owner)                     { return nv::THeaderSection_GetIndex(owner->Handle()); }
+void THeaderSection::SetIndexImpl(TObject* owner, const int& value)    { nv::THeaderSection_SetIndex(owner->Handle(), value); }
+int  THeaderSection::GetLeftImpl(TObject* owner)                      { return nv::THeaderSection_GetLeft(owner->Handle()); }
+int  THeaderSection::GetRightImpl(TObject* owner)                     { return nv::THeaderSection_GetRight(owner->Handle()); }
+int  THeaderSection::GetOriginalIndexImpl(TObject* owner)             { return nv::THeaderSection_GetOriginalIndex(owner->Handle()); }
 
 THeaderSections::THeaderSections(no_vcl_obj_t handle)
     : TPersistent(handle)
@@ -3051,14 +3234,14 @@ THeaderSections::THeaderSections(no_vcl_obj_t handle)
     , Items(this, &THeaderSections::GetItemsImpl)
 {}
 
-THeaderSection* THeaderSections::Add()             { return THeaderSection::Wrap(no_vcl_THeaderSections_Add(handle_)); }
-THeaderSection* THeaderSections::Insert(int Index) { return THeaderSection::Wrap(no_vcl_THeaderSections_Insert(handle_, Index)); }
-void THeaderSections::Delete(int Index)            { no_vcl_THeaderSections_Delete(handle_, Index); }
-void THeaderSections::Clear()                      { no_vcl_THeaderSections_Clear(handle_); }
-void THeaderSections::BeginUpdate()                { no_vcl_THeaderSections_BeginUpdate(handle_); }
-void THeaderSections::EndUpdate()                  { no_vcl_THeaderSections_EndUpdate(handle_); }
-THeaderSection* THeaderSections::GetItemsImpl(TObject* owner, int Index) { return THeaderSection::Wrap(no_vcl_THeaderSections_GetItem(owner->Handle(), Index)); }
-int  THeaderSections::GetCountImpl(TObject* owner) { return no_vcl_THeaderSections_GetCount(owner->Handle()); }
+THeaderSection* THeaderSections::Add()             { return THeaderSection::Wrap(nv::THeaderSections_Add(handle_)); }
+THeaderSection* THeaderSections::Insert(int Index) { return THeaderSection::Wrap(nv::THeaderSections_Insert(handle_, Index)); }
+void THeaderSections::Delete(int Index)            { nv::THeaderSections_Delete(handle_, Index); }
+void THeaderSections::Clear()                      { nv::THeaderSections_Clear(handle_); }
+void THeaderSections::BeginUpdate()                { nv::THeaderSections_BeginUpdate(handle_); }
+void THeaderSections::EndUpdate()                  { nv::THeaderSections_EndUpdate(handle_); }
+THeaderSection* THeaderSections::GetItemsImpl(TObject* owner, int Index) { return THeaderSection::Wrap(nv::THeaderSections_GetItem(owner->Handle(), Index)); }
+int  THeaderSections::GetCountImpl(TObject* owner) { return nv::THeaderSections_GetCount(owner->Handle()); }
 
 TCustomHeaderControl::TCustomHeaderControl(no_vcl_obj_t handle)
     : TCustomControl(handle)
@@ -3072,20 +3255,20 @@ TCustomHeaderControl::TCustomHeaderControl(no_vcl_obj_t handle)
     , OnSectionDrag(this, &TCustomHeaderControl::GetOnSectionDragImpl, &TCustomHeaderControl::SetOnSectionDragImpl)
     , OnSectionEndDrag(this, &TCustomHeaderControl::GetOnSectionEndDragImpl, &TCustomHeaderControl::SetOnSectionEndDragImpl)
     , Images(this, &TCustomHeaderControl::GetImagesImpl, &TCustomHeaderControl::SetImagesImpl)
-    , sections_(no_vcl_TCustomHeaderControl_GetSections(handle_))
+    , sections_(nv::TCustomHeaderControl_GetSections(handle_))
 {}
 
 int TCustomHeaderControl::GetSectionAt(const TPoint& P) const
 {
-    return no_vcl_TCustomHeaderControl_GetSectionAt(handle_, P.X, P.Y);
+    return nv::TCustomHeaderControl_GetSectionAt(handle_, P.X, P.Y);
 }
 
 THeaderSections* TCustomHeaderControl::GetSectionsImpl(TObject* owner) { return &static_cast<TCustomHeaderControl*>(owner)->sections_; }
-bool TCustomHeaderControl::GetDragReorderImpl(TObject* owner) { return no_vcl_TCustomHeaderControl_GetDragReorder(owner->Handle()) != 0; }
-void TCustomHeaderControl::SetDragReorderImpl(TObject* owner, const bool& value) { no_vcl_TCustomHeaderControl_SetDragReorder(owner->Handle(), value ? 1 : 0); }
+bool TCustomHeaderControl::GetDragReorderImpl(TObject* owner) { return nv::TCustomHeaderControl_GetDragReorder(owner->Handle()) != 0; }
+void TCustomHeaderControl::SetDragReorderImpl(TObject* owner, const bool& value) { nv::TCustomHeaderControl_SetDragReorder(owner->Handle(), value ? 1 : 0); }
 THeaderSection* TCustomHeaderControl::GetSectionFromOriginalIndexImpl(TObject* owner, int OriginalIndex)
 {
-    return THeaderSection::Wrap(no_vcl_TCustomHeaderControl_GetSectionFromOriginalIndex(owner->Handle(), OriginalIndex));
+    return THeaderSection::Wrap(nv::TCustomHeaderControl_GetSectionFromOriginalIndex(owner->Handle(), OriginalIndex));
 }
 
 namespace
@@ -3102,48 +3285,60 @@ void CallSectionNotify(TCustomHeaderControl* self, TCustomSectionNotifyEvent han
 
 void NO_VCL_CALL TCustomHeaderControl::SectionClickTrampoline(no_vcl_obj_t sender, no_vcl_obj_t section, void*)
 {
-    if (TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(FromHandle(sender)))
-        CallSectionNotify(self, self->onSectionClick_, THeaderSection::Wrap(section));
+    GuardCallback([&] {
+        if (TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(FromHandle(sender)))
+            CallSectionNotify(self, self->onSectionClick_, THeaderSection::Wrap(section));
+    });
 }
 
 void NO_VCL_CALL TCustomHeaderControl::SectionResizeTrampoline(no_vcl_obj_t sender, no_vcl_obj_t section, void*)
 {
-    if (TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(FromHandle(sender)))
-        CallSectionNotify(self, self->onSectionResize_, THeaderSection::Wrap(section));
+    GuardCallback([&] {
+        if (TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(FromHandle(sender)))
+            CallSectionNotify(self, self->onSectionResize_, THeaderSection::Wrap(section));
+    });
 }
 
 void NO_VCL_CALL TCustomHeaderControl::SectionSeparatorDblClickTrampoline(no_vcl_obj_t sender, no_vcl_obj_t section, void*)
 {
-    if (TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(FromHandle(sender)))
-        CallSectionNotify(self, self->onSectionSeparatorDblClick_, THeaderSection::Wrap(section));
+    GuardCallback([&] {
+        if (TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(FromHandle(sender)))
+            CallSectionNotify(self, self->onSectionSeparatorDblClick_, THeaderSection::Wrap(section));
+    });
 }
 
 void NO_VCL_CALL TCustomHeaderControl::SectionTrackTrampoline(no_vcl_obj_t sender, no_vcl_obj_t section,
                                                               no_vcl_int_t width, no_vcl_int_t state, void*)
 {
-    TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(FromHandle(sender));
-    if (!self || !self->onSectionTrack_)
-        return;
-    TCustomSectionTrackEvent handler = self->onSectionTrack_;
-    handler(self, THeaderSection::Wrap(section), width, static_cast<TSectionTrackState>(state));
+    GuardCallback([&] {
+        TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(FromHandle(sender));
+        if (!self || !self->onSectionTrack_)
+            return;
+        TCustomSectionTrackEvent handler = self->onSectionTrack_;
+        handler(self, THeaderSection::Wrap(section), width, static_cast<TSectionTrackState>(state));
+    });
 }
 
 void NO_VCL_CALL TCustomHeaderControl::SectionDragTrampoline(no_vcl_obj_t sender, no_vcl_obj_t fromSection,
                                                              no_vcl_obj_t toSection, no_vcl_bool_t* allow, void*)
 {
-    TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(FromHandle(sender));
-    if (!self || !self->onSectionDrag_)
-        return;
-    TSectionDragEvent handler = self->onSectionDrag_;
-    bool allowDrag = *allow != 0;
-    handler(self, THeaderSection::Wrap(fromSection), THeaderSection::Wrap(toSection), allowDrag);
-    *allow = allowDrag ? 1 : 0;
+    GuardCallback([&] {
+        TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(FromHandle(sender));
+        if (!self || !self->onSectionDrag_)
+            return;
+        TSectionDragEvent handler = self->onSectionDrag_;
+        bool allowDrag = *allow != 0;
+        handler(self, THeaderSection::Wrap(fromSection), THeaderSection::Wrap(toSection), allowDrag);
+        *allow = allowDrag ? 1 : 0;
+    });
 }
 
 void NO_VCL_CALL TCustomHeaderControl::SectionEndDragTrampoline(no_vcl_obj_t sender, void*)
 {
-    if (TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(FromHandle(sender)))
-        CallNotify(self->onSectionEndDrag_, self);
+    GuardCallback([&] {
+        if (TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(FromHandle(sender)))
+            CallNotify(self->onSectionEndDrag_, self);
+    });
 }
 
 TCustomSectionNotifyEvent TCustomHeaderControl::GetOnSectionClickImpl(TObject* owner) { return static_cast<TCustomHeaderControl*>(owner)->onSectionClick_; }
@@ -3196,7 +3391,7 @@ void TCustomHeaderControl::SetOnSectionEndDragImpl(TObject* owner, const TNotify
 }
 
 THeaderControl::THeaderControl(TComponent* AOwner)
-    : TCustomHeaderControl(no_vcl_THeaderControl_Create(HandleOf(AOwner)))
+    : TCustomHeaderControl(nv::THeaderControl_Create(HandleOf(AOwner)))
 {}
 
 /* ---------------- ToolBar ---------------- */
@@ -3208,17 +3403,17 @@ TToolWindow::TToolWindow(no_vcl_obj_t handle)
     , EdgeOuter(this, &TToolWindow::GetEdgeOuterImpl, &TToolWindow::SetEdgeOuterImpl)
 {}
 
-void TToolWindow::BeginUpdate() { no_vcl_TToolWindow_BeginUpdate(handle_); }
-void TToolWindow::EndUpdate()   { no_vcl_TToolWindow_EndUpdate(handle_); }
-TEdgeBorders TToolWindow::GetEdgeBordersImpl(TObject* owner) { return no_vcl_TToolWindow_GetEdgeBorders(owner->Handle()); }
-void TToolWindow::SetEdgeBordersImpl(TObject* owner, const TEdgeBorders& value) { no_vcl_TToolWindow_SetEdgeBorders(owner->Handle(), value); }
-TEdgeStyle TToolWindow::GetEdgeInnerImpl(TObject* owner) { return static_cast<TEdgeStyle>(no_vcl_TToolWindow_GetEdgeInner(owner->Handle())); }
-void TToolWindow::SetEdgeInnerImpl(TObject* owner, const TEdgeStyle& value) { no_vcl_TToolWindow_SetEdgeInner(owner->Handle(), value); }
-TEdgeStyle TToolWindow::GetEdgeOuterImpl(TObject* owner) { return static_cast<TEdgeStyle>(no_vcl_TToolWindow_GetEdgeOuter(owner->Handle())); }
-void TToolWindow::SetEdgeOuterImpl(TObject* owner, const TEdgeStyle& value) { no_vcl_TToolWindow_SetEdgeOuter(owner->Handle(), value); }
+void TToolWindow::BeginUpdate() { nv::TToolWindow_BeginUpdate(handle_); }
+void TToolWindow::EndUpdate()   { nv::TToolWindow_EndUpdate(handle_); }
+TEdgeBorders TToolWindow::GetEdgeBordersImpl(TObject* owner) { return nv::TToolWindow_GetEdgeBorders(owner->Handle()); }
+void TToolWindow::SetEdgeBordersImpl(TObject* owner, const TEdgeBorders& value) { nv::TToolWindow_SetEdgeBorders(owner->Handle(), value); }
+TEdgeStyle TToolWindow::GetEdgeInnerImpl(TObject* owner) { return static_cast<TEdgeStyle>(nv::TToolWindow_GetEdgeInner(owner->Handle())); }
+void TToolWindow::SetEdgeInnerImpl(TObject* owner, const TEdgeStyle& value) { nv::TToolWindow_SetEdgeInner(owner->Handle(), value); }
+TEdgeStyle TToolWindow::GetEdgeOuterImpl(TObject* owner) { return static_cast<TEdgeStyle>(nv::TToolWindow_GetEdgeOuter(owner->Handle())); }
+void TToolWindow::SetEdgeOuterImpl(TObject* owner, const TEdgeStyle& value) { nv::TToolWindow_SetEdgeOuter(owner->Handle(), value); }
 
 TToolBar::TToolBar(TComponent* AOwner)
-    : TToolWindow(no_vcl_TToolBar_Create(HandleOf(AOwner)))
+    : TToolWindow(nv::TToolBar_Create(HandleOf(AOwner)))
     , ButtonCount(this, &TToolBar::GetButtonCountImpl)
     , Buttons(this, &TToolBar::GetButtonsImpl)
     , RowCount(this, &TToolBar::GetRowCountImpl)
@@ -3238,37 +3433,37 @@ TToolBar::TToolBar(TComponent* AOwner)
 
 void TToolBar::SetButtonSize(int NewButtonWidth, int NewButtonHeight)
 {
-    no_vcl_TToolBar_SetButtonSize(handle_, NewButtonWidth, NewButtonHeight);
+    nv::TToolBar_SetButtonSize(handle_, NewButtonWidth, NewButtonHeight);
 }
 
-int  TToolBar::GetButtonCountImpl(TObject* owner) { return no_vcl_TToolBar_GetButtonCount(owner->Handle()); }
+int  TToolBar::GetButtonCountImpl(TObject* owner) { return nv::TToolBar_GetButtonCount(owner->Handle()); }
 // ボタンは利用者が生成したコンポーネントなので、ラッパーは必ずある。
 TToolButton* TToolBar::GetButtonsImpl(TObject* owner, int Index)
 {
-    return static_cast<TToolButton*>(FromHandle(no_vcl_TToolBar_GetButton(owner->Handle(), Index)));
+    return static_cast<TToolButton*>(FromHandle(nv::TToolBar_GetButton(owner->Handle(), Index)));
 }
-int  TToolBar::GetRowCountImpl(TObject* owner)                         { return no_vcl_TToolBar_GetRowCount(owner->Handle()); }
-int  TToolBar::GetButtonHeightImpl(TObject* owner)                     { return no_vcl_TToolBar_GetButtonHeight(owner->Handle()); }
-void TToolBar::SetButtonHeightImpl(TObject* owner, const int& value)    { no_vcl_TToolBar_SetButtonHeight(owner->Handle(), value); }
-int  TToolBar::GetButtonWidthImpl(TObject* owner)                      { return no_vcl_TToolBar_GetButtonWidth(owner->Handle()); }
-void TToolBar::SetButtonWidthImpl(TObject* owner, const int& value)     { no_vcl_TToolBar_SetButtonWidth(owner->Handle(), value); }
-int  TToolBar::GetDropDownWidthImpl(TObject* owner)                    { return no_vcl_TToolBar_GetDropDownWidth(owner->Handle()); }
-void TToolBar::SetDropDownWidthImpl(TObject* owner, const int& value)   { no_vcl_TToolBar_SetDropDownWidth(owner->Handle(), value); }
-int  TToolBar::GetIndentImpl(TObject* owner)                           { return no_vcl_TToolBar_GetIndent(owner->Handle()); }
-void TToolBar::SetIndentImpl(TObject* owner, const int& value)          { no_vcl_TToolBar_SetIndent(owner->Handle(), value); }
-bool TToolBar::GetFlatImpl(TObject* owner)                             { return no_vcl_TToolBar_GetFlat(owner->Handle()) != 0; }
-void TToolBar::SetFlatImpl(TObject* owner, const bool& value)           { no_vcl_TToolBar_SetFlat(owner->Handle(), value ? 1 : 0); }
-bool TToolBar::GetListImpl(TObject* owner)                             { return no_vcl_TToolBar_GetList(owner->Handle()) != 0; }
-void TToolBar::SetListImpl(TObject* owner, const bool& value)           { no_vcl_TToolBar_SetList(owner->Handle(), value ? 1 : 0); }
-bool TToolBar::GetShowCaptionsImpl(TObject* owner)                     { return no_vcl_TToolBar_GetShowCaptions(owner->Handle()) != 0; }
-void TToolBar::SetShowCaptionsImpl(TObject* owner, const bool& value)   { no_vcl_TToolBar_SetShowCaptions(owner->Handle(), value ? 1 : 0); }
-bool TToolBar::GetTransparentImpl(TObject* owner)                      { return no_vcl_TToolBar_GetTransparent(owner->Handle()) != 0; }
-void TToolBar::SetTransparentImpl(TObject* owner, const bool& value)    { no_vcl_TToolBar_SetTransparent(owner->Handle(), value ? 1 : 0); }
-bool TToolBar::GetWrapableImpl(TObject* owner)                         { return no_vcl_TToolBar_GetWrapable(owner->Handle()) != 0; }
-void TToolBar::SetWrapableImpl(TObject* owner, const bool& value)       { no_vcl_TToolBar_SetWrapable(owner->Handle(), value ? 1 : 0); }
+int  TToolBar::GetRowCountImpl(TObject* owner)                         { return nv::TToolBar_GetRowCount(owner->Handle()); }
+int  TToolBar::GetButtonHeightImpl(TObject* owner)                     { return nv::TToolBar_GetButtonHeight(owner->Handle()); }
+void TToolBar::SetButtonHeightImpl(TObject* owner, const int& value)    { nv::TToolBar_SetButtonHeight(owner->Handle(), value); }
+int  TToolBar::GetButtonWidthImpl(TObject* owner)                      { return nv::TToolBar_GetButtonWidth(owner->Handle()); }
+void TToolBar::SetButtonWidthImpl(TObject* owner, const int& value)     { nv::TToolBar_SetButtonWidth(owner->Handle(), value); }
+int  TToolBar::GetDropDownWidthImpl(TObject* owner)                    { return nv::TToolBar_GetDropDownWidth(owner->Handle()); }
+void TToolBar::SetDropDownWidthImpl(TObject* owner, const int& value)   { nv::TToolBar_SetDropDownWidth(owner->Handle(), value); }
+int  TToolBar::GetIndentImpl(TObject* owner)                           { return nv::TToolBar_GetIndent(owner->Handle()); }
+void TToolBar::SetIndentImpl(TObject* owner, const int& value)          { nv::TToolBar_SetIndent(owner->Handle(), value); }
+bool TToolBar::GetFlatImpl(TObject* owner)                             { return nv::TToolBar_GetFlat(owner->Handle()) != 0; }
+void TToolBar::SetFlatImpl(TObject* owner, const bool& value)           { nv::TToolBar_SetFlat(owner->Handle(), value ? 1 : 0); }
+bool TToolBar::GetListImpl(TObject* owner)                             { return nv::TToolBar_GetList(owner->Handle()) != 0; }
+void TToolBar::SetListImpl(TObject* owner, const bool& value)           { nv::TToolBar_SetList(owner->Handle(), value ? 1 : 0); }
+bool TToolBar::GetShowCaptionsImpl(TObject* owner)                     { return nv::TToolBar_GetShowCaptions(owner->Handle()) != 0; }
+void TToolBar::SetShowCaptionsImpl(TObject* owner, const bool& value)   { nv::TToolBar_SetShowCaptions(owner->Handle(), value ? 1 : 0); }
+bool TToolBar::GetTransparentImpl(TObject* owner)                      { return nv::TToolBar_GetTransparent(owner->Handle()) != 0; }
+void TToolBar::SetTransparentImpl(TObject* owner, const bool& value)    { nv::TToolBar_SetTransparent(owner->Handle(), value ? 1 : 0); }
+bool TToolBar::GetWrapableImpl(TObject* owner)                         { return nv::TToolBar_GetWrapable(owner->Handle()) != 0; }
+void TToolBar::SetWrapableImpl(TObject* owner, const bool& value)       { nv::TToolBar_SetWrapable(owner->Handle(), value ? 1 : 0); }
 
 TToolButton::TToolButton(TComponent* AOwner)
-    : TGraphicControl(no_vcl_TToolButton_Create(HandleOf(AOwner)))
+    : TGraphicControl(nv::TToolButton_Create(HandleOf(AOwner)))
     , AllowAllUp(this, &TToolButton::GetAllowAllUpImpl, &TToolButton::SetAllowAllUpImpl)
     , Down(this, &TToolButton::GetDownImpl, &TToolButton::SetDownImpl)
     , Grouped(this, &TToolButton::GetGroupedImpl, &TToolButton::SetGroupedImpl)
@@ -3284,40 +3479,42 @@ TToolButton::TToolButton(TComponent* AOwner)
     , ImageIndex(this, &TToolButton::GetImageIndexImpl, &TToolButton::SetImageIndexImpl)
 {}
 
-void TToolButton::Click()      { no_vcl_TToolButton_Click(handle_); }
-void TToolButton::ArrowClick() { no_vcl_TToolButton_ArrowClick(handle_); }
-bool TToolButton::PointInArrow(int X, int Y) const { return no_vcl_TToolButton_PointInArrow(handle_, X, Y) != 0; }
+void TToolButton::Click()      { nv::TToolButton_Click(handle_); }
+void TToolButton::ArrowClick() { nv::TToolButton_ArrowClick(handle_); }
+bool TToolButton::PointInArrow(int X, int Y) const { return nv::TToolButton_PointInArrow(handle_, X, Y) != 0; }
 
-bool TToolButton::GetAllowAllUpImpl(TObject* owner)                      { return no_vcl_TToolButton_GetAllowAllUp(owner->Handle()) != 0; }
-void TToolButton::SetAllowAllUpImpl(TObject* owner, const bool& value)    { no_vcl_TToolButton_SetAllowAllUp(owner->Handle(), value ? 1 : 0); }
-bool TToolButton::GetDownImpl(TObject* owner)                            { return no_vcl_TToolButton_GetDown(owner->Handle()) != 0; }
-void TToolButton::SetDownImpl(TObject* owner, const bool& value)          { no_vcl_TToolButton_SetDown(owner->Handle(), value ? 1 : 0); }
-bool TToolButton::GetGroupedImpl(TObject* owner)                         { return no_vcl_TToolButton_GetGrouped(owner->Handle()) != 0; }
-void TToolButton::SetGroupedImpl(TObject* owner, const bool& value)       { no_vcl_TToolButton_SetGrouped(owner->Handle(), value ? 1 : 0); }
-bool TToolButton::GetIndeterminateImpl(TObject* owner)                   { return no_vcl_TToolButton_GetIndeterminate(owner->Handle()) != 0; }
-void TToolButton::SetIndeterminateImpl(TObject* owner, const bool& value) { no_vcl_TToolButton_SetIndeterminate(owner->Handle(), value ? 1 : 0); }
-bool TToolButton::GetMarkedImpl(TObject* owner)                          { return no_vcl_TToolButton_GetMarked(owner->Handle()) != 0; }
-void TToolButton::SetMarkedImpl(TObject* owner, const bool& value)        { no_vcl_TToolButton_SetMarked(owner->Handle(), value ? 1 : 0); }
-bool TToolButton::GetShowCaptionImpl(TObject* owner)                     { return no_vcl_TToolButton_GetShowCaption(owner->Handle()) != 0; }
-void TToolButton::SetShowCaptionImpl(TObject* owner, const bool& value)   { no_vcl_TToolButton_SetShowCaption(owner->Handle(), value ? 1 : 0); }
-bool TToolButton::GetWrapImpl(TObject* owner)                            { return no_vcl_TToolButton_GetWrap(owner->Handle()) != 0; }
-void TToolButton::SetWrapImpl(TObject* owner, const bool& value)          { no_vcl_TToolButton_SetWrap(owner->Handle(), value ? 1 : 0); }
-TToolButtonStyle TToolButton::GetStyleImpl(TObject* owner) { return static_cast<TToolButtonStyle>(no_vcl_TToolButton_GetStyle(owner->Handle())); }
-void TToolButton::SetStyleImpl(TObject* owner, const TToolButtonStyle& value) { no_vcl_TToolButton_SetStyle(owner->Handle(), value); }
+bool TToolButton::GetAllowAllUpImpl(TObject* owner)                      { return nv::TToolButton_GetAllowAllUp(owner->Handle()) != 0; }
+void TToolButton::SetAllowAllUpImpl(TObject* owner, const bool& value)    { nv::TToolButton_SetAllowAllUp(owner->Handle(), value ? 1 : 0); }
+bool TToolButton::GetDownImpl(TObject* owner)                            { return nv::TToolButton_GetDown(owner->Handle()) != 0; }
+void TToolButton::SetDownImpl(TObject* owner, const bool& value)          { nv::TToolButton_SetDown(owner->Handle(), value ? 1 : 0); }
+bool TToolButton::GetGroupedImpl(TObject* owner)                         { return nv::TToolButton_GetGrouped(owner->Handle()) != 0; }
+void TToolButton::SetGroupedImpl(TObject* owner, const bool& value)       { nv::TToolButton_SetGrouped(owner->Handle(), value ? 1 : 0); }
+bool TToolButton::GetIndeterminateImpl(TObject* owner)                   { return nv::TToolButton_GetIndeterminate(owner->Handle()) != 0; }
+void TToolButton::SetIndeterminateImpl(TObject* owner, const bool& value) { nv::TToolButton_SetIndeterminate(owner->Handle(), value ? 1 : 0); }
+bool TToolButton::GetMarkedImpl(TObject* owner)                          { return nv::TToolButton_GetMarked(owner->Handle()) != 0; }
+void TToolButton::SetMarkedImpl(TObject* owner, const bool& value)        { nv::TToolButton_SetMarked(owner->Handle(), value ? 1 : 0); }
+bool TToolButton::GetShowCaptionImpl(TObject* owner)                     { return nv::TToolButton_GetShowCaption(owner->Handle()) != 0; }
+void TToolButton::SetShowCaptionImpl(TObject* owner, const bool& value)   { nv::TToolButton_SetShowCaption(owner->Handle(), value ? 1 : 0); }
+bool TToolButton::GetWrapImpl(TObject* owner)                            { return nv::TToolButton_GetWrap(owner->Handle()) != 0; }
+void TToolButton::SetWrapImpl(TObject* owner, const bool& value)          { nv::TToolButton_SetWrap(owner->Handle(), value ? 1 : 0); }
+TToolButtonStyle TToolButton::GetStyleImpl(TObject* owner) { return static_cast<TToolButtonStyle>(nv::TToolButton_GetStyle(owner->Handle())); }
+void TToolButton::SetStyleImpl(TObject* owner, const TToolButtonStyle& value) { nv::TToolButton_SetStyle(owner->Handle(), value); }
 TPopupMenu* TToolButton::GetDropdownMenuImpl(TObject* owner)
 {
-    return static_cast<TPopupMenu*>(FromHandle(no_vcl_TToolButton_GetDropdownMenu(owner->Handle())));
+    return static_cast<TPopupMenu*>(FromHandle(nv::TToolButton_GetDropdownMenu(owner->Handle())));
 }
-void TToolButton::SetDropdownMenuImpl(TObject* owner, TPopupMenu* const& value) { no_vcl_TToolButton_SetDropdownMenu(owner->Handle(), HandleOf(value)); }
+void TToolButton::SetDropdownMenuImpl(TObject* owner, TPopupMenu* const& value) { nv::TToolButton_SetDropdownMenu(owner->Handle(), HandleOf(value)); }
 // メニュー項目は LCL が内部で生成したもの(メニューのルート項目等)もありうるため WrapExisting で引く。
-TMenuItem* TToolButton::GetMenuItemImpl(TObject* owner) { return WrapExisting<TMenuItem>(no_vcl_TToolButton_GetMenuItem(owner->Handle())); }
-void TToolButton::SetMenuItemImpl(TObject* owner, TMenuItem* const& value) { no_vcl_TToolButton_SetMenuItem(owner->Handle(), HandleOf(value)); }
-int  TToolButton::GetIndexImpl(TObject* owner) { return no_vcl_TToolButton_GetIndex(owner->Handle()); }
+TMenuItem* TToolButton::GetMenuItemImpl(TObject* owner) { return WrapExisting<TMenuItem>(nv::TToolButton_GetMenuItem(owner->Handle())); }
+void TToolButton::SetMenuItemImpl(TObject* owner, TMenuItem* const& value) { nv::TToolButton_SetMenuItem(owner->Handle(), HandleOf(value)); }
+int  TToolButton::GetIndexImpl(TObject* owner) { return nv::TToolButton_GetIndex(owner->Handle()); }
 
 void NO_VCL_CALL TToolButton::ArrowClickTrampoline(no_vcl_obj_t sender, void*)
 {
-    if (TToolButton* self = static_cast<TToolButton*>(FromHandle(sender)))
-        CallNotify(self->onArrowClick_, self);
+    GuardCallback([&] {
+        if (TToolButton* self = static_cast<TToolButton*>(FromHandle(sender)))
+            CallNotify(self->onArrowClick_, self);
+    });
 }
 
 TNotifyEvent TToolButton::GetOnArrowClickImpl(TObject* owner) { return static_cast<TToolButton*>(owner)->onArrowClick_; }
@@ -3355,42 +3552,42 @@ TCoolBand::TCoolBand(no_vcl_obj_t handle)
     , bitmap_(this, &no_vcl_TCoolBand_GetBitmap)
 {}
 
-void TCoolBand::AutosizeWidth() { no_vcl_TCoolBand_AutosizeWidth(handle_); }
+void TCoolBand::AutosizeWidth() { nv::TCoolBand_AutosizeWidth(handle_); }
 
-std::string TCoolBand::GetTextImpl(TObject* owner) { return std::string(no_vcl_TCoolBand_GetText(owner->Handle())); }
-void TCoolBand::SetTextImpl(TObject* owner, const std::string& value) { no_vcl_TCoolBand_SetText(owner->Handle(), value.c_str()); }
-int  TCoolBand::GetWidthImpl(TObject* owner)                            { return no_vcl_TCoolBand_GetWidth(owner->Handle()); }
-void TCoolBand::SetWidthImpl(TObject* owner, const int& value)           { no_vcl_TCoolBand_SetWidth(owner->Handle(), value); }
-int  TCoolBand::GetMinWidthImpl(TObject* owner)                         { return no_vcl_TCoolBand_GetMinWidth(owner->Handle()); }
-void TCoolBand::SetMinWidthImpl(TObject* owner, const int& value)        { no_vcl_TCoolBand_SetMinWidth(owner->Handle(), value); }
-int  TCoolBand::GetMinHeightImpl(TObject* owner)                        { return no_vcl_TCoolBand_GetMinHeight(owner->Handle()); }
-void TCoolBand::SetMinHeightImpl(TObject* owner, const int& value)       { no_vcl_TCoolBand_SetMinHeight(owner->Handle(), value); }
-bool TCoolBand::GetBreakImpl(TObject* owner)                            { return no_vcl_TCoolBand_GetBreak(owner->Handle()) != 0; }
-void TCoolBand::SetBreakImpl(TObject* owner, const bool& value)          { no_vcl_TCoolBand_SetBreak(owner->Handle(), value ? 1 : 0); }
-bool TCoolBand::GetVisibleImpl(TObject* owner)                          { return no_vcl_TCoolBand_GetVisible(owner->Handle()) != 0; }
-void TCoolBand::SetVisibleImpl(TObject* owner, const bool& value)        { no_vcl_TCoolBand_SetVisible(owner->Handle(), value ? 1 : 0); }
-bool TCoolBand::GetFixedSizeImpl(TObject* owner)                        { return no_vcl_TCoolBand_GetFixedSize(owner->Handle()) != 0; }
-void TCoolBand::SetFixedSizeImpl(TObject* owner, const bool& value)      { no_vcl_TCoolBand_SetFixedSize(owner->Handle(), value ? 1 : 0); }
-bool TCoolBand::GetFixedBackgroundImpl(TObject* owner)                  { return no_vcl_TCoolBand_GetFixedBackground(owner->Handle()) != 0; }
-void TCoolBand::SetFixedBackgroundImpl(TObject* owner, const bool& value) { no_vcl_TCoolBand_SetFixedBackground(owner->Handle(), value ? 1 : 0); }
-bool TCoolBand::GetHorizontalOnlyImpl(TObject* owner)                   { return no_vcl_TCoolBand_GetHorizontalOnly(owner->Handle()) != 0; }
-void TCoolBand::SetHorizontalOnlyImpl(TObject* owner, const bool& value) { no_vcl_TCoolBand_SetHorizontalOnly(owner->Handle(), value ? 1 : 0); }
-TColor TCoolBand::GetColorImpl(TObject* owner)                          { return static_cast<TColor>(no_vcl_TCoolBand_GetColor(owner->Handle())); }
-void TCoolBand::SetColorImpl(TObject* owner, const TColor& value)        { no_vcl_TCoolBand_SetColor(owner->Handle(), static_cast<no_vcl_int_t>(value)); }
-bool TCoolBand::GetParentColorImpl(TObject* owner)                      { return no_vcl_TCoolBand_GetParentColor(owner->Handle()) != 0; }
-void TCoolBand::SetParentColorImpl(TObject* owner, const bool& value)    { no_vcl_TCoolBand_SetParentColor(owner->Handle(), value ? 1 : 0); }
-int  TCoolBand::GetIndexImpl(TObject* owner)                            { return no_vcl_TCoolBand_GetIndex(owner->Handle()); }
-void TCoolBand::SetIndexImpl(TObject* owner, const int& value)           { no_vcl_TCoolBand_SetIndex(owner->Handle(), value); }
+std::string TCoolBand::GetTextImpl(TObject* owner) { return std::string(nv::TCoolBand_GetText(owner->Handle())); }
+void TCoolBand::SetTextImpl(TObject* owner, const std::string& value) { nv::TCoolBand_SetText(owner->Handle(), value.c_str()); }
+int  TCoolBand::GetWidthImpl(TObject* owner)                            { return nv::TCoolBand_GetWidth(owner->Handle()); }
+void TCoolBand::SetWidthImpl(TObject* owner, const int& value)           { nv::TCoolBand_SetWidth(owner->Handle(), value); }
+int  TCoolBand::GetMinWidthImpl(TObject* owner)                         { return nv::TCoolBand_GetMinWidth(owner->Handle()); }
+void TCoolBand::SetMinWidthImpl(TObject* owner, const int& value)        { nv::TCoolBand_SetMinWidth(owner->Handle(), value); }
+int  TCoolBand::GetMinHeightImpl(TObject* owner)                        { return nv::TCoolBand_GetMinHeight(owner->Handle()); }
+void TCoolBand::SetMinHeightImpl(TObject* owner, const int& value)       { nv::TCoolBand_SetMinHeight(owner->Handle(), value); }
+bool TCoolBand::GetBreakImpl(TObject* owner)                            { return nv::TCoolBand_GetBreak(owner->Handle()) != 0; }
+void TCoolBand::SetBreakImpl(TObject* owner, const bool& value)          { nv::TCoolBand_SetBreak(owner->Handle(), value ? 1 : 0); }
+bool TCoolBand::GetVisibleImpl(TObject* owner)                          { return nv::TCoolBand_GetVisible(owner->Handle()) != 0; }
+void TCoolBand::SetVisibleImpl(TObject* owner, const bool& value)        { nv::TCoolBand_SetVisible(owner->Handle(), value ? 1 : 0); }
+bool TCoolBand::GetFixedSizeImpl(TObject* owner)                        { return nv::TCoolBand_GetFixedSize(owner->Handle()) != 0; }
+void TCoolBand::SetFixedSizeImpl(TObject* owner, const bool& value)      { nv::TCoolBand_SetFixedSize(owner->Handle(), value ? 1 : 0); }
+bool TCoolBand::GetFixedBackgroundImpl(TObject* owner)                  { return nv::TCoolBand_GetFixedBackground(owner->Handle()) != 0; }
+void TCoolBand::SetFixedBackgroundImpl(TObject* owner, const bool& value) { nv::TCoolBand_SetFixedBackground(owner->Handle(), value ? 1 : 0); }
+bool TCoolBand::GetHorizontalOnlyImpl(TObject* owner)                   { return nv::TCoolBand_GetHorizontalOnly(owner->Handle()) != 0; }
+void TCoolBand::SetHorizontalOnlyImpl(TObject* owner, const bool& value) { nv::TCoolBand_SetHorizontalOnly(owner->Handle(), value ? 1 : 0); }
+TColor TCoolBand::GetColorImpl(TObject* owner)                          { return static_cast<TColor>(nv::TCoolBand_GetColor(owner->Handle())); }
+void TCoolBand::SetColorImpl(TObject* owner, const TColor& value)        { nv::TCoolBand_SetColor(owner->Handle(), static_cast<no_vcl_int_t>(value)); }
+bool TCoolBand::GetParentColorImpl(TObject* owner)                      { return nv::TCoolBand_GetParentColor(owner->Handle()) != 0; }
+void TCoolBand::SetParentColorImpl(TObject* owner, const bool& value)    { nv::TCoolBand_SetParentColor(owner->Handle(), value ? 1 : 0); }
+int  TCoolBand::GetIndexImpl(TObject* owner)                            { return nv::TCoolBand_GetIndex(owner->Handle()); }
+void TCoolBand::SetIndexImpl(TObject* owner, const int& value)           { nv::TCoolBand_SetIndex(owner->Handle(), value); }
 // バンドに置くコントロールは利用者が生成したコンポーネントなので、ラッパーは必ずある。
 TControl* TCoolBand::GetControlImpl(TObject* owner)
 {
-    return static_cast<TControl*>(TControl::FromHandle(no_vcl_TCoolBand_GetControl(owner->Handle())));
+    return static_cast<TControl*>(TControl::FromHandle(nv::TCoolBand_GetControl(owner->Handle())));
 }
-void TCoolBand::SetControlImpl(TObject* owner, TControl* const& value)   { no_vcl_TCoolBand_SetControl(owner->Handle(), value ? value->Handle() : nullptr); }
-int  TCoolBand::GetLeftImpl(TObject* owner)                             { return no_vcl_TCoolBand_GetLeft(owner->Handle()); }
-int  TCoolBand::GetTopImpl(TObject* owner)                              { return no_vcl_TCoolBand_GetTop(owner->Handle()); }
-int  TCoolBand::GetRightImpl(TObject* owner)                            { return no_vcl_TCoolBand_GetRight(owner->Handle()); }
-int  TCoolBand::GetHeightImpl(TObject* owner)                           { return no_vcl_TCoolBand_GetHeight(owner->Handle()); }
+void TCoolBand::SetControlImpl(TObject* owner, TControl* const& value)   { nv::TCoolBand_SetControl(owner->Handle(), value ? value->Handle() : nullptr); }
+int  TCoolBand::GetLeftImpl(TObject* owner)                             { return nv::TCoolBand_GetLeft(owner->Handle()); }
+int  TCoolBand::GetTopImpl(TObject* owner)                              { return nv::TCoolBand_GetTop(owner->Handle()); }
+int  TCoolBand::GetRightImpl(TObject* owner)                            { return nv::TCoolBand_GetRight(owner->Handle()); }
+int  TCoolBand::GetHeightImpl(TObject* owner)                           { return nv::TCoolBand_GetHeight(owner->Handle()); }
 
 TCoolBands::TCoolBands(no_vcl_obj_t handle)
     : TPersistent(handle)
@@ -3398,15 +3595,15 @@ TCoolBands::TCoolBands(no_vcl_obj_t handle)
     , Items(this, &TCoolBands::GetItemsImpl)
 {}
 
-TCoolBand* TCoolBands::Add()          { return TCoolBand::Wrap(no_vcl_TCoolBands_Add(handle_)); }
-void TCoolBands::Delete(int Index)    { no_vcl_TCoolBands_Delete(handle_, Index); }
-void TCoolBands::Clear()              { no_vcl_TCoolBands_Clear(handle_); }
-void TCoolBands::BeginUpdate()        { no_vcl_TCoolBands_BeginUpdate(handle_); }
-void TCoolBands::EndUpdate()          { no_vcl_TCoolBands_EndUpdate(handle_); }
-TCoolBand* TCoolBands::FindBand(TControl* AControl) const { return TCoolBand::Wrap(no_vcl_TCoolBands_FindBand(handle_, AControl ? AControl->Handle() : nullptr)); }
-int  TCoolBands::FindBandIndex(TControl* AControl) const  { return no_vcl_TCoolBands_FindBandIndex(handle_, AControl ? AControl->Handle() : nullptr); }
-TCoolBand* TCoolBands::GetItemsImpl(TObject* owner, int Index) { return TCoolBand::Wrap(no_vcl_TCoolBands_GetItem(owner->Handle(), Index)); }
-int  TCoolBands::GetCountImpl(TObject* owner) { return no_vcl_TCoolBands_GetCount(owner->Handle()); }
+TCoolBand* TCoolBands::Add()          { return TCoolBand::Wrap(nv::TCoolBands_Add(handle_)); }
+void TCoolBands::Delete(int Index)    { nv::TCoolBands_Delete(handle_, Index); }
+void TCoolBands::Clear()              { nv::TCoolBands_Clear(handle_); }
+void TCoolBands::BeginUpdate()        { nv::TCoolBands_BeginUpdate(handle_); }
+void TCoolBands::EndUpdate()          { nv::TCoolBands_EndUpdate(handle_); }
+TCoolBand* TCoolBands::FindBand(TControl* AControl) const { return TCoolBand::Wrap(nv::TCoolBands_FindBand(handle_, AControl ? AControl->Handle() : nullptr)); }
+int  TCoolBands::FindBandIndex(TControl* AControl) const  { return nv::TCoolBands_FindBandIndex(handle_, AControl ? AControl->Handle() : nullptr); }
+TCoolBand* TCoolBands::GetItemsImpl(TObject* owner, int Index) { return TCoolBand::Wrap(nv::TCoolBands_GetItem(owner->Handle(), Index)); }
+int  TCoolBands::GetCountImpl(TObject* owner) { return nv::TCoolBands_GetCount(owner->Handle()); }
 
 TCustomCoolBar::TCustomCoolBar(no_vcl_obj_t handle)
     : TToolWindow(handle)
@@ -3423,45 +3620,47 @@ TCustomCoolBar::TCustomCoolBar(no_vcl_obj_t handle)
     , OnChange(this, &TCustomCoolBar::GetOnChangeImpl, &TCustomCoolBar::SetOnChangeImpl)
     , Images(this, &TCustomCoolBar::GetImagesImpl, &TCustomCoolBar::SetImagesImpl)
     , Bitmap(this, &TCustomCoolBar::GetBitmapImpl, &TCustomCoolBar::SetBitmapImpl)
-    , bands_(no_vcl_TCustomCoolBar_GetBands(handle_))
+    , bands_(nv::TCustomCoolBar_GetBands(handle_))
     , bitmap_(this, &no_vcl_TCustomCoolBar_GetBitmap)
 {}
 
-void TCustomCoolBar::AutosizeBands() { no_vcl_TCustomCoolBar_AutosizeBands(handle_); }
+void TCustomCoolBar::AutosizeBands() { nv::TCustomCoolBar_AutosizeBands(handle_); }
 
 void TCustomCoolBar::MouseToBandPos(int X, int Y, int& ABand, bool& AGrabber) const
 {
     no_vcl_int_t band = -1;
     no_vcl_bool_t grabber = 0;
-    no_vcl_TCustomCoolBar_MouseToBandPos(handle_, X, Y, &band, &grabber);
+    nv::TCustomCoolBar_MouseToBandPos(handle_, X, Y, &band, &grabber);
     ABand = band;
     AGrabber = grabber != 0;
 }
 
 TCoolBands* TCustomCoolBar::GetBandsImpl(TObject* owner) { return &static_cast<TCustomCoolBar*>(owner)->bands_; }
-bool TCustomCoolBar::GetFixedSizeImpl(TObject* owner)                        { return no_vcl_TCustomCoolBar_GetFixedSize(owner->Handle()) != 0; }
-void TCustomCoolBar::SetFixedSizeImpl(TObject* owner, const bool& value)      { no_vcl_TCustomCoolBar_SetFixedSize(owner->Handle(), value ? 1 : 0); }
-bool TCustomCoolBar::GetFixedOrderImpl(TObject* owner)                       { return no_vcl_TCustomCoolBar_GetFixedOrder(owner->Handle()) != 0; }
-void TCustomCoolBar::SetFixedOrderImpl(TObject* owner, const bool& value)     { no_vcl_TCustomCoolBar_SetFixedOrder(owner->Handle(), value ? 1 : 0); }
-TGrabStyle TCustomCoolBar::GetGrabStyleImpl(TObject* owner) { return static_cast<TGrabStyle>(no_vcl_TCustomCoolBar_GetGrabStyle(owner->Handle())); }
-void TCustomCoolBar::SetGrabStyleImpl(TObject* owner, const TGrabStyle& value) { no_vcl_TCustomCoolBar_SetGrabStyle(owner->Handle(), value); }
-int  TCustomCoolBar::GetGrabWidthImpl(TObject* owner)                        { return no_vcl_TCustomCoolBar_GetGrabWidth(owner->Handle()); }
-void TCustomCoolBar::SetGrabWidthImpl(TObject* owner, const int& value)       { no_vcl_TCustomCoolBar_SetGrabWidth(owner->Handle(), value); }
-int  TCustomCoolBar::GetHorizontalSpacingImpl(TObject* owner)                { return no_vcl_TCustomCoolBar_GetHorizontalSpacing(owner->Handle()); }
-void TCustomCoolBar::SetHorizontalSpacingImpl(TObject* owner, const int& value) { no_vcl_TCustomCoolBar_SetHorizontalSpacing(owner->Handle(), value); }
-int  TCustomCoolBar::GetVerticalSpacingImpl(TObject* owner)                  { return no_vcl_TCustomCoolBar_GetVerticalSpacing(owner->Handle()); }
-void TCustomCoolBar::SetVerticalSpacingImpl(TObject* owner, const int& value) { no_vcl_TCustomCoolBar_SetVerticalSpacing(owner->Handle(), value); }
-bool TCustomCoolBar::GetShowTextImpl(TObject* owner)                         { return no_vcl_TCustomCoolBar_GetShowText(owner->Handle()) != 0; }
-void TCustomCoolBar::SetShowTextImpl(TObject* owner, const bool& value)       { no_vcl_TCustomCoolBar_SetShowText(owner->Handle(), value ? 1 : 0); }
-bool TCustomCoolBar::GetThemedImpl(TObject* owner)                           { return no_vcl_TCustomCoolBar_GetThemed(owner->Handle()) != 0; }
-void TCustomCoolBar::SetThemedImpl(TObject* owner, const bool& value)         { no_vcl_TCustomCoolBar_SetThemed(owner->Handle(), value ? 1 : 0); }
-bool TCustomCoolBar::GetVerticalImpl(TObject* owner)                         { return no_vcl_TCustomCoolBar_GetVertical(owner->Handle()) != 0; }
-void TCustomCoolBar::SetVerticalImpl(TObject* owner, const bool& value)       { no_vcl_TCustomCoolBar_SetVertical(owner->Handle(), value ? 1 : 0); }
+bool TCustomCoolBar::GetFixedSizeImpl(TObject* owner)                        { return nv::TCustomCoolBar_GetFixedSize(owner->Handle()) != 0; }
+void TCustomCoolBar::SetFixedSizeImpl(TObject* owner, const bool& value)      { nv::TCustomCoolBar_SetFixedSize(owner->Handle(), value ? 1 : 0); }
+bool TCustomCoolBar::GetFixedOrderImpl(TObject* owner)                       { return nv::TCustomCoolBar_GetFixedOrder(owner->Handle()) != 0; }
+void TCustomCoolBar::SetFixedOrderImpl(TObject* owner, const bool& value)     { nv::TCustomCoolBar_SetFixedOrder(owner->Handle(), value ? 1 : 0); }
+TGrabStyle TCustomCoolBar::GetGrabStyleImpl(TObject* owner) { return static_cast<TGrabStyle>(nv::TCustomCoolBar_GetGrabStyle(owner->Handle())); }
+void TCustomCoolBar::SetGrabStyleImpl(TObject* owner, const TGrabStyle& value) { nv::TCustomCoolBar_SetGrabStyle(owner->Handle(), value); }
+int  TCustomCoolBar::GetGrabWidthImpl(TObject* owner)                        { return nv::TCustomCoolBar_GetGrabWidth(owner->Handle()); }
+void TCustomCoolBar::SetGrabWidthImpl(TObject* owner, const int& value)       { nv::TCustomCoolBar_SetGrabWidth(owner->Handle(), value); }
+int  TCustomCoolBar::GetHorizontalSpacingImpl(TObject* owner)                { return nv::TCustomCoolBar_GetHorizontalSpacing(owner->Handle()); }
+void TCustomCoolBar::SetHorizontalSpacingImpl(TObject* owner, const int& value) { nv::TCustomCoolBar_SetHorizontalSpacing(owner->Handle(), value); }
+int  TCustomCoolBar::GetVerticalSpacingImpl(TObject* owner)                  { return nv::TCustomCoolBar_GetVerticalSpacing(owner->Handle()); }
+void TCustomCoolBar::SetVerticalSpacingImpl(TObject* owner, const int& value) { nv::TCustomCoolBar_SetVerticalSpacing(owner->Handle(), value); }
+bool TCustomCoolBar::GetShowTextImpl(TObject* owner)                         { return nv::TCustomCoolBar_GetShowText(owner->Handle()) != 0; }
+void TCustomCoolBar::SetShowTextImpl(TObject* owner, const bool& value)       { nv::TCustomCoolBar_SetShowText(owner->Handle(), value ? 1 : 0); }
+bool TCustomCoolBar::GetThemedImpl(TObject* owner)                           { return nv::TCustomCoolBar_GetThemed(owner->Handle()) != 0; }
+void TCustomCoolBar::SetThemedImpl(TObject* owner, const bool& value)         { nv::TCustomCoolBar_SetThemed(owner->Handle(), value ? 1 : 0); }
+bool TCustomCoolBar::GetVerticalImpl(TObject* owner)                         { return nv::TCustomCoolBar_GetVertical(owner->Handle()) != 0; }
+void TCustomCoolBar::SetVerticalImpl(TObject* owner, const bool& value)       { nv::TCustomCoolBar_SetVertical(owner->Handle(), value ? 1 : 0); }
 
 void NO_VCL_CALL TCustomCoolBar::ChangeTrampoline(no_vcl_obj_t sender, void*)
 {
-    if (TCustomCoolBar* self = static_cast<TCustomCoolBar*>(FromHandle(sender)))
-        CallNotify(self->onChange_, self);
+    GuardCallback([&] {
+        if (TCustomCoolBar* self = static_cast<TCustomCoolBar*>(FromHandle(sender)))
+            CallNotify(self->onChange_, self);
+    });
 }
 
 TNotifyEvent TCustomCoolBar::GetOnChangeImpl(TObject* owner) { return static_cast<TCustomCoolBar*>(owner)->onChange_; }
@@ -3474,105 +3673,105 @@ void TCustomCoolBar::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value)
 }
 
 TCoolBar::TCoolBar(TComponent* AOwner)
-    : TCustomCoolBar(no_vcl_TCoolBar_Create(HandleOf(AOwner)))
+    : TCustomCoolBar(nv::TCoolBar_Create(HandleOf(AOwner)))
 {}
 
 
 /* ---------------- Images・ImageIndex・Bitmap(docs/adr/0030) ---------------- */
 
-TCustomImageList* TCustomImage::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TCustomImage_GetImages(owner->Handle()))); }
-void TCustomImage::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TCustomImage_SetImages(owner->Handle(), HandleOf(value)); }
-int  TCustomImage::GetImageIndexImpl(TObject* owner) { return no_vcl_TCustomImage_GetImageIndex(owner->Handle()); }
-void TCustomImage::SetImageIndexImpl(TObject* owner, const int& value) { no_vcl_TCustomImage_SetImageIndex(owner->Handle(), value); }
+TCustomImageList* TCustomImage::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(nv::TCustomImage_GetImages(owner->Handle()))); }
+void TCustomImage::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { nv::TCustomImage_SetImages(owner->Handle(), HandleOf(value)); }
+int  TCustomImage::GetImageIndexImpl(TObject* owner) { return nv::TCustomImage_GetImageIndex(owner->Handle()); }
+void TCustomImage::SetImageIndexImpl(TObject* owner, const int& value) { nv::TCustomImage_SetImageIndex(owner->Handle(), value); }
 
-TCustomImageList* TCustomBitBtn::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TCustomBitBtn_GetImages(owner->Handle()))); }
-void TCustomBitBtn::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TCustomBitBtn_SetImages(owner->Handle(), HandleOf(value)); }
-int  TCustomBitBtn::GetImageIndexImpl(TObject* owner) { return no_vcl_TCustomBitBtn_GetImageIndex(owner->Handle()); }
-void TCustomBitBtn::SetImageIndexImpl(TObject* owner, const int& value) { no_vcl_TCustomBitBtn_SetImageIndex(owner->Handle(), value); }
+TCustomImageList* TCustomBitBtn::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(nv::TCustomBitBtn_GetImages(owner->Handle()))); }
+void TCustomBitBtn::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { nv::TCustomBitBtn_SetImages(owner->Handle(), HandleOf(value)); }
+int  TCustomBitBtn::GetImageIndexImpl(TObject* owner) { return nv::TCustomBitBtn_GetImageIndex(owner->Handle()); }
+void TCustomBitBtn::SetImageIndexImpl(TObject* owner, const int& value) { nv::TCustomBitBtn_SetImageIndex(owner->Handle(), value); }
 
-TCustomImageList* TCustomSpeedButton::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TCustomSpeedButton_GetImages(owner->Handle()))); }
-void TCustomSpeedButton::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TCustomSpeedButton_SetImages(owner->Handle(), HandleOf(value)); }
-int  TCustomSpeedButton::GetImageIndexImpl(TObject* owner) { return no_vcl_TCustomSpeedButton_GetImageIndex(owner->Handle()); }
-void TCustomSpeedButton::SetImageIndexImpl(TObject* owner, const int& value) { no_vcl_TCustomSpeedButton_SetImageIndex(owner->Handle(), value); }
+TCustomImageList* TCustomSpeedButton::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(nv::TCustomSpeedButton_GetImages(owner->Handle()))); }
+void TCustomSpeedButton::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { nv::TCustomSpeedButton_SetImages(owner->Handle(), HandleOf(value)); }
+int  TCustomSpeedButton::GetImageIndexImpl(TObject* owner) { return nv::TCustomSpeedButton_GetImageIndex(owner->Handle()); }
+void TCustomSpeedButton::SetImageIndexImpl(TObject* owner, const int& value) { nv::TCustomSpeedButton_SetImageIndex(owner->Handle(), value); }
 
-TCustomImageList* TCustomTabControl::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TCustomTabControl_GetImages(owner->Handle()))); }
-void TCustomTabControl::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TCustomTabControl_SetImages(owner->Handle(), HandleOf(value)); }
+TCustomImageList* TCustomTabControl::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(nv::TCustomTabControl_GetImages(owner->Handle()))); }
+void TCustomTabControl::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { nv::TCustomTabControl_SetImages(owner->Handle(), HandleOf(value)); }
 
-int  TCustomPage::GetImageIndexImpl(TObject* owner) { return no_vcl_TCustomPage_GetImageIndex(owner->Handle()); }
-void TCustomPage::SetImageIndexImpl(TObject* owner, const int& value) { no_vcl_TCustomPage_SetImageIndex(owner->Handle(), value); }
+int  TCustomPage::GetImageIndexImpl(TObject* owner) { return nv::TCustomPage_GetImageIndex(owner->Handle()); }
+void TCustomPage::SetImageIndexImpl(TObject* owner, const int& value) { nv::TCustomPage_SetImageIndex(owner->Handle(), value); }
 
-TCustomImageList* TCustomTreeView::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TCustomTreeView_GetImages(owner->Handle()))); }
-void TCustomTreeView::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TCustomTreeView_SetImages(owner->Handle(), HandleOf(value)); }
-TCustomImageList* TCustomTreeView::GetStateImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TCustomTreeView_GetStateImages(owner->Handle()))); }
-void TCustomTreeView::SetStateImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TCustomTreeView_SetStateImages(owner->Handle(), HandleOf(value)); }
+TCustomImageList* TCustomTreeView::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(nv::TCustomTreeView_GetImages(owner->Handle()))); }
+void TCustomTreeView::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { nv::TCustomTreeView_SetImages(owner->Handle(), HandleOf(value)); }
+TCustomImageList* TCustomTreeView::GetStateImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(nv::TCustomTreeView_GetStateImages(owner->Handle()))); }
+void TCustomTreeView::SetStateImagesImpl(TObject* owner, TCustomImageList* const& value) { nv::TCustomTreeView_SetStateImages(owner->Handle(), HandleOf(value)); }
 
-int  TTreeNode::GetImageIndexImpl(TObject* owner) { return no_vcl_TTreeNode_GetImageIndex(owner->Handle()); }
-void TTreeNode::SetImageIndexImpl(TObject* owner, const int& value) { no_vcl_TTreeNode_SetImageIndex(owner->Handle(), value); }
-int  TTreeNode::GetSelectedIndexImpl(TObject* owner) { return no_vcl_TTreeNode_GetSelectedIndex(owner->Handle()); }
-void TTreeNode::SetSelectedIndexImpl(TObject* owner, const int& value) { no_vcl_TTreeNode_SetSelectedIndex(owner->Handle(), value); }
-int  TTreeNode::GetStateIndexImpl(TObject* owner) { return no_vcl_TTreeNode_GetStateIndex(owner->Handle()); }
-void TTreeNode::SetStateIndexImpl(TObject* owner, const int& value) { no_vcl_TTreeNode_SetStateIndex(owner->Handle(), value); }
-int  TTreeNode::GetOverlayIndexImpl(TObject* owner) { return no_vcl_TTreeNode_GetOverlayIndex(owner->Handle()); }
-void TTreeNode::SetOverlayIndexImpl(TObject* owner, const int& value) { no_vcl_TTreeNode_SetOverlayIndex(owner->Handle(), value); }
+int  TTreeNode::GetImageIndexImpl(TObject* owner) { return nv::TTreeNode_GetImageIndex(owner->Handle()); }
+void TTreeNode::SetImageIndexImpl(TObject* owner, const int& value) { nv::TTreeNode_SetImageIndex(owner->Handle(), value); }
+int  TTreeNode::GetSelectedIndexImpl(TObject* owner) { return nv::TTreeNode_GetSelectedIndex(owner->Handle()); }
+void TTreeNode::SetSelectedIndexImpl(TObject* owner, const int& value) { nv::TTreeNode_SetSelectedIndex(owner->Handle(), value); }
+int  TTreeNode::GetStateIndexImpl(TObject* owner) { return nv::TTreeNode_GetStateIndex(owner->Handle()); }
+void TTreeNode::SetStateIndexImpl(TObject* owner, const int& value) { nv::TTreeNode_SetStateIndex(owner->Handle(), value); }
+int  TTreeNode::GetOverlayIndexImpl(TObject* owner) { return nv::TTreeNode_GetOverlayIndex(owner->Handle()); }
+void TTreeNode::SetOverlayIndexImpl(TObject* owner, const int& value) { nv::TTreeNode_SetOverlayIndex(owner->Handle(), value); }
 
-TCustomImageList* TListView::GetLargeImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TListView_GetLargeImages(owner->Handle()))); }
-void TListView::SetLargeImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TListView_SetLargeImages(owner->Handle(), HandleOf(value)); }
-TCustomImageList* TListView::GetSmallImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TListView_GetSmallImages(owner->Handle()))); }
-void TListView::SetSmallImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TListView_SetSmallImages(owner->Handle(), HandleOf(value)); }
-TCustomImageList* TListView::GetStateImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TListView_GetStateImages(owner->Handle()))); }
-void TListView::SetStateImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TListView_SetStateImages(owner->Handle(), HandleOf(value)); }
+TCustomImageList* TListView::GetLargeImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(nv::TListView_GetLargeImages(owner->Handle()))); }
+void TListView::SetLargeImagesImpl(TObject* owner, TCustomImageList* const& value) { nv::TListView_SetLargeImages(owner->Handle(), HandleOf(value)); }
+TCustomImageList* TListView::GetSmallImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(nv::TListView_GetSmallImages(owner->Handle()))); }
+void TListView::SetSmallImagesImpl(TObject* owner, TCustomImageList* const& value) { nv::TListView_SetSmallImages(owner->Handle(), HandleOf(value)); }
+TCustomImageList* TListView::GetStateImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(nv::TListView_GetStateImages(owner->Handle()))); }
+void TListView::SetStateImagesImpl(TObject* owner, TCustomImageList* const& value) { nv::TListView_SetStateImages(owner->Handle(), HandleOf(value)); }
 
-int  TListItem::GetImageIndexImpl(TObject* owner) { return no_vcl_TListItem_GetImageIndex(owner->Handle()); }
-void TListItem::SetImageIndexImpl(TObject* owner, const int& value) { no_vcl_TListItem_SetImageIndex(owner->Handle(), value); }
-int  TListItem::GetStateIndexImpl(TObject* owner) { return no_vcl_TListItem_GetStateIndex(owner->Handle()); }
-void TListItem::SetStateIndexImpl(TObject* owner, const int& value) { no_vcl_TListItem_SetStateIndex(owner->Handle(), value); }
+int  TListItem::GetImageIndexImpl(TObject* owner) { return nv::TListItem_GetImageIndex(owner->Handle()); }
+void TListItem::SetImageIndexImpl(TObject* owner, const int& value) { nv::TListItem_SetImageIndex(owner->Handle(), value); }
+int  TListItem::GetStateIndexImpl(TObject* owner) { return nv::TListItem_GetStateIndex(owner->Handle()); }
+void TListItem::SetStateIndexImpl(TObject* owner, const int& value) { nv::TListItem_SetStateIndex(owner->Handle(), value); }
 
-int  TListColumn::GetImageIndexImpl(TObject* owner) { return no_vcl_TListColumn_GetImageIndex(owner->Handle()); }
-void TListColumn::SetImageIndexImpl(TObject* owner, const int& value) { no_vcl_TListColumn_SetImageIndex(owner->Handle(), value); }
+int  TListColumn::GetImageIndexImpl(TObject* owner) { return nv::TListColumn_GetImageIndex(owner->Handle()); }
+void TListColumn::SetImageIndexImpl(TObject* owner, const int& value) { nv::TListColumn_SetImageIndex(owner->Handle(), value); }
 
-TCustomImageList* TToolBar::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TToolBar_GetImages(owner->Handle()))); }
-void TToolBar::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TToolBar_SetImages(owner->Handle(), HandleOf(value)); }
-TCustomImageList* TToolBar::GetHotImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TToolBar_GetHotImages(owner->Handle()))); }
-void TToolBar::SetHotImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TToolBar_SetHotImages(owner->Handle(), HandleOf(value)); }
-TCustomImageList* TToolBar::GetDisabledImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TToolBar_GetDisabledImages(owner->Handle()))); }
-void TToolBar::SetDisabledImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TToolBar_SetDisabledImages(owner->Handle(), HandleOf(value)); }
+TCustomImageList* TToolBar::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(nv::TToolBar_GetImages(owner->Handle()))); }
+void TToolBar::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { nv::TToolBar_SetImages(owner->Handle(), HandleOf(value)); }
+TCustomImageList* TToolBar::GetHotImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(nv::TToolBar_GetHotImages(owner->Handle()))); }
+void TToolBar::SetHotImagesImpl(TObject* owner, TCustomImageList* const& value) { nv::TToolBar_SetHotImages(owner->Handle(), HandleOf(value)); }
+TCustomImageList* TToolBar::GetDisabledImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(nv::TToolBar_GetDisabledImages(owner->Handle()))); }
+void TToolBar::SetDisabledImagesImpl(TObject* owner, TCustomImageList* const& value) { nv::TToolBar_SetDisabledImages(owner->Handle(), HandleOf(value)); }
 
-int  TToolButton::GetImageIndexImpl(TObject* owner) { return no_vcl_TToolButton_GetImageIndex(owner->Handle()); }
-void TToolButton::SetImageIndexImpl(TObject* owner, const int& value) { no_vcl_TToolButton_SetImageIndex(owner->Handle(), value); }
+int  TToolButton::GetImageIndexImpl(TObject* owner) { return nv::TToolButton_GetImageIndex(owner->Handle()); }
+void TToolButton::SetImageIndexImpl(TObject* owner, const int& value) { nv::TToolButton_SetImageIndex(owner->Handle(), value); }
 
-TCustomImageList* TCustomHeaderControl::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TCustomHeaderControl_GetImages(owner->Handle()))); }
-void TCustomHeaderControl::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TCustomHeaderControl_SetImages(owner->Handle(), HandleOf(value)); }
+TCustomImageList* TCustomHeaderControl::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(nv::TCustomHeaderControl_GetImages(owner->Handle()))); }
+void TCustomHeaderControl::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { nv::TCustomHeaderControl_SetImages(owner->Handle(), HandleOf(value)); }
 
-int  THeaderSection::GetImageIndexImpl(TObject* owner) { return no_vcl_THeaderSection_GetImageIndex(owner->Handle()); }
-void THeaderSection::SetImageIndexImpl(TObject* owner, const int& value) { no_vcl_THeaderSection_SetImageIndex(owner->Handle(), value); }
+int  THeaderSection::GetImageIndexImpl(TObject* owner) { return nv::THeaderSection_GetImageIndex(owner->Handle()); }
+void THeaderSection::SetImageIndexImpl(TObject* owner, const int& value) { nv::THeaderSection_SetImageIndex(owner->Handle(), value); }
 
-TCustomImageList* TCustomCoolBar::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TCustomCoolBar_GetImages(owner->Handle()))); }
-void TCustomCoolBar::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TCustomCoolBar_SetImages(owner->Handle(), HandleOf(value)); }
+TCustomImageList* TCustomCoolBar::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(nv::TCustomCoolBar_GetImages(owner->Handle()))); }
+void TCustomCoolBar::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { nv::TCustomCoolBar_SetImages(owner->Handle(), HandleOf(value)); }
 TBitmap* TCustomCoolBar::GetBitmapImpl(TObject* owner) { return &static_cast<TCustomCoolBar*>(owner)->bitmap_; }
 void TCustomCoolBar::SetBitmapImpl(TObject* owner, TBitmap* const& value)
 {
-    no_vcl_TCustomCoolBar_SetBitmap(owner->Handle(), value ? value->Current() : nullptr);
+    nv::TCustomCoolBar_SetBitmap(owner->Handle(), value ? value->Current() : nullptr);
 }
 
-int  TCoolBand::GetImageIndexImpl(TObject* owner) { return no_vcl_TCoolBand_GetImageIndex(owner->Handle()); }
-void TCoolBand::SetImageIndexImpl(TObject* owner, const int& value) { no_vcl_TCoolBand_SetImageIndex(owner->Handle(), value); }
+int  TCoolBand::GetImageIndexImpl(TObject* owner) { return nv::TCoolBand_GetImageIndex(owner->Handle()); }
+void TCoolBand::SetImageIndexImpl(TObject* owner, const int& value) { nv::TCoolBand_SetImageIndex(owner->Handle(), value); }
 TBitmap* TCoolBand::GetBitmapImpl(TObject* owner) { return &static_cast<TCoolBand*>(owner)->bitmap_; }
 void TCoolBand::SetBitmapImpl(TObject* owner, TBitmap* const& value)
 {
-    no_vcl_TCoolBand_SetBitmap(owner->Handle(), value ? value->Current() : nullptr);
+    nv::TCoolBand_SetBitmap(owner->Handle(), value ? value->Current() : nullptr);
 }
 
-TCustomImageList* TMenu::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TMenu_GetImages(owner->Handle()))); }
-void TMenu::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TMenu_SetImages(owner->Handle(), HandleOf(value)); }
+TCustomImageList* TMenu::GetImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(nv::TMenu_GetImages(owner->Handle()))); }
+void TMenu::SetImagesImpl(TObject* owner, TCustomImageList* const& value) { nv::TMenu_SetImages(owner->Handle(), HandleOf(value)); }
 
-int  TMenuItem::GetImageIndexImpl(TObject* owner) { return no_vcl_TMenuItem_GetImageIndex(owner->Handle()); }
-void TMenuItem::SetImageIndexImpl(TObject* owner, const int& value) { no_vcl_TMenuItem_SetImageIndex(owner->Handle(), value); }
-TCustomImageList* TMenuItem::GetSubMenuImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(no_vcl_TMenuItem_GetSubMenuImages(owner->Handle()))); }
-void TMenuItem::SetSubMenuImagesImpl(TObject* owner, TCustomImageList* const& value) { no_vcl_TMenuItem_SetSubMenuImages(owner->Handle(), HandleOf(value)); }
+int  TMenuItem::GetImageIndexImpl(TObject* owner) { return nv::TMenuItem_GetImageIndex(owner->Handle()); }
+void TMenuItem::SetImageIndexImpl(TObject* owner, const int& value) { nv::TMenuItem_SetImageIndex(owner->Handle(), value); }
+TCustomImageList* TMenuItem::GetSubMenuImagesImpl(TObject* owner) { return static_cast<TCustomImageList*>(FromHandle(nv::TMenuItem_GetSubMenuImages(owner->Handle()))); }
+void TMenuItem::SetSubMenuImagesImpl(TObject* owner, TCustomImageList* const& value) { nv::TMenuItem_SetSubMenuImages(owner->Handle(), HandleOf(value)); }
 TBitmap* TMenuItem::GetBitmapImpl(TObject* owner) { return &static_cast<TMenuItem*>(owner)->bitmap_; }
 void TMenuItem::SetBitmapImpl(TObject* owner, TBitmap* const& value)
 {
-    no_vcl_TMenuItem_SetBitmap(owner->Handle(), value ? value->Current() : nullptr);
+    nv::TMenuItem_SetBitmap(owner->Handle(), value ? value->Current() : nullptr);
 }
 
 } // namespace no_vcl

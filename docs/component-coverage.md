@@ -143,10 +143,12 @@ Tier 1 の 1 バッチ目([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.m
   箇所がある。** TStatusBar ではこれが原因で Run() 開始前の生成が失敗していた(DLL 側で回避済み)。
   新しいコントロールを追加する際は、Run() 開始前にフォームを表示しても問題が無いか確認する
   ([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.md))。
-- **LCL が送出した例外は、呼び出し側(C/C++)で捕捉できない。** 範囲外の添字、ソートされた TStringList への Insert
-  ([ADR 0028](adr/0028-labelededit-and-stringlist.md))、読み込めない画像ファイル([ADR 0029](adr/0029-graphics-picture-image-glyph.md))等。
-  いまはヘッダーに使い方の制約として書いている。VCL の `try ... catch (Exception&)` を移植するには、
-  DLL 側で例外を捕捉して呼び出し側に伝える仕組み(エラーコード・C++ の例外への変換)が要る。
+- ✅ **LCL が送出した例外は、呼び出し側(C/C++)で捕捉できない。** → 解決済み([ADR 0031](adr/0031-exceptions-across-dll.md))。
+  DLL の公開関数で例外を捕まえ、C はスレッドごとの直前のエラー(`no_vcl_HasLastError` 等)、C++ は `no_vcl::Exception` として受けられる。
+  イベントのハンドラから送出した例外も、DLL 側で送出し直す(メッセージループの中なら LCL が処理する)。
+  以下は当初の記述。範囲外の添字、ソートされた TStringList への Insert
+  ([ADR 0028](adr/0028-labelededit-and-stringlist.md))、読み込めない画像ファイル([ADR 0029](adr/0029-graphics-picture-image-glyph.md))等が、
+  呼び出し側で捕捉できなかった。
 
 ## 4. 推奨する着手順序
 

@@ -11,6 +11,14 @@ static void NO_VCL_CALL OnComponentFreed(no_vcl_obj_t obj, void* data)
     ++*(int*)data;
 }
 
+/* コールバックの中で処理を失敗させる(docs/adr/0031)。no_vcl_TMenuItem_Click の中で呼ばれ、その関数が失敗する。 */
+static void NO_VCL_CALL OnFailingMenuClick(no_vcl_obj_t sender, void* data)
+{
+    (void)sender;
+    (void)data;
+    no_vcl_SetCallbackError("EMyError", "failed in the C callback");
+}
+
 static void NO_VCL_CALL OnButtonClick(no_vcl_obj_t sender, void* data)
 {
     int* clickCount = (int*)data;
@@ -702,6 +710,34 @@ int main(void)
         no_vcl_TStringList_Destroy(list);
     }
 
+    /* 例外(docs/adr/0031)。LCL が例外を送出した関数は、既定の値(文字列なら空文字列)を返し、直前のエラーに内容が入る。
+       直前のエラーは、次に no_vcl_ で始まる関数を呼ぶとクリアされる。 */
+    {
+        no_vcl_obj_t list = no_vcl_TStringList_Create();
+        no_vcl_obj_t failingItem;
+        char className[64];
+        no_vcl_str_t value;
+        int count;
+        no_vcl_TStrings_Add(list, "only");
+        value = no_vcl_TStrings_GetStrings(list, 5);
+        snprintf(className, sizeof(className), "%s", no_vcl_GetLastErrorClassName());
+        printf("C GetStrings(5) on 1 item: returned empty: %s, HasLastError=%d (expected 1), ClassName=%s (expected EStringListError), Message=%s\n",
+               value[0] == '\0' ? "yes" : "no", no_vcl_HasLastError() != 0, className, no_vcl_GetLastErrorMessage());
+        /* printf の引数の評価順は決まっていないため、呼び出してから確かめる。 */
+        count = no_vcl_TStrings_GetCount(list);
+        printf("C after a successful call: Count=%d (expected 1), HasLastError=%d (expected 0)\n",
+               count, no_vcl_HasLastError() != 0);
+        no_vcl_TStringList_Destroy(list);
+
+        /* コールバックの中で no_vcl_SetCallbackError を呼ぶと、そのイベントを起こした関数が失敗する。 */
+        failingItem = no_vcl_TMenuItem_Create(form);
+        no_vcl_TMenuItem_SetOnClick(failingItem, OnFailingMenuClick, NULL);
+        no_vcl_TMenuItem_Click(failingItem);
+        snprintf(className, sizeof(className), "%s", no_vcl_GetLastErrorClassName());
+        printf("C TMenuItem_Click with a failing callback: HasLastError=%d (expected 1), ClassName=%s (expected EMyError), Message=%s\n",
+               no_vcl_HasLastError() != 0, className, no_vcl_GetLastErrorMessage());
+    }
+
     /* グラフィックス(docs/adr/0029)。生成したグラフィック・TPicture は no_vcl_TGraphic_Destroy・no_vcl_TPicture_Destroy で破棄する。
        TPicture の中身(no_vcl_TPicture_GetGraphic 等)のハンドルは保存せず、使うたびに取得する。 */
     {
@@ -1102,7 +1138,7 @@ int main(void)
     /* Application が所有するフォーム(と、フォームが所有するコントロール)をまとめて破棄する。
        呼ばなくても DLL の切り離し時に LCL が破棄するが、そのときは破棄通知が呼ばれない。 */
     no_vcl_TComponent_DestroyComponents(app);
-    printf("Clicks: %d, Freed components: %d (expected 75: form + 67 owned + 7 created inside LCL: 2 menu roots, a separator, 3 AddTabSheet pages and an EditLabel)\n", clickCount, freedCount);
+    printf("Clicks: %d, Freed components: %d (expected 76: form + 68 owned + 7 created inside LCL: 2 menu roots, a separator, 3 AddTabSheet pages and an EditLabel)\n", clickCount, freedCount);
     /* ツリービュー・リストビュー・ヘッダーコントロールの破棄に伴って、残りのノード(4 つ)・リストビューの項目(2 つ)と列(2 つ)・
        セクション(2 つ)・バンド(1 つ)も破棄通知が届く。 */
     printf("Items freed: %d (expected 17: tree 2 deleted + 4 with the tree view, list 1 item + 1 column deleted "

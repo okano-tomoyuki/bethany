@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <stdexcept>
 #include <string>
 
 #include "no_vcl.hpp"
@@ -2005,6 +2006,63 @@ int main()
         std::remove(path);
         std::printf("SaveToFile/LoadFromFile: Count=%d (expected 4), Strings[3]=%s (expected d)\n",
                     (int)loaded.Count, std::string(loaded.Strings[3]).c_str());
+    }
+
+    // 例外(docs/adr/0031)。LCL が送出した例外は no_vcl::Exception として送出され、VCL と同じく catch (Exception& E) で受けられる。
+    {
+        TStringList list;
+        list.Add("only");
+        try
+        {
+            std::string s = list.Strings[5];
+            std::printf("must not be reached: %s\n", s.c_str());
+        }
+        catch (Exception& E)
+        {
+            std::printf("Strings[5] on 1 item threw: ClassName=%s (expected EStringListError), Message=%s\n",
+                        E.ClassName().c_str(), E.Message.c_str());
+        }
+        std::printf("After the exception: Count=%d (expected 1)\n", (int)list.Count);
+
+        try
+        {
+            TPicture picture;
+            picture.LoadFromFile("no_vcl_no_such_file.png");
+        }
+        catch (Exception& E)
+        {
+            std::printf("LoadFromFile(no such file) threw: ClassName=%s (expected EFOpenError)\n", E.ClassName().c_str());
+        }
+
+        // ハンドラから送出した例外は、ハンドラを呼んだ DLL の関数(ここでは Click)から送出し直される。
+        TMenuItem* failing = new TMenuItem(Application);
+        failing->OnClick = [](TObject*) { throw Exception("boom"); };
+        try
+        {
+            failing->Click();
+            std::printf("must not be reached\n");
+        }
+        catch (Exception& E)
+        {
+            std::printf("Click with a throwing handler: ClassName=%s (expected Exception), Message=%s (expected boom)\n",
+                        E.ClassName().c_str(), E.Message.c_str());
+        }
+        // クラス名を指定した例外・標準の例外・ハンドラの中で LCL が送出した例外。
+        failing->OnClick = [](TObject*) { throw Exception("EMyError", "custom"); };
+        try { failing->Click(); } catch (Exception& E) { std::printf("Custom class: %s/%s (expected EMyError/custom)\n", E.ClassName().c_str(), E.Message.c_str()); }
+        failing->OnClick = [](TObject*) { throw std::runtime_error("std error"); };
+        try { failing->Click(); } catch (Exception& E) { std::printf("std::runtime_error: %s/%s (expected std::exception/std error)\n", E.ClassName().c_str(), E.Message.c_str()); }
+        failing->OnClick = [](TObject*) {
+            TStringList inner;
+            inner.Delete(3);
+        };
+        try { failing->Click(); } catch (Exception& E) { std::printf("LCL exception inside the handler: %s (expected EStringListError)\n", E.ClassName().c_str()); }
+        // 例外を送出しないハンドラに戻すと、Click は成功する。
+        int clicks = 0;
+        failing->OnClick = [&clicks](TObject*) { ++clicks; };
+        failing->Click();
+        std::printf("Click after the failures: clicks=%d (expected 1)\n", clicks);
+        failing->Free();
     }
 
     // Tier 3、1 バッチ目(グラフィックス。docs/adr/0029)。

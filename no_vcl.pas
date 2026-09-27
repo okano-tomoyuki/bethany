@@ -29,6 +29,7 @@ uses
   AVL_Tree,
   Menus,
   LCLProc,
+  SysUtils,
   Graphics,
   ImgList,
   CustomTimer
@@ -39,6 +40,9 @@ uses
 type
   { Data は登録時に渡された利用者データをそのまま返す(C 側で状態を持ち回るため) }
   TNoVclCallback = procedure(Sender: Pointer; Data: Pointer); NO_VCL_CALL;
+
+  { 公開関数の中で起きた例外を呼び出し側へ知らせる(docs/adr/0031)。文字列は UTF-8 で、呼び出しの間だけ有効。 }
+  TNoVclErrorCallback = procedure(ClassName: PChar; Message: PChar); NO_VCL_CALL;
 
   { Cのプレーンな関数ポインタ(no_vcl_callback_t)を
     LCLのTNotifyEvent(オブジェクトメソッド)へ橋渡しする }
@@ -147,10 +151,68 @@ var
   { DLL の切り離し中は True。LCL の終了処理で起きるイベント(フォームの OnDestroy・OnHide 等)を呼び出し側へ送らない。 }
   GDetaching: Boolean = False;
 
+  { 例外の受け渡し(docs/adr/0031)。
+    - 公開関数の中で送出された例外は、その関数の except で捕まえ、GErrorCallback で呼び出し側(no_vcl_c.cpp)へ
+      クラス名とメッセージを知らせる(FPC の例外は C/C++ の関数をまたいで伝わらないため、公開関数の外へは出さない)。
+    - 呼び出し側のイベントのコールバックの中で起きた例外(C++ の throw)は、呼び出し側が SetCallbackError で知らせ、
+      コールバックから戻った後にブリッジが CheckCallbackError で ENoVclCallbackError として送出し直す。
+      メッセージループの中なら LCL の Application.HandleException が処理し(VCL と同じくメッセージボックス)、
+      公開関数の中(MenuItem の Click 等)なら、その関数の except で呼び出し側へ知らせる。 }
+  GErrorCallback: TNoVclErrorCallback = nil;
+
+threadvar
+  GCallbackErrorPending: Boolean;
+  GCallbackErrorClass: AnsiString;
+  GCallbackErrorMessage: AnsiString;
+
+type
+  { 呼び出し側のコールバックで起きた例外。呼び出し側へ知らせるときは、元のクラス名(OriginalClassName)を使う。 }
+  ENoVclCallbackError = class(Exception)
+  private
+    FOriginalClassName: AnsiString;
+  public
+    property OriginalClassName: AnsiString read FOriginalClassName;
+  end;
+
+{ 公開関数の except から呼ぶ。捕まえた例外(ExceptObject)のクラス名とメッセージを呼び出し側へ知らせる。 }
+procedure ReportException;
+var
+  E: TObject;
+  C, M: AnsiString;
+begin
+  E := ExceptObject;
+  if E is ENoVclCallbackError then
+    C := ENoVclCallbackError(E).OriginalClassName
+  else if E <> nil then
+    C := E.ClassName
+  else
+    C := '';
+  if E is Exception then
+    M := Exception(E).Message
+  else
+    M := '';
+  if Assigned(GErrorCallback) then
+    GErrorCallback(PChar(C), PChar(M));
+end;
+
+{ ブリッジが呼び出し側のコールバックから戻った後に呼ぶ。コールバックの中で例外が起きていれば送出し直す。 }
+procedure CheckCallbackError;
+var
+  E: ENoVclCallbackError;
+begin
+  if not GCallbackErrorPending then
+    Exit;
+  GCallbackErrorPending := False;
+  E := ENoVclCallbackError.Create(GCallbackErrorMessage);
+  E.FOriginalClassName := GCallbackErrorClass;
+  raise E;
+end;
+
 procedure TCallbackBridge.DoClick(Sender: TObject);
 begin
   if Assigned(FCallback) and not GDetaching then
     FCallback(Pointer(Sender), FData);
+  CheckCallbackError;
 end;
 
 procedure TVarCallbackBridge.DoClose(Sender: TObject; var CloseAction: TCloseAction);
@@ -164,6 +226,7 @@ begin
   { 範囲外の値が書き込まれた場合は、既定の動作のままにする }
   if (A >= Ord(Low(TCloseAction))) and (A <= Ord(High(TCloseAction))) then
     CloseAction := TCloseAction(A);
+  CheckCallbackError;
 end;
 
 procedure TVarCallbackBridge.DoCloseQuery(Sender: TObject; var CanClose: Boolean);
@@ -175,6 +238,7 @@ begin
   if CanClose then A := -1 else A := 0;
   FCallback(Pointer(Sender), @A, FData);
   CanClose := A <> 0;
+  CheckCallbackError;
 end;
 
 { TShiftState(集合型)を LongWord のビット集合(no_vcl_ss* と対応)に変換する。
@@ -208,6 +272,7 @@ begin
   K := Key;
   FCallback(Pointer(Sender), @K, ShiftStateToInt(Shift), FData);
   Key := Word(K and $FFFF);
+  CheckCallbackError;
 end;
 
 procedure TKeyPressCallbackBridge.DoKeyPress(Sender: TObject; var Key: char);
@@ -219,6 +284,7 @@ begin
   K := Ord(Key);
   FCallback(Pointer(Sender), @K, FData);
   Key := Chr(K and $FF);
+  CheckCallbackError;
 end;
 
 procedure TMouseCallbackBridge.DoMouse(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
@@ -226,6 +292,7 @@ begin
   if not Assigned(FCallback) or GDetaching then
     Exit;
   FCallback(Pointer(Sender), Ord(Button), ShiftStateToInt(Shift), X, Y, FData);
+  CheckCallbackError;
 end;
 
 procedure TMouseMoveCallbackBridge.DoMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
@@ -233,6 +300,7 @@ begin
   if not Assigned(FCallback) or GDetaching then
     Exit;
   FCallback(Pointer(Sender), ShiftStateToInt(Shift), X, Y, FData);
+  CheckCallbackError;
 end;
 
 procedure TMouseWheelCallbackBridge.DoMouseWheel(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
@@ -244,6 +312,7 @@ begin
   if Handled then H := -1 else H := 0;
   FCallback(Pointer(Sender), ShiftStateToInt(Shift), WheelDelta, MousePos.X, MousePos.Y, @H, FData);
   Handled := H <> 0;
+  CheckCallbackError;
 end;
 
 { ブリッジの取得(*_SetOnXxx は必ずこれを通す)。
@@ -405,290 +474,527 @@ begin
   GFreeData := nil;
   GItemFreeCallback := nil;
   GItemFreeData := nil;
+  GErrorCallback := nil;
 end;
 
 { FreeNotify }
 
 procedure FreeNotify_SetCallback(Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  GFreeCallback := Cb;
-  GFreeData := Data;
+  try
+    GFreeCallback := Cb;
+    GFreeData := Data;
+  except
+    ReportException;
+  end;
+end;
+
+{ 例外の受け渡し(docs/adr/0031)。この 2 つは例外を送出しないため、try/except で包まない。 }
+
+procedure Error_SetCallback(Cb: TNoVclErrorCallback); NO_VCL_CALL;
+begin
+  GErrorCallback := Cb;
+end;
+
+{ 呼び出し側のイベントのコールバックの中で起きた例外を知らせる。コールバックから戻った後に、DLL 側で送出し直す。 }
+procedure SetCallbackError(ClassName: PChar; Message: PChar); NO_VCL_CALL;
+begin
+  GCallbackErrorPending := True;
+  GCallbackErrorClass := ClassName;
+  GCallbackErrorMessage := Message;
 end;
 
 { TComponent }
 
 procedure TComponent_Destroy(Obj: Pointer); NO_VCL_CALL;
 begin
-  TComponent(Obj).Free;
+  try
+    TComponent(Obj).Free;
+  except
+    ReportException;
+  end;
 end;
 
 { 所有しているコンポーネントをすべて破棄する(自身は残る)。 }
 procedure TComponent_DestroyComponents(Obj: Pointer); NO_VCL_CALL;
 begin
-  TComponent(Obj).DestroyComponents;
+  try
+    TComponent(Obj).DestroyComponents;
+  except
+    ReportException;
+  end;
 end;
 
 { TControl }
 
 function TControl_GetParent(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TControl(Obj).Parent);
+  try
+    Result := Pointer(TControl(Obj).Parent);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TControl_SetParent(Obj: Pointer; ParentObj: Pointer); NO_VCL_CALL;
 begin
-  TControl(Obj).Parent := TWinControl(ParentObj);
+  try
+    TControl(Obj).Parent := TWinControl(ParentObj);
+  except
+    ReportException;
+  end;
 end;
 
 function TControl_GetLeft(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TControl(Obj).Left;
+  try
+    Result := TControl(Obj).Left;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TControl_SetLeft(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TControl(Obj).Left := Value;
+  try
+    TControl(Obj).Left := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TControl_GetTop(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TControl(Obj).Top;
+  try
+    Result := TControl(Obj).Top;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TControl_SetTop(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TControl(Obj).Top := Value;
+  try
+    TControl(Obj).Top := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TControl_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TControl(Obj).Width;
+  try
+    Result := TControl(Obj).Width;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TControl_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TControl(Obj).Width := Value;
+  try
+    TControl(Obj).Width := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TControl_GetHeight(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TControl(Obj).Height;
+  try
+    Result := TControl(Obj).Height;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TControl_SetHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TControl(Obj).Height := Value;
+  try
+    TControl(Obj).Height := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TControl_GetVisible(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TControl(Obj).Visible;
+  try
+    Result := TControl(Obj).Visible;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TControl_SetVisible(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TControl(Obj).Visible := Value;
+  try
+    TControl(Obj).Visible := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TControl_GetEnabled(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TControl(Obj).Enabled;
+  try
+    Result := TControl(Obj).Enabled;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TControl_SetEnabled(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TControl(Obj).Enabled := Value;
+  try
+    TControl(Obj).Enabled := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TControl_GetCaption(Obj: Pointer): PChar; NO_VCL_CALL;
 begin
-  Result := ReturnStr(TControl(Obj).Caption);
+  try
+    Result := ReturnStr(TControl(Obj).Caption);
+  except
+    Result := '';
+    ReportException;
+  end;
 end;
 
 procedure TControl_SetCaption(Obj: Pointer; Value: PChar); NO_VCL_CALL;
 begin
-  TControl(Obj).Caption := Value;
+  try
+    TControl(Obj).Caption := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { Align は TControl の public。TAlign の序数(alNone=0, alTop, alBottom, alLeft, alRight, alClient, alCustom)で受け渡す。
   既定値はクラスごとに異なる(TControl は alNone、TStatusBar は alBottom、TSplitter は alLeft)。 }
 function TControl_GetAlign(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TControl(Obj).Align);
+  try
+    Result := Ord(TControl(Obj).Align);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TControl_SetAlign(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  { TCustomCoolBar は Align の Setter を reintroduce で差し替え(非仮想)、alLeft/alRight なら Vertical も切り替えるため、
-    TControl の Setter を経由せずにその Setter を呼ぶ。 }
-  if TObject(Obj) is TCustomCoolBar then
-    TCustomCoolBar(Obj).Align := TAlign(Value)
-  else
-    TControl(Obj).Align := TAlign(Value);
+  try
+    { TCustomCoolBar は Align の Setter を reintroduce で差し替え(非仮想)、alLeft/alRight なら Vertical も切り替えるため、
+      TControl の Setter を経由せずにその Setter を呼ぶ。 }
+    if TObject(Obj) is TCustomCoolBar then
+      TCustomCoolBar(Obj).Align := TAlign(Value)
+    else
+      TControl(Obj).Align := TAlign(Value);
+  except
+    ReportException;
+  end;
 end;
 
 { AutoSize は TControl の public(docs/adr/0029)。LCL では Align と同じく、配置はフォームの表示まで行われないことがある。 }
 function TControl_GetAutoSize(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TControl(Obj).AutoSize;
+  try
+    Result := TControl(Obj).AutoSize;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TControl_SetAutoSize(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TControl(Obj).AutoSize := Value;
+  try
+    TControl(Obj).AutoSize := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { Text は TControl で protected。TCustomEdit と TCustomComboBox がそれぞれ公開している。 }
 function TControl_GetText(Obj: Pointer): PChar; NO_VCL_CALL;
 begin
-  Result := ReturnStr(TControlAccess(Obj).Text);
+  try
+    Result := ReturnStr(TControlAccess(Obj).Text);
+  except
+    Result := '';
+    ReportException;
+  end;
 end;
 
 procedure TControl_SetText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
 begin
-  TControlAccess(Obj).Text := Value;
+  try
+    TControlAccess(Obj).Text := Value;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TControl_Show(Obj: Pointer); NO_VCL_CALL;
 begin
-  TControl(Obj).Show;
+  try
+    TControl(Obj).Show;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TControl_Hide(Obj: Pointer); NO_VCL_CALL;
 begin
-  TControl(Obj).Hide;
+  try
+    TControl(Obj).Hide;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TControl_SetOnClick(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TControl(Obj).OnClick := @BridgeFor(TControl(Obj), MethodData(TControl(Obj).OnClick), Cb, Data).DoClick;
+  try
+    TControl(Obj).OnClick := @BridgeFor(TControl(Obj), MethodData(TControl(Obj).OnClick), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TControl_SetOnDblClick(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TControlAccess(Obj).OnDblClick := @BridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnDblClick), Cb, Data).DoClick;
+  try
+    TControlAccess(Obj).OnDblClick := @BridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnDblClick), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TControl_SetOnResize(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TControl(Obj).OnResize := @BridgeFor(TControl(Obj), MethodData(TControl(Obj).OnResize), Cb, Data).DoClick;
+  try
+    TControl(Obj).OnResize := @BridgeFor(TControl(Obj), MethodData(TControl(Obj).OnResize), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TControl_SetOnMouseDown(Obj: Pointer; Cb: TNoVclMouseCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TControlAccess(Obj).OnMouseDown := @MouseBridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnMouseDown), Cb, Data).DoMouse;
+  try
+    TControlAccess(Obj).OnMouseDown := @MouseBridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnMouseDown), Cb, Data).DoMouse;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TControl_SetOnMouseUp(Obj: Pointer; Cb: TNoVclMouseCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TControlAccess(Obj).OnMouseUp := @MouseBridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnMouseUp), Cb, Data).DoMouse;
+  try
+    TControlAccess(Obj).OnMouseUp := @MouseBridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnMouseUp), Cb, Data).DoMouse;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TControl_SetOnMouseMove(Obj: Pointer; Cb: TNoVclMouseMoveCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TControlAccess(Obj).OnMouseMove := @MouseMoveBridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnMouseMove), Cb, Data).DoMouseMove;
+  try
+    TControlAccess(Obj).OnMouseMove := @MouseMoveBridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnMouseMove), Cb, Data).DoMouseMove;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TControl_SetOnMouseEnter(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TControlAccess(Obj).OnMouseEnter := @BridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnMouseEnter), Cb, Data).DoClick;
+  try
+    TControlAccess(Obj).OnMouseEnter := @BridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnMouseEnter), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TControl_SetOnMouseLeave(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TControlAccess(Obj).OnMouseLeave := @BridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnMouseLeave), Cb, Data).DoClick;
+  try
+    TControlAccess(Obj).OnMouseLeave := @BridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnMouseLeave), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TControl_SetOnMouseWheel(Obj: Pointer; Cb: TNoVclMouseWheelCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TControlAccess(Obj).OnMouseWheel := @MouseWheelBridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnMouseWheel), Cb, Data).DoMouseWheel;
+  try
+    TControlAccess(Obj).OnMouseWheel := @MouseWheelBridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnMouseWheel), Cb, Data).DoMouseWheel;
+  except
+    ReportException;
+  end;
 end;
 
 { TWinControl }
 
 procedure TWinControl_SetOnKeyDown(Obj: Pointer; Cb: TNoVclKeyCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TWinControl(Obj).OnKeyDown := @KeyBridgeFor(TWinControl(Obj), MethodData(TWinControl(Obj).OnKeyDown), Cb, Data).DoKey;
+  try
+    TWinControl(Obj).OnKeyDown := @KeyBridgeFor(TWinControl(Obj), MethodData(TWinControl(Obj).OnKeyDown), Cb, Data).DoKey;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TWinControl_SetOnKeyUp(Obj: Pointer; Cb: TNoVclKeyCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TWinControl(Obj).OnKeyUp := @KeyBridgeFor(TWinControl(Obj), MethodData(TWinControl(Obj).OnKeyUp), Cb, Data).DoKey;
+  try
+    TWinControl(Obj).OnKeyUp := @KeyBridgeFor(TWinControl(Obj), MethodData(TWinControl(Obj).OnKeyUp), Cb, Data).DoKey;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TWinControl_SetOnKeyPress(Obj: Pointer; Cb: TNoVclKeyPressCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TWinControl(Obj).OnKeyPress := @KeyPressBridgeFor(TWinControl(Obj), MethodData(TWinControl(Obj).OnKeyPress), Cb, Data).DoKeyPress;
+  try
+    TWinControl(Obj).OnKeyPress := @KeyPressBridgeFor(TWinControl(Obj), MethodData(TWinControl(Obj).OnKeyPress), Cb, Data).DoKeyPress;
+  except
+    ReportException;
+  end;
 end;
 
 { TCustomForm / TForm }
 
 function TForm_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TForm.Create(TComponent(Owner)));
+  try
+    Result := Watch(TForm.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TCustomForm_Show(Obj: Pointer); NO_VCL_CALL;
 begin
-  TCustomForm(Obj).Show;
+  try
+    TCustomForm(Obj).Show;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomForm_Hide(Obj: Pointer); NO_VCL_CALL;
 begin
-  TCustomForm(Obj).Hide;
+  try
+    TCustomForm(Obj).Hide;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomForm_ShowModal(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomForm(Obj).ShowModal;
+  try
+    Result := TCustomForm(Obj).ShowModal;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomForm_Close(Obj: Pointer); NO_VCL_CALL;
 begin
-  TCustomForm(Obj).Close;
+  try
+    TCustomForm(Obj).Close;
+  except
+    ReportException;
+  end;
 end;
 
 { 保留中のメッセージを処理し終えてから破棄する(Application.ReleaseComponent)。
   フォーム自身やその子のイベントハンドラの中からでも安全に呼べる。 }
 procedure TCustomForm_Release(Obj: Pointer); NO_VCL_CALL;
 begin
-  TCustomForm(Obj).Release;
+  try
+    TCustomForm(Obj).Release;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomForm_SetOnClose(Obj: Pointer; Cb: TNoVclVarCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomForm(Obj).OnClose := @VarBridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnClose), Cb, Data).DoClose;
+  try
+    TCustomForm(Obj).OnClose := @VarBridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnClose), Cb, Data).DoClose;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomForm_SetOnCloseQuery(Obj: Pointer; Cb: TNoVclVarCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomForm(Obj).OnCloseQuery := @VarBridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnCloseQuery), Cb, Data).DoCloseQuery;
+  try
+    TCustomForm(Obj).OnCloseQuery := @VarBridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnCloseQuery), Cb, Data).DoCloseQuery;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomForm_SetOnShow(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomForm(Obj).OnShow := @BridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnShow), Cb, Data).DoClick;
+  try
+    TCustomForm(Obj).OnShow := @BridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnShow), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomForm_SetOnHide(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomForm(Obj).OnHide := @BridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnHide), Cb, Data).DoClick;
+  try
+    TCustomForm(Obj).OnHide := @BridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnHide), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomForm_SetOnActivate(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomForm(Obj).OnActivate := @BridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnActivate), Cb, Data).DoClick;
+  try
+    TCustomForm(Obj).OnActivate := @BridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnActivate), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomForm_SetOnDeactivate(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomForm(Obj).OnDeactivate := @BridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnDeactivate), Cb, Data).DoClick;
+  try
+    TCustomForm(Obj).OnDeactivate := @BridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnDeactivate), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 { 破棄の最初(BeforeDestruction)で呼ばれる。子コントロールはまだ生きており、破棄通知はこの後に来る。 }
 procedure TCustomForm_SetOnDestroy(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomForm(Obj).OnDestroy := @BridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnDestroy), Cb, Data).DoClick;
+  try
+    TCustomForm(Obj).OnDestroy := @BridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnDestroy), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 { TApplication
@@ -699,7 +1005,12 @@ end;
 
 function GetApplication: Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(Application);
+  try
+    Result := Pointer(Application);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { MainForm を設定できるのは LCL では CreateForm の中だけ(UpdateMainForm は CreateForm が
@@ -709,70 +1020,130 @@ function TApplication_CreateForm(Obj: Pointer): Pointer; NO_VCL_CALL;
 var
   F: TForm;
 begin
-  TApplication(Obj).CreateForm(TForm, F);
-  Result := Watch(F);
+  try
+    TApplication(Obj).CreateForm(TForm, F);
+    Result := Watch(F);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TApplication_GetMainForm(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TApplication(Obj).MainForm);
+  try
+    Result := Pointer(TApplication(Obj).MainForm);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TApplication_Run(Obj: Pointer); NO_VCL_CALL;
 begin
-  TApplication(Obj).Run;
+  try
+    TApplication(Obj).Run;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TApplication_ProcessMessages(Obj: Pointer); NO_VCL_CALL;
 begin
-  TApplication(Obj).ProcessMessages;
+  try
+    TApplication(Obj).ProcessMessages;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TApplication_Terminate(Obj: Pointer); NO_VCL_CALL;
 begin
-  TApplication(Obj).Terminate;
+  try
+    TApplication(Obj).Terminate;
+  except
+    ReportException;
+  end;
 end;
 
 function TApplication_GetTerminated(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TApplication(Obj).Terminated;
+  try
+    Result := TApplication(Obj).Terminated;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 function TApplication_GetTitle(Obj: Pointer): PChar; NO_VCL_CALL;
 begin
-  Result := ReturnStr(TApplication(Obj).Title);
+  try
+    Result := ReturnStr(TApplication(Obj).Title);
+  except
+    Result := '';
+    ReportException;
+  end;
 end;
 
 procedure TApplication_SetTitle(Obj: Pointer; Value: PChar); NO_VCL_CALL;
 begin
-  TApplication(Obj).Title := Value;
+  try
+    TApplication(Obj).Title := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TApplication_GetShowMainForm(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TApplication(Obj).ShowMainForm;
+  try
+    Result := TApplication(Obj).ShowMainForm;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TApplication_SetShowMainForm(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TApplication(Obj).ShowMainForm := Value;
+  try
+    TApplication(Obj).ShowMainForm := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { TPanel / TGroupBox / TLabel }
 
 function TPanel_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TPanel.Create(TComponent(Owner)));
+  try
+    Result := Watch(TPanel.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TGroupBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TGroupBox.Create(TComponent(Owner)));
+  try
+    Result := Watch(TGroupBox.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TLabel_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TLabel.Create(TComponent(Owner)));
+  try
+    Result := Watch(TLabel.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { TButtonControl / TButton / TCheckBox / TRadioButton }
@@ -780,59 +1151,110 @@ end;
 { Checked は TButtonControl で protected。TCheckBox と TRadioButton がそれぞれ公開している。 }
 function TButtonControl_GetChecked(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TButtonControlAccess(Obj).Checked;
+  try
+    Result := TButtonControlAccess(Obj).Checked;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TButtonControl_SetChecked(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TButtonControlAccess(Obj).Checked := Value;
+  try
+    TButtonControlAccess(Obj).Checked := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TButton_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TButton.Create(TComponent(Owner)));
+  try
+    Result := Watch(TButton.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCheckBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TCheckBox.Create(TComponent(Owner)));
+  try
+    Result := Watch(TCheckBox.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TRadioButton_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TRadioButton.Create(TComponent(Owner)));
+  try
+    Result := Watch(TRadioButton.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { TCustomEdit / TEdit }
 
 function TCustomEdit_GetMaxLength(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomEdit(Obj).MaxLength;
+  try
+    Result := TCustomEdit(Obj).MaxLength;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomEdit_SetMaxLength(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomEdit(Obj).MaxLength := Value;
+  try
+    TCustomEdit(Obj).MaxLength := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomEdit_GetReadOnly(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomEdit(Obj).ReadOnly;
+  try
+    Result := TCustomEdit(Obj).ReadOnly;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomEdit_SetReadOnly(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomEdit(Obj).ReadOnly := Value;
+  try
+    TCustomEdit(Obj).ReadOnly := Value;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomEdit_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomEdit(Obj).OnChange := @BridgeFor(TCustomEdit(Obj), MethodData(TCustomEdit(Obj).OnChange), Cb, Data).DoClick;
+  try
+    TCustomEdit(Obj).OnChange := @BridgeFor(TCustomEdit(Obj), MethodData(TCustomEdit(Obj).OnChange), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 function TEdit_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TEdit.Create(TComponent(Owner)));
+  try
+    Result := Watch(TEdit.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { TCustomMemo / TMemo }
@@ -840,123 +1262,225 @@ end;
 { Lines(TStrings)。LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがあるため、ハンドルは保存せず、使うたびに取得する(docs/adr/0027)。 }
 function TCustomMemo_GetLines(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomMemo(Obj).Lines);
+  try
+    Result := Pointer(TCustomMemo(Obj).Lines);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCustomMemo_GetScrollBars(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TCustomMemo(Obj).ScrollBars);
+  try
+    Result := Ord(TCustomMemo(Obj).ScrollBars);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomMemo_SetScrollBars(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomMemo(Obj).ScrollBars := TScrollStyle(Value);
+  try
+    TCustomMemo(Obj).ScrollBars := TScrollStyle(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TMemo_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TMemo.Create(TComponent(Owner)));
+  try
+    Result := Watch(TMemo.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { TCustomComboBox / TComboBox }
 
 function TCustomComboBox_GetItemIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomComboBox(Obj).ItemIndex;
+  try
+    Result := TCustomComboBox(Obj).ItemIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomComboBox_SetItemIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomComboBox(Obj).ItemIndex := Value;
+  try
+    TCustomComboBox(Obj).ItemIndex := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { Items(TStrings)。LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがあるため、ハンドルは保存せず、使うたびに取得する(docs/adr/0027)。 }
 function TCustomComboBox_GetItems(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomComboBox(Obj).Items);
+  try
+    Result := Pointer(TCustomComboBox(Obj).Items);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TComboBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TComboBox.Create(TComponent(Owner)));
+  try
+    Result := Watch(TComboBox.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { OnChange は TCustomComboBox では protected で、公開しているのは TComboBox だけ。 }
 procedure TComboBox_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TComboBox(Obj).OnChange := @BridgeFor(TComboBox(Obj), MethodData(TComboBox(Obj).OnChange), Cb, Data).DoClick;
+  try
+    TComboBox(Obj).OnChange := @BridgeFor(TComboBox(Obj), MethodData(TComboBox(Obj).OnChange), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 { TCustomListBox / TListBox }
 
 function TCustomListBox_GetItemIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomListBox(Obj).ItemIndex;
+  try
+    Result := TCustomListBox(Obj).ItemIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomListBox_SetItemIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomListBox(Obj).ItemIndex := Value;
+  try
+    TCustomListBox(Obj).ItemIndex := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { Items(TStrings)。LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがあるため、ハンドルは保存せず、使うたびに取得する(docs/adr/0027)。 }
 function TCustomListBox_GetItems(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomListBox(Obj).Items);
+  try
+    Result := Pointer(TCustomListBox(Obj).Items);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TListBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TListBox.Create(TComponent(Owner)));
+  try
+    Result := Watch(TListBox.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { TCustomTimer / TTimer }
 
 function TCustomTimer_GetInterval(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomTimer(Obj).Interval;
+  try
+    Result := TCustomTimer(Obj).Interval;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomTimer_SetInterval(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomTimer(Obj).Interval := Value;
+  try
+    TCustomTimer(Obj).Interval := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomTimer_GetEnabled(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomTimer(Obj).Enabled;
+  try
+    Result := TCustomTimer(Obj).Enabled;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomTimer_SetEnabled(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomTimer(Obj).Enabled := Value;
+  try
+    TCustomTimer(Obj).Enabled := Value;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomTimer_SetOnTimer(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomTimer(Obj).OnTimer := @BridgeFor(TCustomTimer(Obj), MethodData(TCustomTimer(Obj).OnTimer), Cb, Data).DoClick;
+  try
+    TCustomTimer(Obj).OnTimer := @BridgeFor(TCustomTimer(Obj), MethodData(TCustomTimer(Obj).OnTimer), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 function TTimer_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TTimer.Create(TComponent(Owner)));
+  try
+    Result := Watch(TTimer.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { TPaintBox }
 
 function TPaintBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TPaintBox.Create(TComponent(Owner)));
+  try
+    Result := Watch(TPaintBox.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TPaintBox_GetCanvas(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TPaintBox(Obj).Canvas);
+  try
+    Result := Pointer(TPaintBox(Obj).Canvas);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TPaintBox_SetOnPaint(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TPaintBox(Obj).OnPaint := @BridgeFor(TPaintBox(Obj), MethodData(TPaintBox(Obj).OnPaint), Cb, Data).DoClick;
+  try
+    TPaintBox(Obj).OnPaint := @BridgeFor(TPaintBox(Obj), MethodData(TPaintBox(Obj).OnPaint), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 { TCanvas }
@@ -966,141 +1490,251 @@ end;
 
 procedure TCanvas_MoveTo(Obj: Pointer; X, Y: Integer); NO_VCL_CALL;
 begin
-  TCanvas(Obj).MoveTo(X, Y);
+  try
+    TCanvas(Obj).MoveTo(X, Y);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCanvas_LineTo(Obj: Pointer; X, Y: Integer); NO_VCL_CALL;
 begin
-  TCanvas(Obj).LineTo(X, Y);
+  try
+    TCanvas(Obj).LineTo(X, Y);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCanvas_Rectangle(Obj: Pointer; X1, Y1, X2, Y2: Integer); NO_VCL_CALL;
 begin
-  TCanvas(Obj).Rectangle(X1, Y1, X2, Y2);
+  try
+    TCanvas(Obj).Rectangle(X1, Y1, X2, Y2);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCanvas_Ellipse(Obj: Pointer; X1, Y1, X2, Y2: Integer); NO_VCL_CALL;
 begin
-  TCanvas(Obj).Ellipse(X1, Y1, X2, Y2);
+  try
+    TCanvas(Obj).Ellipse(X1, Y1, X2, Y2);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCanvas_TextOut(Obj: Pointer; X, Y: Integer; Text: PChar); NO_VCL_CALL;
 begin
-  TCanvas(Obj).TextOut(X, Y, Text);
+  try
+    TCanvas(Obj).TextOut(X, Y, Text);
+  except
+    ReportException;
+  end;
 end;
 
 function TCanvas_GetPen(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCanvas(Obj).Pen);
+  try
+    Result := Pointer(TCanvas(Obj).Pen);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCanvas_GetBrush(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCanvas(Obj).Brush);
+  try
+    Result := Pointer(TCanvas(Obj).Brush);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCanvas_GetFont(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCanvas(Obj).Font);
+  try
+    Result := Pointer(TCanvas(Obj).Font);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { グラフィック(TGraphic の派生のハンドル)を描く(docs/adr/0029)。Graphic が nil なら何もしない。 }
 procedure TCanvas_Draw(Obj: Pointer; X, Y: Integer; Graphic: Pointer); NO_VCL_CALL;
 begin
-  if Graphic <> nil then
-    TCanvas(Obj).Draw(X, Y, TGraphic(Graphic));
+  try
+    if Graphic <> nil then
+      TCanvas(Obj).Draw(X, Y, TGraphic(Graphic));
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCanvas_StretchDraw(Obj: Pointer; X1, Y1, X2, Y2: Integer; Graphic: Pointer); NO_VCL_CALL;
 var
   R: TRect;
 begin
-  if Graphic = nil then
-    Exit;
-  { Rect(...) は Win32 では Windows ユニットの型名に隠されるため、フィールドで組み立てる。 }
-  R.Left := X1;
-  R.Top := Y1;
-  R.Right := X2;
-  R.Bottom := Y2;
-  TCanvas(Obj).StretchDraw(R, TGraphic(Graphic));
+  try
+    if Graphic = nil then
+      Exit;
+    { Rect(...) は Win32 では Windows ユニットの型名に隠されるため、フィールドで組み立てる。 }
+    R.Left := X1;
+    R.Top := Y1;
+    R.Right := X2;
+    R.Bottom := Y2;
+    TCanvas(Obj).StretchDraw(R, TGraphic(Graphic));
+  except
+    ReportException;
+  end;
 end;
 
 { Brush で塗りつぶす(枠は描かない)。 }
 procedure TCanvas_FillRect(Obj: Pointer; X1, Y1, X2, Y2: Integer); NO_VCL_CALL;
 begin
-  TCanvas(Obj).FillRect(X1, Y1, X2, Y2);
+  try
+    TCanvas(Obj).FillRect(X1, Y1, X2, Y2);
+  except
+    ReportException;
+  end;
 end;
 
 function TCanvas_GetPixels(Obj: Pointer; X, Y: Integer): Integer; NO_VCL_CALL;
 begin
-  Result := Integer(TCanvas(Obj).Pixels[X, Y]);
+  try
+    Result := Integer(TCanvas(Obj).Pixels[X, Y]);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCanvas_SetPixels(Obj: Pointer; X, Y: Integer; Value: Integer); NO_VCL_CALL;
 begin
-  TCanvas(Obj).Pixels[X, Y] := TColor(Value);
+  try
+    TCanvas(Obj).Pixels[X, Y] := TColor(Value);
+  except
+    ReportException;
+  end;
 end;
 
 { TPen / TBrush / TFont (いずれも非所有) }
 
 function TPen_GetColor(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Integer(TPen(Obj).Color);
+  try
+    Result := Integer(TPen(Obj).Color);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TPen_SetColor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TPen(Obj).Color := TColor(Value);
+  try
+    TPen(Obj).Color := TColor(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TPen_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TPen(Obj).Width;
+  try
+    Result := TPen(Obj).Width;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TPen_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TPen(Obj).Width := Value;
+  try
+    TPen(Obj).Width := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TBrush_GetColor(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Integer(TBrush(Obj).Color);
+  try
+    Result := Integer(TBrush(Obj).Color);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TBrush_SetColor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TBrush(Obj).Color := TColor(Value);
+  try
+    TBrush(Obj).Color := TColor(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TFont_GetName(Obj: Pointer): PChar; NO_VCL_CALL;
 begin
-  Result := ReturnStr(TFont(Obj).Name);
+  try
+    Result := ReturnStr(TFont(Obj).Name);
+  except
+    Result := '';
+    ReportException;
+  end;
 end;
 
 procedure TFont_SetName(Obj: Pointer; Value: PChar); NO_VCL_CALL;
 begin
-  TFont(Obj).Name := Value;
+  try
+    TFont(Obj).Name := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TFont_GetSize(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TFont(Obj).Size;
+  try
+    Result := TFont(Obj).Size;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TFont_SetSize(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TFont(Obj).Size := Value;
+  try
+    TFont(Obj).Size := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TFont_GetColor(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Integer(TFont(Obj).Color);
+  try
+    Result := Integer(TFont(Obj).Color);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TFont_SetColor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TFont(Obj).Color := TColor(Value);
+  try
+    TFont(Obj).Color := TColor(Value);
+  except
+    ReportException;
+  end;
 end;
 
 { docs/component-coverage.md の Tier 1 で挙げたコントロール。既存クラスの部分列として追加する。 }
@@ -1108,84 +1742,155 @@ end;
 { TScrollBox: TScrollingWinControl(実装済み)の直接の派生で、追加のメンバは無い。 }
 function TScrollBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TScrollBox.Create(TComponent(Owner)));
+  try
+    Result := Watch(TScrollBox.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { TToggleBox: TCustomCheckBox(実装済み)の直接の派生で、追加のメンバは無い(Checked を共有)。 }
 function TToggleBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TToggleBox.Create(TComponent(Owner)));
+  try
+    Result := Watch(TToggleBox.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { TBevel }
 
 function TBevel_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TBevel.Create(TComponent(Owner)));
+  try
+    Result := Watch(TBevel.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TBevel_GetShape(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TBevel(Obj).Shape);
+  try
+    Result := Ord(TBevel(Obj).Shape);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TBevel_SetShape(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TBevel(Obj).Shape := TBevelShape(Value);
+  try
+    TBevel(Obj).Shape := TBevelShape(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TBevel_GetStyle(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TBevel(Obj).Style);
+  try
+    Result := Ord(TBevel(Obj).Style);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TBevel_SetStyle(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TBevel(Obj).Style := TBevelStyle(Value);
+  try
+    TBevel(Obj).Style := TBevelStyle(Value);
+  except
+    ReportException;
+  end;
 end;
 
 { TShape: Pen/Brush は TCustomShape が所有する実体で、TCanvas の Pen/Brush と同じく非所有のハンドルとして返す。 }
 
 function TShape_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TShape.Create(TComponent(Owner)));
+  try
+    Result := Watch(TShape.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCustomShape_GetShape(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TCustomShape(Obj).Shape);
+  try
+    Result := Ord(TCustomShape(Obj).Shape);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomShape_SetShape(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomShape(Obj).Shape := TShapeType(Value);
+  try
+    TCustomShape(Obj).Shape := TShapeType(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomShape_GetPen(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomShape(Obj).Pen);
+  try
+    Result := Pointer(TCustomShape(Obj).Pen);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCustomShape_GetBrush(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomShape(Obj).Brush);
+  try
+    Result := Pointer(TCustomShape(Obj).Brush);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { TStaticText }
 
 function TStaticText_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TStaticText.Create(TComponent(Owner)));
+  try
+    Result := Watch(TStaticText.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCustomStaticText_GetBorderStyle(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TCustomStaticText(Obj).BorderStyle);
+  try
+    Result := Ord(TCustomStaticText(Obj).BorderStyle);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomStaticText_SetBorderStyle(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomStaticText(Obj).BorderStyle := TStaticBorderStyle(Value);
+  try
+    TCustomStaticText(Obj).BorderStyle := TStaticBorderStyle(Value);
+  except
+    ReportException;
+  end;
 end;
 
 { TStatusBar: LCL に中間の TCustomStatusBar は無く、TWinControl の直接の派生。
@@ -1227,30 +1932,53 @@ end;
 
 function TStatusBar_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TStatusBar.Create(TComponent(Owner)));
-  {$ifdef LCLwin32}
-  WarmUpStatusBarHeight(TStatusBar(Result));
-  {$endif}
+  try
+    Result := Watch(TStatusBar.Create(TComponent(Owner)));
+    {$ifdef LCLwin32}
+    WarmUpStatusBarHeight(TStatusBar(Result));
+    {$endif}
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TStatusBar_GetSimpleText(Obj: Pointer): PChar; NO_VCL_CALL;
 begin
-  Result := ReturnStr(TStatusBar(Obj).SimpleText);
+  try
+    Result := ReturnStr(TStatusBar(Obj).SimpleText);
+  except
+    Result := '';
+    ReportException;
+  end;
 end;
 
 procedure TStatusBar_SetSimpleText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
 begin
-  TStatusBar(Obj).SimpleText := Value;
+  try
+    TStatusBar(Obj).SimpleText := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TStatusBar_GetSimplePanel(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TStatusBar(Obj).SimplePanel;
+  try
+    Result := TStatusBar(Obj).SimplePanel;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TStatusBar_SetSimplePanel(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TStatusBar(Obj).SimplePanel := Value;
+  try
+    TStatusBar(Obj).SimplePanel := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { docs/component-coverage.md の Tier 1、2 バッチ目(範囲・数値系のコントロール)。
@@ -1261,141 +1989,263 @@ end;
 
 function TScrollBar_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TScrollBar.Create(TComponent(Owner)));
+  try
+    Result := Watch(TScrollBar.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCustomScrollBar_GetKind(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TCustomScrollBar(Obj).Kind);
+  try
+    Result := Ord(TCustomScrollBar(Obj).Kind);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomScrollBar_SetKind(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomScrollBar(Obj).Kind := TScrollBarKind(Value);
+  try
+    TCustomScrollBar(Obj).Kind := TScrollBarKind(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomScrollBar_GetMin(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomScrollBar(Obj).Min;
+  try
+    Result := TCustomScrollBar(Obj).Min;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomScrollBar_SetMin(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomScrollBar(Obj).Min := Value;
+  try
+    TCustomScrollBar(Obj).Min := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomScrollBar_GetMax(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomScrollBar(Obj).Max;
+  try
+    Result := TCustomScrollBar(Obj).Max;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomScrollBar_SetMax(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomScrollBar(Obj).Max := Value;
+  try
+    TCustomScrollBar(Obj).Max := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomScrollBar_GetPosition(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomScrollBar(Obj).Position;
+  try
+    Result := TCustomScrollBar(Obj).Position;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomScrollBar_SetPosition(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomScrollBar(Obj).Position := Value;
+  try
+    TCustomScrollBar(Obj).Position := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomScrollBar_GetPageSize(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomScrollBar(Obj).PageSize;
+  try
+    Result := TCustomScrollBar(Obj).PageSize;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomScrollBar_SetPageSize(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomScrollBar(Obj).PageSize := Value;
+  try
+    TCustomScrollBar(Obj).PageSize := Value;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomScrollBar_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomScrollBar(Obj).OnChange := @BridgeFor(TCustomScrollBar(Obj), MethodData(TCustomScrollBar(Obj).OnChange), Cb, Data).DoClick;
+  try
+    TCustomScrollBar(Obj).OnChange := @BridgeFor(TCustomScrollBar(Obj), MethodData(TCustomScrollBar(Obj).OnChange), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 { TTrackBar }
 
 function TTrackBar_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TTrackBar.Create(TComponent(Owner)));
+  try
+    Result := Watch(TTrackBar.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCustomTrackBar_GetMin(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomTrackBar(Obj).Min;
+  try
+    Result := TCustomTrackBar(Obj).Min;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomTrackBar_SetMin(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomTrackBar(Obj).Min := Value;
+  try
+    TCustomTrackBar(Obj).Min := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomTrackBar_GetMax(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomTrackBar(Obj).Max;
+  try
+    Result := TCustomTrackBar(Obj).Max;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomTrackBar_SetMax(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomTrackBar(Obj).Max := Value;
+  try
+    TCustomTrackBar(Obj).Max := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomTrackBar_GetPosition(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomTrackBar(Obj).Position;
+  try
+    Result := TCustomTrackBar(Obj).Position;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomTrackBar_SetPosition(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomTrackBar(Obj).Position := Value;
+  try
+    TCustomTrackBar(Obj).Position := Value;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomTrackBar_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomTrackBar(Obj).OnChange := @BridgeFor(TCustomTrackBar(Obj), MethodData(TCustomTrackBar(Obj).OnChange), Cb, Data).DoClick;
+  try
+    TCustomTrackBar(Obj).OnChange := @BridgeFor(TCustomTrackBar(Obj), MethodData(TCustomTrackBar(Obj).OnChange), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 { TProgressBar: 表示専用で、対応するイベントは無い。 }
 
 function TProgressBar_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TProgressBar.Create(TComponent(Owner)));
+  try
+    Result := Watch(TProgressBar.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCustomProgressBar_GetMin(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomProgressBar(Obj).Min;
+  try
+    Result := TCustomProgressBar(Obj).Min;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomProgressBar_SetMin(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomProgressBar(Obj).Min := Value;
+  try
+    TCustomProgressBar(Obj).Min := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomProgressBar_GetMax(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomProgressBar(Obj).Max;
+  try
+    Result := TCustomProgressBar(Obj).Max;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomProgressBar_SetMax(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomProgressBar(Obj).Max := Value;
+  try
+    TCustomProgressBar(Obj).Max := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomProgressBar_GetPosition(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomProgressBar(Obj).Position;
+  try
+    Result := TCustomProgressBar(Obj).Position;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomProgressBar_SetPosition(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomProgressBar(Obj).Position := Value;
+  try
+    TCustomProgressBar(Obj).Position := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { TUpDown: Min/Max/Position/Increment/Associate は TCustomUpDown では protected で、
@@ -1406,57 +2256,107 @@ end;
 
 function TUpDown_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TUpDown.Create(TComponent(Owner)));
+  try
+    Result := Watch(TUpDown.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TUpDown_GetMin(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TUpDown(Obj).Min;
+  try
+    Result := TUpDown(Obj).Min;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TUpDown_SetMin(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TUpDown(Obj).Min := Value;
+  try
+    TUpDown(Obj).Min := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TUpDown_GetMax(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TUpDown(Obj).Max;
+  try
+    Result := TUpDown(Obj).Max;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TUpDown_SetMax(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TUpDown(Obj).Max := Value;
+  try
+    TUpDown(Obj).Max := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TUpDown_GetPosition(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TUpDown(Obj).Position;
+  try
+    Result := TUpDown(Obj).Position;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TUpDown_SetPosition(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TUpDown(Obj).Position := Value;
+  try
+    TUpDown(Obj).Position := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TUpDown_GetIncrement(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TUpDown(Obj).Increment;
+  try
+    Result := TUpDown(Obj).Increment;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TUpDown_SetIncrement(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TUpDown(Obj).Increment := Value;
+  try
+    TUpDown(Obj).Increment := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TUpDown_GetAssociate(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TUpDown(Obj).Associate);
+  try
+    Result := Pointer(TUpDown(Obj).Associate);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TUpDown_SetAssociate(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TUpDown(Obj).Associate := TWinControl(Value);
+  try
+    TUpDown(Obj).Associate := TWinControl(Value);
+  except
+    ReportException;
+  end;
 end;
 
 { docs/component-coverage.md の Tier 1、4 バッチ目(Items を持つグループ・リスト系のコントロール)。 }
@@ -1466,28 +2366,51 @@ end;
 
 function TRadioGroup_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TRadioGroup.Create(TComponent(Owner)));
+  try
+    Result := Watch(TRadioGroup.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { Items(TStrings)。LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがあるため、ハンドルは保存せず、使うたびに取得する(docs/adr/0027)。 }
 function TCustomRadioGroup_GetItems(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomRadioGroup(Obj).Items);
+  try
+    Result := Pointer(TCustomRadioGroup(Obj).Items);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCustomRadioGroup_GetItemIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomRadioGroup(Obj).ItemIndex;
+  try
+    Result := TCustomRadioGroup(Obj).ItemIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomRadioGroup_SetItemIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomRadioGroup(Obj).ItemIndex := Value;
+  try
+    TCustomRadioGroup(Obj).ItemIndex := Value;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomRadioGroup_SetOnClick(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomRadioGroup(Obj).OnClick := @BridgeFor(TCustomRadioGroup(Obj), MethodData(TCustomRadioGroup(Obj).OnClick), Cb, Data).DoClick;
+  try
+    TCustomRadioGroup(Obj).OnClick := @BridgeFor(TCustomRadioGroup(Obj), MethodData(TCustomRadioGroup(Obj).OnClick), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 { TCheckGroup: Checked はインデックス付きプロパティ。値は他のインデックス付きアクセスと同様、
@@ -1495,23 +2418,42 @@ end;
 
 function TCheckGroup_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TCheckGroup.Create(TComponent(Owner)));
+  try
+    Result := Watch(TCheckGroup.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { Items(TStrings)。LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがあるため、ハンドルは保存せず、使うたびに取得する(docs/adr/0027)。 }
 function TCustomCheckGroup_GetItems(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomCheckGroup(Obj).Items);
+  try
+    Result := Pointer(TCustomCheckGroup(Obj).Items);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCustomCheckGroup_GetChecked(Obj: Pointer; Index: Integer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomCheckGroup(Obj).Checked[Index];
+  try
+    Result := TCustomCheckGroup(Obj).Checked[Index];
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomCheckGroup_SetChecked(Obj: Pointer; Index: Integer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomCheckGroup(Obj).Checked[Index] := Value;
+  try
+    TCustomCheckGroup(Obj).Checked[Index] := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { TCheckListBox: Items は基底 TCustomListBox のものをそのまま使う(no_vcl_TCustomListBox_GetItems で
@@ -1519,22 +2461,40 @@ end;
 
 function TCheckListBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TCheckListBox.Create(TComponent(Owner)));
+  try
+    Result := Watch(TCheckListBox.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCustomCheckListBox_GetChecked(Obj: Pointer; Index: Integer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomCheckListBox(Obj).Checked[Index];
+  try
+    Result := TCustomCheckListBox(Obj).Checked[Index];
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomCheckListBox_SetChecked(Obj: Pointer; Index: Integer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomCheckListBox(Obj).Checked[Index] := Value;
+  try
+    TCustomCheckListBox(Obj).Checked[Index] := Value;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomCheckListBox_SetOnClickCheck(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomCheckListBox(Obj).OnClickCheck := @BridgeFor(TCustomCheckListBox(Obj), MethodData(TCustomCheckListBox(Obj).OnClickCheck), Cb, Data).DoClick;
+  try
+    TCustomCheckListBox(Obj).OnClickCheck := @BridgeFor(TCustomCheckListBox(Obj), MethodData(TCustomCheckListBox(Obj).OnClickCheck), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 { docs/component-coverage.md の Tier 1、5 バッチ目(ボタンの派生)。
@@ -1543,62 +2503,117 @@ end;
 
 function TSpeedButton_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TSpeedButton.Create(TComponent(Owner)));
+  try
+    Result := Watch(TSpeedButton.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCustomSpeedButton_GetDown(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomSpeedButton(Obj).Down;
+  try
+    Result := TCustomSpeedButton(Obj).Down;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomSpeedButton_SetDown(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomSpeedButton(Obj).Down := Value;
+  try
+    TCustomSpeedButton(Obj).Down := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomSpeedButton_GetGroupIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomSpeedButton(Obj).GroupIndex;
+  try
+    Result := TCustomSpeedButton(Obj).GroupIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomSpeedButton_SetGroupIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomSpeedButton(Obj).GroupIndex := Value;
+  try
+    TCustomSpeedButton(Obj).GroupIndex := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomSpeedButton_GetFlat(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomSpeedButton(Obj).Flat;
+  try
+    Result := TCustomSpeedButton(Obj).Flat;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomSpeedButton_SetFlat(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomSpeedButton(Obj).Flat := Value;
+  try
+    TCustomSpeedButton(Obj).Flat := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomSpeedButton_GetAllowAllUp(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomSpeedButton(Obj).AllowAllUp;
+  try
+    Result := TCustomSpeedButton(Obj).AllowAllUp;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomSpeedButton_SetAllowAllUp(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomSpeedButton(Obj).AllowAllUp := Value;
+  try
+    TCustomSpeedButton(Obj).AllowAllUp := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TBitBtn_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TBitBtn.Create(TComponent(Owner)));
+  try
+    Result := Watch(TBitBtn.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCustomBitBtn_GetKind(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TCustomBitBtn(Obj).Kind);
+  try
+    Result := Ord(TCustomBitBtn(Obj).Kind);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomBitBtn_SetKind(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomBitBtn(Obj).Kind := TBitBtnKind(Value);
+  try
+    TCustomBitBtn(Obj).Kind := TBitBtnKind(Value);
+  except
+    ReportException;
+  end;
 end;
 
 { docs/component-coverage.md の Tier 1、6 バッチ目(数値・書式付き Edit)。
@@ -1608,102 +2623,193 @@ end;
 
 function TFloatSpinEdit_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TFloatSpinEdit.Create(TComponent(Owner)));
+  try
+    Result := Watch(TFloatSpinEdit.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCustomFloatSpinEdit_GetValue(Obj: Pointer): Double; NO_VCL_CALL;
 begin
-  Result := TCustomFloatSpinEdit(Obj).Value;
+  try
+    Result := TCustomFloatSpinEdit(Obj).Value;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomFloatSpinEdit_SetValue(Obj: Pointer; Value: Double); NO_VCL_CALL;
 begin
-  TCustomFloatSpinEdit(Obj).Value := Value;
+  try
+    TCustomFloatSpinEdit(Obj).Value := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomFloatSpinEdit_GetMinValue(Obj: Pointer): Double; NO_VCL_CALL;
 begin
-  Result := TCustomFloatSpinEdit(Obj).MinValue;
+  try
+    Result := TCustomFloatSpinEdit(Obj).MinValue;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomFloatSpinEdit_SetMinValue(Obj: Pointer; Value: Double); NO_VCL_CALL;
 begin
-  TCustomFloatSpinEdit(Obj).MinValue := Value;
+  try
+    TCustomFloatSpinEdit(Obj).MinValue := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomFloatSpinEdit_GetMaxValue(Obj: Pointer): Double; NO_VCL_CALL;
 begin
-  Result := TCustomFloatSpinEdit(Obj).MaxValue;
+  try
+    Result := TCustomFloatSpinEdit(Obj).MaxValue;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomFloatSpinEdit_SetMaxValue(Obj: Pointer; Value: Double); NO_VCL_CALL;
 begin
-  TCustomFloatSpinEdit(Obj).MaxValue := Value;
+  try
+    TCustomFloatSpinEdit(Obj).MaxValue := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomFloatSpinEdit_GetIncrement(Obj: Pointer): Double; NO_VCL_CALL;
 begin
-  Result := TCustomFloatSpinEdit(Obj).Increment;
+  try
+    Result := TCustomFloatSpinEdit(Obj).Increment;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomFloatSpinEdit_SetIncrement(Obj: Pointer; Value: Double); NO_VCL_CALL;
 begin
-  TCustomFloatSpinEdit(Obj).Increment := Value;
+  try
+    TCustomFloatSpinEdit(Obj).Increment := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomFloatSpinEdit_GetDecimalPlaces(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomFloatSpinEdit(Obj).DecimalPlaces;
+  try
+    Result := TCustomFloatSpinEdit(Obj).DecimalPlaces;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomFloatSpinEdit_SetDecimalPlaces(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomFloatSpinEdit(Obj).DecimalPlaces := Value;
+  try
+    TCustomFloatSpinEdit(Obj).DecimalPlaces := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TSpinEdit_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TSpinEdit.Create(TComponent(Owner)));
+  try
+    Result := Watch(TSpinEdit.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCustomSpinEdit_GetValue(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomSpinEdit(Obj).Value;
+  try
+    Result := TCustomSpinEdit(Obj).Value;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomSpinEdit_SetValue(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomSpinEdit(Obj).Value := Value;
+  try
+    TCustomSpinEdit(Obj).Value := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomSpinEdit_GetMinValue(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomSpinEdit(Obj).MinValue;
+  try
+    Result := TCustomSpinEdit(Obj).MinValue;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomSpinEdit_SetMinValue(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomSpinEdit(Obj).MinValue := Value;
+  try
+    TCustomSpinEdit(Obj).MinValue := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomSpinEdit_GetMaxValue(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomSpinEdit(Obj).MaxValue;
+  try
+    Result := TCustomSpinEdit(Obj).MaxValue;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomSpinEdit_SetMaxValue(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomSpinEdit(Obj).MaxValue := Value;
+  try
+    TCustomSpinEdit(Obj).MaxValue := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomSpinEdit_GetIncrement(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomSpinEdit(Obj).Increment;
+  try
+    Result := TCustomSpinEdit(Obj).Increment;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomSpinEdit_SetIncrement(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomSpinEdit(Obj).Increment := Value;
+  try
+    TCustomSpinEdit(Obj).Increment := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { TMaskEdit: EditMask は TCustomMaskEdit では protected だが、唯一の具象クラス TMaskEdit が
@@ -1711,17 +2817,31 @@ end;
 
 function TMaskEdit_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TMaskEdit.Create(TComponent(Owner)));
+  try
+    Result := Watch(TMaskEdit.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TMaskEdit_GetEditMask(Obj: Pointer): PChar; NO_VCL_CALL;
 begin
-  Result := ReturnStr(TMaskEdit(Obj).EditMask);
+  try
+    Result := ReturnStr(TMaskEdit(Obj).EditMask);
+  except
+    Result := '';
+    ReportException;
+  end;
 end;
 
 procedure TMaskEdit_SetEditMask(Obj: Pointer; Value: PChar); NO_VCL_CALL;
 begin
-  TMaskEdit(Obj).EditMask := Value;
+  try
+    TMaskEdit(Obj).EditMask := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { TCustomLabeledEdit(docs/adr/0028)。EditLabel(TBoundLabel)は、LCL が生成時に内部で作る子コンポーネント
@@ -1730,38 +2850,66 @@ end;
 
 function TLabeledEdit_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TLabeledEdit.Create(TComponent(Owner)));
+  try
+    Result := Watch(TLabeledEdit.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCustomLabeledEdit_GetEditLabel(Obj: Pointer): Pointer; NO_VCL_CALL;
 var
   L: TBoundLabel;
 begin
-  L := TCustomLabeledEdit(Obj).EditLabel;
-  if L = nil then
-    Result := nil
-  else
-    Result := Watch(L);
+  try
+    L := TCustomLabeledEdit(Obj).EditLabel;
+    if L = nil then
+      Result := nil
+    else
+      Result := Watch(L);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCustomLabeledEdit_GetLabelPosition(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TCustomLabeledEdit(Obj).LabelPosition);
+  try
+    Result := Ord(TCustomLabeledEdit(Obj).LabelPosition);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomLabeledEdit_SetLabelPosition(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomLabeledEdit(Obj).LabelPosition := TLabelPosition(Value);
+  try
+    TCustomLabeledEdit(Obj).LabelPosition := TLabelPosition(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomLabeledEdit_GetLabelSpacing(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomLabeledEdit(Obj).LabelSpacing;
+  try
+    Result := TCustomLabeledEdit(Obj).LabelSpacing;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomLabeledEdit_SetLabelSpacing(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomLabeledEdit(Obj).LabelSpacing := Value;
+  try
+    TCustomLabeledEdit(Obj).LabelSpacing := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { docs/component-coverage.md の Tier 1、7 バッチ目(最後のバッチ)。
@@ -1771,28 +2919,51 @@ end;
 
 function TTabControl_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TTabControl.Create(TComponent(Owner)));
+  try
+    Result := Watch(TTabControl.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { Tabs(TStrings)。LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがあるため、ハンドルは保存せず、使うたびに取得する(docs/adr/0027)。 }
 function TTabControl_GetTabs(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TTabControl(Obj).Tabs);
+  try
+    Result := Pointer(TTabControl(Obj).Tabs);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TTabControl_GetTabIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TTabControl(Obj).TabIndex;
+  try
+    Result := TTabControl(Obj).TabIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TTabControl_SetTabIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TTabControl(Obj).TabIndex := Value;
+  try
+    TTabControl(Obj).TabIndex := Value;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TTabControl_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TTabControl(Obj).OnChange := @BridgeFor(TTabControl(Obj), MethodData(TTabControl(Obj).OnChange), Cb, Data).DoClick;
+  try
+    TTabControl(Obj).OnChange := @BridgeFor(TTabControl(Obj), MethodData(TTabControl(Obj).OnChange), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 { TSplitter: 隣の Align 済みコントロール(同じ Align を持つ直前のコントロール)の幅・高さをドラッグで変える。
@@ -1801,74 +2972,137 @@ end;
 
 function TSplitter_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TSplitter.Create(TComponent(Owner)));
+  try
+    Result := Watch(TSplitter.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCustomSplitter_GetAutoSnap(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomSplitter(Obj).AutoSnap;
+  try
+    Result := TCustomSplitter(Obj).AutoSnap;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomSplitter_SetAutoSnap(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomSplitter(Obj).AutoSnap := Value;
+  try
+    TCustomSplitter(Obj).AutoSnap := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomSplitter_GetBeveled(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomSplitter(Obj).Beveled;
+  try
+    Result := TCustomSplitter(Obj).Beveled;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomSplitter_SetBeveled(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomSplitter(Obj).Beveled := Value;
+  try
+    TCustomSplitter(Obj).Beveled := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomSplitter_GetMinSize(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomSplitter(Obj).MinSize;
+  try
+    Result := TCustomSplitter(Obj).MinSize;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomSplitter_SetMinSize(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomSplitter(Obj).MinSize := Value;
+  try
+    TCustomSplitter(Obj).MinSize := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { TAnchorKind の序数(akTop=0, akLeft, akRight, akBottom)。 }
 function TCustomSplitter_GetResizeAnchor(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TCustomSplitter(Obj).ResizeAnchor);
+  try
+    Result := Ord(TCustomSplitter(Obj).ResizeAnchor);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomSplitter_SetResizeAnchor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomSplitter(Obj).ResizeAnchor := TAnchorKind(Value);
+  try
+    TCustomSplitter(Obj).ResizeAnchor := TAnchorKind(Value);
+  except
+    ReportException;
+  end;
 end;
 
 { TResizeStyle の序数(rsLine=0, rsNone, rsPattern, rsUpdate)。 }
 function TCustomSplitter_GetResizeStyle(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TCustomSplitter(Obj).ResizeStyle);
+  try
+    Result := Ord(TCustomSplitter(Obj).ResizeStyle);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomSplitter_SetResizeStyle(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomSplitter(Obj).ResizeStyle := TResizeStyle(Value);
+  try
+    TCustomSplitter(Obj).ResizeStyle := TResizeStyle(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomSplitter_GetSplitterPosition(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomSplitter(Obj).GetSplitterPosition;
+  try
+    Result := TCustomSplitter(Obj).GetSplitterPosition;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomSplitter_SetSplitterPosition(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomSplitter(Obj).SetSplitterPosition(Value);
+  try
+    TCustomSplitter(Obj).SetSplitterPosition(Value);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomSplitter_SetOnMoved(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomSplitter(Obj).OnMoved := @BridgeFor(TCustomSplitter(Obj), MethodData(TCustomSplitter(Obj).OnMoved), Cb, Data).DoClick;
+  try
+    TCustomSplitter(Obj).OnMoved := @BridgeFor(TCustomSplitter(Obj), MethodData(TCustomSplitter(Obj).OnMoved), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 { docs/component-coverage.md の Tier 5(メニュー)。
@@ -1881,139 +3115,263 @@ end;
 { ShortCut: Key は仮想キーコード、Shift は no_vcl_ss* のビット集合。VCL と同じ値(scShift=$2000 等)を返す。 }
 function ShortCut_Make(Key: Integer; Shift: LongWord): Integer; NO_VCL_CALL;
 begin
-  Result := Menus.ShortCut(Word(Key), IntToShiftState(Shift));
+  try
+    Result := Menus.ShortCut(Word(Key), IntToShiftState(Shift));
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function ShortCut_FromText(Text: PChar): Integer; NO_VCL_CALL;
 begin
-  Result := TextToShortCut(Text);
+  try
+    Result := TextToShortCut(Text);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function ShortCut_ToText(Value: Integer): PChar; NO_VCL_CALL;
 begin
-  Result := ReturnStr(ShortCutToText(TShortCut(Value)));
+  try
+    Result := ReturnStr(ShortCutToText(TShortCut(Value)));
+  except
+    Result := '';
+    ReportException;
+  end;
 end;
 
 { TMenuItem }
 
 function TMenuItem_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TMenuItem.Create(TComponent(Owner)));
+  try
+    Result := Watch(TMenuItem.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TMenuItem_GetCaption(Obj: Pointer): PChar; NO_VCL_CALL;
 begin
-  Result := ReturnStr(TMenuItem(Obj).Caption);
+  try
+    Result := ReturnStr(TMenuItem(Obj).Caption);
+  except
+    Result := '';
+    ReportException;
+  end;
 end;
 
 procedure TMenuItem_SetCaption(Obj: Pointer; Value: PChar); NO_VCL_CALL;
 begin
-  TMenuItem(Obj).Caption := Value;
+  try
+    TMenuItem(Obj).Caption := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TMenuItem_GetChecked(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TMenuItem(Obj).Checked;
+  try
+    Result := TMenuItem(Obj).Checked;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TMenuItem_SetChecked(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TMenuItem(Obj).Checked := Value;
+  try
+    TMenuItem(Obj).Checked := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TMenuItem_GetEnabled(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TMenuItem(Obj).Enabled;
+  try
+    Result := TMenuItem(Obj).Enabled;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TMenuItem_SetEnabled(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TMenuItem(Obj).Enabled := Value;
+  try
+    TMenuItem(Obj).Enabled := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TMenuItem_GetVisible(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TMenuItem(Obj).Visible;
+  try
+    Result := TMenuItem(Obj).Visible;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TMenuItem_SetVisible(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TMenuItem(Obj).Visible := Value;
+  try
+    TMenuItem(Obj).Visible := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TMenuItem_GetAutoCheck(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TMenuItem(Obj).AutoCheck;
+  try
+    Result := TMenuItem(Obj).AutoCheck;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TMenuItem_SetAutoCheck(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TMenuItem(Obj).AutoCheck := Value;
+  try
+    TMenuItem(Obj).AutoCheck := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TMenuItem_GetRadioItem(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TMenuItem(Obj).RadioItem;
+  try
+    Result := TMenuItem(Obj).RadioItem;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TMenuItem_SetRadioItem(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TMenuItem(Obj).RadioItem := Value;
+  try
+    TMenuItem(Obj).RadioItem := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TMenuItem_GetGroupIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TMenuItem(Obj).GroupIndex;
+  try
+    Result := TMenuItem(Obj).GroupIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TMenuItem_SetGroupIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TMenuItem(Obj).GroupIndex := Byte(Value);
+  try
+    TMenuItem(Obj).GroupIndex := Byte(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TMenuItem_GetDefault(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TMenuItem(Obj).Default;
+  try
+    Result := TMenuItem(Obj).Default;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TMenuItem_SetDefault(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TMenuItem(Obj).Default := Value;
+  try
+    TMenuItem(Obj).Default := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TMenuItem_GetShortCut(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TMenuItem(Obj).ShortCut;
+  try
+    Result := TMenuItem(Obj).ShortCut;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TMenuItem_SetShortCut(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TMenuItem(Obj).ShortCut := TShortCut(Value);
+  try
+    TMenuItem(Obj).ShortCut := TShortCut(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TMenuItem_GetHint(Obj: Pointer): PChar; NO_VCL_CALL;
 begin
-  Result := ReturnStr(TMenuItem(Obj).Hint);
+  try
+    Result := ReturnStr(TMenuItem(Obj).Hint);
+  except
+    Result := '';
+    ReportException;
+  end;
 end;
 
 procedure TMenuItem_SetHint(Obj: Pointer; Value: PChar); NO_VCL_CALL;
 begin
-  TMenuItem(Obj).Hint := Value;
+  try
+    TMenuItem(Obj).Hint := Value;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TMenuItem_SetOnClick(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TMenuItem(Obj).OnClick := @BridgeFor(TMenuItem(Obj), MethodData(TMenuItem(Obj).OnClick), Cb, Data).DoClick;
+  try
+    TMenuItem(Obj).OnClick := @BridgeFor(TMenuItem(Obj), MethodData(TMenuItem(Obj).OnClick), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 function TMenuItem_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TMenuItem(Obj).Count;
+  try
+    Result := TMenuItem(Obj).Count;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function TMenuItem_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TMenuItem(Obj).Items[Index]);
+  try
+    Result := Watch(TMenuItem(Obj).Items[Index]);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { 親の TMenuItem(TMenu のルートの Items 直下の項目なら、そのルート)。どこにも追加されていなければ nil。 }
@@ -2021,136 +3379,242 @@ function TMenuItem_GetParent(Obj: Pointer): Pointer; NO_VCL_CALL;
 var
   P: TMenuItem;
 begin
-  P := TMenuItem(Obj).Parent;
-  if P = nil then
-    Result := nil
-  else
-    Result := Watch(P);
+  try
+    P := TMenuItem(Obj).Parent;
+    if P = nil then
+      Result := nil
+    else
+      Result := Watch(P);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TMenuItem_Add(Obj: Pointer; Item: Pointer); NO_VCL_CALL;
 begin
-  TMenuItem(Obj).Add(TMenuItem(Item));
+  try
+    TMenuItem(Obj).Add(TMenuItem(Item));
+  except
+    ReportException;
+  end;
 end;
 
 procedure TMenuItem_Insert(Obj: Pointer; Index: Integer; Item: Pointer); NO_VCL_CALL;
 begin
-  TMenuItem(Obj).Insert(Index, TMenuItem(Item));
+  try
+    TMenuItem(Obj).Insert(Index, TMenuItem(Item));
+  except
+    ReportException;
+  end;
 end;
 
 { Delete/Remove は子から外すだけで破棄しない(VCL と同じ。破棄は Owner に任せるか、明示的に行う)。
   Clear はすべての子を破棄する。 }
 procedure TMenuItem_Delete(Obj: Pointer; Index: Integer); NO_VCL_CALL;
 begin
-  TMenuItem(Obj).Delete(Index);
+  try
+    TMenuItem(Obj).Delete(Index);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TMenuItem_Remove(Obj: Pointer; Item: Pointer); NO_VCL_CALL;
 begin
-  TMenuItem(Obj).Remove(TMenuItem(Item));
+  try
+    TMenuItem(Obj).Remove(TMenuItem(Item));
+  except
+    ReportException;
+  end;
 end;
 
 procedure TMenuItem_Clear(Obj: Pointer); NO_VCL_CALL;
 begin
-  TMenuItem(Obj).Clear;
+  try
+    TMenuItem(Obj).Clear;
+  except
+    ReportException;
+  end;
 end;
 
 function TMenuItem_IndexOf(Obj: Pointer; Item: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TMenuItem(Obj).IndexOf(TMenuItem(Item));
+  try
+    Result := TMenuItem(Obj).IndexOf(TMenuItem(Item));
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 { 区切り線(Caption が '-' の項目)を末尾に追加する。追加される項目は LCL が内部で生成する(Owner はこの項目)。 }
 procedure TMenuItem_AddSeparator(Obj: Pointer); NO_VCL_CALL;
 begin
-  TMenuItem(Obj).AddSeparator;
+  try
+    TMenuItem(Obj).AddSeparator;
+  except
+    ReportException;
+  end;
 end;
 
 function TMenuItem_IsLine(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TMenuItem(Obj).IsLine;
+  try
+    Result := TMenuItem(Obj).IsLine;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 { 利用者が項目を選んだときと同じ処理(AutoCheck の反映と OnClick)を行う。 }
 procedure TMenuItem_Click(Obj: Pointer); NO_VCL_CALL;
 begin
-  TMenuItem(Obj).Click;
+  try
+    TMenuItem(Obj).Click;
+  except
+    ReportException;
+  end;
 end;
 
 { TMenu / TMainMenu / TPopupMenu }
 
 function TMenu_GetItems(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TMenu(Obj).Items);
+  try
+    Result := Watch(TMenu(Obj).Items);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TMainMenu_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TMainMenu.Create(TComponent(Owner)));
+  try
+    Result := Watch(TMainMenu.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TPopupMenu_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TPopupMenu.Create(TComponent(Owner)));
+  try
+    Result := Watch(TPopupMenu.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { X, Y はスクリーン座標。Win32 ではメニューが閉じるまで戻らない。 }
 procedure TPopupMenu_Popup(Obj: Pointer; X, Y: Integer); NO_VCL_CALL;
 begin
-  TPopupMenu(Obj).PopUp(X, Y);
+  try
+    TPopupMenu(Obj).PopUp(X, Y);
+  except
+    ReportException;
+  end;
 end;
 
 function TPopupMenu_GetAutoPopup(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TPopupMenu(Obj).AutoPopup;
+  try
+    Result := TPopupMenu(Obj).AutoPopup;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TPopupMenu_SetAutoPopup(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TPopupMenu(Obj).AutoPopup := Value;
+  try
+    TPopupMenu(Obj).AutoPopup := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { 右クリック等でメニューを開いたコントロール(OnPopup の中で、どのコントロールから開かれたかを知るのに使う)。 }
 function TPopupMenu_GetPopupComponent(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TPopupMenu(Obj).PopupComponent);
+  try
+    Result := Pointer(TPopupMenu(Obj).PopupComponent);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TPopupMenu_SetPopupComponent(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TPopupMenu(Obj).PopupComponent := TComponent(Value);
+  try
+    TPopupMenu(Obj).PopupComponent := TComponent(Value);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TPopupMenu_SetOnPopup(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TPopupMenu(Obj).OnPopup := @BridgeFor(TPopupMenu(Obj), MethodData(TPopupMenu(Obj).OnPopup), Cb, Data).DoClick;
+  try
+    TPopupMenu(Obj).OnPopup := @BridgeFor(TPopupMenu(Obj), MethodData(TPopupMenu(Obj).OnPopup), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TPopupMenu_SetOnClose(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TPopupMenu(Obj).OnClose := @BridgeFor(TPopupMenu(Obj), MethodData(TPopupMenu(Obj).OnClose), Cb, Data).DoClick;
+  try
+    TPopupMenu(Obj).OnClose := @BridgeFor(TPopupMenu(Obj), MethodData(TPopupMenu(Obj).OnClose), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 { TCustomForm.Menu(public。TForm が published)と TControl.PopupMenu(public)。 }
 
 function TCustomForm_GetMenu(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomForm(Obj).Menu);
+  try
+    Result := Pointer(TCustomForm(Obj).Menu);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TCustomForm_SetMenu(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TCustomForm(Obj).Menu := TMainMenu(Value);
+  try
+    TCustomForm(Obj).Menu := TMainMenu(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TControl_GetPopupMenu(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TControl(Obj).PopupMenu);
+  try
+    Result := Pointer(TControl(Obj).PopupMenu);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TControl_SetPopupMenu(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TControl(Obj).PopupMenu := TPopupMenu(Value);
+  try
+    TControl(Obj).PopupMenu := TPopupMenu(Value);
+  except
+    ReportException;
+  end;
 end;
 
 { docs/component-coverage.md の Tier 2、1 バッチ目(TPageControl + TTabSheet)。
@@ -2161,7 +3625,12 @@ end;
 
 function TPageControl_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TPageControl.Create(TComponent(Owner)));
+  try
+    Result := Watch(TPageControl.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function WatchOrNil(C: TComponent): Pointer;
@@ -2174,153 +3643,283 @@ end;
 
 function TPageControl_GetActivePage(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchOrNil(TPageControl(Obj).ActivePage);
+  try
+    Result := WatchOrNil(TPageControl(Obj).ActivePage);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TPageControl_SetActivePage(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TPageControl(Obj).ActivePage := TTabSheet(Value);
+  try
+    TPageControl(Obj).ActivePage := TTabSheet(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TPageControl_GetActivePageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TPageControl(Obj).ActivePageIndex;
+  try
+    Result := TPageControl(Obj).ActivePageIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TPageControl_SetActivePageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TPageControl(Obj).ActivePageIndex := Value;
+  try
+    TPageControl(Obj).ActivePageIndex := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TPageControl_GetPage(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchOrNil(TPageControl(Obj).Pages[Index]);
+  try
+    Result := WatchOrNil(TPageControl(Obj).Pages[Index]);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCustomTabControl_GetPageCount(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomTabControl(Obj).PageCount;
+  try
+    Result := TCustomTabControl(Obj).PageCount;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function TPageControl_AddTabSheet(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TPageControl(Obj).AddTabSheet);
+  try
+    Result := Watch(TPageControl(Obj).AddTabSheet);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { すべてのページを外して破棄する。LCL の TNBPages.Delete は Application.ReleaseComponent を使うため、
   破棄は遅延され、次にメッセージを処理したとき(または Owner の破棄時)に行われる。 }
 procedure TPageControl_Clear(Obj: Pointer); NO_VCL_CALL;
 begin
-  TPageControl(Obj).Clear;
+  try
+    TPageControl(Obj).Clear;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TPageControl_SelectNextPage(Obj: Pointer; GoForward: LongBool); NO_VCL_CALL;
 begin
-  TPageControl(Obj).SelectNextPage(GoForward);
+  try
+    TPageControl(Obj).SelectNextPage(GoForward);
+  except
+    ReportException;
+  end;
 end;
 
 function TPageControl_GetTabIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TPageControl(Obj).TabIndex;
+  try
+    Result := TPageControl(Obj).TabIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TPageControl_SetTabIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TPageControl(Obj).TabIndex := Value;
+  try
+    TPageControl(Obj).TabIndex := Value;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TPageControl_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TPageControl(Obj).OnChange := @BridgeFor(TPageControl(Obj), MethodData(TPageControl(Obj).OnChange), Cb, Data).DoClick;
+  try
+    TPageControl(Obj).OnChange := @BridgeFor(TPageControl(Obj), MethodData(TPageControl(Obj).OnChange), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 { OnChanging(TTabChangingEvent: Sender, var AllowChange)は OnCloseQuery と同じ形のため、同じブリッジ(DoCloseQuery)を使う。 }
 procedure TCustomTabControl_SetOnChanging(Obj: Pointer; Cb: TNoVclVarCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomTabControl(Obj).OnChanging := @VarBridgeFor(TComponent(Obj), MethodData(TCustomTabControl(Obj).OnChanging), Cb, Data).DoCloseQuery;
+  try
+    TCustomTabControl(Obj).OnChanging := @VarBridgeFor(TComponent(Obj), MethodData(TCustomTabControl(Obj).OnChanging), Cb, Data).DoCloseQuery;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomTabControl_GetMultiLine(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomTabControl(Obj).MultiLine;
+  try
+    Result := TCustomTabControl(Obj).MultiLine;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomTabControl_SetMultiLine(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomTabControl(Obj).MultiLine := Value;
+  try
+    TCustomTabControl(Obj).MultiLine := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomTabControl_GetShowTabs(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomTabControl(Obj).ShowTabs;
+  try
+    Result := TCustomTabControl(Obj).ShowTabs;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomTabControl_SetShowTabs(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomTabControl(Obj).ShowTabs := Value;
+  try
+    TCustomTabControl(Obj).ShowTabs := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { TTabPosition の序数(tpTop=0, tpBottom, tpLeft, tpRight)。 }
 function TCustomTabControl_GetTabPosition(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TCustomTabControl(Obj).TabPosition);
+  try
+    Result := Ord(TCustomTabControl(Obj).TabPosition);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomTabControl_SetTabPosition(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomTabControl(Obj).TabPosition := TTabPosition(Value);
+  try
+    TCustomTabControl(Obj).TabPosition := TTabPosition(Value);
+  except
+    ReportException;
+  end;
 end;
 
 { TTabSheet(TCustomPage の派生)。タブの文字列は Caption(TControl_SetCaption)。 }
 
 function TTabSheet_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TTabSheet.Create(TComponent(Owner)));
+  try
+    Result := Watch(TTabSheet.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TTabSheet_GetPageControl(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TTabSheet(Obj).PageControl);
+  try
+    Result := Pointer(TTabSheet(Obj).PageControl);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TTabSheet_SetPageControl(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TTabSheet(Obj).PageControl := TPageControl(Value);
+  try
+    TTabSheet(Obj).PageControl := TPageControl(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TTabSheet_GetTabIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TTabSheet(Obj).TabIndex;
+  try
+    Result := TTabSheet(Obj).TabIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function TCustomPage_GetPageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomPage(Obj).PageIndex;
+  try
+    Result := TCustomPage(Obj).PageIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomPage_SetPageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomPage(Obj).PageIndex := Value;
+  try
+    TCustomPage(Obj).PageIndex := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomPage_GetTabVisible(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomPage(Obj).TabVisible;
+  try
+    Result := TCustomPage(Obj).TabVisible;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomPage_SetTabVisible(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomPage(Obj).TabVisible := Value;
+  try
+    TCustomPage(Obj).TabVisible := Value;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomPage_SetOnShow(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomPage(Obj).OnShow := @BridgeFor(TCustomPage(Obj), MethodData(TCustomPage(Obj).OnShow), Cb, Data).DoClick;
+  try
+    TCustomPage(Obj).OnShow := @BridgeFor(TCustomPage(Obj), MethodData(TCustomPage(Obj).OnShow), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomPage_SetOnHide(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomPage(Obj).OnHide := @BridgeFor(TCustomPage(Obj), MethodData(TCustomPage(Obj).OnHide), Cb, Data).DoClick;
+  try
+    TCustomPage(Obj).OnHide := @BridgeFor(TCustomPage(Obj), MethodData(TCustomPage(Obj).OnHide), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 { docs/component-coverage.md の Tier 2、2 バッチ目(TTreeView)。docs/adr/0019-... を参照。
@@ -2427,6 +4026,7 @@ begin
   if not Assigned(FCallback) or GDetaching then
     Exit;
   FCallback(Pointer(Sender), WatchItem(Node), FData);
+  CheckCallbackError;
 end;
 
 procedure TItemCallbackBridge.DoListItem(Sender: TObject; Item: TListItem);
@@ -2434,6 +4034,7 @@ begin
   if not Assigned(FCallback) or GDetaching then
     Exit;
   FCallback(Pointer(Sender), WatchItem(Item), FData);
+  CheckCallbackError;
 end;
 
 procedure TItemCallbackBridge.DoColumn(Sender: TObject; Column: TListColumn);
@@ -2441,6 +4042,7 @@ begin
   if not Assigned(FCallback) or GDetaching then
     Exit;
   FCallback(Pointer(Sender), WatchItem(Column), FData);
+  CheckCallbackError;
 end;
 
 procedure TItemCallbackBridge.DoSection(HeaderControl: TCustomHeaderControl; Section: THeaderSection);
@@ -2448,6 +4050,7 @@ begin
   if not Assigned(FCallback) or GDetaching then
     Exit;
   FCallback(Pointer(HeaderControl), WatchItem(Section), FData);
+  CheckCallbackError;
 end;
 
 procedure TItemIntCallbackBridge.DoSelectItem(Sender: TObject; Item: TListItem; Selected: Boolean);
@@ -2458,6 +4061,7 @@ begin
     FCallback(Pointer(Sender), WatchItem(Item), -1, FData)
   else
     FCallback(Pointer(Sender), WatchItem(Item), 0, FData);
+  CheckCallbackError;
 end;
 
 procedure TItemIntCallbackBridge.DoItemChange(Sender: TObject; Item: TListItem; Change: TItemChange);
@@ -2465,6 +4069,7 @@ begin
   if not Assigned(FCallback) or GDetaching then
     Exit;
   FCallback(Pointer(Sender), WatchItem(Item), Ord(Change), FData);
+  CheckCallbackError;
 end;
 
 procedure TItemAllowCallbackBridge.DoNodeAllow(Sender: TObject; Node: TTreeNode; var Allow: Boolean);
@@ -2476,6 +4081,7 @@ begin
   if Allow then A := -1 else A := 0;
   FCallback(Pointer(Sender), WatchItem(Node), @A, FData);
   Allow := A <> 0;
+  CheckCallbackError;
 end;
 
 { BridgeFor と同じく、同じイベントに何度登録してもブリッジを再利用する。
@@ -2513,383 +4119,715 @@ end;
 
 procedure ItemFree_SetCallback(Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  GItemFreeCallback := Cb;
-  GItemFreeData := Data;
+  try
+    GItemFreeCallback := Cb;
+    GItemFreeData := Data;
+  except
+    ReportException;
+  end;
 end;
 
 { TTreeView / TCustomTreeView }
 
 function TTreeView_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TTreeView.Create(TComponent(Owner)));
+  try
+    Result := Watch(TTreeView.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { Items(TTreeNodes)はツリービューが所有する非所有のハンドル(TCanvas と同じく、ツリービューと寿命が一致する)。 }
 function TCustomTreeView_GetItems(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomTreeView(Obj).Items);
+  try
+    Result := Pointer(TCustomTreeView(Obj).Items);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCustomTreeView_GetSelected(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TCustomTreeView(Obj).Selected);
+  try
+    Result := WatchItem(TCustomTreeView(Obj).Selected);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TCustomTreeView_SetSelected(Obj: Pointer; Node: Pointer); NO_VCL_CALL;
 begin
-  TCustomTreeView(Obj).Selected := TTreeNode(Node);
+  try
+    TCustomTreeView(Obj).Selected := TTreeNode(Node);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomTreeView_FullExpand(Obj: Pointer); NO_VCL_CALL;
 begin
-  TCustomTreeView(Obj).FullExpand;
+  try
+    TCustomTreeView(Obj).FullExpand;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomTreeView_FullCollapse(Obj: Pointer); NO_VCL_CALL;
 begin
-  TCustomTreeView(Obj).FullCollapse;
+  try
+    TCustomTreeView(Obj).FullCollapse;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomTreeView_AlphaSort(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomTreeView(Obj).AlphaSort;
+  try
+    Result := TCustomTreeView(Obj).AlphaSort;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 { X, Y はツリービューのクライアント座標。そこにノードが無ければ nil。 }
 function TCustomTreeView_GetNodeAt(Obj: Pointer; X, Y: Integer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TCustomTreeView(Obj).GetNodeAt(X, Y));
+  try
+    Result := WatchItem(TCustomTreeView(Obj).GetNodeAt(X, Y));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { TCustomTreeView の protected を TTreeView が published にしているプロパティ。 }
 
 function TTreeView_GetReadOnly(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TTreeView(Obj).ReadOnly;
+  try
+    Result := TTreeView(Obj).ReadOnly;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TTreeView_SetReadOnly(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TTreeView(Obj).ReadOnly := Value;
+  try
+    TTreeView(Obj).ReadOnly := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TTreeView_GetShowLines(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TTreeView(Obj).ShowLines;
+  try
+    Result := TTreeView(Obj).ShowLines;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TTreeView_SetShowLines(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TTreeView(Obj).ShowLines := Value;
+  try
+    TTreeView(Obj).ShowLines := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TTreeView_GetShowRoot(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TTreeView(Obj).ShowRoot;
+  try
+    Result := TTreeView(Obj).ShowRoot;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TTreeView_SetShowRoot(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TTreeView(Obj).ShowRoot := Value;
+  try
+    TTreeView(Obj).ShowRoot := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TTreeView_GetShowButtons(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TTreeView(Obj).ShowButtons;
+  try
+    Result := TTreeView(Obj).ShowButtons;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TTreeView_SetShowButtons(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TTreeView(Obj).ShowButtons := Value;
+  try
+    TTreeView(Obj).ShowButtons := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TTreeView_GetAutoExpand(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TTreeView(Obj).AutoExpand;
+  try
+    Result := TTreeView(Obj).AutoExpand;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TTreeView_SetAutoExpand(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TTreeView(Obj).AutoExpand := Value;
+  try
+    TTreeView(Obj).AutoExpand := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TTreeView_GetHideSelection(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TTreeView(Obj).HideSelection;
+  try
+    Result := TTreeView(Obj).HideSelection;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TTreeView_SetHideSelection(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TTreeView(Obj).HideSelection := Value;
+  try
+    TTreeView(Obj).HideSelection := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TTreeView_GetRowSelect(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TTreeView(Obj).RowSelect;
+  try
+    Result := TTreeView(Obj).RowSelect;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TTreeView_SetRowSelect(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TTreeView(Obj).RowSelect := Value;
+  try
+    TTreeView(Obj).RowSelect := Value;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TTreeView_SetOnChange(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TTreeView(Obj).OnChange := @ItemBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnChange).Data, Cb, Data).DoNode;
+  try
+    TTreeView(Obj).OnChange := @ItemBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnChange).Data, Cb, Data).DoNode;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TTreeView_SetOnExpanded(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TTreeView(Obj).OnExpanded := @ItemBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnExpanded).Data, Cb, Data).DoNode;
+  try
+    TTreeView(Obj).OnExpanded := @ItemBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnExpanded).Data, Cb, Data).DoNode;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TTreeView_SetOnCollapsed(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TTreeView(Obj).OnCollapsed := @ItemBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnCollapsed).Data, Cb, Data).DoNode;
+  try
+    TTreeView(Obj).OnCollapsed := @ItemBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnCollapsed).Data, Cb, Data).DoNode;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TTreeView_SetOnDeletion(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TTreeView(Obj).OnDeletion := @ItemBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnDeletion).Data, Cb, Data).DoNode;
+  try
+    TTreeView(Obj).OnDeletion := @ItemBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnDeletion).Data, Cb, Data).DoNode;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TTreeView_SetOnChanging(Obj: Pointer; Cb: TNoVclItemAllowCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TTreeView(Obj).OnChanging := @ItemAllowBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnChanging).Data, Cb, Data).DoNodeAllow;
+  try
+    TTreeView(Obj).OnChanging := @ItemAllowBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnChanging).Data, Cb, Data).DoNodeAllow;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TTreeView_SetOnExpanding(Obj: Pointer; Cb: TNoVclItemAllowCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TTreeView(Obj).OnExpanding := @ItemAllowBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnExpanding).Data, Cb, Data).DoNodeAllow;
+  try
+    TTreeView(Obj).OnExpanding := @ItemAllowBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnExpanding).Data, Cb, Data).DoNodeAllow;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TTreeView_SetOnCollapsing(Obj: Pointer; Cb: TNoVclItemAllowCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TTreeView(Obj).OnCollapsing := @ItemAllowBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnCollapsing).Data, Cb, Data).DoNodeAllow;
+  try
+    TTreeView(Obj).OnCollapsing := @ItemAllowBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnCollapsing).Data, Cb, Data).DoNodeAllow;
+  except
+    ReportException;
+  end;
 end;
 
 { TTreeNodes。Sibling/Parent に nil を渡すと最上位のノードになる(LCL と同じ)。 }
 
 function TTreeNodes_Add(Obj: Pointer; Sibling: Pointer; Text: PChar): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TTreeNodes(Obj).Add(TTreeNode(Sibling), Text));
+  try
+    Result := WatchItem(TTreeNodes(Obj).Add(TTreeNode(Sibling), Text));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TTreeNodes_AddFirst(Obj: Pointer; Sibling: Pointer; Text: PChar): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TTreeNodes(Obj).AddFirst(TTreeNode(Sibling), Text));
+  try
+    Result := WatchItem(TTreeNodes(Obj).AddFirst(TTreeNode(Sibling), Text));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TTreeNodes_AddChild(Obj: Pointer; Parent: Pointer; Text: PChar): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TTreeNodes(Obj).AddChild(TTreeNode(Parent), Text));
+  try
+    Result := WatchItem(TTreeNodes(Obj).AddChild(TTreeNode(Parent), Text));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TTreeNodes_AddChildFirst(Obj: Pointer; Parent: Pointer; Text: PChar): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TTreeNodes(Obj).AddChildFirst(TTreeNode(Parent), Text));
+  try
+    Result := WatchItem(TTreeNodes(Obj).AddChildFirst(TTreeNode(Parent), Text));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TTreeNodes_Insert(Obj: Pointer; NextNode: Pointer; Text: PChar): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TTreeNodes(Obj).Insert(TTreeNode(NextNode), Text));
+  try
+    Result := WatchItem(TTreeNodes(Obj).Insert(TTreeNode(NextNode), Text));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TTreeNodes_Clear(Obj: Pointer); NO_VCL_CALL;
 begin
-  TTreeNodes(Obj).Clear;
+  try
+    TTreeNodes(Obj).Clear;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TTreeNodes_Delete(Obj: Pointer; Node: Pointer); NO_VCL_CALL;
 begin
-  TTreeNodes(Obj).Delete(TTreeNode(Node));
+  try
+    TTreeNodes(Obj).Delete(TTreeNode(Node));
+  except
+    ReportException;
+  end;
 end;
 
 { すべてのノード(子孫を含む)の数。GetItem の Index は、上から順に数えた位置(AbsoluteIndex)。 }
 function TTreeNodes_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TTreeNodes(Obj).Count;
+  try
+    Result := TTreeNodes(Obj).Count;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function TTreeNodes_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TTreeNodes(Obj).Item[Index]);
+  try
+    Result := WatchItem(TTreeNodes(Obj).Item[Index]);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TTreeNodes_GetFirstNode(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TTreeNodes(Obj).GetFirstNode);
+  try
+    Result := WatchItem(TTreeNodes(Obj).GetFirstNode);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TTreeNodes_FindNodeWithText(Obj: Pointer; Text: PChar): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TTreeNodes(Obj).FindNodeWithText(Text));
+  try
+    Result := WatchItem(TTreeNodes(Obj).FindNodeWithText(Text));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TTreeNodes_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
 begin
-  TTreeNodes(Obj).BeginUpdate;
+  try
+    TTreeNodes(Obj).BeginUpdate;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TTreeNodes_EndUpdate(Obj: Pointer); NO_VCL_CALL;
 begin
-  TTreeNodes(Obj).EndUpdate;
+  try
+    TTreeNodes(Obj).EndUpdate;
+  except
+    ReportException;
+  end;
 end;
 
 { TTreeNode }
 
 function TTreeNode_GetText(Obj: Pointer): PChar; NO_VCL_CALL;
 begin
-  Result := ReturnStr(TTreeNode(Obj).Text);
+  try
+    Result := ReturnStr(TTreeNode(Obj).Text);
+  except
+    Result := '';
+    ReportException;
+  end;
 end;
 
 procedure TTreeNode_SetText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
 begin
-  TTreeNode(Obj).Text := Value;
+  try
+    TTreeNode(Obj).Text := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TTreeNode_GetExpanded(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TTreeNode(Obj).Expanded;
+  try
+    Result := TTreeNode(Obj).Expanded;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TTreeNode_SetExpanded(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TTreeNode(Obj).Expanded := Value;
+  try
+    TTreeNode(Obj).Expanded := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TTreeNode_GetSelected(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TTreeNode(Obj).Selected;
+  try
+    Result := TTreeNode(Obj).Selected;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TTreeNode_SetSelected(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TTreeNode(Obj).Selected := Value;
+  try
+    TTreeNode(Obj).Selected := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TTreeNode_GetHasChildren(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TTreeNode(Obj).HasChildren;
+  try
+    Result := TTreeNode(Obj).HasChildren;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TTreeNode_SetHasChildren(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TTreeNode(Obj).HasChildren := Value;
+  try
+    TTreeNode(Obj).HasChildren := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { 利用者データ(LCL は解釈しない)。 }
 function TTreeNode_GetData(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := TTreeNode(Obj).Data;
+  try
+    Result := TTreeNode(Obj).Data;
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TTreeNode_SetData(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TTreeNode(Obj).Data := Value;
+  try
+    TTreeNode(Obj).Data := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TTreeNode_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TTreeNode(Obj).Count;
+  try
+    Result := TTreeNode(Obj).Count;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function TTreeNode_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TTreeNode(Obj).Items[Index]);
+  try
+    Result := WatchItem(TTreeNode(Obj).Items[Index]);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TTreeNode_GetIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TTreeNode(Obj).Index;
+  try
+    Result := TTreeNode(Obj).Index;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function TTreeNode_GetLevel(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TTreeNode(Obj).Level;
+  try
+    Result := TTreeNode(Obj).Level;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function TTreeNode_GetAbsoluteIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TTreeNode(Obj).AbsoluteIndex;
+  try
+    Result := TTreeNode(Obj).AbsoluteIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function TTreeNode_GetParent(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TTreeNode(Obj).Parent);
+  try
+    Result := WatchItem(TTreeNode(Obj).Parent);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TTreeNode_GetTreeView(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TTreeNode(Obj).TreeView);
+  try
+    Result := Pointer(TTreeNode(Obj).TreeView);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TTreeNode_GetFirstChild(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TTreeNode(Obj).GetFirstChild);
+  try
+    Result := WatchItem(TTreeNode(Obj).GetFirstChild);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TTreeNode_GetLastChild(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TTreeNode(Obj).GetLastChild);
+  try
+    Result := WatchItem(TTreeNode(Obj).GetLastChild);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TTreeNode_GetNextSibling(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TTreeNode(Obj).GetNextSibling);
+  try
+    Result := WatchItem(TTreeNode(Obj).GetNextSibling);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TTreeNode_GetPrevSibling(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TTreeNode(Obj).GetPrevSibling);
+  try
+    Result := WatchItem(TTreeNode(Obj).GetPrevSibling);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { 上から順(子孫を含む)の次/前のノード。 }
 function TTreeNode_GetNext(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TTreeNode(Obj).GetNext);
+  try
+    Result := WatchItem(TTreeNode(Obj).GetNext);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TTreeNode_GetPrev(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TTreeNode(Obj).GetPrev);
+  try
+    Result := WatchItem(TTreeNode(Obj).GetPrev);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TTreeNode_IndexOf(Obj: Pointer; Node: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TTreeNode(Obj).IndexOf(TTreeNode(Node));
+  try
+    Result := TTreeNode(Obj).IndexOf(TTreeNode(Node));
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TTreeNode_Expand(Obj: Pointer; Recurse: LongBool); NO_VCL_CALL;
 begin
-  TTreeNode(Obj).Expand(Recurse);
+  try
+    TTreeNode(Obj).Expand(Recurse);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TTreeNode_Collapse(Obj: Pointer; Recurse: LongBool); NO_VCL_CALL;
 begin
-  TTreeNode(Obj).Collapse(Recurse);
+  try
+    TTreeNode(Obj).Collapse(Recurse);
+  except
+    ReportException;
+  end;
 end;
 
 { このノード(と子孫)を削除する。削除されたノードごとに OnDeletion と破棄通知が呼ばれる。 }
 procedure TTreeNode_Delete(Obj: Pointer); NO_VCL_CALL;
 begin
-  TTreeNode(Obj).Delete;
+  try
+    TTreeNode(Obj).Delete;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TTreeNode_DeleteChildren(Obj: Pointer); NO_VCL_CALL;
 begin
-  TTreeNode(Obj).DeleteChildren;
+  try
+    TTreeNode(Obj).DeleteChildren;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TTreeNode_MakeVisible(Obj: Pointer); NO_VCL_CALL;
 begin
-  TTreeNode(Obj).MakeVisible;
+  try
+    TTreeNode(Obj).MakeVisible;
+  except
+    ReportException;
+  end;
 end;
 
 { Mode は TNodeAttachMode の序数(naAdd=0, naAddFirst, naAddChild, naAddChildFirst, naInsert, naInsertBehind)。 }
 procedure TTreeNode_MoveTo(Obj: Pointer; Destination: Pointer; Mode: Integer); NO_VCL_CALL;
 begin
-  TTreeNode(Obj).MoveTo(TTreeNode(Destination), TNodeAttachMode(Mode));
+  try
+    TTreeNode(Obj).MoveTo(TTreeNode(Destination), TNodeAttachMode(Mode));
+  except
+    ReportException;
+  end;
 end;
 
 { docs/component-coverage.md の Tier 2、3 バッチ目(TListView)。docs/adr/0020-... を参照。
@@ -2902,18 +4840,33 @@ end;
 
 function TListView_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TListView.Create(TComponent(Owner)));
+  try
+    Result := Watch(TListView.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { Items(TListItems)と Columns(TListColumns)は、リストビューが所有する非所有のハンドル(リストビューと寿命が一致する)。 }
 function TCustomListView_GetItems(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomListView(Obj).Items);
+  try
+    Result := Pointer(TCustomListView(Obj).Items);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCustomListView_GetSelected(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TCustomListView(Obj).Selected);
+  try
+    Result := WatchItem(TCustomListView(Obj).Selected);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { LCL の TCustomListView.SetSelection は、ウィンドウハンドルが無いと(フォームの表示前・表示されていないページの上)
@@ -2937,12 +4890,21 @@ end;
 
 procedure TCustomListView_SetSelected(Obj: Pointer; Item: Pointer); NO_VCL_CALL;
 begin
-  SelectListItem(TCustomListView(Obj), TListItem(Item));
+  try
+    SelectListItem(TCustomListView(Obj), TListItem(Item));
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomListView_GetItemIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomListView(Obj).ItemIndex;
+  try
+    Result := TCustomListView(Obj).ItemIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 { -1 で選択を外す。範囲外の値は無視する。 }
@@ -2950,308 +4912,566 @@ procedure TCustomListView_SetItemIndex(Obj: Pointer; Value: Integer); NO_VCL_CAL
 var
   LV: TCustomListView;
 begin
-  LV := TCustomListView(Obj);
-  if Value = -1 then
-    SelectListItem(LV, nil)
-  else if (Value >= 0) and (Value < LV.Items.Count) then
-    SelectListItem(LV, LV.Items[Value]);
+  try
+    LV := TCustomListView(Obj);
+    if Value = -1 then
+      SelectListItem(LV, nil)
+    else if (Value >= 0) and (Value < LV.Items.Count) then
+      SelectListItem(LV, LV.Items[Value]);
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomListView_GetSelCount(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomListView(Obj).SelCount;
+  try
+    Result := TCustomListView(Obj).SelCount;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function TCustomListView_GetCheckboxes(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomListView(Obj).Checkboxes;
+  try
+    Result := TCustomListView(Obj).Checkboxes;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomListView_SetCheckboxes(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomListView(Obj).Checkboxes := Value;
+  try
+    TCustomListView(Obj).Checkboxes := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomListView_GetGridLines(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomListView(Obj).GridLines;
+  try
+    Result := TCustomListView(Obj).GridLines;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomListView_SetGridLines(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomListView(Obj).GridLines := Value;
+  try
+    TCustomListView(Obj).GridLines := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomListView_GetMultiSelect(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomListView(Obj).MultiSelect;
+  try
+    Result := TCustomListView(Obj).MultiSelect;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomListView_SetMultiSelect(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomListView(Obj).MultiSelect := Value;
+  try
+    TCustomListView(Obj).MultiSelect := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomListView_GetReadOnly(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomListView(Obj).ReadOnly;
+  try
+    Result := TCustomListView(Obj).ReadOnly;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomListView_SetReadOnly(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomListView(Obj).ReadOnly := Value;
+  try
+    TCustomListView(Obj).ReadOnly := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomListView_GetRowSelect(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomListView(Obj).RowSelect;
+  try
+    Result := TCustomListView(Obj).RowSelect;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomListView_SetRowSelect(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomListView(Obj).RowSelect := Value;
+  try
+    TCustomListView(Obj).RowSelect := Value;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomListView_Clear(Obj: Pointer); NO_VCL_CALL;
 begin
-  TCustomListView(Obj).Clear;
+  try
+    TCustomListView(Obj).Clear;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomListView_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
 begin
-  TCustomListView(Obj).BeginUpdate;
+  try
+    TCustomListView(Obj).BeginUpdate;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomListView_EndUpdate(Obj: Pointer); NO_VCL_CALL;
 begin
-  TCustomListView(Obj).EndUpdate;
+  try
+    TCustomListView(Obj).EndUpdate;
+  except
+    ReportException;
+  end;
 end;
 
 { X, Y はクライアント座標。そこに項目が無ければ nil。 }
 function TCustomListView_GetItemAt(Obj: Pointer; X, Y: Integer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TCustomListView(Obj).GetItemAt(X, Y));
+  try
+    Result := WatchItem(TCustomListView(Obj).GetItemAt(X, Y));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TCustomListView_ClearSelection(Obj: Pointer); NO_VCL_CALL;
 begin
-  TCustomListView(Obj).ClearSelection;
+  try
+    TCustomListView(Obj).ClearSelection;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomListView_SelectAll(Obj: Pointer); NO_VCL_CALL;
 begin
-  TCustomListView(Obj).SelectAll;
+  try
+    TCustomListView(Obj).SelectAll;
+  except
+    ReportException;
+  end;
 end;
 
 { TCustomListView の protected を TListView が published にしているメンバ。 }
 
 function TListView_GetColumns(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TListView(Obj).Columns);
+  try
+    Result := Pointer(TListView(Obj).Columns);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { TViewStyle の序数(vsIcon=0, vsSmallIcon, vsList, vsReport)。 }
 function TListView_GetViewStyle(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TListView(Obj).ViewStyle);
+  try
+    Result := Ord(TListView(Obj).ViewStyle);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TListView_SetViewStyle(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TListView(Obj).ViewStyle := TViewStyle(Value);
+  try
+    TListView(Obj).ViewStyle := TViewStyle(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TListView_GetHideSelection(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TListView(Obj).HideSelection;
+  try
+    Result := TListView(Obj).HideSelection;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TListView_SetHideSelection(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TListView(Obj).HideSelection := Value;
+  try
+    TListView(Obj).HideSelection := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { TSortType の序数(stNone=0, stData, stText, stBoth)。 }
 function TListView_GetSortType(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TListView(Obj).SortType);
+  try
+    Result := Ord(TListView(Obj).SortType);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TListView_SetSortType(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TListView(Obj).SortType := TSortType(Value);
+  try
+    TListView(Obj).SortType := TSortType(Value);
+  except
+    ReportException;
+  end;
 end;
 
 { 並べ替えに使う列の位置(0 が Caption の列)。既定の -1 のままでは、SortType を設定しても並べ替えない(LCL の Sort)。 }
 function TListView_GetSortColumn(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TListView(Obj).SortColumn;
+  try
+    Result := TListView(Obj).SortColumn;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TListView_SetSortColumn(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TListView(Obj).SortColumn := Value;
+  try
+    TListView(Obj).SortColumn := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { TSortDirection の序数(sdAscending=0, sdDescending)。 }
 function TListView_GetSortDirection(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TListView(Obj).SortDirection);
+  try
+    Result := Ord(TListView(Obj).SortDirection);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TListView_SetSortDirection(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TListView(Obj).SortDirection := TSortDirection(Value);
+  try
+    TListView(Obj).SortDirection := TSortDirection(Value);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TListView_SetOnSelectItem(Obj: Pointer; Cb: TNoVclItemIntCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TListView(Obj).OnSelectItem := @ItemIntBridgeFor(TListView(Obj), TMethod(TListView(Obj).OnSelectItem).Data, Cb, Data).DoSelectItem;
+  try
+    TListView(Obj).OnSelectItem := @ItemIntBridgeFor(TListView(Obj), TMethod(TListView(Obj).OnSelectItem).Data, Cb, Data).DoSelectItem;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TListView_SetOnChange(Obj: Pointer; Cb: TNoVclItemIntCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TListView(Obj).OnChange := @ItemIntBridgeFor(TListView(Obj), TMethod(TListView(Obj).OnChange).Data, Cb, Data).DoItemChange;
+  try
+    TListView(Obj).OnChange := @ItemIntBridgeFor(TListView(Obj), TMethod(TListView(Obj).OnChange).Data, Cb, Data).DoItemChange;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TListView_SetOnDeletion(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TListView(Obj).OnDeletion := @ItemBridgeFor(TListView(Obj), TMethod(TListView(Obj).OnDeletion).Data, Cb, Data).DoListItem;
+  try
+    TListView(Obj).OnDeletion := @ItemBridgeFor(TListView(Obj), TMethod(TListView(Obj).OnDeletion).Data, Cb, Data).DoListItem;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TListView_SetOnItemChecked(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TListView(Obj).OnItemChecked := @ItemBridgeFor(TListView(Obj), TMethod(TListView(Obj).OnItemChecked).Data, Cb, Data).DoListItem;
+  try
+    TListView(Obj).OnItemChecked := @ItemBridgeFor(TListView(Obj), TMethod(TListView(Obj).OnItemChecked).Data, Cb, Data).DoListItem;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TListView_SetOnColumnClick(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TListView(Obj).OnColumnClick := @ItemBridgeFor(TListView(Obj), TMethod(TListView(Obj).OnColumnClick).Data, Cb, Data).DoColumn;
+  try
+    TListView(Obj).OnColumnClick := @ItemBridgeFor(TListView(Obj), TMethod(TListView(Obj).OnColumnClick).Data, Cb, Data).DoColumn;
+  except
+    ReportException;
+  end;
 end;
 
 { TListItems }
 
 function TListItems_Add(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TListItems(Obj).Add);
+  try
+    Result := WatchItem(TListItems(Obj).Add);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TListItems_Insert(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TListItems(Obj).Insert(Index));
+  try
+    Result := WatchItem(TListItems(Obj).Insert(Index));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TListItems_Delete(Obj: Pointer; Index: Integer); NO_VCL_CALL;
 begin
-  TListItems(Obj).Delete(Index);
+  try
+    TListItems(Obj).Delete(Index);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TListItems_Clear(Obj: Pointer); NO_VCL_CALL;
 begin
-  TListItems(Obj).Clear;
+  try
+    TListItems(Obj).Clear;
+  except
+    ReportException;
+  end;
 end;
 
 function TListItems_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TListItems(Obj).Count;
+  try
+    Result := TListItems(Obj).Count;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function TListItems_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TListItems(Obj).Item[Index]);
+  try
+    Result := WatchItem(TListItems(Obj).Item[Index]);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TListItems_IndexOf(Obj: Pointer; Item: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TListItems(Obj).IndexOf(TListItem(Item));
+  try
+    Result := TListItems(Obj).IndexOf(TListItem(Item));
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 { StartIndex の次(Inclusive なら StartIndex から)から Caption を探す。Partial なら前方一致、Wrap なら末尾から先頭へ続けて探す。 }
 function TListItems_FindCaption(Obj: Pointer; StartIndex: Integer; Value: PChar; Partial, Inclusive, Wrap: LongBool): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TListItems(Obj).FindCaption(StartIndex, Value, Partial, Inclusive, Wrap));
+  try
+    Result := WatchItem(TListItems(Obj).FindCaption(StartIndex, Value, Partial, Inclusive, Wrap));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TListItems_Exchange(Obj: Pointer; Index1, Index2: Integer); NO_VCL_CALL;
 begin
-  TListItems(Obj).Exchange(Index1, Index2);
+  try
+    TListItems(Obj).Exchange(Index1, Index2);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TListItems_Move(Obj: Pointer; FromIndex, ToIndex: Integer); NO_VCL_CALL;
 begin
-  TListItems(Obj).Move(FromIndex, ToIndex);
+  try
+    TListItems(Obj).Move(FromIndex, ToIndex);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TListItems_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
 begin
-  TListItems(Obj).BeginUpdate;
+  try
+    TListItems(Obj).BeginUpdate;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TListItems_EndUpdate(Obj: Pointer); NO_VCL_CALL;
 begin
-  TListItems(Obj).EndUpdate;
+  try
+    TListItems(Obj).EndUpdate;
+  except
+    ReportException;
+  end;
 end;
 
 { TListItem }
 
 function TListItem_GetCaption(Obj: Pointer): PChar; NO_VCL_CALL;
 begin
-  Result := ReturnStr(TListItem(Obj).Caption);
+  try
+    Result := ReturnStr(TListItem(Obj).Caption);
+  except
+    Result := '';
+    ReportException;
+  end;
 end;
 
 procedure TListItem_SetCaption(Obj: Pointer; Value: PChar); NO_VCL_CALL;
 begin
-  TListItem(Obj).Caption := Value;
+  try
+    TListItem(Obj).Caption := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TListItem_GetChecked(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TListItem(Obj).Checked;
+  try
+    Result := TListItem(Obj).Checked;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TListItem_SetChecked(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TListItem(Obj).Checked := Value;
+  try
+    TListItem(Obj).Checked := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TListItem_GetSelected(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TListItem(Obj).Selected;
+  try
+    Result := TListItem(Obj).Selected;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TListItem_SetSelected(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TListItem(Obj).Selected := Value;
+  try
+    TListItem(Obj).Selected := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TListItem_GetFocused(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TListItem(Obj).Focused;
+  try
+    Result := TListItem(Obj).Focused;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TListItem_SetFocused(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TListItem(Obj).Focused := Value;
+  try
+    TListItem(Obj).Focused := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TListItem_GetData(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := TListItem(Obj).Data;
+  try
+    Result := TListItem(Obj).Data;
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TListItem_SetData(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TListItem(Obj).Data := Value;
+  try
+    TListItem(Obj).Data := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TListItem_GetIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TListItem(Obj).Index;
+  try
+    Result := TListItem(Obj).Index;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function TListItem_GetListView(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TListItem(Obj).ListView);
+  try
+    Result := Pointer(TListItem(Obj).ListView);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { SubItems(2 列目以降の文字列)。 }
@@ -3259,107 +5479,197 @@ end;
 { SubItems(TStrings)。LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがあるため、ハンドルは保存せず、使うたびに取得する(docs/adr/0027)。 }
 function TListItem_GetSubItems(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TListItem(Obj).SubItems);
+  try
+    Result := Pointer(TListItem(Obj).SubItems);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { この項目を削除する。OnDeletion と項目の破棄通知が呼ばれる。 }
 procedure TListItem_Delete(Obj: Pointer); NO_VCL_CALL;
 begin
-  TListItem(Obj).Delete;
+  try
+    TListItem(Obj).Delete;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TListItem_MakeVisible(Obj: Pointer; PartialOK: LongBool); NO_VCL_CALL;
 begin
-  TListItem(Obj).MakeVisible(PartialOK);
+  try
+    TListItem(Obj).MakeVisible(PartialOK);
+  except
+    ReportException;
+  end;
 end;
 
 { TListColumns / TListColumn }
 
 function TListColumns_Add(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TListColumns(Obj).Add);
+  try
+    Result := WatchItem(TListColumns(Obj).Add);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TListColumns_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TListColumns(Obj).Count;
+  try
+    Result := TListColumns(Obj).Count;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function TListColumns_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TListColumns(Obj).Items[Index]);
+  try
+    Result := WatchItem(TListColumns(Obj).Items[Index]);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TListColumns_Delete(Obj: Pointer; Index: Integer); NO_VCL_CALL;
 begin
-  TListColumns(Obj).Delete(Index);
+  try
+    TListColumns(Obj).Delete(Index);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TListColumns_Clear(Obj: Pointer); NO_VCL_CALL;
 begin
-  TListColumns(Obj).Clear;
+  try
+    TListColumns(Obj).Clear;
+  except
+    ReportException;
+  end;
 end;
 
 function TListColumn_GetCaption(Obj: Pointer): PChar; NO_VCL_CALL;
 begin
-  Result := ReturnStr(TListColumn(Obj).Caption);
+  try
+    Result := ReturnStr(TListColumn(Obj).Caption);
+  except
+    Result := '';
+    ReportException;
+  end;
 end;
 
 procedure TListColumn_SetCaption(Obj: Pointer; Value: PChar); NO_VCL_CALL;
 begin
-  TListColumn(Obj).Caption := Value;
+  try
+    TListColumn(Obj).Caption := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TListColumn_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TListColumn(Obj).Width;
+  try
+    Result := TListColumn(Obj).Width;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TListColumn_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TListColumn(Obj).Width := Value;
+  try
+    TListColumn(Obj).Width := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { TAlignment の序数(taLeftJustify=0, taRightJustify, taCenter)。 }
 function TListColumn_GetAlignment(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TListColumn(Obj).Alignment);
+  try
+    Result := Ord(TListColumn(Obj).Alignment);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TListColumn_SetAlignment(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TListColumn(Obj).Alignment := TAlignment(Value);
+  try
+    TListColumn(Obj).Alignment := TAlignment(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TListColumn_GetAutoSize(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TListColumn(Obj).AutoSize;
+  try
+    Result := TListColumn(Obj).AutoSize;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TListColumn_SetAutoSize(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TListColumn(Obj).AutoSize := Value;
+  try
+    TListColumn(Obj).AutoSize := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TListColumn_GetVisible(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TListColumn(Obj).Visible;
+  try
+    Result := TListColumn(Obj).Visible;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TListColumn_SetVisible(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TListColumn(Obj).Visible := Value;
+  try
+    TListColumn(Obj).Visible := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { 列の並び順。書き換えると列が移動する。 }
 function TListColumn_GetIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TListColumn(Obj).Index;
+  try
+    Result := TListColumn(Obj).Index;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TListColumn_SetIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TListColumn(Obj).Index := Value;
+  try
+    TListColumn(Obj).Index := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { docs/component-coverage.md の Tier 2、4 バッチ目(TDrawGrid・TStringGrid)。docs/adr/0021-... を参照。
@@ -3406,6 +5716,7 @@ begin
   if not Assigned(FCallback) or GDetaching then
     Exit;
   FCallback(Pointer(Sender), aCol, aRow, FData);
+  CheckCallbackError;
 end;
 
 procedure TCellCallbackBridge.DoHeaderClick(Sender: TObject; IsColumn: Boolean; Index: Integer);
@@ -3416,6 +5727,7 @@ begin
     FCallback(Pointer(Sender), -1, Index, FData)
   else
     FCallback(Pointer(Sender), 0, Index, FData);
+  CheckCallbackError;
 end;
 
 procedure TCellAllowCallbackBridge.DoSelectCell(Sender: TObject; aCol, aRow: Integer; var CanSelect: Boolean);
@@ -3427,6 +5739,7 @@ begin
   if CanSelect then A := -1 else A := 0;
   FCallback(Pointer(Sender), aCol, aRow, @A, FData);
   CanSelect := A <> 0;
+  CheckCallbackError;
 end;
 
 procedure TDrawCellCallbackBridge.DoDrawCell(Sender: TObject; aCol, aRow: Integer; aRect: TRect; aState: TGridDrawState);
@@ -3444,6 +5757,7 @@ begin
   if gdPushed in aState then S := S or $10;
   if gdRowHighlight in aState then S := S or $20;
   FCallback(Pointer(Sender), aCol, aRow, aRect.Left, aRect.Top, aRect.Right, aRect.Bottom, S, FData);
+  CheckCallbackError;
 end;
 
 function CellBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclCellCallback; Data: Pointer): TCellCallbackBridge;
@@ -3501,30 +5815,52 @@ end;
 
 function TDrawGrid_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TDrawGrid.Create(TComponent(Owner)));
+  try
+    Result := Watch(TDrawGrid.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TStringGrid_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TStringGrid.Create(TComponent(Owner)));
+  try
+    Result := Watch(TStringGrid.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { TCustomGrid の public。 }
 
 procedure TCustomGrid_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
 begin
-  TCustomGrid(Obj).BeginUpdate;
+  try
+    TCustomGrid(Obj).BeginUpdate;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomGrid_EndUpdate(Obj: Pointer); NO_VCL_CALL;
 begin
-  TCustomGrid(Obj).EndUpdate;
+  try
+    TCustomGrid(Obj).EndUpdate;
+  except
+    ReportException;
+  end;
 end;
 
 { すべての行・列を削除する(ColCount・RowCount が 0 になる)。セルの文字列だけを消すのは TCustomStringGrid_Clean。 }
 procedure TCustomGrid_Clear(Obj: Pointer); NO_VCL_CALL;
 begin
-  TCustomGrid(Obj).Clear;
+  try
+    TCustomGrid(Obj).Clear;
+  except
+    ReportException;
+  end;
 end;
 
 { セルのクライアント座標での矩形。 }
@@ -3532,11 +5868,15 @@ procedure TCustomGrid_CellRect(Obj: Pointer; ACol, ARow: Integer; Left, Top, Rig
 var
   R: TRect;
 begin
-  R := TCustomGrid(Obj).CellRect(ACol, ARow);
-  Left^ := R.Left;
-  Top^ := R.Top;
-  Right^ := R.Right;
-  Bottom^ := R.Bottom;
+  try
+    R := TCustomGrid(Obj).CellRect(ACol, ARow);
+    Left^ := R.Left;
+    Top^ := R.Top;
+    Right^ := R.Right;
+    Bottom^ := R.Bottom;
+  except
+    ReportException;
+  end;
 end;
 
 { クライアント座標 X, Y にあるセル。セルの外なら -1。 }
@@ -3544,127 +5884,235 @@ procedure TCustomGrid_MouseToCell(Obj: Pointer; X, Y: Integer; ACol, ARow: PInte
 var
   C, R: Longint;
 begin
-  TCustomGrid(Obj).MouseToCell(X, Y, C, R);
-  ACol^ := C;
-  ARow^ := R;
+  try
+    TCustomGrid(Obj).MouseToCell(X, Y, C, R);
+    ACol^ := C;
+    ARow^ := R;
+  except
+    ReportException;
+  end;
 end;
 
 { TCustomDrawGrid の public(LCL では TCustomGrid の protected を公開したもの)。 }
 
 function TCustomDrawGrid_GetCanvas(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomDrawGrid(Obj).Canvas);
+  try
+    Result := Pointer(TCustomDrawGrid(Obj).Canvas);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCustomDrawGrid_GetColCount(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomDrawGrid(Obj).ColCount;
+  try
+    Result := TCustomDrawGrid(Obj).ColCount;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomDrawGrid_SetColCount(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomDrawGrid(Obj).ColCount := Value;
+  try
+    TCustomDrawGrid(Obj).ColCount := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomDrawGrid_GetRowCount(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomDrawGrid(Obj).RowCount;
+  try
+    Result := TCustomDrawGrid(Obj).RowCount;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomDrawGrid_SetRowCount(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomDrawGrid(Obj).RowCount := Value;
+  try
+    TCustomDrawGrid(Obj).RowCount := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomDrawGrid_GetFixedCols(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomDrawGrid(Obj).FixedCols;
+  try
+    Result := TCustomDrawGrid(Obj).FixedCols;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomDrawGrid_SetFixedCols(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomDrawGrid(Obj).FixedCols := Value;
+  try
+    TCustomDrawGrid(Obj).FixedCols := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomDrawGrid_GetFixedRows(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomDrawGrid(Obj).FixedRows;
+  try
+    Result := TCustomDrawGrid(Obj).FixedRows;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomDrawGrid_SetFixedRows(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomDrawGrid(Obj).FixedRows := Value;
+  try
+    TCustomDrawGrid(Obj).FixedRows := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { 現在のセル(フォーカスのあるセル)の列・行。 }
 function TCustomDrawGrid_GetCol(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomDrawGrid(Obj).Col;
+  try
+    Result := TCustomDrawGrid(Obj).Col;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomDrawGrid_SetCol(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomDrawGrid(Obj).Col := Value;
+  try
+    TCustomDrawGrid(Obj).Col := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomDrawGrid_GetRow(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomDrawGrid(Obj).Row;
+  try
+    Result := TCustomDrawGrid(Obj).Row;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomDrawGrid_SetRow(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomDrawGrid(Obj).Row := Value;
+  try
+    TCustomDrawGrid(Obj).Row := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomDrawGrid_GetDefaultColWidth(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomDrawGrid(Obj).DefaultColWidth;
+  try
+    Result := TCustomDrawGrid(Obj).DefaultColWidth;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomDrawGrid_SetDefaultColWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomDrawGrid(Obj).DefaultColWidth := Value;
+  try
+    TCustomDrawGrid(Obj).DefaultColWidth := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomDrawGrid_GetDefaultRowHeight(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomDrawGrid(Obj).DefaultRowHeight;
+  try
+    Result := TCustomDrawGrid(Obj).DefaultRowHeight;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomDrawGrid_SetDefaultRowHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomDrawGrid(Obj).DefaultRowHeight := Value;
+  try
+    TCustomDrawGrid(Obj).DefaultRowHeight := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomDrawGrid_GetColWidths(Obj: Pointer; ACol: Integer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomDrawGrid(Obj).ColWidths[ACol];
+  try
+    Result := TCustomDrawGrid(Obj).ColWidths[ACol];
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomDrawGrid_SetColWidths(Obj: Pointer; ACol, Value: Integer); NO_VCL_CALL;
 begin
-  TCustomDrawGrid(Obj).ColWidths[ACol] := Value;
+  try
+    TCustomDrawGrid(Obj).ColWidths[ACol] := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomDrawGrid_GetRowHeights(Obj: Pointer; ARow: Integer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomDrawGrid(Obj).RowHeights[ARow];
+  try
+    Result := TCustomDrawGrid(Obj).RowHeights[ARow];
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomDrawGrid_SetRowHeights(Obj: Pointer; ARow, Value: Integer); NO_VCL_CALL;
 begin
-  TCustomDrawGrid(Obj).RowHeights[ARow] := Value;
+  try
+    TCustomDrawGrid(Obj).RowHeights[ARow] := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomDrawGrid_GetOptions(Obj: Pointer): LongWord; NO_VCL_CALL;
 begin
-  Result := GridOptionsToInt(TCustomDrawGrid(Obj).Options);
+  try
+    Result := GridOptionsToInt(TCustomDrawGrid(Obj).Options);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomDrawGrid_SetOptions(Obj: Pointer; Value: LongWord); NO_VCL_CALL;
 begin
-  TCustomDrawGrid(Obj).Options := IntToGridOptions(Value);
+  try
+    TCustomDrawGrid(Obj).Options := IntToGridOptions(Value);
+  except
+    ReportException;
+  end;
 end;
 
 { 選択範囲(Left/Right が列、Top/Bottom が行。単一のセルなら Left = Right、Top = Bottom)。 }
@@ -3672,142 +6120,248 @@ procedure TCustomDrawGrid_GetSelection(Obj: Pointer; Left, Top, Right, Bottom: P
 var
   R: TGridRect;
 begin
-  R := TCustomDrawGrid(Obj).Selection;
-  Left^ := R.Left;
-  Top^ := R.Top;
-  Right^ := R.Right;
-  Bottom^ := R.Bottom;
+  try
+    R := TCustomDrawGrid(Obj).Selection;
+    Left^ := R.Left;
+    Top^ := R.Top;
+    Right^ := R.Right;
+    Bottom^ := R.Bottom;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomDrawGrid_SetSelection(Obj: Pointer; Left, Top, Right, Bottom: Integer); NO_VCL_CALL;
 var
   R: TGridRect;
 begin
-  { Rect(...) は Win32 では Windows ユニットの型名(TRect の別名)に隠されるため、フィールドで組み立てる。 }
-  R.Left := Left;
-  R.Top := Top;
-  R.Right := Right;
-  R.Bottom := Bottom;
-  TCustomDrawGrid(Obj).Selection := R;
+  try
+    { Rect(...) は Win32 では Windows ユニットの型名(TRect の別名)に隠されるため、フィールドで組み立てる。 }
+    R.Left := Left;
+    R.Top := Top;
+    R.Right := Right;
+    R.Bottom := Bottom;
+    TCustomDrawGrid(Obj).Selection := R;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomDrawGrid_GetLeftCol(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomDrawGrid(Obj).LeftCol;
+  try
+    Result := TCustomDrawGrid(Obj).LeftCol;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomDrawGrid_SetLeftCol(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomDrawGrid(Obj).LeftCol := Value;
+  try
+    TCustomDrawGrid(Obj).LeftCol := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomDrawGrid_GetTopRow(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomDrawGrid(Obj).TopRow;
+  try
+    Result := TCustomDrawGrid(Obj).TopRow;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomDrawGrid_SetTopRow(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomDrawGrid(Obj).TopRow := Value;
+  try
+    TCustomDrawGrid(Obj).TopRow := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomDrawGrid_GetDefaultDrawing(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomDrawGrid(Obj).DefaultDrawing;
+  try
+    Result := TCustomDrawGrid(Obj).DefaultDrawing;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomDrawGrid_SetDefaultDrawing(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomDrawGrid(Obj).DefaultDrawing := Value;
+  try
+    TCustomDrawGrid(Obj).DefaultDrawing := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomDrawGrid_GetFixedColor(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomDrawGrid(Obj).FixedColor;
+  try
+    Result := TCustomDrawGrid(Obj).FixedColor;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomDrawGrid_SetFixedColor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomDrawGrid(Obj).FixedColor := TColor(Value);
+  try
+    TCustomDrawGrid(Obj).FixedColor := TColor(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomDrawGrid_GetEditorMode(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomDrawGrid(Obj).EditorMode;
+  try
+    Result := TCustomDrawGrid(Obj).EditorMode;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomDrawGrid_SetEditorMode(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomDrawGrid(Obj).EditorMode := Value;
+  try
+    TCustomDrawGrid(Obj).EditorMode := Value;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomDrawGrid_InsertColRow(Obj: Pointer; IsColumn: LongBool; Index: Integer); NO_VCL_CALL;
 begin
-  TCustomDrawGrid(Obj).InsertColRow(IsColumn, Index);
+  try
+    TCustomDrawGrid(Obj).InsertColRow(IsColumn, Index);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomDrawGrid_DeleteColRow(Obj: Pointer; IsColumn: LongBool; Index: Integer); NO_VCL_CALL;
 begin
-  TCustomDrawGrid(Obj).DeleteColRow(IsColumn, Index);
+  try
+    TCustomDrawGrid(Obj).DeleteColRow(IsColumn, Index);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomDrawGrid_MoveColRow(Obj: Pointer; IsColumn: LongBool; FromIndex, ToIndex: Integer); NO_VCL_CALL;
 begin
-  TCustomDrawGrid(Obj).MoveColRow(IsColumn, FromIndex, ToIndex);
+  try
+    TCustomDrawGrid(Obj).MoveColRow(IsColumn, FromIndex, ToIndex);
+  except
+    ReportException;
+  end;
 end;
 
 { IsColumn が True なら、列 Index の値で行を並べ替える(固定行は除く)。False なら行 Index の値で列を並べ替える。 }
 procedure TCustomDrawGrid_SortColRow(Obj: Pointer; IsColumn: LongBool; Index: Integer); NO_VCL_CALL;
 begin
-  TCustomDrawGrid(Obj).SortColRow(IsColumn, Index);
+  try
+    TCustomDrawGrid(Obj).SortColRow(IsColumn, Index);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomDrawGrid_SetOnDrawCell(Obj: Pointer; Cb: TNoVclDrawCellCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomDrawGrid(Obj).OnDrawCell := @DrawCellBridgeFor(TCustomDrawGrid(Obj), TMethod(TCustomDrawGrid(Obj).OnDrawCell).Data, Cb, Data).DoDrawCell;
+  try
+    TCustomDrawGrid(Obj).OnDrawCell := @DrawCellBridgeFor(TCustomDrawGrid(Obj), TMethod(TCustomDrawGrid(Obj).OnDrawCell).Data, Cb, Data).DoDrawCell;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomDrawGrid_SetOnSelectCell(Obj: Pointer; Cb: TNoVclCellAllowCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomDrawGrid(Obj).OnSelectCell := @CellAllowBridgeFor(TCustomDrawGrid(Obj), TMethod(TCustomDrawGrid(Obj).OnSelectCell).Data, Cb, Data).DoSelectCell;
+  try
+    TCustomDrawGrid(Obj).OnSelectCell := @CellAllowBridgeFor(TCustomDrawGrid(Obj), TMethod(TCustomDrawGrid(Obj).OnSelectCell).Data, Cb, Data).DoSelectCell;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomDrawGrid_SetOnSelection(Obj: Pointer; Cb: TNoVclCellCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomDrawGrid(Obj).OnSelection := @CellBridgeFor(TCustomDrawGrid(Obj), TMethod(TCustomDrawGrid(Obj).OnSelection).Data, Cb, Data).DoSelection;
+  try
+    TCustomDrawGrid(Obj).OnSelection := @CellBridgeFor(TCustomDrawGrid(Obj), TMethod(TCustomDrawGrid(Obj).OnSelection).Data, Cb, Data).DoSelection;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomDrawGrid_SetOnHeaderClick(Obj: Pointer; Cb: TNoVclCellCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomDrawGrid(Obj).OnHeaderClick := @CellBridgeFor(TCustomDrawGrid(Obj), TMethod(TCustomDrawGrid(Obj).OnHeaderClick).Data, Cb, Data).DoHeaderClick;
+  try
+    TCustomDrawGrid(Obj).OnHeaderClick := @CellBridgeFor(TCustomDrawGrid(Obj), TMethod(TCustomDrawGrid(Obj).OnHeaderClick).Data, Cb, Data).DoHeaderClick;
+  except
+    ReportException;
+  end;
 end;
 
 { TCustomStringGrid の public。 }
 
 function TCustomStringGrid_GetCells(Obj: Pointer; ACol, ARow: Integer): PChar; NO_VCL_CALL;
 begin
-  Result := ReturnStr(TCustomStringGrid(Obj).Cells[ACol, ARow]);
+  try
+    Result := ReturnStr(TCustomStringGrid(Obj).Cells[ACol, ARow]);
+  except
+    Result := '';
+    ReportException;
+  end;
 end;
 
 procedure TCustomStringGrid_SetCells(Obj: Pointer; ACol, ARow: Integer; Value: PChar); NO_VCL_CALL;
 begin
-  TCustomStringGrid(Obj).Cells[ACol, ARow] := Value;
+  try
+    TCustomStringGrid(Obj).Cells[ACol, ARow] := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { すべてのセルの文字列を消す(行・列の数は変わらない)。 }
 procedure TCustomStringGrid_Clean(Obj: Pointer); NO_VCL_CALL;
 begin
-  TCustomStringGrid(Obj).Clean;
+  try
+    TCustomStringGrid(Obj).Clean;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomStringGrid_AutoSizeColumns(Obj: Pointer); NO_VCL_CALL;
 begin
-  TCustomStringGrid(Obj).AutoSizeColumns;
+  try
+    TCustomStringGrid(Obj).AutoSizeColumns;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomStringGrid_AutoSizeColumn(Obj: Pointer; ACol: Integer); NO_VCL_CALL;
 begin
-  TCustomStringGrid(Obj).AutoSizeColumn(ACol);
+  try
+    TCustomStringGrid(Obj).AutoSizeColumn(ACol);
+  except
+    ReportException;
+  end;
 end;
 
 { docs/component-coverage.md の Tier 2、5 バッチ目(THeaderControl)。docs/adr/0024-... を参照。
@@ -3842,6 +6396,7 @@ begin
   if not Assigned(FCallback) or GDetaching then
     Exit;
   FCallback(Pointer(HeaderControl), WatchItem(Section), Width, Ord(State), FData);
+  CheckCallbackError;
 end;
 
 procedure TSectionDragCallbackBridge.DoDrag(Sender: TObject; FromSection, ToSection: THeaderSection; var AllowDrag: Boolean);
@@ -3853,29 +6408,49 @@ begin
   if AllowDrag then A := -1 else A := 0;
   FCallback(Pointer(Sender), WatchItem(FromSection), WatchItem(ToSection), @A, FData);
   AllowDrag := A <> 0;
+  CheckCallbackError;
 end;
 
 { THeaderControl / TCustomHeaderControl }
 
 function THeaderControl_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(THeaderControl.Create(TComponent(Owner)));
+  try
+    Result := Watch(THeaderControl.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { Sections(THeaderSections)は、ヘッダーコントロールが所有する非所有のハンドル(ヘッダーコントロールと寿命が一致する)。 }
 function TCustomHeaderControl_GetSections(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomHeaderControl(Obj).Sections);
+  try
+    Result := Pointer(TCustomHeaderControl(Obj).Sections);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCustomHeaderControl_GetDragReorder(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomHeaderControl(Obj).DragReorder;
+  try
+    Result := TCustomHeaderControl(Obj).DragReorder;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomHeaderControl_SetDragReorder(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomHeaderControl(Obj).DragReorder := Value;
+  try
+    TCustomHeaderControl(Obj).DragReorder := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { Win32 では Windows ユニットの型名 Point(TPoint の別名)が Types.Point を隠すため、TPoint はフィールドで組み立てる。 }
@@ -3883,29 +6458,51 @@ function TCustomHeaderControl_GetSectionAt(Obj: Pointer; X, Y: Integer): Integer
 var
   P: TPoint;
 begin
-  P.X := X;
-  P.Y := Y;
-  Result := TCustomHeaderControl(Obj).GetSectionAt(P);
+  try
+    P.X := X;
+    P.Y := Y;
+    Result := TCustomHeaderControl(Obj).GetSectionAt(P);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function TCustomHeaderControl_GetSectionFromOriginalIndex(Obj: Pointer; OriginalIndex: Integer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TCustomHeaderControl(Obj).SectionFromOriginalIndex[OriginalIndex]);
+  try
+    Result := WatchItem(TCustomHeaderControl(Obj).SectionFromOriginalIndex[OriginalIndex]);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TCustomHeaderControl_SetOnSectionClick(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  THeaderControl(Obj).OnSectionClick := @ItemBridgeFor(THeaderControl(Obj), TMethod(THeaderControl(Obj).OnSectionClick).Data, Cb, Data).DoSection;
+  try
+    THeaderControl(Obj).OnSectionClick := @ItemBridgeFor(THeaderControl(Obj), TMethod(THeaderControl(Obj).OnSectionClick).Data, Cb, Data).DoSection;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomHeaderControl_SetOnSectionResize(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  THeaderControl(Obj).OnSectionResize := @ItemBridgeFor(THeaderControl(Obj), TMethod(THeaderControl(Obj).OnSectionResize).Data, Cb, Data).DoSection;
+  try
+    THeaderControl(Obj).OnSectionResize := @ItemBridgeFor(THeaderControl(Obj), TMethod(THeaderControl(Obj).OnSectionResize).Data, Cb, Data).DoSection;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomHeaderControl_SetOnSectionSeparatorDblClick(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  THeaderControl(Obj).OnSectionSeparatorDblClick := @ItemBridgeFor(THeaderControl(Obj), TMethod(THeaderControl(Obj).OnSectionSeparatorDblClick).Data, Cb, Data).DoSection;
+  try
+    THeaderControl(Obj).OnSectionSeparatorDblClick := @ItemBridgeFor(THeaderControl(Obj), TMethod(THeaderControl(Obj).OnSectionSeparatorDblClick).Data, Cb, Data).DoSection;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomHeaderControl_SetOnSectionTrack(Obj: Pointer; Cb: TNoVclSectionTrackCallback; Data: Pointer); NO_VCL_CALL;
@@ -3913,15 +6510,19 @@ var
   HC: THeaderControl;
   Bridge: TSectionTrackCallbackBridge;
 begin
-  HC := THeaderControl(Obj);
-  if (TMethod(HC.OnSectionTrack).Data <> nil) and (TObject(TMethod(HC.OnSectionTrack).Data) is TSectionTrackCallbackBridge)
-     and (TSectionTrackCallbackBridge(TMethod(HC.OnSectionTrack).Data).Owner = HC) then
-    Bridge := TSectionTrackCallbackBridge(TMethod(HC.OnSectionTrack).Data)
-  else
-    Bridge := TSectionTrackCallbackBridge.Create(HC);
-  Bridge.FCallback := Cb;
-  Bridge.FData := Data;
-  HC.OnSectionTrack := @Bridge.DoTrack;
+  try
+    HC := THeaderControl(Obj);
+    if (TMethod(HC.OnSectionTrack).Data <> nil) and (TObject(TMethod(HC.OnSectionTrack).Data) is TSectionTrackCallbackBridge)
+       and (TSectionTrackCallbackBridge(TMethod(HC.OnSectionTrack).Data).Owner = HC) then
+      Bridge := TSectionTrackCallbackBridge(TMethod(HC.OnSectionTrack).Data)
+    else
+      Bridge := TSectionTrackCallbackBridge.Create(HC);
+    Bridge.FCallback := Cb;
+    Bridge.FData := Data;
+    HC.OnSectionTrack := @Bridge.DoTrack;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomHeaderControl_SetOnSectionDrag(Obj: Pointer; Cb: TNoVclSectionDragCallback; Data: Pointer); NO_VCL_CALL;
@@ -3929,151 +6530,273 @@ var
   HC: THeaderControl;
   Bridge: TSectionDragCallbackBridge;
 begin
-  HC := THeaderControl(Obj);
-  if (TMethod(HC.OnSectionDrag).Data <> nil) and (TObject(TMethod(HC.OnSectionDrag).Data) is TSectionDragCallbackBridge)
-     and (TSectionDragCallbackBridge(TMethod(HC.OnSectionDrag).Data).Owner = HC) then
-    Bridge := TSectionDragCallbackBridge(TMethod(HC.OnSectionDrag).Data)
-  else
-    Bridge := TSectionDragCallbackBridge.Create(HC);
-  Bridge.FCallback := Cb;
-  Bridge.FData := Data;
-  HC.OnSectionDrag := @Bridge.DoDrag;
+  try
+    HC := THeaderControl(Obj);
+    if (TMethod(HC.OnSectionDrag).Data <> nil) and (TObject(TMethod(HC.OnSectionDrag).Data) is TSectionDragCallbackBridge)
+       and (TSectionDragCallbackBridge(TMethod(HC.OnSectionDrag).Data).Owner = HC) then
+      Bridge := TSectionDragCallbackBridge(TMethod(HC.OnSectionDrag).Data)
+    else
+      Bridge := TSectionDragCallbackBridge.Create(HC);
+    Bridge.FCallback := Cb;
+    Bridge.FData := Data;
+    HC.OnSectionDrag := @Bridge.DoDrag;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomHeaderControl_SetOnSectionEndDrag(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  THeaderControl(Obj).OnSectionEndDrag := @BridgeFor(THeaderControl(Obj), MethodData(THeaderControl(Obj).OnSectionEndDrag), Cb, Data).DoClick;
+  try
+    THeaderControl(Obj).OnSectionEndDrag := @BridgeFor(THeaderControl(Obj), MethodData(THeaderControl(Obj).OnSectionEndDrag), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 { THeaderSections(TCollection)。セクションを返す関数は WatchItem してから返す。 }
 
 function THeaderSections_Add(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(THeaderSections(Obj).Add);
+  try
+    Result := WatchItem(THeaderSections(Obj).Add);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function THeaderSections_Insert(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(THeaderSections(Obj).Insert(Index));
+  try
+    Result := WatchItem(THeaderSections(Obj).Insert(Index));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure THeaderSections_Delete(Obj: Pointer; Index: Integer); NO_VCL_CALL;
 begin
-  THeaderSections(Obj).Delete(Index);
+  try
+    THeaderSections(Obj).Delete(Index);
+  except
+    ReportException;
+  end;
 end;
 
 procedure THeaderSections_Clear(Obj: Pointer); NO_VCL_CALL;
 begin
-  THeaderSections(Obj).Clear;
+  try
+    THeaderSections(Obj).Clear;
+  except
+    ReportException;
+  end;
 end;
 
 function THeaderSections_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := THeaderSections(Obj).Count;
+  try
+    Result := THeaderSections(Obj).Count;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function THeaderSections_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(THeaderSections(Obj).Items[Index]);
+  try
+    Result := WatchItem(THeaderSections(Obj).Items[Index]);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure THeaderSections_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
 begin
-  THeaderSections(Obj).BeginUpdate;
+  try
+    THeaderSections(Obj).BeginUpdate;
+  except
+    ReportException;
+  end;
 end;
 
 procedure THeaderSections_EndUpdate(Obj: Pointer); NO_VCL_CALL;
 begin
-  THeaderSections(Obj).EndUpdate;
+  try
+    THeaderSections(Obj).EndUpdate;
+  except
+    ReportException;
+  end;
 end;
 
 { THeaderSection }
 
 function THeaderSection_GetText(Obj: Pointer): PChar; NO_VCL_CALL;
 begin
-  Result := ReturnStr(THeaderSection(Obj).Text);
+  try
+    Result := ReturnStr(THeaderSection(Obj).Text);
+  except
+    Result := '';
+    ReportException;
+  end;
 end;
 
 procedure THeaderSection_SetText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
 begin
-  THeaderSection(Obj).Text := Value;
+  try
+    THeaderSection(Obj).Text := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function THeaderSection_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := THeaderSection(Obj).Width;
+  try
+    Result := THeaderSection(Obj).Width;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure THeaderSection_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  THeaderSection(Obj).Width := Value;
+  try
+    THeaderSection(Obj).Width := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function THeaderSection_GetMinWidth(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := THeaderSection(Obj).MinWidth;
+  try
+    Result := THeaderSection(Obj).MinWidth;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure THeaderSection_SetMinWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  THeaderSection(Obj).MinWidth := Value;
+  try
+    THeaderSection(Obj).MinWidth := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function THeaderSection_GetMaxWidth(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := THeaderSection(Obj).MaxWidth;
+  try
+    Result := THeaderSection(Obj).MaxWidth;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure THeaderSection_SetMaxWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  THeaderSection(Obj).MaxWidth := Value;
+  try
+    THeaderSection(Obj).MaxWidth := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { TAlignment の序数(taLeftJustify = 0, taRightJustify, taCenter)。 }
 function THeaderSection_GetAlignment(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(THeaderSection(Obj).Alignment);
+  try
+    Result := Ord(THeaderSection(Obj).Alignment);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure THeaderSection_SetAlignment(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  THeaderSection(Obj).Alignment := TAlignment(Value);
+  try
+    THeaderSection(Obj).Alignment := TAlignment(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function THeaderSection_GetVisible(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := THeaderSection(Obj).Visible;
+  try
+    Result := THeaderSection(Obj).Visible;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure THeaderSection_SetVisible(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  THeaderSection(Obj).Visible := Value;
+  try
+    THeaderSection(Obj).Visible := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { TCollectionItem.Index。書き換えるとセクションが移動する。 }
 function THeaderSection_GetIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := THeaderSection(Obj).Index;
+  try
+    Result := THeaderSection(Obj).Index;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure THeaderSection_SetIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  THeaderSection(Obj).Index := Value;
+  try
+    THeaderSection(Obj).Index := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function THeaderSection_GetLeft(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := THeaderSection(Obj).Left;
+  try
+    Result := THeaderSection(Obj).Left;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function THeaderSection_GetRight(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := THeaderSection(Obj).Right;
+  try
+    Result := THeaderSection(Obj).Right;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function THeaderSection_GetOriginalIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := THeaderSection(Obj).OriginalIndex;
+  try
+    Result := THeaderSection(Obj).OriginalIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 { docs/component-coverage.md の Tier 2、6 バッチ目(TToolBar・TToolButton)。docs/adr/0025-... を参照。
@@ -4086,10 +6809,15 @@ function TToolWindow_GetEdgeBorders(Obj: Pointer): LongWord; NO_VCL_CALL;
 var
   B: TEdgeBorder;
 begin
-  Result := 0;
-  for B := Low(TEdgeBorder) to High(TEdgeBorder) do
-    if B in TToolWindow(Obj).EdgeBorders then
-      Result := Result or (LongWord(1) shl Ord(B));
+  try
+    Result := 0;
+    for B := Low(TEdgeBorder) to High(TEdgeBorder) do
+      if B in TToolWindow(Obj).EdgeBorders then
+        Result := Result or (LongWord(1) shl Ord(B));
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TToolWindow_SetEdgeBorders(Obj: Pointer; Value: LongWord); NO_VCL_CALL;
@@ -4097,293 +6825,545 @@ var
   B: TEdgeBorder;
   S: TEdgeBorders;
 begin
-  S := [];
-  for B := Low(TEdgeBorder) to High(TEdgeBorder) do
-    if (Value and (LongWord(1) shl Ord(B))) <> 0 then
-      Include(S, B);
-  TToolWindow(Obj).EdgeBorders := S;
+  try
+    S := [];
+    for B := Low(TEdgeBorder) to High(TEdgeBorder) do
+      if (Value and (LongWord(1) shl Ord(B))) <> 0 then
+        Include(S, B);
+    TToolWindow(Obj).EdgeBorders := S;
+  except
+    ReportException;
+  end;
 end;
 
 { TEdgeStyle の序数(esNone = 0, esRaised, esLowered)。 }
 function TToolWindow_GetEdgeInner(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TToolWindow(Obj).EdgeInner);
+  try
+    Result := Ord(TToolWindow(Obj).EdgeInner);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TToolWindow_SetEdgeInner(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TToolWindow(Obj).EdgeInner := TEdgeStyle(Value);
+  try
+    TToolWindow(Obj).EdgeInner := TEdgeStyle(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TToolWindow_GetEdgeOuter(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TToolWindow(Obj).EdgeOuter);
+  try
+    Result := Ord(TToolWindow(Obj).EdgeOuter);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TToolWindow_SetEdgeOuter(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TToolWindow(Obj).EdgeOuter := TEdgeStyle(Value);
+  try
+    TToolWindow(Obj).EdgeOuter := TEdgeStyle(Value);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TToolWindow_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
 begin
-  TToolWindow(Obj).BeginUpdate;
+  try
+    TToolWindow(Obj).BeginUpdate;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TToolWindow_EndUpdate(Obj: Pointer); NO_VCL_CALL;
 begin
-  TToolWindow(Obj).EndUpdate;
+  try
+    TToolWindow(Obj).EndUpdate;
+  except
+    ReportException;
+  end;
 end;
 
 { TToolBar }
 
 function TToolBar_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TToolBar.Create(TComponent(Owner)));
+  try
+    Result := Watch(TToolBar.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TToolBar_GetButtonCount(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TToolBar(Obj).ButtonCount;
+  try
+    Result := TToolBar(Obj).ButtonCount;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function TToolBar_GetButton(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchOrNil(TToolBar(Obj).Buttons[Index]);
+  try
+    Result := WatchOrNil(TToolBar(Obj).Buttons[Index]);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TToolBar_GetRowCount(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TToolBar(Obj).RowCount;
+  try
+    Result := TToolBar(Obj).RowCount;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function TToolBar_GetButtonHeight(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TToolBar(Obj).ButtonHeight;
+  try
+    Result := TToolBar(Obj).ButtonHeight;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TToolBar_SetButtonHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TToolBar(Obj).ButtonHeight := Value;
+  try
+    TToolBar(Obj).ButtonHeight := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TToolBar_GetButtonWidth(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TToolBar(Obj).ButtonWidth;
+  try
+    Result := TToolBar(Obj).ButtonWidth;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TToolBar_SetButtonWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TToolBar(Obj).ButtonWidth := Value;
+  try
+    TToolBar(Obj).ButtonWidth := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TToolBar_GetDropDownWidth(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TToolBar(Obj).DropDownWidth;
+  try
+    Result := TToolBar(Obj).DropDownWidth;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TToolBar_SetDropDownWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TToolBar(Obj).DropDownWidth := Value;
+  try
+    TToolBar(Obj).DropDownWidth := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TToolBar_GetIndent(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TToolBar(Obj).Indent;
+  try
+    Result := TToolBar(Obj).Indent;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TToolBar_SetIndent(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TToolBar(Obj).Indent := Value;
+  try
+    TToolBar(Obj).Indent := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TToolBar_GetFlat(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TToolBar(Obj).Flat;
+  try
+    Result := TToolBar(Obj).Flat;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TToolBar_SetFlat(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TToolBar(Obj).Flat := Value;
+  try
+    TToolBar(Obj).Flat := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TToolBar_GetList(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TToolBar(Obj).List;
+  try
+    Result := TToolBar(Obj).List;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TToolBar_SetList(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TToolBar(Obj).List := Value;
+  try
+    TToolBar(Obj).List := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TToolBar_GetShowCaptions(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TToolBar(Obj).ShowCaptions;
+  try
+    Result := TToolBar(Obj).ShowCaptions;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TToolBar_SetShowCaptions(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TToolBar(Obj).ShowCaptions := Value;
+  try
+    TToolBar(Obj).ShowCaptions := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TToolBar_GetTransparent(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TToolBar(Obj).Transparent;
+  try
+    Result := TToolBar(Obj).Transparent;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TToolBar_SetTransparent(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TToolBar(Obj).Transparent := Value;
+  try
+    TToolBar(Obj).Transparent := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TToolBar_GetWrapable(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TToolBar(Obj).Wrapable;
+  try
+    Result := TToolBar(Obj).Wrapable;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TToolBar_SetWrapable(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TToolBar(Obj).Wrapable := Value;
+  try
+    TToolBar(Obj).Wrapable := Value;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TToolBar_SetButtonSize(Obj: Pointer; NewButtonWidth, NewButtonHeight: Integer); NO_VCL_CALL;
 begin
-  TToolBar(Obj).SetButtonSize(NewButtonWidth, NewButtonHeight);
+  try
+    TToolBar(Obj).SetButtonSize(NewButtonWidth, NewButtonHeight);
+  except
+    ReportException;
+  end;
 end;
 
 { TToolButton }
 
 function TToolButton_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TToolButton.Create(TComponent(Owner)));
+  try
+    Result := Watch(TToolButton.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TToolButton_GetAllowAllUp(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TToolButton(Obj).AllowAllUp;
+  try
+    Result := TToolButton(Obj).AllowAllUp;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TToolButton_SetAllowAllUp(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TToolButton(Obj).AllowAllUp := Value;
+  try
+    TToolButton(Obj).AllowAllUp := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TToolButton_GetDown(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TToolButton(Obj).Down;
+  try
+    Result := TToolButton(Obj).Down;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TToolButton_SetDown(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TToolButton(Obj).Down := Value;
+  try
+    TToolButton(Obj).Down := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TToolButton_GetGrouped(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TToolButton(Obj).Grouped;
+  try
+    Result := TToolButton(Obj).Grouped;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TToolButton_SetGrouped(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TToolButton(Obj).Grouped := Value;
+  try
+    TToolButton(Obj).Grouped := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TToolButton_GetIndeterminate(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TToolButton(Obj).Indeterminate;
+  try
+    Result := TToolButton(Obj).Indeterminate;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TToolButton_SetIndeterminate(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TToolButton(Obj).Indeterminate := Value;
+  try
+    TToolButton(Obj).Indeterminate := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TToolButton_GetMarked(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TToolButton(Obj).Marked;
+  try
+    Result := TToolButton(Obj).Marked;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TToolButton_SetMarked(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TToolButton(Obj).Marked := Value;
+  try
+    TToolButton(Obj).Marked := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TToolButton_GetShowCaption(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TToolButton(Obj).ShowCaption;
+  try
+    Result := TToolButton(Obj).ShowCaption;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TToolButton_SetShowCaption(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TToolButton(Obj).ShowCaption := Value;
+  try
+    TToolButton(Obj).ShowCaption := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TToolButton_GetWrap(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TToolButton(Obj).Wrap;
+  try
+    Result := TToolButton(Obj).Wrap;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TToolButton_SetWrap(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TToolButton(Obj).Wrap := Value;
+  try
+    TToolButton(Obj).Wrap := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { TToolButtonStyle の序数(tbsButton = 0, tbsCheck, tbsDropDown, tbsSeparator, tbsDivider, tbsButtonDrop)。 }
 function TToolButton_GetStyle(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TToolButton(Obj).Style);
+  try
+    Result := Ord(TToolButton(Obj).Style);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TToolButton_SetStyle(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TToolButton(Obj).Style := TToolButtonStyle(Value);
+  try
+    TToolButton(Obj).Style := TToolButtonStyle(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TToolButton_GetDropdownMenu(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchOrNil(TToolButton(Obj).DropdownMenu);
+  try
+    Result := WatchOrNil(TToolButton(Obj).DropdownMenu);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TToolButton_SetDropdownMenu(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TToolButton(Obj).DropdownMenu := TPopupMenu(Value);
+  try
+    TToolButton(Obj).DropdownMenu := TPopupMenu(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TToolButton_GetMenuItem(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchOrNil(TToolButton(Obj).MenuItem);
+  try
+    Result := WatchOrNil(TToolButton(Obj).MenuItem);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TToolButton_SetMenuItem(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TToolButton(Obj).MenuItem := TMenuItem(Value);
+  try
+    TToolButton(Obj).MenuItem := TMenuItem(Value);
+  except
+    ReportException;
+  end;
 end;
 
 { ツールバーの中での位置(ツールバーに置かれていなければ -1)。 }
 function TToolButton_GetIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TToolButton(Obj).Index;
+  try
+    Result := TToolButton(Obj).Index;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TToolButton_Click(Obj: Pointer); NO_VCL_CALL;
 begin
-  TToolButton(Obj).Click;
+  try
+    TToolButton(Obj).Click;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TToolButton_ArrowClick(Obj: Pointer); NO_VCL_CALL;
 begin
-  TToolButton(Obj).ArrowClick;
+  try
+    TToolButton(Obj).ArrowClick;
+  except
+    ReportException;
+  end;
 end;
 
 function TToolButton_PointInArrow(Obj: Pointer; X, Y: Integer): LongBool; NO_VCL_CALL;
 begin
-  Result := TToolButton(Obj).PointInArrow(X, Y);
+  try
+    Result := TToolButton(Obj).PointInArrow(X, Y);
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TToolButton_SetOnArrowClick(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TToolButton(Obj).OnArrowClick := @BridgeFor(TToolButton(Obj), MethodData(TToolButton(Obj).OnArrowClick), Cb, Data).DoClick;
+  try
+    TToolButton(Obj).OnArrowClick := @BridgeFor(TToolButton(Obj), MethodData(TToolButton(Obj).OnArrowClick), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 { docs/component-coverage.md の Tier 2、7 バッチ目(TCoolBar)。docs/adr/0026-... を参照。
@@ -4395,18 +7375,32 @@ end;
 
 function TCoolBar_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TCoolBar.Create(TComponent(Owner)));
+  try
+    Result := Watch(TCoolBar.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { Bands(TCoolBands)は、クールバーが所有する非所有のハンドル(クールバーと寿命が一致する)。 }
 function TCustomCoolBar_GetBands(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomCoolBar(Obj).Bands);
+  try
+    Result := Pointer(TCustomCoolBar(Obj).Bands);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TCustomCoolBar_AutosizeBands(Obj: Pointer); NO_VCL_CALL;
 begin
-  TCustomCoolBar(Obj).AutosizeBands;
+  try
+    TCustomCoolBar(Obj).AutosizeBands;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomCoolBar_MouseToBandPos(Obj: Pointer; X, Y: Integer; ABand: PInteger; AGrabber: PInteger); NO_VCL_CALL;
@@ -4414,311 +7408,582 @@ var
   B: Integer;
   G: Boolean;
 begin
-  TCustomCoolBar(Obj).MouseToBandPos(X, Y, B, G);
-  ABand^ := B;
-  if G then AGrabber^ := -1 else AGrabber^ := 0;
+  try
+    TCustomCoolBar(Obj).MouseToBandPos(X, Y, B, G);
+    ABand^ := B;
+    if G then AGrabber^ := -1 else AGrabber^ := 0;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomCoolBar_GetFixedSize(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomCoolBar(Obj).FixedSize;
+  try
+    Result := TCustomCoolBar(Obj).FixedSize;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomCoolBar_SetFixedSize(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomCoolBar(Obj).FixedSize := Value;
+  try
+    TCustomCoolBar(Obj).FixedSize := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomCoolBar_GetFixedOrder(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomCoolBar(Obj).FixedOrder;
+  try
+    Result := TCustomCoolBar(Obj).FixedOrder;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomCoolBar_SetFixedOrder(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomCoolBar(Obj).FixedOrder := Value;
+  try
+    TCustomCoolBar(Obj).FixedOrder := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { TGrabStyle の序数(gsSimple = 0, gsDouble, gsHorLines, gsVerLines, gsGripper, gsButton)。 }
 function TCustomCoolBar_GetGrabStyle(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TCustomCoolBar(Obj).GrabStyle);
+  try
+    Result := Ord(TCustomCoolBar(Obj).GrabStyle);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomCoolBar_SetGrabStyle(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomCoolBar(Obj).GrabStyle := TGrabStyle(Value);
+  try
+    TCustomCoolBar(Obj).GrabStyle := TGrabStyle(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomCoolBar_GetGrabWidth(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomCoolBar(Obj).GrabWidth;
+  try
+    Result := TCustomCoolBar(Obj).GrabWidth;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomCoolBar_SetGrabWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomCoolBar(Obj).GrabWidth := Value;
+  try
+    TCustomCoolBar(Obj).GrabWidth := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomCoolBar_GetHorizontalSpacing(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomCoolBar(Obj).HorizontalSpacing;
+  try
+    Result := TCustomCoolBar(Obj).HorizontalSpacing;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomCoolBar_SetHorizontalSpacing(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomCoolBar(Obj).HorizontalSpacing := Value;
+  try
+    TCustomCoolBar(Obj).HorizontalSpacing := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomCoolBar_GetVerticalSpacing(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomCoolBar(Obj).VerticalSpacing;
+  try
+    Result := TCustomCoolBar(Obj).VerticalSpacing;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomCoolBar_SetVerticalSpacing(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomCoolBar(Obj).VerticalSpacing := Value;
+  try
+    TCustomCoolBar(Obj).VerticalSpacing := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomCoolBar_GetShowText(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomCoolBar(Obj).ShowText;
+  try
+    Result := TCustomCoolBar(Obj).ShowText;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomCoolBar_SetShowText(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomCoolBar(Obj).ShowText := Value;
+  try
+    TCustomCoolBar(Obj).ShowText := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomCoolBar_GetThemed(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomCoolBar(Obj).Themed;
+  try
+    Result := TCustomCoolBar(Obj).Themed;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomCoolBar_SetThemed(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomCoolBar(Obj).Themed := Value;
+  try
+    TCustomCoolBar(Obj).Themed := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomCoolBar_GetVertical(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomCoolBar(Obj).Vertical;
+  try
+    Result := TCustomCoolBar(Obj).Vertical;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomCoolBar_SetVertical(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomCoolBar(Obj).Vertical := Value;
+  try
+    TCustomCoolBar(Obj).Vertical := Value;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomCoolBar_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomCoolBar(Obj).OnChange := @BridgeFor(TCustomCoolBar(Obj), MethodData(TCustomCoolBar(Obj).OnChange), Cb, Data).DoClick;
+  try
+    TCustomCoolBar(Obj).OnChange := @BridgeFor(TCustomCoolBar(Obj), MethodData(TCustomCoolBar(Obj).OnChange), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 { TCoolBands(TCollection)。バンドを返す関数は WatchItem してから返す。 }
 
 function TCoolBands_Add(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TCoolBands(Obj).Add);
+  try
+    Result := WatchItem(TCoolBands(Obj).Add);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCoolBands_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCoolBands(Obj).Count;
+  try
+    Result := TCoolBands(Obj).Count;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function TCoolBands_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TCoolBands(Obj).Items[Index]);
+  try
+    Result := WatchItem(TCoolBands(Obj).Items[Index]);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TCoolBands_Delete(Obj: Pointer; Index: Integer); NO_VCL_CALL;
 begin
-  TCoolBands(Obj).Delete(Index);
+  try
+    TCoolBands(Obj).Delete(Index);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCoolBands_Clear(Obj: Pointer); NO_VCL_CALL;
 begin
-  TCoolBands(Obj).Clear;
+  try
+    TCoolBands(Obj).Clear;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCoolBands_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
 begin
-  TCoolBands(Obj).BeginUpdate;
+  try
+    TCoolBands(Obj).BeginUpdate;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCoolBands_EndUpdate(Obj: Pointer); NO_VCL_CALL;
 begin
-  TCoolBands(Obj).EndUpdate;
+  try
+    TCoolBands(Obj).EndUpdate;
+  except
+    ReportException;
+  end;
 end;
 
 function TCoolBands_FindBand(Obj: Pointer; AControl: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchItem(TCoolBands(Obj).FindBand(TControl(AControl)));
+  try
+    Result := WatchItem(TCoolBands(Obj).FindBand(TControl(AControl)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCoolBands_FindBandIndex(Obj: Pointer; AControl: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCoolBands(Obj).FindBandIndex(TControl(AControl));
+  try
+    Result := TCoolBands(Obj).FindBandIndex(TControl(AControl));
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 { TCoolBand }
 
 function TCoolBand_GetText(Obj: Pointer): PChar; NO_VCL_CALL;
 begin
-  Result := ReturnStr(TCoolBand(Obj).Text);
+  try
+    Result := ReturnStr(TCoolBand(Obj).Text);
+  except
+    Result := '';
+    ReportException;
+  end;
 end;
 
 procedure TCoolBand_SetText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
 begin
-  TCoolBand(Obj).Text := Value;
+  try
+    TCoolBand(Obj).Text := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCoolBand_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCoolBand(Obj).Width;
+  try
+    Result := TCoolBand(Obj).Width;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCoolBand_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCoolBand(Obj).Width := Value;
+  try
+    TCoolBand(Obj).Width := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCoolBand_GetMinWidth(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCoolBand(Obj).MinWidth;
+  try
+    Result := TCoolBand(Obj).MinWidth;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCoolBand_SetMinWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCoolBand(Obj).MinWidth := Value;
+  try
+    TCoolBand(Obj).MinWidth := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCoolBand_GetMinHeight(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCoolBand(Obj).MinHeight;
+  try
+    Result := TCoolBand(Obj).MinHeight;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCoolBand_SetMinHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCoolBand(Obj).MinHeight := Value;
+  try
+    TCoolBand(Obj).MinHeight := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCoolBand_GetBreak(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCoolBand(Obj).Break;
+  try
+    Result := TCoolBand(Obj).Break;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCoolBand_SetBreak(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCoolBand(Obj).Break := Value;
+  try
+    TCoolBand(Obj).Break := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCoolBand_GetVisible(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCoolBand(Obj).Visible;
+  try
+    Result := TCoolBand(Obj).Visible;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCoolBand_SetVisible(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCoolBand(Obj).Visible := Value;
+  try
+    TCoolBand(Obj).Visible := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCoolBand_GetFixedSize(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCoolBand(Obj).FixedSize;
+  try
+    Result := TCoolBand(Obj).FixedSize;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCoolBand_SetFixedSize(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCoolBand(Obj).FixedSize := Value;
+  try
+    TCoolBand(Obj).FixedSize := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCoolBand_GetFixedBackground(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCoolBand(Obj).FixedBackground;
+  try
+    Result := TCoolBand(Obj).FixedBackground;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCoolBand_SetFixedBackground(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCoolBand(Obj).FixedBackground := Value;
+  try
+    TCoolBand(Obj).FixedBackground := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCoolBand_GetHorizontalOnly(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCoolBand(Obj).HorizontalOnly;
+  try
+    Result := TCoolBand(Obj).HorizontalOnly;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCoolBand_SetHorizontalOnly(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCoolBand(Obj).HorizontalOnly := Value;
+  try
+    TCoolBand(Obj).HorizontalOnly := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCoolBand_GetColor(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Integer(TCoolBand(Obj).Color);
+  try
+    Result := Integer(TCoolBand(Obj).Color);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCoolBand_SetColor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCoolBand(Obj).Color := TColor(Value);
+  try
+    TCoolBand(Obj).Color := TColor(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TCoolBand_GetParentColor(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCoolBand(Obj).ParentColor;
+  try
+    Result := TCoolBand(Obj).ParentColor;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCoolBand_SetParentColor(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCoolBand(Obj).ParentColor := Value;
+  try
+    TCoolBand(Obj).ParentColor := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { TCollectionItem.Index。書き換えるとバンドが移動する。 }
 function TCoolBand_GetIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCoolBand(Obj).Index;
+  try
+    Result := TCoolBand(Obj).Index;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCoolBand_SetIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCoolBand(Obj).Index := Value;
+  try
+    TCoolBand(Obj).Index := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { バンドに置くコントロール。設定するとそのコントロールの Parent がクールバーになり、Align は alNone になる。 }
 function TCoolBand_GetControl(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := WatchOrNil(TCoolBand(Obj).Control);
+  try
+    Result := WatchOrNil(TCoolBand(Obj).Control);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TCoolBand_SetControl(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TCoolBand(Obj).Control := TControl(Value);
+  try
+    TCoolBand(Obj).Control := TControl(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TCoolBand_GetLeft(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCoolBand(Obj).Left;
+  try
+    Result := TCoolBand(Obj).Left;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function TCoolBand_GetTop(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCoolBand(Obj).Top;
+  try
+    Result := TCoolBand(Obj).Top;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function TCoolBand_GetRight(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCoolBand(Obj).Right;
+  try
+    Result := TCoolBand(Obj).Right;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function TCoolBand_GetHeight(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCoolBand(Obj).Height;
+  try
+    Result := TCoolBand(Obj).Height;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCoolBand_AutosizeWidth(Obj: Pointer); NO_VCL_CALL;
 begin
-  TCoolBand(Obj).AutosizeWidth;
+  try
+    TCoolBand(Obj).AutosizeWidth;
+  except
+    ReportException;
+  end;
 end;
 
 { TStrings(docs/adr/0027)。ハンドルはコントロールの Items・Lines・Tabs 等(TCustomListBox_GetItems 等)から得る。
@@ -4726,185 +7991,340 @@ end;
 
 function TStrings_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TStrings(Obj).Count;
+  try
+    Result := TStrings(Obj).Count;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function TStrings_GetStrings(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
 begin
-  Result := ReturnStr(TStrings(Obj).Strings[Index]);
+  try
+    Result := ReturnStr(TStrings(Obj).Strings[Index]);
+  except
+    Result := '';
+    ReportException;
+  end;
 end;
 
 procedure TStrings_SetStrings(Obj: Pointer; Index: Integer; Value: PChar); NO_VCL_CALL;
 begin
-  TStrings(Obj).Strings[Index] := Value;
+  try
+    TStrings(Obj).Strings[Index] := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { Objects[Index] は利用者データ(C 側のポインタ)として扱う。LCL は解釈しない(TStringList は所有しない)。 }
 function TStrings_GetObjects(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TStrings(Obj).Objects[Index]);
+  try
+    Result := Pointer(TStrings(Obj).Objects[Index]);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TStrings_SetObjects(Obj: Pointer; Index: Integer; Value: Pointer); NO_VCL_CALL;
 begin
-  TStrings(Obj).Objects[Index] := TObject(Value);
+  try
+    TStrings(Obj).Objects[Index] := TObject(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TStrings_Add(Obj: Pointer; S: PChar): Integer; NO_VCL_CALL;
 begin
-  Result := TStrings(Obj).Add(S);
+  try
+    Result := TStrings(Obj).Add(S);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function TStrings_AddObject(Obj: Pointer; S: PChar; AObject: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TStrings(Obj).AddObject(S, TObject(AObject));
+  try
+    Result := TStrings(Obj).AddObject(S, TObject(AObject));
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TStrings_Insert(Obj: Pointer; Index: Integer; S: PChar); NO_VCL_CALL;
 begin
-  TStrings(Obj).Insert(Index, S);
+  try
+    TStrings(Obj).Insert(Index, S);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TStrings_Delete(Obj: Pointer; Index: Integer); NO_VCL_CALL;
 begin
-  TStrings(Obj).Delete(Index);
+  try
+    TStrings(Obj).Delete(Index);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TStrings_Clear(Obj: Pointer); NO_VCL_CALL;
 begin
-  TStrings(Obj).Clear;
+  try
+    TStrings(Obj).Clear;
+  except
+    ReportException;
+  end;
 end;
 
 function TStrings_IndexOf(Obj: Pointer; S: PChar): Integer; NO_VCL_CALL;
 begin
-  Result := TStrings(Obj).IndexOf(S);
+  try
+    Result := TStrings(Obj).IndexOf(S);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TStrings_Exchange(Obj: Pointer; Index1, Index2: Integer); NO_VCL_CALL;
 begin
-  TStrings(Obj).Exchange(Index1, Index2);
+  try
+    TStrings(Obj).Exchange(Index1, Index2);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TStrings_Move(Obj: Pointer; CurIndex, NewIndex: Integer); NO_VCL_CALL;
 begin
-  TStrings(Obj).Move(CurIndex, NewIndex);
+  try
+    TStrings(Obj).Move(CurIndex, NewIndex);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TStrings_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
 begin
-  TStrings(Obj).BeginUpdate;
+  try
+    TStrings(Obj).BeginUpdate;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TStrings_EndUpdate(Obj: Pointer); NO_VCL_CALL;
 begin
-  TStrings(Obj).EndUpdate;
+  try
+    TStrings(Obj).EndUpdate;
+  except
+    ReportException;
+  end;
 end;
 
 { すべての行を改行でつないだ文字列。設定すると改行で分けて置き換える。 }
 function TStrings_GetText(Obj: Pointer): PChar; NO_VCL_CALL;
 begin
-  Result := ReturnStr(TStrings(Obj).Text);
+  try
+    Result := ReturnStr(TStrings(Obj).Text);
+  except
+    Result := '';
+    ReportException;
+  end;
 end;
 
 procedure TStrings_SetText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
 begin
-  TStrings(Obj).Text := Value;
+  try
+    TStrings(Obj).Text := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TStrings_GetCommaText(Obj: Pointer): PChar; NO_VCL_CALL;
 begin
-  Result := ReturnStr(TStrings(Obj).CommaText);
+  try
+    Result := ReturnStr(TStrings(Obj).CommaText);
+  except
+    Result := '';
+    ReportException;
+  end;
 end;
 
 procedure TStrings_SetCommaText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
 begin
-  TStrings(Obj).CommaText := Value;
+  try
+    TStrings(Obj).CommaText := Value;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TStrings_Assign(Obj: Pointer; Source: Pointer); NO_VCL_CALL;
 begin
-  TStrings(Obj).Assign(TStrings(Source));
+  try
+    TStrings(Obj).Assign(TStrings(Source));
+  except
+    ReportException;
+  end;
 end;
 
 procedure TStrings_AddStrings(Obj: Pointer; Source: Pointer); NO_VCL_CALL;
 begin
-  TStrings(Obj).AddStrings(TStrings(Source));
+  try
+    TStrings(Obj).AddStrings(TStrings(Source));
+  except
+    ReportException;
+  end;
 end;
 
 { 名前=値 の形の行(Names・Values・ValueFromIndex・IndexOfName)。区切りは LCL の既定の '='。 }
 
 function TStrings_GetNames(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
 begin
-  Result := ReturnStr(TStrings(Obj).Names[Index]);
+  try
+    Result := ReturnStr(TStrings(Obj).Names[Index]);
+  except
+    Result := '';
+    ReportException;
+  end;
 end;
 
 function TStrings_GetValues(Obj: Pointer; Name: PChar): PChar; NO_VCL_CALL;
 begin
-  Result := ReturnStr(TStrings(Obj).Values[Name]);
+  try
+    Result := ReturnStr(TStrings(Obj).Values[Name]);
+  except
+    Result := '';
+    ReportException;
+  end;
 end;
 
 procedure TStrings_SetValues(Obj: Pointer; Name: PChar; Value: PChar); NO_VCL_CALL;
 begin
-  TStrings(Obj).Values[Name] := Value;
+  try
+    TStrings(Obj).Values[Name] := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TStrings_GetValueFromIndex(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
 begin
-  Result := ReturnStr(TStrings(Obj).ValueFromIndex[Index]);
+  try
+    Result := ReturnStr(TStrings(Obj).ValueFromIndex[Index]);
+  except
+    Result := '';
+    ReportException;
+  end;
 end;
 
 procedure TStrings_SetValueFromIndex(Obj: Pointer; Index: Integer; Value: PChar); NO_VCL_CALL;
 begin
-  TStrings(Obj).ValueFromIndex[Index] := Value;
+  try
+    TStrings(Obj).ValueFromIndex[Index] := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TStrings_IndexOfName(Obj: Pointer; Name: PChar): Integer; NO_VCL_CALL;
 begin
-  Result := TStrings(Obj).IndexOfName(Name);
+  try
+    Result := TStrings(Obj).IndexOfName(Name);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 { 任意の区切り文字の文字列(Delimiter・StrictDelimiter・DelimitedText)。 }
 
 function TStrings_GetDelimiter(Obj: Pointer): AnsiChar; NO_VCL_CALL;
 begin
-  Result := TStrings(Obj).Delimiter;
+  try
+    Result := TStrings(Obj).Delimiter;
+  except
+    Result := #0;
+    ReportException;
+  end;
 end;
 
 procedure TStrings_SetDelimiter(Obj: Pointer; Value: AnsiChar); NO_VCL_CALL;
 begin
-  TStrings(Obj).Delimiter := Value;
+  try
+    TStrings(Obj).Delimiter := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TStrings_GetStrictDelimiter(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TStrings(Obj).StrictDelimiter;
+  try
+    Result := TStrings(Obj).StrictDelimiter;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TStrings_SetStrictDelimiter(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TStrings(Obj).StrictDelimiter := Value;
+  try
+    TStrings(Obj).StrictDelimiter := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TStrings_GetDelimitedText(Obj: Pointer): PChar; NO_VCL_CALL;
 begin
-  Result := ReturnStr(TStrings(Obj).DelimitedText);
+  try
+    Result := ReturnStr(TStrings(Obj).DelimitedText);
+  except
+    Result := '';
+    ReportException;
+  end;
 end;
 
 procedure TStrings_SetDelimitedText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
 begin
-  TStrings(Obj).DelimitedText := Value;
+  try
+    TStrings(Obj).DelimitedText := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { ファイル名・内容とも UTF-8 のまま扱う(LCL は文字列を UTF-8 として扱う)。 }
 
 procedure TStrings_LoadFromFile(Obj: Pointer; FileName: PChar); NO_VCL_CALL;
 begin
-  TStrings(Obj).LoadFromFile(FileName);
+  try
+    TStrings(Obj).LoadFromFile(FileName);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TStrings_SaveToFile(Obj: Pointer; FileName: PChar); NO_VCL_CALL;
 begin
-  TStrings(Obj).SaveToFile(FileName);
+  try
+    TStrings(Obj).SaveToFile(FileName);
+  except
+    ReportException;
+  end;
 end;
 
 { TStringList(docs/adr/0028)。利用者が生成し、TStringList_Destroy で破棄する(TComponent ではなく、Owner も破棄通知も無い)。
@@ -4912,17 +8332,30 @@ end;
 
 function TStringList_Create: Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TStringList.Create);
+  try
+    Result := Pointer(TStringList.Create);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TStringList_Destroy(Obj: Pointer); NO_VCL_CALL;
 begin
-  TStringList(Obj).Free;
+  try
+    TStringList(Obj).Free;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TStringList_Sort(Obj: Pointer); NO_VCL_CALL;
 begin
-  TStringList(Obj).Sort;
+  try
+    TStringList(Obj).Sort;
+  except
+    ReportException;
+  end;
 end;
 
 { ソートされた一覧から S を二分探索する。見つからなければ、S を挿入すべき位置を Index に入れて False を返す。
@@ -4931,39 +8364,71 @@ function TStringList_Find(Obj: Pointer; S: PChar; Index: PInteger): LongBool; NO
 var
   I: Integer;
 begin
-  Result := TStringList(Obj).Find(S, I);
-  if Index <> nil then
-    Index^ := I;
+  try
+    Result := TStringList(Obj).Find(S, I);
+    if Index <> nil then
+      Index^ := I;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 function TStringList_GetSorted(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TStringList(Obj).Sorted;
+  try
+    Result := TStringList(Obj).Sorted;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TStringList_SetSorted(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TStringList(Obj).Sorted := Value;
+  try
+    TStringList(Obj).Sorted := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TStringList_GetDuplicates(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TStringList(Obj).Duplicates);
+  try
+    Result := Ord(TStringList(Obj).Duplicates);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TStringList_SetDuplicates(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TStringList(Obj).Duplicates := TDuplicates(Value);
+  try
+    TStringList(Obj).Duplicates := TDuplicates(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TStringList_GetCaseSensitive(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TStringList(Obj).CaseSensitive;
+  try
+    Result := TStringList(Obj).CaseSensitive;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TStringList_SetCaseSensitive(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TStringList(Obj).CaseSensitive := Value;
+  try
+    TStringList(Obj).CaseSensitive := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { ---------------- グラフィックス(docs/adr/0029) ----------------
@@ -4974,138 +8439,250 @@ end;
 
 procedure TGraphic_Destroy(Obj: Pointer); NO_VCL_CALL;
 begin
-  TGraphic(Obj).Free;
+  try
+    TGraphic(Obj).Free;
+  except
+    ReportException;
+  end;
 end;
 
 function TGraphic_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TGraphic(Obj).Width;
+  try
+    Result := TGraphic(Obj).Width;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TGraphic_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TGraphic(Obj).Width := Value;
+  try
+    TGraphic(Obj).Width := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TGraphic_GetHeight(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TGraphic(Obj).Height;
+  try
+    Result := TGraphic(Obj).Height;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TGraphic_SetHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TGraphic(Obj).Height := Value;
+  try
+    TGraphic(Obj).Height := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TGraphic_GetEmpty(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TGraphic(Obj).Empty;
+  try
+    Result := TGraphic(Obj).Empty;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 function TGraphic_GetTransparent(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TGraphic(Obj).Transparent;
+  try
+    Result := TGraphic(Obj).Transparent;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TGraphic_SetTransparent(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TGraphic(Obj).Transparent := Value;
+  try
+    TGraphic(Obj).Transparent := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { ファイル名は UTF-8。形式はクラスで決まる(TBitmap に PNG のファイルを読むと例外になる)。
   拡張子から形式を選ぶのは TPicture_LoadFromFile のほう。 }
 procedure TGraphic_LoadFromFile(Obj: Pointer; FileName: PChar); NO_VCL_CALL;
 begin
-  TGraphic(Obj).LoadFromFile(FileName);
+  try
+    TGraphic(Obj).LoadFromFile(FileName);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TGraphic_SaveToFile(Obj: Pointer; FileName: PChar); NO_VCL_CALL;
 begin
-  TGraphic(Obj).SaveToFile(FileName);
+  try
+    TGraphic(Obj).SaveToFile(FileName);
+  except
+    ReportException;
+  end;
 end;
 
 { Source はグラフィックか TPicture のハンドル。nil なら Clear と同じ。 }
 procedure TGraphic_Assign(Obj: Pointer; Source: Pointer); NO_VCL_CALL;
 begin
-  if Source = nil then
-    TGraphic(Obj).Clear
-  else
-    TGraphic(Obj).Assign(TPersistent(Source));
+  try
+    if Source = nil then
+      TGraphic(Obj).Clear
+    else
+      TGraphic(Obj).Assign(TPersistent(Source));
+  except
+    ReportException;
+  end;
 end;
 
 procedure TGraphic_Clear(Obj: Pointer); NO_VCL_CALL;
 begin
-  TGraphic(Obj).Clear;
+  try
+    TGraphic(Obj).Clear;
+  except
+    ReportException;
+  end;
 end;
 
 { TRasterImage の public。Canvas はグラフィックが所有し、初めて参照したときに作られる。 }
 function TRasterImage_GetCanvas(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TRasterImage(Obj).Canvas);
+  try
+    Result := Pointer(TRasterImage(Obj).Canvas);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { TPixelFormat の序数(pfDevice=0, pf1bit, pf4bit, pf8bit, pf15bit, pf16bit, pf24bit, pf32bit, pfCustom)。 }
 function TRasterImage_GetPixelFormat(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TRasterImage(Obj).PixelFormat);
+  try
+    Result := Ord(TRasterImage(Obj).PixelFormat);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TRasterImage_SetPixelFormat(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TRasterImage(Obj).PixelFormat := TPixelFormat(Value);
+  try
+    TRasterImage(Obj).PixelFormat := TPixelFormat(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TRasterImage_GetTransparentColor(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Integer(TRasterImage(Obj).TransparentColor);
+  try
+    Result := Integer(TRasterImage(Obj).TransparentColor);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TRasterImage_SetTransparentColor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TRasterImage(Obj).TransparentColor := TColor(Value);
+  try
+    TRasterImage(Obj).TransparentColor := TColor(Value);
+  except
+    ReportException;
+  end;
 end;
 
 { TTransparentMode の序数(tmAuto=0, tmFixed)。 }
 function TRasterImage_GetTransparentMode(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TRasterImage(Obj).TransparentMode);
+  try
+    Result := Ord(TRasterImage(Obj).TransparentMode);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TRasterImage_SetTransparentMode(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TRasterImage(Obj).TransparentMode := TTransparentMode(Value);
+  try
+    TRasterImage(Obj).TransparentMode := TTransparentMode(Value);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomBitmap_SetSize(Obj: Pointer; AWidth, AHeight: Integer); NO_VCL_CALL;
 begin
-  TCustomBitmap(Obj).SetSize(AWidth, AHeight);
+  try
+    TCustomBitmap(Obj).SetSize(AWidth, AHeight);
+  except
+    ReportException;
+  end;
 end;
 
 { TBitmap は Win32 では Windows ユニットの構造体(BITMAP)に隠されるため、Graphics.TBitmap と書く。 }
 function TBitmap_Create: Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(Graphics.TBitmap.Create);
+  try
+    Result := Pointer(Graphics.TBitmap.Create);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TPortableNetworkGraphic_Create: Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TPortableNetworkGraphic.Create);
+  try
+    Result := Pointer(TPortableNetworkGraphic.Create);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TJPEGImage_Create: Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TJPEGImage.Create);
+  try
+    Result := Pointer(TJPEGImage.Create);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { 保存するときの品質(1〜100。既定は 75)。 }
 function TJPEGImage_GetCompressionQuality(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TJPEGImage(Obj).CompressionQuality;
+  try
+    Result := TJPEGImage(Obj).CompressionQuality;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TJPEGImage_SetCompressionQuality(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TJPEGImage(Obj).CompressionQuality := TJPEGQualityRange(Value);
+  try
+    TJPEGImage(Obj).CompressionQuality := TJPEGQualityRange(Value);
+  except
+    ReportException;
+  end;
 end;
 
 { TPicture。TCustomImage.Picture は画像コントロールが所有する(生成時に作られ、差し替わらない)。
@@ -5113,168 +8690,309 @@ end;
 
 function TPicture_Create: Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TPicture.Create);
+  try
+    Result := Pointer(TPicture.Create);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TPicture_Destroy(Obj: Pointer); NO_VCL_CALL;
 begin
-  TPicture(Obj).Free;
+  try
+    TPicture(Obj).Free;
+  except
+    ReportException;
+  end;
 end;
 
 { 空なら nil。 }
 function TPicture_GetGraphic(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TPicture(Obj).Graphic);
+  try
+    Result := Pointer(TPicture(Obj).Graphic);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { Value と同じクラスのグラフィックを作って内容を写す(Value はそのまま呼び出し側の持ち物)。nil なら空にする。 }
 procedure TPicture_SetGraphic(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TPicture(Obj).Graphic := TGraphic(Value);
+  try
+    TPicture(Obj).Graphic := TGraphic(Value);
+  except
+    ReportException;
+  end;
 end;
 
 { 中身がそのクラスでなければ、そのクラスに変換する(中身のオブジェクトが作り直される。空なら空のものを作る)。 }
 function TPicture_GetBitmap(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TPicture(Obj).Bitmap);
+  try
+    Result := Pointer(TPicture(Obj).Bitmap);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TPicture_GetPNG(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TPicture(Obj).PNG);
+  try
+    Result := Pointer(TPicture(Obj).PNG);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TPicture_GetJpeg(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TPicture(Obj).Jpeg);
+  try
+    Result := Pointer(TPicture(Obj).Jpeg);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TPicture_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TPicture(Obj).Width;
+  try
+    Result := TPicture(Obj).Width;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function TPicture_GetHeight(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TPicture(Obj).Height;
+  try
+    Result := TPicture(Obj).Height;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 { 拡張子から形式(クラス)を選んで読み込む。ファイル名は UTF-8。 }
 procedure TPicture_LoadFromFile(Obj: Pointer; FileName: PChar); NO_VCL_CALL;
 begin
-  TPicture(Obj).LoadFromFile(FileName);
+  try
+    TPicture(Obj).LoadFromFile(FileName);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TPicture_SaveToFile(Obj: Pointer; FileName: PChar); NO_VCL_CALL;
 begin
-  TPicture(Obj).SaveToFile(FileName);
+  try
+    TPicture(Obj).SaveToFile(FileName);
+  except
+    ReportException;
+  end;
 end;
 
 { Source は TPicture かグラフィックのハンドル。nil なら空にする。 }
 procedure TPicture_Assign(Obj: Pointer; Source: Pointer); NO_VCL_CALL;
 begin
-  TPicture(Obj).Assign(TPersistent(Source));
+  try
+    TPicture(Obj).Assign(TPersistent(Source));
+  except
+    ReportException;
+  end;
 end;
 
 procedure TPicture_Clear(Obj: Pointer); NO_VCL_CALL;
 begin
-  TPicture(Obj).Clear;
+  try
+    TPicture(Obj).Clear;
+  except
+    ReportException;
+  end;
 end;
 
 { TImage(TCustomImage)。 }
 
 function TImage_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TImage.Create(TComponent(Owner)));
+  try
+    Result := Watch(TImage.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCustomImage_GetPicture(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomImage(Obj).Picture);
+  try
+    Result := Pointer(TCustomImage(Obj).Picture);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 { Value(TPicture)の内容を写す。 }
 procedure TCustomImage_SetPicture(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TCustomImage(Obj).Picture := TPicture(Value);
+  try
+    TCustomImage(Obj).Picture := TPicture(Value);
+  except
+    ReportException;
+  end;
 end;
 
 { Picture が空なら、コントロールの大きさの TBitmap を作ってからその Canvas を返す。
   中身がビットマップの類でない(アイコン等)なら、コントロール自身の Canvas を返す。 }
 function TCustomImage_GetCanvas(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomImage(Obj).Canvas);
+  try
+    Result := Pointer(TCustomImage(Obj).Canvas);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCustomImage_GetHasGraphic(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomImage(Obj).HasGraphic;
+  try
+    Result := TCustomImage(Obj).HasGraphic;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 function TCustomImage_GetCenter(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomImage(Obj).Center;
+  try
+    Result := TCustomImage(Obj).Center;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomImage_SetCenter(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomImage(Obj).Center := Value;
+  try
+    TCustomImage(Obj).Center := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomImage_GetStretch(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomImage(Obj).Stretch;
+  try
+    Result := TCustomImage(Obj).Stretch;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomImage_SetStretch(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomImage(Obj).Stretch := Value;
+  try
+    TCustomImage(Obj).Stretch := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomImage_GetStretchOutEnabled(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomImage(Obj).StretchOutEnabled;
+  try
+    Result := TCustomImage(Obj).StretchOutEnabled;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomImage_SetStretchOutEnabled(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomImage(Obj).StretchOutEnabled := Value;
+  try
+    TCustomImage(Obj).StretchOutEnabled := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomImage_GetStretchInEnabled(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomImage(Obj).StretchInEnabled;
+  try
+    Result := TCustomImage(Obj).StretchInEnabled;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomImage_SetStretchInEnabled(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomImage(Obj).StretchInEnabled := Value;
+  try
+    TCustomImage(Obj).StretchInEnabled := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomImage_GetProportional(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomImage(Obj).Proportional;
+  try
+    Result := TCustomImage(Obj).Proportional;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomImage_SetProportional(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomImage(Obj).Proportional := Value;
+  try
+    TCustomImage(Obj).Proportional := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomImage_GetTransparent(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomImage(Obj).Transparent;
+  try
+    Result := TCustomImage(Obj).Transparent;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomImage_SetTransparent(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomImage(Obj).Transparent := Value;
+  try
+    TCustomImage(Obj).Transparent := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { Picture(またはその中身)が変わったときに呼ばれる。 }
 procedure TCustomImage_SetOnPictureChanged(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomImage(Obj).OnPictureChanged := @BridgeFor(TCustomImage(Obj), MethodData(TCustomImage(Obj).OnPictureChanged), Cb, Data).DoClick;
+  try
+    TCustomImage(Obj).OnPictureChanged := @BridgeFor(TCustomImage(Obj), MethodData(TCustomImage(Obj).OnPictureChanged), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 { TCustomBitBtn・TCustomSpeedButton の Glyph。ボタンが所有する TBitmap(差し替わらない)を返す。
@@ -5284,102 +9002,192 @@ end;
 
 function TCustomBitBtn_GetGlyph(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomBitBtn(Obj).Glyph);
+  try
+    Result := Pointer(TCustomBitBtn(Obj).Glyph);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TCustomBitBtn_SetGlyph(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TCustomBitBtn(Obj).Glyph := Graphics.TBitmap(Value);
+  try
+    TCustomBitBtn(Obj).Glyph := Graphics.TBitmap(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomBitBtn_GetNumGlyphs(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomBitBtn(Obj).NumGlyphs;
+  try
+    Result := TCustomBitBtn(Obj).NumGlyphs;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomBitBtn_SetNumGlyphs(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomBitBtn(Obj).NumGlyphs := Value;
+  try
+    TCustomBitBtn(Obj).NumGlyphs := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomBitBtn_GetLayout(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TCustomBitBtn(Obj).Layout);
+  try
+    Result := Ord(TCustomBitBtn(Obj).Layout);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomBitBtn_SetLayout(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomBitBtn(Obj).Layout := TButtonLayout(Value);
+  try
+    TCustomBitBtn(Obj).Layout := TButtonLayout(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomBitBtn_GetMargin(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomBitBtn(Obj).Margin;
+  try
+    Result := TCustomBitBtn(Obj).Margin;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomBitBtn_SetMargin(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomBitBtn(Obj).Margin := Value;
+  try
+    TCustomBitBtn(Obj).Margin := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomBitBtn_GetSpacing(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomBitBtn(Obj).Spacing;
+  try
+    Result := TCustomBitBtn(Obj).Spacing;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomBitBtn_SetSpacing(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomBitBtn(Obj).Spacing := Value;
+  try
+    TCustomBitBtn(Obj).Spacing := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomSpeedButton_GetGlyph(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomSpeedButton(Obj).Glyph);
+  try
+    Result := Pointer(TCustomSpeedButton(Obj).Glyph);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TCustomSpeedButton_SetGlyph(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TCustomSpeedButton(Obj).Glyph := Graphics.TBitmap(Value);
+  try
+    TCustomSpeedButton(Obj).Glyph := Graphics.TBitmap(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomSpeedButton_GetNumGlyphs(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomSpeedButton(Obj).NumGlyphs;
+  try
+    Result := TCustomSpeedButton(Obj).NumGlyphs;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomSpeedButton_SetNumGlyphs(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomSpeedButton(Obj).NumGlyphs := Value;
+  try
+    TCustomSpeedButton(Obj).NumGlyphs := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomSpeedButton_GetLayout(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TCustomSpeedButton(Obj).Layout);
+  try
+    Result := Ord(TCustomSpeedButton(Obj).Layout);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomSpeedButton_SetLayout(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomSpeedButton(Obj).Layout := TButtonLayout(Value);
+  try
+    TCustomSpeedButton(Obj).Layout := TButtonLayout(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomSpeedButton_GetMargin(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomSpeedButton(Obj).Margin;
+  try
+    Result := TCustomSpeedButton(Obj).Margin;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomSpeedButton_SetMargin(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomSpeedButton(Obj).Margin := Value;
+  try
+    TCustomSpeedButton(Obj).Margin := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomSpeedButton_GetSpacing(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomSpeedButton(Obj).Spacing;
+  try
+    Result := TCustomSpeedButton(Obj).Spacing;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomSpeedButton_SetSpacing(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomSpeedButton(Obj).Spacing := Value;
+  try
+    TCustomSpeedButton(Obj).Spacing := Value;
+  except
+    ReportException;
+  end;
 end;
 
 { ---------------- TImageList(docs/adr/0030) ----------------
@@ -5390,134 +9198,244 @@ end;
 
 function TImageList_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Watch(TImageList.Create(TComponent(Owner)));
+  try
+    Result := Watch(TImageList.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 function TCustomImageList_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomImageList(Obj).Width;
+  try
+    Result := TCustomImageList(Obj).Width;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomImageList_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomImageList(Obj).Width := Value;
+  try
+    TCustomImageList(Obj).Width := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomImageList_GetHeight(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomImageList(Obj).Height;
+  try
+    Result := TCustomImageList(Obj).Height;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomImageList_SetHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomImageList(Obj).Height := Value;
+  try
+    TCustomImageList(Obj).Height := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomImageList_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomImageList(Obj).Count;
+  try
+    Result := TCustomImageList(Obj).Count;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 function TCustomImageList_GetMasked(Obj: Pointer): LongBool; NO_VCL_CALL;
 begin
-  Result := TCustomImageList(Obj).Masked;
+  try
+    Result := TCustomImageList(Obj).Masked;
+  except
+    Result := False;
+    ReportException;
+  end;
 end;
 
 procedure TCustomImageList_SetMasked(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
 begin
-  TCustomImageList(Obj).Masked := Value;
+  try
+    TCustomImageList(Obj).Masked := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomImageList_GetBkColor(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Integer(TCustomImageList(Obj).BkColor);
+  try
+    Result := Integer(TCustomImageList(Obj).BkColor);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomImageList_SetBkColor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomImageList(Obj).BkColor := TColor(Value);
+  try
+    TCustomImageList(Obj).BkColor := TColor(Value);
+  except
+    ReportException;
+  end;
 end;
 
 { TDrawingStyle の序数(dsFocus=0, dsSelected, dsNormal, dsTransparent)。 }
 function TCustomImageList_GetDrawingStyle(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := Ord(TCustomImageList(Obj).DrawingStyle);
+  try
+    Result := Ord(TCustomImageList(Obj).DrawingStyle);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomImageList_SetDrawingStyle(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomImageList(Obj).DrawingStyle := TDrawingStyle(Value);
+  try
+    TCustomImageList(Obj).DrawingStyle := TDrawingStyle(Value);
+  except
+    ReportException;
+  end;
 end;
 
 { Image・Mask は TCustomBitmap の派生(TBitmap・TPortableNetworkGraphic・TJPEGImage)のハンドル。Mask は nil でよい。
   加えた最初の画像の位置を返す。 }
 function TCustomImageList_Add(Obj: Pointer; Image, Mask: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomImageList(Obj).Add(TCustomBitmap(Image), TCustomBitmap(Mask));
+  try
+    Result := TCustomImageList(Obj).Add(TCustomBitmap(Image), TCustomBitmap(Mask));
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 { Image を横 AHorizontalCount・縦 AVerticalCount に分けて、それぞれを画像として加える。加えた最初の画像の位置を返す。 }
 function TCustomImageList_AddSliced(Obj: Pointer; Image: Pointer; AHorizontalCount, AVerticalCount: Integer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomImageList(Obj).AddSliced(TCustomBitmap(Image), AHorizontalCount, AVerticalCount);
+  try
+    Result := TCustomImageList(Obj).AddSliced(TCustomBitmap(Image), AHorizontalCount, AVerticalCount);
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 { MaskColor の画素を透明として加える。Image は TBitmap のハンドル。 }
 function TCustomImageList_AddMasked(Obj: Pointer; Image: Pointer; MaskColor: Integer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomImageList(Obj).AddMasked(Graphics.TBitmap(Image), TColor(MaskColor));
+  try
+    Result := TCustomImageList(Obj).AddMasked(Graphics.TBitmap(Image), TColor(MaskColor));
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomImageList_Insert(Obj: Pointer; Index: Integer; Image, Mask: Pointer); NO_VCL_CALL;
 begin
-  TCustomImageList(Obj).Insert(Index, TCustomBitmap(Image), TCustomBitmap(Mask));
+  try
+    TCustomImageList(Obj).Insert(Index, TCustomBitmap(Image), TCustomBitmap(Mask));
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomImageList_Replace(Obj: Pointer; Index: Integer; Image, Mask: Pointer); NO_VCL_CALL;
 begin
-  TCustomImageList(Obj).Replace(Index, TCustomBitmap(Image), TCustomBitmap(Mask));
+  try
+    TCustomImageList(Obj).Replace(Index, TCustomBitmap(Image), TCustomBitmap(Mask));
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomImageList_Delete(Obj: Pointer; Index: Integer); NO_VCL_CALL;
 begin
-  TCustomImageList(Obj).Delete(Index);
+  try
+    TCustomImageList(Obj).Delete(Index);
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomImageList_Clear(Obj: Pointer); NO_VCL_CALL;
 begin
-  TCustomImageList(Obj).Clear;
+  try
+    TCustomImageList(Obj).Clear;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomImageList_Move(Obj: Pointer; CurIndex, NewIndex: Integer); NO_VCL_CALL;
 begin
-  TCustomImageList(Obj).Move(CurIndex, NewIndex);
+  try
+    TCustomImageList(Obj).Move(CurIndex, NewIndex);
+  except
+    ReportException;
+  end;
 end;
 
 { Index 番目の画像を Image(TCustomBitmap の派生)に写す。 }
 procedure TCustomImageList_GetBitmap(Obj: Pointer; Index: Integer; Image: Pointer); NO_VCL_CALL;
 begin
-  TCustomImageList(Obj).GetBitmap(Index, TCustomBitmap(Image));
+  try
+    TCustomImageList(Obj).GetBitmap(Index, TCustomBitmap(Image));
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomImageList_Draw(Obj: Pointer; Canvas: Pointer; X, Y, Index: Integer; Enabled: LongBool); NO_VCL_CALL;
 begin
-  TCustomImageList(Obj).Draw(TCanvas(Canvas), X, Y, Index, Boolean(Enabled));
+  try
+    TCustomImageList(Obj).Draw(TCanvas(Canvas), X, Y, Index, Boolean(Enabled));
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomImageList_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
 begin
-  TCustomImageList(Obj).BeginUpdate;
+  try
+    TCustomImageList(Obj).BeginUpdate;
+  except
+    ReportException;
+  end;
 end;
 
 procedure TCustomImageList_EndUpdate(Obj: Pointer); NO_VCL_CALL;
 begin
-  TCustomImageList(Obj).EndUpdate;
+  try
+    TCustomImageList(Obj).EndUpdate;
+  except
+    ReportException;
+  end;
 end;
 
 { Clear・Delete・Move・BkColor の変更で呼ばれる(LCL の仕様で、Add・Insert 等では呼ばれない。BeginUpdate の間は EndUpdate まで遅れる)。 }
 procedure TCustomImageList_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TCustomImageList(Obj).OnChange := @BridgeFor(TCustomImageList(Obj), MethodData(TCustomImageList(Obj).OnChange), Cb, Data).DoClick;
+  try
+    TCustomImageList(Obj).OnChange := @BridgeFor(TCustomImageList(Obj), MethodData(TCustomImageList(Obj).OnChange), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
 end;
 
 { 各コントロール・項目の Images・ImageIndex・Bitmap(docs/adr/0030)。
@@ -5527,346 +9445,654 @@ end;
 
 function TCustomImage_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomImage(Obj).Images);
+  try
+    Result := Pointer(TCustomImage(Obj).Images);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TCustomImage_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TCustomImage(Obj).Images := TCustomImageList(Value);
+  try
+    TCustomImage(Obj).Images := TCustomImageList(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomImage_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomImage(Obj).ImageIndex;
+  try
+    Result := TCustomImage(Obj).ImageIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomImage_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomImage(Obj).ImageIndex := Value;
+  try
+    TCustomImage(Obj).ImageIndex := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomBitBtn_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomBitBtn(Obj).Images);
+  try
+    Result := Pointer(TCustomBitBtn(Obj).Images);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TCustomBitBtn_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TCustomBitBtn(Obj).Images := TCustomImageList(Value);
+  try
+    TCustomBitBtn(Obj).Images := TCustomImageList(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomBitBtn_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomBitBtn(Obj).ImageIndex;
+  try
+    Result := TCustomBitBtn(Obj).ImageIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomBitBtn_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomBitBtn(Obj).ImageIndex := Value;
+  try
+    TCustomBitBtn(Obj).ImageIndex := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomSpeedButton_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomSpeedButton(Obj).Images);
+  try
+    Result := Pointer(TCustomSpeedButton(Obj).Images);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TCustomSpeedButton_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TCustomSpeedButton(Obj).Images := TCustomImageList(Value);
+  try
+    TCustomSpeedButton(Obj).Images := TCustomImageList(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomSpeedButton_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomSpeedButton(Obj).ImageIndex;
+  try
+    Result := TCustomSpeedButton(Obj).ImageIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomSpeedButton_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomSpeedButton(Obj).ImageIndex := Value;
+  try
+    TCustomSpeedButton(Obj).ImageIndex := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomTabControl_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomTabControl(Obj).Images);
+  try
+    Result := Pointer(TCustomTabControl(Obj).Images);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TCustomTabControl_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TCustomTabControl(Obj).Images := TCustomImageList(Value);
+  try
+    TCustomTabControl(Obj).Images := TCustomImageList(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomPage_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCustomPage(Obj).ImageIndex;
+  try
+    Result := TCustomPage(Obj).ImageIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCustomPage_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCustomPage(Obj).ImageIndex := Value;
+  try
+    TCustomPage(Obj).ImageIndex := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomTreeView_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomTreeView(Obj).Images);
+  try
+    Result := Pointer(TCustomTreeView(Obj).Images);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TCustomTreeView_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TCustomTreeView(Obj).Images := TCustomImageList(Value);
+  try
+    TCustomTreeView(Obj).Images := TCustomImageList(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomTreeView_GetStateImages(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomTreeView(Obj).StateImages);
+  try
+    Result := Pointer(TCustomTreeView(Obj).StateImages);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TCustomTreeView_SetStateImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TCustomTreeView(Obj).StateImages := TCustomImageList(Value);
+  try
+    TCustomTreeView(Obj).StateImages := TCustomImageList(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TTreeNode_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TTreeNode(Obj).ImageIndex;
+  try
+    Result := TTreeNode(Obj).ImageIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TTreeNode_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TTreeNode(Obj).ImageIndex := Value;
+  try
+    TTreeNode(Obj).ImageIndex := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TTreeNode_GetSelectedIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TTreeNode(Obj).SelectedIndex;
+  try
+    Result := TTreeNode(Obj).SelectedIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TTreeNode_SetSelectedIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TTreeNode(Obj).SelectedIndex := Value;
+  try
+    TTreeNode(Obj).SelectedIndex := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TTreeNode_GetStateIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TTreeNode(Obj).StateIndex;
+  try
+    Result := TTreeNode(Obj).StateIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TTreeNode_SetStateIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TTreeNode(Obj).StateIndex := Value;
+  try
+    TTreeNode(Obj).StateIndex := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TTreeNode_GetOverlayIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TTreeNode(Obj).OverlayIndex;
+  try
+    Result := TTreeNode(Obj).OverlayIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TTreeNode_SetOverlayIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TTreeNode(Obj).OverlayIndex := Value;
+  try
+    TTreeNode(Obj).OverlayIndex := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TListView_GetLargeImages(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TListView(Obj).LargeImages);
+  try
+    Result := Pointer(TListView(Obj).LargeImages);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TListView_SetLargeImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TListView(Obj).LargeImages := TCustomImageList(Value);
+  try
+    TListView(Obj).LargeImages := TCustomImageList(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TListView_GetSmallImages(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TListView(Obj).SmallImages);
+  try
+    Result := Pointer(TListView(Obj).SmallImages);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TListView_SetSmallImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TListView(Obj).SmallImages := TCustomImageList(Value);
+  try
+    TListView(Obj).SmallImages := TCustomImageList(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TListView_GetStateImages(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TListView(Obj).StateImages);
+  try
+    Result := Pointer(TListView(Obj).StateImages);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TListView_SetStateImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TListView(Obj).StateImages := TCustomImageList(Value);
+  try
+    TListView(Obj).StateImages := TCustomImageList(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TListItem_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TListItem(Obj).ImageIndex;
+  try
+    Result := TListItem(Obj).ImageIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TListItem_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TListItem(Obj).ImageIndex := Value;
+  try
+    TListItem(Obj).ImageIndex := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TListItem_GetStateIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TListItem(Obj).StateIndex;
+  try
+    Result := TListItem(Obj).StateIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TListItem_SetStateIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TListItem(Obj).StateIndex := Value;
+  try
+    TListItem(Obj).StateIndex := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TListColumn_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TListColumn(Obj).ImageIndex;
+  try
+    Result := TListColumn(Obj).ImageIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TListColumn_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TListColumn(Obj).ImageIndex := Value;
+  try
+    TListColumn(Obj).ImageIndex := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TToolBar_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TToolBar(Obj).Images);
+  try
+    Result := Pointer(TToolBar(Obj).Images);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TToolBar_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TToolBar(Obj).Images := TCustomImageList(Value);
+  try
+    TToolBar(Obj).Images := TCustomImageList(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TToolBar_GetHotImages(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TToolBar(Obj).HotImages);
+  try
+    Result := Pointer(TToolBar(Obj).HotImages);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TToolBar_SetHotImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TToolBar(Obj).HotImages := TCustomImageList(Value);
+  try
+    TToolBar(Obj).HotImages := TCustomImageList(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TToolBar_GetDisabledImages(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TToolBar(Obj).DisabledImages);
+  try
+    Result := Pointer(TToolBar(Obj).DisabledImages);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TToolBar_SetDisabledImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TToolBar(Obj).DisabledImages := TCustomImageList(Value);
+  try
+    TToolBar(Obj).DisabledImages := TCustomImageList(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TToolButton_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TToolButton(Obj).ImageIndex;
+  try
+    Result := TToolButton(Obj).ImageIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TToolButton_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TToolButton(Obj).ImageIndex := Value;
+  try
+    TToolButton(Obj).ImageIndex := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomHeaderControl_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomHeaderControl(Obj).Images);
+  try
+    Result := Pointer(TCustomHeaderControl(Obj).Images);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TCustomHeaderControl_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TCustomHeaderControl(Obj).Images := TCustomImageList(Value);
+  try
+    TCustomHeaderControl(Obj).Images := TCustomImageList(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function THeaderSection_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := THeaderSection(Obj).ImageIndex;
+  try
+    Result := THeaderSection(Obj).ImageIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure THeaderSection_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  THeaderSection(Obj).ImageIndex := Value;
+  try
+    THeaderSection(Obj).ImageIndex := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomCoolBar_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomCoolBar(Obj).Images);
+  try
+    Result := Pointer(TCustomCoolBar(Obj).Images);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TCustomCoolBar_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TCustomCoolBar(Obj).Images := TCustomImageList(Value);
+  try
+    TCustomCoolBar(Obj).Images := TCustomImageList(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TCustomCoolBar_GetBitmap(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCustomCoolBar(Obj).Bitmap);
+  try
+    Result := Pointer(TCustomCoolBar(Obj).Bitmap);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TCustomCoolBar_SetBitmap(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TCustomCoolBar(Obj).Bitmap := Graphics.TBitmap(Value);
+  try
+    TCustomCoolBar(Obj).Bitmap := Graphics.TBitmap(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TCoolBand_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TCoolBand(Obj).ImageIndex;
+  try
+    Result := TCoolBand(Obj).ImageIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TCoolBand_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TCoolBand(Obj).ImageIndex := Value;
+  try
+    TCoolBand(Obj).ImageIndex := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TCoolBand_GetBitmap(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TCoolBand(Obj).Bitmap);
+  try
+    Result := Pointer(TCoolBand(Obj).Bitmap);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TCoolBand_SetBitmap(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TCoolBand(Obj).Bitmap := Graphics.TBitmap(Value);
+  try
+    TCoolBand(Obj).Bitmap := Graphics.TBitmap(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TMenu_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TMenu(Obj).Images);
+  try
+    Result := Pointer(TMenu(Obj).Images);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TMenu_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TMenu(Obj).Images := TCustomImageList(Value);
+  try
+    TMenu(Obj).Images := TCustomImageList(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TMenuItem_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
 begin
-  Result := TMenuItem(Obj).ImageIndex;
+  try
+    Result := TMenuItem(Obj).ImageIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
 end;
 
 procedure TMenuItem_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
 begin
-  TMenuItem(Obj).ImageIndex := Value;
+  try
+    TMenuItem(Obj).ImageIndex := Value;
+  except
+    ReportException;
+  end;
 end;
 
 function TMenuItem_GetSubMenuImages(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TMenuItem(Obj).SubMenuImages);
+  try
+    Result := Pointer(TMenuItem(Obj).SubMenuImages);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TMenuItem_SetSubMenuImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TMenuItem(Obj).SubMenuImages := TCustomImageList(Value);
+  try
+    TMenuItem(Obj).SubMenuImages := TCustomImageList(Value);
+  except
+    ReportException;
+  end;
 end;
 
 function TMenuItem_GetBitmap(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  Result := Pointer(TMenuItem(Obj).Bitmap);
+  try
+    Result := Pointer(TMenuItem(Obj).Bitmap);
+  except
+    Result := nil;
+    ReportException;
+  end;
 end;
 
 procedure TMenuItem_SetBitmap(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
 begin
-  TMenuItem(Obj).Bitmap := Graphics.TBitmap(Value);
+  try
+    TMenuItem(Obj).Bitmap := Graphics.TBitmap(Value);
+  except
+    ReportException;
+  end;
 end;
 
 exports
   FreeNotify_SetCallback,
+  Error_SetCallback,
+  SetCallbackError,
 
   TComponent_Destroy,
   TComponent_DestroyComponents,

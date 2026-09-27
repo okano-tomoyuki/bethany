@@ -107,6 +107,28 @@ enum
  */
 void          NO_VCL_CALL no_vcl_FreeNotify_SetCallback(no_vcl_callback_t Cb, void* Data);
 
+/*
+ * エラー(docs/adr/0031): 関数の中で LCL が例外を送出すると(範囲外の添字・読み込めないファイル等)、関数はそこで中断し、
+ * 戻り値は 0・NULL・偽・空文字列になる。そのとき、同じスレッドの「直前のエラー」に例外のクラス名(EStringListError 等)と
+ * メッセージが入る。直前のエラーは、no_vcl_ で始まる関数(下の 4 つを除く)を呼ぶたびにクリアされるため、
+ * 失敗したかどうかは、その関数の直後に no_vcl_HasLastError で確かめる。
+ * 返す文字列は、同じスレッドで次に no_vcl_ で始まる関数を呼ぶまで有効。
+ * C++ ラッパー(no_vcl.hpp)では、これを no_vcl::Exception の送出に変換している。
+ */
+no_vcl_bool_t NO_VCL_CALL no_vcl_HasLastError(void);
+no_vcl_str_t  NO_VCL_CALL no_vcl_GetLastErrorClassName(void);
+no_vcl_str_t  NO_VCL_CALL no_vcl_GetLastErrorMessage(void);
+void          NO_VCL_CALL no_vcl_ClearLastError(void);
+
+/*
+ * イベントのコールバックの中で処理を失敗させたいとき(C++ ラッパーでは、ハンドラが例外を送出したとき)に呼ぶ。
+ * コールバックから戻った後に DLL 側で例外(クラスは ClassName として扱われる)として送出し直される。
+ * - メッセージループの中で起きたイベントなら、LCL が処理する(VCL と同じく、メッセージを表示して処理を続ける)。
+ * - no_vcl_ の関数の中で起きたイベント(no_vcl_TMenuItem_Click 等)なら、その関数が失敗し、直前のエラーに入る。
+ * コールバックの外で呼んだ場合は、次にイベントのコールバックから戻ったときに送出される。
+ */
+void          NO_VCL_CALL no_vcl_SetCallbackError(no_vcl_str_t ClassName, no_vcl_str_t Message);
+
 /* TComponent */
 void          NO_VCL_CALL no_vcl_TComponent_Destroy(no_vcl_obj_t Obj);
 /* 所有しているコンポーネントをすべて破棄する(Obj 自身は残る)。 */
@@ -1394,7 +1416,7 @@ void          NO_VCL_CALL no_vcl_TStringList_SetCaseSensitive(no_vcl_obj_t Obj, 
  *   TPicture は LoadFromFile・Bitmap/PNG/Jpeg の取得・Graphic の設定のたびに中身のオブジェクトを作り直すため、
  *   保存せず、使うたびに取得すること。
  * Graphic・Glyph・Picture を設定する関数は、渡したオブジェクトの内容を写す(渡したものは呼び出し側の持ち物のまま)。
- * ファイル名は UTF-8。読み込めないファイル・形式の違うファイルでは LCL が例外を送出し、呼び出し側では捕捉できない。 */
+ * ファイル名は UTF-8。読み込めないファイル・形式の違うファイルでは関数が失敗する(直前のエラー。no_vcl_HasLastError を参照)。 */
 void          NO_VCL_CALL no_vcl_TGraphic_Destroy(no_vcl_obj_t Obj);
 no_vcl_int_t  NO_VCL_CALL no_vcl_TGraphic_GetWidth(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TGraphic_SetWidth(no_vcl_obj_t Obj, no_vcl_int_t Value);

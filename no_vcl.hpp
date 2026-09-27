@@ -2,6 +2,7 @@
 #define NO_VCL_HPP
 
 #include <cstdint>
+#include <exception>
 #include <functional>
 #include <memory>
 #include <string>
@@ -28,6 +29,28 @@ const TColor clRed    = 0x0000FF;
 const TColor clGreen  = 0x008000;
 const TColor clBlue   = 0xFF0000;
 const TColor clYellow = 0x00FFFF;
+
+// LCL が送出した例外(docs/adr/0031)。VCL の Exception と同じく、catch (Exception& E) で受けて E.Message を使う。
+// - no_vcl の関数・プロパティの中で LCL が例外を送出すると(範囲外の添字・読み込めないファイル等)、その操作は中断し、
+//   この例外が送出される。ClassName() は LCL の例外のクラス名(EStringListError・EFOpenError 等)。
+// - イベントのハンドラから送出された例外(この例外に限らない)は、ハンドラを呼んだ DLL 側で送出し直される。
+//   メッセージループの中なら LCL が処理し(VCL と同じく、メッセージを表示して処理を続ける)、
+//   MenuItem1->Click() のように no_vcl の関数の中で起きたイベントなら、その関数からこの例外として送出される
+//   (ClassName() は元の例外のクラス名。std::exception の派生なら "std::exception"、それ以外は空文字列)。
+class Exception : public std::exception
+{
+public:
+    explicit Exception(const std::string& Msg) : Message(Msg), className_("Exception") {}
+    Exception(const std::string& AClassName, const std::string& Msg) : Message(Msg), className_(AClassName) {}
+
+    std::string Message;
+
+    const std::string& ClassName() const { return className_; }
+    const char* what() const noexcept override { return Message.c_str(); }
+
+private:
+    std::string className_;
+};
 
 class TObject
 {
@@ -523,16 +546,16 @@ public:
     TStringList();
     ~TStringList() override;
 
-    // true にすると並べ替え、以降の Add はソート順の位置に入る(Insert と Strings への代入は例外になる)。
+    // true にすると並べ替え、以降の Add はソート順の位置に入る(Insert と Strings への代入は Exception を送出する)。
     Property<bool>        Sorted;
-    // Sorted のときの重複の扱い(既定は dupIgnore で、重複は加えない。dupError で重複を加えると例外になる)。
+    // Sorted のときの重複の扱い(既定は dupIgnore で、重複は加えない。dupError で重複を加えると Exception を送出する)。
     Property<TDuplicates> Duplicates;
     // 並べ替え・IndexOf・Find で大文字と小文字を区別するか(既定は false)。
     Property<bool>        CaseSensitive;
 
     void Sort();
     // ソートされた一覧から S を二分探索する。見つからなければ、S を挿入すべき位置を Index に入れて false を返す。
-    // Sorted が false の一覧には使えない(LCL が例外を送出する)。
+    // Sorted が false の一覧には使えない(Exception を送出する)。
     bool Find(const std::string& S, int& Index) const;
 
 private:
@@ -673,7 +696,7 @@ private:
 //     操作のたびに所有者から取得する(TPicture は LoadFromFile 等のたびに中身を作り直すため)。Handle() は nullptr を返す
 //     (C API に渡すハンドルは Current() で得る。保存しないこと)。
 // Picture->Graphic・Glyph 等への代入は、LCL と同じく内容のコピーになる(代入したものは代入した側の持ち物のまま)。
-// 読み込めないファイル・形式の違うファイルでは LCL が例外を送出し、呼び出し側では捕捉できない。
+// 読み込めないファイル・形式の違うファイルでは Exception(EFOpenError 等)が送出される。
 class TGraphic : public TPersistent
 {
 public:
