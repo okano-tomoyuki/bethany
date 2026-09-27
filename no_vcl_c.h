@@ -317,14 +317,9 @@ no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomStaticText_GetBorderStyle(no_vcl_obj_t O
 void          NO_VCL_CALL no_vcl_TCustomStaticText_SetBorderStyle(no_vcl_obj_t Obj, no_vcl_int_t Value);
 
 /* TStatusBar。Panels(複数区画)は今回未対応で、SimpleText/SimplePanel のみ。
- *
- * 既知の問題: Application の Run() がメッセージループを始める前に(例えばフォームの生成中に
- * Parent を設定して)ウィンドウハンドルを作らせると、Win32 エラー 1406
- * (「トップレベルの子ウィンドウを作成できません」)で失敗する。標準の Lazarus 実行ファイルでは
- * 起きず、LCL が DLL としてホストされる no_vcl 特有の現象と見られる(詳細は
- * docs/component-coverage.md の TStatusBar の項、docs/adr/0015-... を参照)。
- * 回避策: Interval=1 の使い捨てタイマーの OnTimer など、Run() が始まった後に呼ばれる
- * ハンドラの中で生成する(test/main.c・test/main.cpp も参照)。 */
+ * 他のコントロールと同じく、Application の Run() より前(フォームの生成中)に生成・配置してよい
+ * (LCL の Win32 実装が DLL で失敗する問題は no_vcl_TStatusBar_Create の中で回避済み。
+ * docs/adr/0015-... を参照)。 */
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TStatusBar_Create(no_vcl_obj_t Owner);
 no_vcl_str_t  NO_VCL_CALL no_vcl_TStatusBar_GetSimpleText(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TStatusBar_SetSimpleText(no_vcl_obj_t Obj, no_vcl_str_t Value);
@@ -332,8 +327,7 @@ no_vcl_bool_t NO_VCL_CALL no_vcl_TStatusBar_GetSimplePanel(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TStatusBar_SetSimplePanel(no_vcl_obj_t Obj, no_vcl_bool_t Value);
 
 /* docs/component-coverage.md の Tier 1、2 バッチ目(範囲・数値系のコントロール)。
- * いずれも ComCtrls のネイティブコントロール。TStatusBar と異なり、Application_Run 開始前の
- * 生成でも問題が無いことを確認済み(詳細は docs/adr/0015-... を参照)。 */
+ * いずれも ComCtrls のネイティブコントロール(詳細は docs/adr/0015-... を参照)。 */
 
 /* TScrollBar */
 enum { no_vcl_sbHorizontal = 0, no_vcl_sbVertical };

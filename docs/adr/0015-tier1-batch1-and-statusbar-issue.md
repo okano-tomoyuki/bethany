@@ -23,6 +23,9 @@
 
 ## TStatusBar の既知の問題(重要)
 
+> **この問題は解消済み。** 根本原因は LCL の Win32 実装が DLL のときに行うフォールバック処理にあり、
+> no_vcl 側で回避した。下の「追記: TStatusBar の問題の根本原因と解消」を参照。以下は当初の調査記録として残す。
+
 実装後のテストで、**TStatusBar は Application->Run() がメッセージループを始める前にウィンドウハンドルを
 作らせると、Win32 エラー 1406(「トップレベルの子ウィンドウを作成できません」)で失敗する**ことが分かった。
 no_vcl の通常の使い方(`Application->CreateForm(&Form1); Application->Run();` で、フォームのコンストラクタの中で
@@ -49,7 +52,7 @@ no_vcl の通常の使い方(`Application->CreateForm(&Form1); Application->Run(
 何らかの形で未完了になっている等)は特定できていない。LCL 自体のバグか、DLL ホスティングという
 使用方法自体が LCL の想定外である可能性がある。
 
-### 決定
+### 決定(当初。2・3 は後の追記で置き換えた)
 
 1. TStatusBar の実装(Pascal・C API・C++)はそのまま採用する。問題は生成のタイミングに起因し、
    実装そのものは他のコントロールと同じ形で正しいため。
@@ -159,3 +162,63 @@ TBitBtn(buttons.pp、TCustomBitBtn → TCustomButton、既存の TButton と同�
 - インデックス付きプロパティ(TCheckGroup・TCheckListBox の Checked)は `Property<T>` ではなく、
   素朴な `Get`/`Set` メソッドの組として C++ に表す前例ができた。今後、同様のインデックス付き
   プロパティ(TListView の選択状態等)にもこの形を踏襲できる。
+
+## 追記: TStatusBar の問題の根本原因と解消
+
+当初は「DLL の読み込みに伴うスレッドの扱い」が原因ではないかと疑ったが、調べた結果スレッドとは関係なく、
+**LCL の Win32 実装が DLL(`IsLibrary`)のときだけ使うフォールバック処理が、Application.Run の開始前には
+親ウィンドウを見つけられないこと**が原因と分かった。
+
+### 原因
+
+no_vcl.dll をデバッグ情報付きでビルドし、例外発生時のバックトレースを取得したところ、失敗しているのは
+TStatusBar 自身のウィンドウではなく、LCL がステータスバーの推奨の高さを測るために一時的に作る、
+使い捨てのステータスバーであった。
+
+```
+InitializePreferredStatusBarHeight   (lcl/interfaces/win32/win32wscomctrls.pp)
+TWin32WSStatusBar.GetPreferredSize
+TStatusBar.CalculatePreferredSize ... DoAlign ... DoAllAutoSize ... TCustomForm.SetVisible
+```
+
+`InitializePreferredStatusBarHeight` は、計測用のウィンドウを `WS_CHILD` で作り、その親として次を使う。
+
+1. `TWin32WidgetSet.AppHandle`(アプリケーション全体の隠しウィンドウ)。**LCL は `IsLibrary` のとき
+   このウィンドウを作らない**(`win32object.inc` の `if not IsLibrary then CreateAppHandle`)ため、DLL では常に 0。
+2. 1 が 0 で、かつ DLL のときは代わりに `Screen.ActiveForm.Handle`。**`Screen.ActiveForm` はフォームが
+   実際にアクティブになる(メッセージループが WM_ACTIVATE を処理する)までは nil。**
+
+Run の開始前はどちらも得られないため、親 0 の `WS_CHILD` ウィンドウを作ろうとして Win32 エラー 1406
+(ERROR_TLW_WITH_WSCHILD)になり、例外が `Application.Run` の外まで伝わってプロセスが終了していた。
+計測した高さはユニット内の変数にキャッシュされるため、一度成功すればそれ以降は再計測しない。
+
+これで当初の観察結果はすべて説明がつく。
+
+| 当初の観察 | 理由 |
+|---|---|
+| 通常の Lazarus 実行ファイルでは起きない | `AppHandle` が作られているため、1 で親が決まる |
+| TProgressBar 等では起きない | この計測処理は TStatusBar の `GetPreferredSize` 専用 |
+| `HandleNeeded`・`ProcessMessages` 1 回・`OnShow` の中での生成でも失敗 | いずれもフォームがアクティブになる前で、`Screen.ActiveForm` が nil |
+| Run 開始後のタイマーで生成すると成功 | メインフォームがアクティブになり、2 で親が決まる |
+
+なお、`Parent` の設定やハンドルの生成だけでは失敗せず、フォームの表示に伴う自動サイズ調整で
+`GetPreferredSize` が呼ばれた時点で失敗する。また、同じスレッド(ホストのメインスレッド =
+`MainThreadID`)ですべての処理が行われていること、`Application.Initialize` を DLL の初期化部
+(DLL_PROCESS_ATTACH の中)で呼ぶかどうかが結果に影響しないことも確認した。
+
+当初の回避策(Run 開始後のタイマーで生成する)も `Screen.ActiveForm` に依存しているため、タイマーの発火時に
+アプリケーションのウィンドウがアクティブでなければ(利用者が別のアプリに切り替えていた等)、同じ失敗が
+起こりうる不完全なものであった。
+
+### 決定(当初の決定 2・3 を置き換える)
+
+1. **`TStatusBar_Create` の中で、最初の 1 回だけ推奨の高さの計測を済ませておく**(Win32 版のみ。
+   `{$ifdef LCLwin32}`)。使い捨ての隠しウィンドウ(`WS_POPUP`)を作り、`WidgetSet.AppHandle` に一時的に
+   設定したうえで `GetPreferredSize` を呼び、終わったらすぐに `AppHandle` を 0 に戻してウィンドウを破棄する。
+   - `AppHandle` を恒久的に設定する案は採らなかった。`AppHandle` はフォームの所有関係(オーナーウィンドウ)や
+     タスクバーの扱いにも使われ、DLL としてホストされる no_vcl の他の挙動に影響しかねないため。
+   - 計測はユニット内の変数(LCL の private な実装)を直接操作せず、公開されている `GetPreferredSize` を
+     経由して LCL 自身に行わせる。LCL の実装が変わって計測が不要になっても、この処理は無害に終わる。
+2. C API・C++ ヘッダの警告コメントと、test/main.c・test/main.cpp のタイマーによる回避策を削除した。
+   TStatusBar も他のコントロールと同じく、Run の開始前(フォームのコンストラクタの中)で生成・配置できる。
+3. 根本的には LCL 側の不備(親が見つからないときも `WS_CHILD` のまま作ろうとする)であり、上流への報告を検討する。

@@ -37,7 +37,7 @@ TScrollingWinControl のいずれかで、いずれも実装済み。既存パ�
 | ✅ TBevel | extctrls.pp | TGraphicControl(実装済み) | Shape/Style(ADR 0015) |
 | ✅ TShape | extctrls.pp(TCustomShape) | TGraphicControl(実装済み) | Shape/Pen/Brush(ADR 0015) |
 | ✅ TStaticText | stdctrls.pp(TCustomStaticText) | TWinControl(実装済み) | BorderStyle(ADR 0015) |
-| ✅ TStatusBar | comctrls.pp | TWinControl(実装済み) | SimpleText/SimplePanel のみ(Panels は未対応)。**既知の問題:** Application->Run() 開始前に生成すると Win32 エラー 1406 で失敗する。回避策と詳細は [ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.md) |
+| ✅ TStatusBar | comctrls.pp | TWinControl(実装済み) | SimpleText/SimplePanel のみ(Panels は未対応)。Run() 開始前の生成が失敗する LCL 側の問題は DLL 側で回避済み([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.md)) |
 | TSplitter | extctrls.pp(TCustomSplitter) | TCustomControl(実装済み) | `TControl.Align` が no_vcl に無いと実用にならないため保留(下記「cross-cutting な既知の課題」参照) |
 | ✅ TScrollBar | stdctrls.pp(TCustomScrollBar) | TWinControl(実装済み) | Kind/Min/Max/Position/PageSize/OnChange(ADR 0015 の 2 バッチ目) |
 | ✅ TRadioGroup | extctrls.pp(TCustomRadioGroup) | TCustomGroupBox(実装済み) | Items/ItemIndex/OnClick(ADR 0015 の 3 バッチ目)。OnClick は TControl のものとは別の独自フィールド |
@@ -132,8 +132,10 @@ Tier 1 の 1 バッチ目([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.m
   コンポーネントが自分の子を Pascal 側だけで生成する場合、その子は no_vcl の `*_Create` を経由しないため
   C++ 側にラッパーが登録されない(`TComponent::FromHandle` が nullptr を返す)。この種のプロパティを
   公開するには、「既存のハンドルを受け取って、初回アクセス時に遅延でラッパーを生成する」ような仕組みが要る。
-- **ComCtrls のネイティブコントロールに、生成タイミングに関する既知の問題がある(TStatusBar)。**
-  他のコントロールにも同様の問題が無いか、追加のたびに確認する([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.md))。
+- **LCL の Win32 実装には、DLL(`IsLibrary`)のとき `WidgetSet.AppHandle` が 0 であることを前提にしていない
+  箇所がある。** TStatusBar ではこれが原因で Run() 開始前の生成が失敗していた(DLL 側で回避済み)。
+  新しいコントロールを追加する際は、Run() 開始前にフォームを表示しても問題が無いか確認する
+  ([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.md))。
 
 ## 4. 推奨する着手順序
 

@@ -111,7 +111,6 @@ public:
     TShape*       Shape1;
     TStaticText*  StaticText1;
     TStatusBar*   StatusBar1 = nullptr;
-    TTimer*       StatusBarInitTimer;
     TScrollBar*   ScrollBar1;
     TTrackBar*    TrackBar1;
     TProgressBar* ProgressBar1;
@@ -323,8 +322,7 @@ public:
         StaticText1->Width = 150;
         StaticText1->BorderStyle = sbsSunken;
 
-        // Tier 1、3 バッチ目(範囲・数値系のコントロール)。いずれも ADR 0015 で TStatusBar のような
-        // 生成タイミングの問題が無いことを確認済みで、コンストラクタの中で普通に生成できる。
+        // Tier 1、3 バッチ目(範囲・数値系のコントロール)。
         ScrollBar1 = new TScrollBar(this);
         ScrollBar1->Parent = this;
         ScrollBar1->Left = 20;
@@ -468,23 +466,11 @@ public:
         TabControl1->TabIndex = 0;
         TabControl1->OnChange = [this](TObject* Sender) { TabControl1Change(Sender); };
 
-        // 既知の問題: TStatusBar は、Application->Run() のメッセージループが始まる前に
-        // ウィンドウハンドルを作らせると(コンストラクタの中で Parent を設定する等)、
-        // 「トップレベルの子ウィンドウを作成できません」(Win32 エラー 1406)で失敗する。
-        // 標準の Lazarus 実行ファイルでは起きず、DLL としてホストされる no_vcl 特有の現象と見られる
-        // (docs/component-coverage.md の TStatusBar の項を参照)。
-        // 回避策として、1 回だけ発火するタイマーでメッセージループが始まった後に生成する。
-        StatusBarInitTimer = new TTimer(this);
-        StatusBarInitTimer->Interval = 1;
-        StatusBarInitTimer->OnTimer = [this](TObject* Sender) {
-            static_cast<TTimer*>(Sender)->Enabled = false;
-            StatusBar1 = new TStatusBar(this);
-            StatusBar1->Parent = this;
-            StatusBar1->SimpleText = "Ready";
-            std::printf("StatusBar1 created after Run() started (workaround for a known issue)\n");
-            std::fflush(stdout);
-        };
-        StatusBarInitTimer->Enabled = true;
+        // TStatusBar も他のコントロールと同じくコンストラクタの中で生成してよい
+        // (ADR 0015 の問題は DLL 側で回避済み)。
+        StatusBar1 = new TStatusBar(this);
+        StatusBar1->Parent = this;
+        StatusBar1->SimpleText = "Ready";
 
         OnCreate = [this](TObject* Sender) { FormCreate(Sender); };
         OnShow = [this](TObject* Sender) { FormShow(Sender); };
@@ -771,7 +757,7 @@ int main()
     std::printf("MaskEdit1 EditMask: %s\n", std::string(Form1->MaskEdit1->EditMask).c_str());
     std::printf("TabControl1 TabsCount/TabIndex: %d/%d (expected 3/0)\n",
                 Form1->TabControl1->TabsCount(), (int)Form1->TabControl1->TabIndex);
-    // StatusBar1 は Run() の開始後に生成されるため、ここではまだ存在しない(StatusBarInitTimer 参照)。
+    std::printf("StatusBar1 SimpleText: %s (expected Ready)\n", std::string(Form1->StatusBar1->SimpleText).c_str());
 
     // 2 つ目以降に生成したフォームは MainForm にならない。
     TForm* subForm = new TForm(Application);

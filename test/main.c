@@ -196,19 +196,6 @@ static void NO_VCL_CALL OnPaintBoxPaint(no_vcl_obj_t sender, void* data)
     no_vcl_TCanvas_TextOut(canvas, 10, 100, "Canvas drawing test");
 }
 
-/* data にはフォームのハンドルを渡す。1 回だけ発火してから自分自身を無効にする。 */
-static void NO_VCL_CALL OnStatusBarInitTick(no_vcl_obj_t sender, void* data)
-{
-    no_vcl_obj_t statusBar;
-    no_vcl_TCustomTimer_SetEnabled(sender, 0);
-    statusBar = no_vcl_TStatusBar_Create((no_vcl_obj_t)data);
-    no_vcl_TControl_SetParent(statusBar, (no_vcl_obj_t)data);
-    no_vcl_TStatusBar_SetSimpleText(statusBar, "Ready");
-    printf("StatusBar created after Run() started (workaround for a known issue). SimpleText: %s\n",
-           no_vcl_TStatusBar_GetSimpleText(statusBar));
-    fflush(stdout);
-}
-
 /* data にはカウントを表示するラベルのハンドルを渡す。 */
 static void NO_VCL_CALL OnTimerTick(no_vcl_obj_t sender, void* data)
 {
@@ -259,7 +246,7 @@ int main(void)
     no_vcl_obj_t bevel;
     no_vcl_obj_t shape;
     no_vcl_obj_t staticText;
-    no_vcl_obj_t statusBarInitTimer;
+    no_vcl_obj_t statusBar;
     no_vcl_obj_t scrollBar;
     no_vcl_obj_t trackBar;
     no_vcl_obj_t progressBar;
@@ -418,8 +405,7 @@ int main(void)
     no_vcl_TControl_SetWidth(staticText, 150);
     no_vcl_TCustomStaticText_SetBorderStyle(staticText, no_vcl_sbsSunken);
 
-    /* Tier 1、3 バッチ目(範囲・数値系のコントロール)。ADR 0015 で TStatusBar のような生成タイミングの
-       問題が無いことを確認済みで、普通にここで生成できる。 */
+    /* Tier 1、3 バッチ目(範囲・数値系のコントロール)。 */
     scrollBar = Place(no_vcl_TScrollBar_Create(form), form, 20, 480);
     no_vcl_TControl_SetWidth(scrollBar, 150);
     no_vcl_TCustomScrollBar_SetMin(scrollBar, 0);
@@ -537,15 +523,11 @@ int main(void)
     printf("TabControl TabsCount=%d, TabIndex=%d\n",
            no_vcl_TTabControl_Tabs_Count(tabControl), no_vcl_TTabControl_GetTabIndex(tabControl));
 
-    /* 既知の問題: TStatusBar は Application->Run() のメッセージループが始まる前にウィンドウハンドルを
-       作らせると「トップレベルの子ウィンドウを作成できません」(Win32 エラー 1406)で失敗する。
-       標準の Lazarus 実行ファイルでは起きず、DLL としてホストされる no_vcl 特有の現象と見られる
-       (docs/component-coverage.md の TStatusBar の項を参照)。回避策として、1 回だけ発火する
-       タイマーでメッセージループが始まった後に生成する。 */
-    statusBarInitTimer = no_vcl_TTimer_Create(form);
-    no_vcl_TCustomTimer_SetInterval(statusBarInitTimer, 1);
-    no_vcl_TCustomTimer_SetOnTimer(statusBarInitTimer, OnStatusBarInitTick, form);
-    no_vcl_TCustomTimer_SetEnabled(statusBarInitTimer, 1);
+    /* TStatusBar も Run() の前に生成してよい(ADR 0015 の問題は DLL 側で回避済み)。 */
+    statusBar = no_vcl_TStatusBar_Create(form);
+    no_vcl_TControl_SetParent(statusBar, form);
+    no_vcl_TStatusBar_SetSimpleText(statusBar, "Ready");
+    printf("StatusBar SimpleText: %s\n", no_vcl_TStatusBar_GetSimpleText(statusBar));
 
     printf("Running (click the button, then close the window twice: the first close is blocked)...\n");
     fflush(stdout);

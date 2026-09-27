@@ -25,7 +25,10 @@ uses
   Spin,
   MaskEdit,
   Graphics,
-  CustomTimer;
+  CustomTimer
+  {$ifdef LCLwin32}
+  , Windows, InterfaceBase, WSControls
+  {$endif};
 
 type
   { Data は登録時に渡された利用者データをそのまま返す(C 側で状態を持ち回るため) }
@@ -1148,9 +1151,46 @@ end;
 { TStatusBar: LCL に中間の TCustomStatusBar は無く、TWinControl の直接の派生。
   Panels(TCollection)は今回未対応。SimpleText/SimplePanel のみ。 }
 
+{$ifdef LCLwin32}
+var
+  GStatusBarHeightWarmedUp: Boolean = False;
+
+{ LCL の Win32 実装は、ステータスバーの推奨の高さを最初の GetPreferredSize で一度だけ測り、
+  ユニット内の変数にキャッシュする(win32wscomctrls.pp の InitializePreferredStatusBarHeight)。
+  その際の計測用ウィンドウは WS_CHILD で、親に WidgetSet.AppHandle を使い、DLL(IsLibrary)では
+  AppHandle が作られないため Screen.ActiveForm で代用する。Application.Run 開始前は
+  ActiveForm も nil のため親が 0 になり、Win32 エラー 1406 で失敗する(ADR 0015)。
+  そこで最初の TStatusBar の生成時に、使い捨ての隠しウィンドウを AppHandle に一時的に設定して
+  計測を済ませておく。AppHandle はフォームの所有関係にも使われるため、計測後すぐに 0 に戻す。 }
+procedure WarmUpStatusBarHeight(StatusBar: TStatusBar);
+var
+  Dummy: HWND;
+  W, H: Integer;
+begin
+  if GStatusBarHeightWarmedUp or (WidgetSet.AppHandle <> 0) then
+    Exit;
+  Dummy := CreateWindowExW(0, 'STATIC', nil, WS_POPUP, 0, 0, 0, 0, 0, 0, HInstance, nil);
+  if Dummy = 0 then
+    Exit;
+  WidgetSet.AppHandle := Dummy;
+  try
+    W := 0;
+    H := 0;
+    TWSWinControlClass(StatusBar.WidgetSetClass).GetPreferredSize(StatusBar, W, H, False);
+  finally
+    WidgetSet.AppHandle := 0;
+    DestroyWindow(Dummy);
+  end;
+  GStatusBarHeightWarmedUp := True;
+end;
+{$endif}
+
 function TStatusBar_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
   Result := Watch(TStatusBar.Create(TComponent(Owner)));
+  {$ifdef LCLwin32}
+  WarmUpStatusBarHeight(TStatusBar(Result));
+  {$endif}
 end;
 
 function TStatusBar_GetSimpleText(Obj: Pointer): PChar; NO_VCL_CALL;
@@ -1174,9 +1214,8 @@ begin
 end;
 
 { docs/component-coverage.md の Tier 1、2 バッチ目(範囲・数値系のコントロール)。
-  いずれも ComCtrls のネイティブコントロール。ADR 0015 で見つかった TStatusBar の問題
-  (Application.Run 開始前の生成が失敗する)は、TProgressBar では起きないことを確認済みで、
-  TScrollBar・TTrackBar・TUpDown でも同様に確認した(いずれも問題なし)。 }
+  いずれも ComCtrls のネイティブコントロール。ADR 0015 の TStatusBar の問題(推奨の高さの計測が
+  Application.Run 開始前に失敗する)は TStatusBar 固有の処理によるもので、これらには関係しない。 }
 
 { TScrollBar }
 

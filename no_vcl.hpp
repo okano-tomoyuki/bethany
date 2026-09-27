@@ -1269,13 +1269,8 @@ protected:
 
 // ステータス行。LCL では中間の TCustomStatusBar が無く、TWinControl の直接の派生。
 // Panels(複数区画のコレクション)は今回未対応で、SimpleText/SimplePanel のみ。
-//
-// 既知の問題: Application->Run() がメッセージループを始める前にウィンドウハンドルを作らせると
-// (例えばフォームのコンストラクタの中で Parent を設定すると)、Win32 エラー 1406 で失敗する。
-// 標準の Lazarus 実行ファイルでは起きず、LCL が DLL としてホストされる no_vcl 特有の現象と見られる
-// (docs/component-coverage.md の TStatusBar の項を参照)。回避策として、Interval=1 の使い捨て
-// タイマーの OnTimer など、Run() が始まった後に呼ばれるハンドラの中で生成すること
-// (test/main.cpp の StatusBarInitTimer を参照)。
+// 他のコントロールと同じく、フォームのコンストラクタの中で生成・配置してよい
+// (LCL の Win32 実装が DLL で失敗する問題は DLL 側で回避済み。docs/adr/0015-... を参照)。
 class TStatusBar : public TWinControl
 {
 public:
