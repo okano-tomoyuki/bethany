@@ -98,29 +98,20 @@ using no_vcl_module_t = void*;
     X(void,          TCustomEdit_SetOnChange,       (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),          (o, cb, d)) \
     X(no_vcl_obj_t,  TEdit_Create,                  (no_vcl_obj_t owner),                                     (owner)) \
     \
-    X(void,          TCustomMemo_Lines_Add,         (no_vcl_obj_t o, no_vcl_str_t s),                         (o, s)) \
-    X(void,          TCustomMemo_Lines_Clear,       (no_vcl_obj_t o),                                         (o)) \
-    X(no_vcl_int_t,  TCustomMemo_Lines_Count,       (no_vcl_obj_t o),                                         (o)) \
-    X(no_vcl_str_t,  TCustomMemo_Lines_GetText,     (no_vcl_obj_t o, no_vcl_int_t i),                         (o, i)) \
+    X(no_vcl_obj_t,  TCustomMemo_GetLines,                    (no_vcl_obj_t o),                                     (o)) \
     X(no_vcl_int_t,  TCustomMemo_GetScrollBars,     (no_vcl_obj_t o),                                         (o)) \
     X(void,          TCustomMemo_SetScrollBars,     (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
     X(no_vcl_obj_t,  TMemo_Create,                  (no_vcl_obj_t owner),                                     (owner)) \
     \
     X(no_vcl_int_t,  TCustomComboBox_GetItemIndex,  (no_vcl_obj_t o),                                         (o)) \
     X(void,          TCustomComboBox_SetItemIndex,  (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
-    X(void,          TCustomComboBox_Items_Add,     (no_vcl_obj_t o, no_vcl_str_t s),                         (o, s)) \
-    X(void,          TCustomComboBox_Items_Clear,   (no_vcl_obj_t o),                                         (o)) \
-    X(no_vcl_int_t,  TCustomComboBox_Items_Count,   (no_vcl_obj_t o),                                         (o)) \
-    X(no_vcl_str_t,  TCustomComboBox_Items_GetText, (no_vcl_obj_t o, no_vcl_int_t i),                         (o, i)) \
+    X(no_vcl_obj_t,  TCustomComboBox_GetItems,                (no_vcl_obj_t o),                                     (o)) \
     X(no_vcl_obj_t,  TComboBox_Create,              (no_vcl_obj_t owner),                                     (owner)) \
     X(void,          TComboBox_SetOnChange,         (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),          (o, cb, d)) \
     \
     X(no_vcl_int_t,  TCustomListBox_GetItemIndex,   (no_vcl_obj_t o),                                         (o)) \
     X(void,          TCustomListBox_SetItemIndex,   (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
-    X(void,          TCustomListBox_Items_Add,      (no_vcl_obj_t o, no_vcl_str_t s),                         (o, s)) \
-    X(void,          TCustomListBox_Items_Clear,    (no_vcl_obj_t o),                                         (o)) \
-    X(no_vcl_int_t,  TCustomListBox_Items_Count,    (no_vcl_obj_t o),                                         (o)) \
-    X(no_vcl_str_t,  TCustomListBox_Items_GetText,  (no_vcl_obj_t o, no_vcl_int_t i),                         (o, i)) \
+    X(no_vcl_obj_t,  TCustomListBox_GetItems,                 (no_vcl_obj_t o),                                     (o)) \
     X(no_vcl_obj_t,  TListBox_Create,               (no_vcl_obj_t owner),                                     (owner)) \
     \
     X(no_vcl_int_t,  TCustomTimer_GetInterval,      (no_vcl_obj_t o),                                         (o)) \
@@ -224,19 +215,13 @@ using no_vcl_module_t = void*;
     X(void,          TUpDown_SetAssociate,            (no_vcl_obj_t o, no_vcl_obj_t v),                        (o, v)) \
     \
     X(no_vcl_obj_t,  TRadioGroup_Create,                     (no_vcl_obj_t owner),                                 (owner)) \
-    X(void,          TCustomRadioGroup_Items_Add,            (no_vcl_obj_t o, no_vcl_str_t t),                     (o, t)) \
-    X(void,          TCustomRadioGroup_Items_Clear,          (no_vcl_obj_t o),                                     (o)) \
-    X(no_vcl_int_t,  TCustomRadioGroup_Items_Count,          (no_vcl_obj_t o),                                     (o)) \
-    X(no_vcl_str_t,  TCustomRadioGroup_Items_GetText,        (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(no_vcl_obj_t,  TCustomRadioGroup_GetItems,              (no_vcl_obj_t o),                                     (o)) \
     X(no_vcl_int_t,  TCustomRadioGroup_GetItemIndex,         (no_vcl_obj_t o),                                     (o)) \
     X(void,          TCustomRadioGroup_SetItemIndex,         (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
     X(void,          TCustomRadioGroup_SetOnClick,           (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d)) \
     \
     X(no_vcl_obj_t,  TCheckGroup_Create,                     (no_vcl_obj_t owner),                                 (owner)) \
-    X(void,          TCustomCheckGroup_Items_Add,            (no_vcl_obj_t o, no_vcl_str_t t),                     (o, t)) \
-    X(void,          TCustomCheckGroup_Items_Clear,          (no_vcl_obj_t o),                                     (o)) \
-    X(no_vcl_int_t,  TCustomCheckGroup_Items_Count,          (no_vcl_obj_t o),                                     (o)) \
-    X(no_vcl_str_t,  TCustomCheckGroup_Items_GetText,        (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(no_vcl_obj_t,  TCustomCheckGroup_GetItems,              (no_vcl_obj_t o),                                     (o)) \
     X(no_vcl_bool_t, TCustomCheckGroup_GetChecked,           (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
     X(void,          TCustomCheckGroup_SetChecked,           (no_vcl_obj_t o, no_vcl_int_t i, no_vcl_bool_t v),    (o, i, v)) \
     \
@@ -286,10 +271,7 @@ using no_vcl_module_t = void*;
     X(void,          TMaskEdit_SetEditMask,                   (no_vcl_obj_t o, no_vcl_str_t v),                     (o, v)) \
     \
     X(no_vcl_obj_t,  TTabControl_Create,                      (no_vcl_obj_t owner),                                 (owner)) \
-    X(void,          TTabControl_Tabs_Add,                    (no_vcl_obj_t o, no_vcl_str_t t),                     (o, t)) \
-    X(void,          TTabControl_Tabs_Clear,                  (no_vcl_obj_t o),                                     (o)) \
-    X(no_vcl_int_t,  TTabControl_Tabs_Count,                  (no_vcl_obj_t o),                                     (o)) \
-    X(no_vcl_str_t,  TTabControl_Tabs_GetText,                (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(no_vcl_obj_t,  TTabControl_GetTabs,                     (no_vcl_obj_t o),                                     (o)) \
     X(no_vcl_int_t,  TTabControl_GetTabIndex,                 (no_vcl_obj_t o),                                     (o)) \
     X(void,          TTabControl_SetTabIndex,                 (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
     X(void,          TTabControl_SetOnChange,                 (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d)) \
@@ -537,11 +519,7 @@ using no_vcl_module_t = void*;
     X(void,          TListItem_SetData,                       (no_vcl_obj_t o, void* v),                            (o, v)) \
     X(no_vcl_int_t,  TListItem_GetIndex,                      (no_vcl_obj_t o),                                     (o)) \
     X(no_vcl_obj_t,  TListItem_GetListView,                   (no_vcl_obj_t o),                                     (o)) \
-    X(void,          TListItem_SubItems_Add,                  (no_vcl_obj_t o, no_vcl_str_t t),                     (o, t)) \
-    X(void,          TListItem_SubItems_Clear,                (no_vcl_obj_t o),                                     (o)) \
-    X(no_vcl_int_t,  TListItem_SubItems_Count,                (no_vcl_obj_t o),                                     (o)) \
-    X(no_vcl_str_t,  TListItem_SubItems_GetText,              (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
-    X(void,          TListItem_SubItems_SetText,              (no_vcl_obj_t o, no_vcl_int_t i, no_vcl_str_t t),     (o, i, t)) \
+    X(no_vcl_obj_t,  TListItem_GetSubItems,                   (no_vcl_obj_t o),                                     (o)) \
     X(void,          TListItem_Delete,                        (no_vcl_obj_t o),                                     (o)) \
     X(void,          TListItem_MakeVisible,                   (no_vcl_obj_t o, no_vcl_bool_t p),                    (o, p)) \
     \
@@ -774,7 +752,28 @@ using no_vcl_module_t = void*;
     X(no_vcl_int_t,  TCoolBand_GetTop,                        (no_vcl_obj_t o),                                     (o)) \
     X(no_vcl_int_t,  TCoolBand_GetRight,                      (no_vcl_obj_t o),                                     (o)) \
     X(no_vcl_int_t,  TCoolBand_GetHeight,                     (no_vcl_obj_t o),                                     (o)) \
-    X(void,          TCoolBand_AutosizeWidth,                 (no_vcl_obj_t o),                                     (o))
+    X(void,          TCoolBand_AutosizeWidth,                 (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_int_t,  TStrings_GetCount,                       (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_str_t,  TStrings_GetStrings,                     (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(void,          TStrings_SetStrings,                     (no_vcl_obj_t o, no_vcl_int_t i, no_vcl_str_t v),     (o, i, v)) \
+    X(void*,         TStrings_GetObjects,                     (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(void,          TStrings_SetObjects,                     (no_vcl_obj_t o, no_vcl_int_t i, void* v),            (o, i, v)) \
+    X(no_vcl_int_t,  TStrings_Add,                            (no_vcl_obj_t o, no_vcl_str_t s),                     (o, s)) \
+    X(no_vcl_int_t,  TStrings_AddObject,                      (no_vcl_obj_t o, no_vcl_str_t s, void* a),            (o, s, a)) \
+    X(void,          TStrings_Insert,                         (no_vcl_obj_t o, no_vcl_int_t i, no_vcl_str_t s),     (o, i, s)) \
+    X(void,          TStrings_Delete,                         (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(void,          TStrings_Clear,                          (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_int_t,  TStrings_IndexOf,                        (no_vcl_obj_t o, no_vcl_str_t s),                     (o, s)) \
+    X(void,          TStrings_Exchange,                       (no_vcl_obj_t o, no_vcl_int_t a, no_vcl_int_t b),     (o, a, b)) \
+    X(void,          TStrings_Move,                           (no_vcl_obj_t o, no_vcl_int_t a, no_vcl_int_t b),     (o, a, b)) \
+    X(void,          TStrings_BeginUpdate,                    (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TStrings_EndUpdate,                      (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_str_t,  TStrings_GetText,                        (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TStrings_SetText,                        (no_vcl_obj_t o, no_vcl_str_t v),                     (o, v)) \
+    X(no_vcl_str_t,  TStrings_GetCommaText,                   (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TStrings_SetCommaText,                   (no_vcl_obj_t o, no_vcl_str_t v),                     (o, v)) \
+    X(void,          TStrings_Assign,                         (no_vcl_obj_t o, no_vcl_obj_t s),                     (o, s)) \
+    X(void,          TStrings_AddStrings,                     (no_vcl_obj_t o, no_vcl_obj_t s),                     (o, s))
 
 namespace
 {

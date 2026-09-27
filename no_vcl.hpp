@@ -416,6 +416,64 @@ private:
     static void NO_VCL_CALL FreeTrampoline(no_vcl_obj_t handle, void* data);
 };
 
+
+// 文字列の一覧(LCL の TStrings)。コントロールの Items・Lines・Tabs 等として、所有者の値メンバで持つ非所有のビュー
+// (ListBox1->Items->Add("x"); ListBox1->Items->Strings[0]; Memo1->Lines->Text = "..."; のように VCL と同じく使う)。
+// LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがある(TListBox・TComboBox・TMemo)ため、
+// このビューは中身のハンドルを覚えず、操作のたびに所有者から取得する。そのため Handle() は nullptr を返す
+// (C API の no_vcl_TStrings_* に渡すハンドルは Current() で得る。保存しないこと)。
+class TStrings : public TPersistent
+{
+public:
+    // 所有者のハンドルから中身の TStrings のハンドルを得る C API の関数(no_vcl_TCustomListBox_GetItems 等)。
+    using Accessor = no_vcl_obj_t (NO_VCL_CALL *)(no_vcl_obj_t owner);
+
+    TStrings(TObject* owner, Accessor accessor);
+    ~TStrings() override = default;
+
+    ReadOnlyProperty<int>        Count;
+    IndexedProperty<std::string> Strings;
+    // 利用者データ(ポインタ)。LCL は解釈も解放もしない。
+    IndexedProperty<void*>       Objects;
+    // すべての行を改行でつないだ文字列。設定すると改行で分けて置き換える。
+    Property<std::string>        Text;
+    // カンマ区切りの文字列(空白・カンマを含む要素は二重引用符で囲まれる)。
+    Property<std::string>        CommaText;
+
+    // 末尾に追加し、追加した位置を返す(ソートされた一覧では挿入された位置)。
+    int  Add(const std::string& S);
+    int  AddObject(const std::string& S, void* AObject);
+    void Insert(int Index, const std::string& S);
+    void Delete(int Index);
+    void Clear();
+    // 見つからなければ -1。
+    int  IndexOf(const std::string& S) const;
+    void Exchange(int Index1, int Index2);
+    void Move(int CurIndex, int NewIndex);
+    void BeginUpdate();
+    void EndUpdate();
+    // Source の内容(文字列と Objects)で置き換える / 末尾に加える。
+    void Assign(const TStrings* Source);
+    void AddStrings(const TStrings* Source);
+
+    // 現在の中身のハンドル。
+    no_vcl_obj_t Current() const { return accessor_(owner_->Handle()); }
+
+private:
+    TObject* owner_;
+    Accessor accessor_;
+
+    static int         GetCountImpl(TObject* owner);
+    static std::string GetStringsImpl(TObject* owner, int Index);
+    static void        SetStringsImpl(TObject* owner, int Index, const std::string& value);
+    static void*       GetObjectsImpl(TObject* owner, int Index);
+    static void        SetObjectsImpl(TObject* owner, int Index, void* const& value);
+    static std::string GetTextImpl(TObject* owner);
+    static void        SetTextImpl(TObject* owner, const std::string& value);
+    static std::string GetCommaTextImpl(TObject* owner);
+    static void        SetCommaTextImpl(TObject* owner, const std::string& value);
+};
+
 // LCL のコンポーネント(Create/Destroy を持つオブジェクト)。
 // ハンドルと C++ ラッパーの対応を共通のレジストリで管理し、
 // コールバックのトランポリンや Parent の Getter から C++ ラッパーを引けるようにする。
@@ -1161,16 +1219,16 @@ public:
     Property<int>          ItemIndex;
     Property<TNotifyEvent> OnClick;
 
-    void        ItemsAdd(const std::string& text);
-    void        ItemsClear();
-    int         ItemsCount() const;
-    std::string ItemsGetText(int index) const;
+    // 文字列の一覧(TStrings。RadioGroup1->Items->Add("x") のように使う)。
+    ReadOnlyProperty<TStrings*> Items;
 
 protected:
     explicit TCustomRadioGroup(no_vcl_obj_t handle);
     ~TCustomRadioGroup() override = default;
 
 private:
+    TStrings items_;
+    static TStrings* GetItemsImpl(TObject* owner);
     TNotifyEvent onClick_;
     bool         onClickHooked_ = false;
     static void NO_VCL_CALL ClickTrampoline(no_vcl_obj_t sender, void* data);
@@ -1194,10 +1252,8 @@ protected:
 class TCustomCheckGroup : public TCustomGroupBox
 {
 public:
-    void        ItemsAdd(const std::string& text);
-    void        ItemsClear();
-    int         ItemsCount() const;
-    std::string ItemsGetText(int index) const;
+    // 文字列の一覧(TStrings。CheckGroup1->Items->Add("x") のように使う)。
+    ReadOnlyProperty<TStrings*> Items;
     // 項目ごとのチェックの状態(CheckGroup1->Checked[i] = true;)。
     IndexedProperty<bool> Checked;
 
@@ -1206,6 +1262,8 @@ protected:
     ~TCustomCheckGroup() override = default;
 
 private:
+    TStrings items_;
+    static TStrings* GetItemsImpl(TObject* owner);
     static bool GetCheckedImpl(TObject* owner, int index);
     static void SetCheckedImpl(TObject* owner, int index, const bool& value);
 };
@@ -1534,15 +1592,15 @@ public:
     Property<int>          TabIndex;
     Property<TNotifyEvent> OnChange;
 
-    void        TabsAdd(const std::string& text);
-    void        TabsClear();
-    int         TabsCount() const;
-    std::string TabsGetText(int index) const;
+    // 文字列の一覧(TStrings。TabControl1->Tabs->Add("x") のように使う)。
+    ReadOnlyProperty<TStrings*> Tabs;
 
 protected:
     ~TTabControl() override = default;
 
 private:
+    TStrings tabs_;
+    static TStrings* GetTabsImpl(TObject* owner);
     TNotifyEvent onChange_;
     bool         onChangeHooked_ = false;
     static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender, void* data);
@@ -1914,7 +1972,7 @@ class TListView;
 // Delete() 等で削除する。同じ項目には常に同じポインタが返り、項目が削除されると(リストビューの破棄に伴う削除も含め)
 // OnDeletion などの削除の処理がすべて終わった後にラッパーも delete される。
 // Caption は 1 列目、SubItems は 2 列目以降の文字列(ViewStyle が vsReport のときに表示される)。
-// SubItems(TStrings)は、TComboBox の Items と同じく SubItemsAdd 等のメンバ関数で操作する。
+// SubItems(TStrings)は Item->SubItems->Add("x"); のように操作する。
 class TListItem : public TPersistent
 {
 public:
@@ -1928,17 +1986,16 @@ public:
     ReadOnlyProperty<int>              Index;
     ReadOnlyProperty<TCustomListView*> ListView;
 
-    void        SubItemsAdd(const std::string& text);
-    void        SubItemsClear();
-    int         SubItemsCount() const;
-    std::string SubItemsGetText(int index) const;
-    void        SubItemsSetText(int index, const std::string& text);
+    // 文字列の一覧(TStrings。Item->SubItems->Add("x") のように使う)。
+    ReadOnlyProperty<TStrings*> SubItems;
 
     // この項目を削除する。このラッパーも delete されるため、呼び出し後に触れてはならない。
     void Delete();
     void MakeVisible(bool PartialOK);
 
 private:
+    TStrings subItems_;
+    static TStrings* GetSubItemsImpl(TObject* owner);
     friend class ItemRegistry;
     friend class TListItems;
     friend class TCustomListView;
@@ -2242,16 +2299,16 @@ class TCustomMemo : public TCustomEdit
 public:
     Property<int> ScrollBars;
 
-    void        LinesAdd(const std::string& text);
-    void        LinesClear();
-    int         LinesCount() const;
-    std::string LinesGetText(int index) const;
+    // 文字列の一覧(TStrings。Memo1->Lines->Add("x") のように使う)。
+    ReadOnlyProperty<TStrings*> Lines;
 
 protected:
     explicit TCustomMemo(no_vcl_obj_t handle);
     ~TCustomMemo() override = default;
 
 private:
+    TStrings lines_;
+    static TStrings* GetLinesImpl(TObject* owner);
     static int  GetScrollBarsImpl(TObject* owner);
     static void SetScrollBarsImpl(TObject* owner, const int& value);
 };
@@ -2273,16 +2330,16 @@ public:
     using TControl::Text;
     Property<int> ItemIndex;
 
-    void        ItemsAdd(const std::string& text);
-    void        ItemsClear();
-    int         ItemsCount() const;
-    std::string ItemsGetText(int index) const;
+    // 文字列の一覧(TStrings。ComboBox1->Items->Add("x") のように使う)。
+    ReadOnlyProperty<TStrings*> Items;
 
 protected:
     explicit TCustomComboBox(no_vcl_obj_t handle);
     ~TCustomComboBox() override = default;
 
 private:
+    TStrings items_;
+    static TStrings* GetItemsImpl(TObject* owner);
     static int  GetItemIndexImpl(TObject* owner);
     static void SetItemIndexImpl(TObject* owner, const int& value);
 };
@@ -2313,16 +2370,16 @@ class TCustomListBox : public TWinControl
 public:
     Property<int> ItemIndex;
 
-    void        ItemsAdd(const std::string& text);
-    void        ItemsClear();
-    int         ItemsCount() const;
-    std::string ItemsGetText(int index) const;
+    // 文字列の一覧(TStrings。ListBox1->Items->Add("x") のように使う)。
+    ReadOnlyProperty<TStrings*> Items;
 
 protected:
     explicit TCustomListBox(no_vcl_obj_t handle);
     ~TCustomListBox() override = default;
 
 private:
+    TStrings items_;
+    static TStrings* GetItemsImpl(TObject* owner);
     static int  GetItemIndexImpl(TObject* owner);
     static void SetItemIndexImpl(TObject* owner, const int& value);
 };

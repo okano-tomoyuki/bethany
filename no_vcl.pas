@@ -825,24 +825,10 @@ end;
 
 { TCustomMemo / TMemo }
 
-procedure TCustomMemo_Lines_Add(Obj: Pointer; Text: PChar); NO_VCL_CALL;
+{ Lines(TStrings)。LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがあるため、ハンドルは保存せず、使うたびに取得する(docs/adr/0027)。 }
+function TCustomMemo_GetLines(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  TCustomMemo(Obj).Lines.Add(Text);
-end;
-
-procedure TCustomMemo_Lines_Clear(Obj: Pointer); NO_VCL_CALL;
-begin
-  TCustomMemo(Obj).Lines.Clear;
-end;
-
-function TCustomMemo_Lines_Count(Obj: Pointer): Integer; NO_VCL_CALL;
-begin
-  Result := TCustomMemo(Obj).Lines.Count;
-end;
-
-function TCustomMemo_Lines_GetText(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
-begin
-  Result := ReturnStr(TCustomMemo(Obj).Lines[Index]);
+  Result := Pointer(TCustomMemo(Obj).Lines);
 end;
 
 function TCustomMemo_GetScrollBars(Obj: Pointer): Integer; NO_VCL_CALL;
@@ -872,24 +858,10 @@ begin
   TCustomComboBox(Obj).ItemIndex := Value;
 end;
 
-procedure TCustomComboBox_Items_Add(Obj: Pointer; Text: PChar); NO_VCL_CALL;
+{ Items(TStrings)。LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがあるため、ハンドルは保存せず、使うたびに取得する(docs/adr/0027)。 }
+function TCustomComboBox_GetItems(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  TCustomComboBox(Obj).Items.Add(Text);
-end;
-
-procedure TCustomComboBox_Items_Clear(Obj: Pointer); NO_VCL_CALL;
-begin
-  TCustomComboBox(Obj).Items.Clear;
-end;
-
-function TCustomComboBox_Items_Count(Obj: Pointer): Integer; NO_VCL_CALL;
-begin
-  Result := TCustomComboBox(Obj).Items.Count;
-end;
-
-function TCustomComboBox_Items_GetText(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
-begin
-  Result := ReturnStr(TCustomComboBox(Obj).Items[Index]);
+  Result := Pointer(TCustomComboBox(Obj).Items);
 end;
 
 function TComboBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
@@ -915,24 +887,10 @@ begin
   TCustomListBox(Obj).ItemIndex := Value;
 end;
 
-procedure TCustomListBox_Items_Add(Obj: Pointer; Text: PChar); NO_VCL_CALL;
+{ Items(TStrings)。LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがあるため、ハンドルは保存せず、使うたびに取得する(docs/adr/0027)。 }
+function TCustomListBox_GetItems(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  TCustomListBox(Obj).Items.Add(Text);
-end;
-
-procedure TCustomListBox_Items_Clear(Obj: Pointer); NO_VCL_CALL;
-begin
-  TCustomListBox(Obj).Items.Clear;
-end;
-
-function TCustomListBox_Items_Count(Obj: Pointer): Integer; NO_VCL_CALL;
-begin
-  Result := TCustomListBox(Obj).Items.Count;
-end;
-
-function TCustomListBox_Items_GetText(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
-begin
-  Result := ReturnStr(TCustomListBox(Obj).Items[Index]);
+  Result := Pointer(TCustomListBox(Obj).Items);
 end;
 
 function TListBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
@@ -1462,24 +1420,10 @@ begin
   Result := Watch(TRadioGroup.Create(TComponent(Owner)));
 end;
 
-procedure TCustomRadioGroup_Items_Add(Obj: Pointer; Text: PChar); NO_VCL_CALL;
+{ Items(TStrings)。LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがあるため、ハンドルは保存せず、使うたびに取得する(docs/adr/0027)。 }
+function TCustomRadioGroup_GetItems(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  TCustomRadioGroup(Obj).Items.Add(Text);
-end;
-
-procedure TCustomRadioGroup_Items_Clear(Obj: Pointer); NO_VCL_CALL;
-begin
-  TCustomRadioGroup(Obj).Items.Clear;
-end;
-
-function TCustomRadioGroup_Items_Count(Obj: Pointer): Integer; NO_VCL_CALL;
-begin
-  Result := TCustomRadioGroup(Obj).Items.Count;
-end;
-
-function TCustomRadioGroup_Items_GetText(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
-begin
-  Result := ReturnStr(TCustomRadioGroup(Obj).Items[Index]);
+  Result := Pointer(TCustomRadioGroup(Obj).Items);
 end;
 
 function TCustomRadioGroup_GetItemIndex(Obj: Pointer): Integer; NO_VCL_CALL;
@@ -1498,31 +1442,17 @@ begin
 end;
 
 { TCheckGroup: Checked はインデックス付きプロパティ。値は他のインデックス付きアクセスと同様、
-  引数に Index を追加して表す(TCustomMemo_Lines_GetText 等と同じ形)。 }
+  引数に Index を追加して表す(TCustomDrawGrid_GetColWidths 等と同じ形)。 }
 
 function TCheckGroup_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
 begin
   Result := Watch(TCheckGroup.Create(TComponent(Owner)));
 end;
 
-procedure TCustomCheckGroup_Items_Add(Obj: Pointer; Text: PChar); NO_VCL_CALL;
+{ Items(TStrings)。LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがあるため、ハンドルは保存せず、使うたびに取得する(docs/adr/0027)。 }
+function TCustomCheckGroup_GetItems(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  TCustomCheckGroup(Obj).Items.Add(Text);
-end;
-
-procedure TCustomCheckGroup_Items_Clear(Obj: Pointer); NO_VCL_CALL;
-begin
-  TCustomCheckGroup(Obj).Items.Clear;
-end;
-
-function TCustomCheckGroup_Items_Count(Obj: Pointer): Integer; NO_VCL_CALL;
-begin
-  Result := TCustomCheckGroup(Obj).Items.Count;
-end;
-
-function TCustomCheckGroup_Items_GetText(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
-begin
-  Result := ReturnStr(TCustomCheckGroup(Obj).Items[Index]);
+  Result := Pointer(TCustomCheckGroup(Obj).Items);
 end;
 
 function TCustomCheckGroup_GetChecked(Obj: Pointer; Index: Integer): LongBool; NO_VCL_CALL;
@@ -1535,7 +1465,7 @@ begin
   TCustomCheckGroup(Obj).Checked[Index] := Value;
 end;
 
-{ TCheckListBox: Items は基底 TCustomListBox のものをそのまま使う(no_vcl_TCustomListBox_Items_* で
+{ TCheckListBox: Items は基底 TCustomListBox のものをそのまま使う(no_vcl_TCustomListBox_GetItems で
   共通)。Checked はインデックス付き。OnClickCheck は Sender のみの TNotifyEvent。 }
 
 function TCheckListBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
@@ -1755,24 +1685,10 @@ begin
   Result := Watch(TTabControl.Create(TComponent(Owner)));
 end;
 
-procedure TTabControl_Tabs_Add(Obj: Pointer; Text: PChar); NO_VCL_CALL;
+{ Tabs(TStrings)。LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがあるため、ハンドルは保存せず、使うたびに取得する(docs/adr/0027)。 }
+function TTabControl_GetTabs(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  TTabControl(Obj).Tabs.Add(Text);
-end;
-
-procedure TTabControl_Tabs_Clear(Obj: Pointer); NO_VCL_CALL;
-begin
-  TTabControl(Obj).Tabs.Clear;
-end;
-
-function TTabControl_Tabs_Count(Obj: Pointer): Integer; NO_VCL_CALL;
-begin
-  Result := TTabControl(Obj).Tabs.Count;
-end;
-
-function TTabControl_Tabs_GetText(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
-begin
-  Result := ReturnStr(TTabControl(Obj).Tabs[Index]);
+  Result := Pointer(TTabControl(Obj).Tabs);
 end;
 
 function TTabControl_GetTabIndex(Obj: Pointer): Integer; NO_VCL_CALL;
@@ -3251,29 +3167,10 @@ end;
 
 { SubItems(2 列目以降の文字列)。 }
 
-procedure TListItem_SubItems_Add(Obj: Pointer; Text: PChar); NO_VCL_CALL;
+{ SubItems(TStrings)。LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがあるため、ハンドルは保存せず、使うたびに取得する(docs/adr/0027)。 }
+function TListItem_GetSubItems(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
-  TListItem(Obj).SubItems.Add(Text);
-end;
-
-procedure TListItem_SubItems_Clear(Obj: Pointer); NO_VCL_CALL;
-begin
-  TListItem(Obj).SubItems.Clear;
-end;
-
-function TListItem_SubItems_Count(Obj: Pointer): Integer; NO_VCL_CALL;
-begin
-  Result := TListItem(Obj).SubItems.Count;
-end;
-
-function TListItem_SubItems_GetText(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
-begin
-  Result := ReturnStr(TListItem(Obj).SubItems[Index]);
-end;
-
-procedure TListItem_SubItems_SetText(Obj: Pointer; Index: Integer; Text: PChar); NO_VCL_CALL;
-begin
-  TListItem(Obj).SubItems[Index] := Text;
+  Result := Pointer(TListItem(Obj).SubItems);
 end;
 
 { この項目を削除する。OnDeletion と項目の破棄通知が呼ばれる。 }
@@ -4735,6 +4632,116 @@ begin
   TCoolBand(Obj).AutosizeWidth;
 end;
 
+{ TStrings(docs/adr/0027)。ハンドルはコントロールの Items・Lines・Tabs 等(TCustomListBox_GetItems 等)から得る。
+  ハンドルは所有者の持ち物で、LCL がウィンドウの生成・破棄のときに差し替えることがあるため、呼び出し側は保存しない。 }
+
+function TStrings_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TStrings(Obj).Count;
+end;
+
+function TStrings_GetStrings(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
+begin
+  Result := ReturnStr(TStrings(Obj).Strings[Index]);
+end;
+
+procedure TStrings_SetStrings(Obj: Pointer; Index: Integer; Value: PChar); NO_VCL_CALL;
+begin
+  TStrings(Obj).Strings[Index] := Value;
+end;
+
+{ Objects[Index] は利用者データ(C 側のポインタ)として扱う。LCL は解釈しない(TStringList は所有しない)。 }
+function TStrings_GetObjects(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TStrings(Obj).Objects[Index]);
+end;
+
+procedure TStrings_SetObjects(Obj: Pointer; Index: Integer; Value: Pointer); NO_VCL_CALL;
+begin
+  TStrings(Obj).Objects[Index] := TObject(Value);
+end;
+
+function TStrings_Add(Obj: Pointer; S: PChar): Integer; NO_VCL_CALL;
+begin
+  Result := TStrings(Obj).Add(S);
+end;
+
+function TStrings_AddObject(Obj: Pointer; S: PChar; AObject: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TStrings(Obj).AddObject(S, TObject(AObject));
+end;
+
+procedure TStrings_Insert(Obj: Pointer; Index: Integer; S: PChar); NO_VCL_CALL;
+begin
+  TStrings(Obj).Insert(Index, S);
+end;
+
+procedure TStrings_Delete(Obj: Pointer; Index: Integer); NO_VCL_CALL;
+begin
+  TStrings(Obj).Delete(Index);
+end;
+
+procedure TStrings_Clear(Obj: Pointer); NO_VCL_CALL;
+begin
+  TStrings(Obj).Clear;
+end;
+
+function TStrings_IndexOf(Obj: Pointer; S: PChar): Integer; NO_VCL_CALL;
+begin
+  Result := TStrings(Obj).IndexOf(S);
+end;
+
+procedure TStrings_Exchange(Obj: Pointer; Index1, Index2: Integer); NO_VCL_CALL;
+begin
+  TStrings(Obj).Exchange(Index1, Index2);
+end;
+
+procedure TStrings_Move(Obj: Pointer; CurIndex, NewIndex: Integer); NO_VCL_CALL;
+begin
+  TStrings(Obj).Move(CurIndex, NewIndex);
+end;
+
+procedure TStrings_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
+begin
+  TStrings(Obj).BeginUpdate;
+end;
+
+procedure TStrings_EndUpdate(Obj: Pointer); NO_VCL_CALL;
+begin
+  TStrings(Obj).EndUpdate;
+end;
+
+{ すべての行を改行でつないだ文字列。設定すると改行で分けて置き換える。 }
+function TStrings_GetText(Obj: Pointer): PChar; NO_VCL_CALL;
+begin
+  Result := ReturnStr(TStrings(Obj).Text);
+end;
+
+procedure TStrings_SetText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+begin
+  TStrings(Obj).Text := Value;
+end;
+
+function TStrings_GetCommaText(Obj: Pointer): PChar; NO_VCL_CALL;
+begin
+  Result := ReturnStr(TStrings(Obj).CommaText);
+end;
+
+procedure TStrings_SetCommaText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+begin
+  TStrings(Obj).CommaText := Value;
+end;
+
+procedure TStrings_Assign(Obj: Pointer; Source: Pointer); NO_VCL_CALL;
+begin
+  TStrings(Obj).Assign(TStrings(Source));
+end;
+
+procedure TStrings_AddStrings(Obj: Pointer; Source: Pointer); NO_VCL_CALL;
+begin
+  TStrings(Obj).AddStrings(TStrings(Source));
+end;
+
 exports
   FreeNotify_SetCallback,
 
@@ -4820,29 +4827,17 @@ exports
   TCustomEdit_SetOnChange,
   TEdit_Create,
 
-  TCustomMemo_Lines_Add,
-  TCustomMemo_Lines_Clear,
-  TCustomMemo_Lines_Count,
-  TCustomMemo_Lines_GetText,
   TCustomMemo_GetScrollBars,
   TCustomMemo_SetScrollBars,
   TMemo_Create,
 
   TCustomComboBox_GetItemIndex,
   TCustomComboBox_SetItemIndex,
-  TCustomComboBox_Items_Add,
-  TCustomComboBox_Items_Clear,
-  TCustomComboBox_Items_Count,
-  TCustomComboBox_Items_GetText,
   TComboBox_Create,
   TComboBox_SetOnChange,
 
   TCustomListBox_GetItemIndex,
   TCustomListBox_SetItemIndex,
-  TCustomListBox_Items_Add,
-  TCustomListBox_Items_Clear,
-  TCustomListBox_Items_Count,
-  TCustomListBox_Items_GetText,
   TListBox_Create,
 
   TCustomTimer_GetInterval,
@@ -4946,19 +4941,11 @@ exports
   TUpDown_SetAssociate,
 
   TRadioGroup_Create,
-  TCustomRadioGroup_Items_Add,
-  TCustomRadioGroup_Items_Clear,
-  TCustomRadioGroup_Items_Count,
-  TCustomRadioGroup_Items_GetText,
   TCustomRadioGroup_GetItemIndex,
   TCustomRadioGroup_SetItemIndex,
   TCustomRadioGroup_SetOnClick,
 
   TCheckGroup_Create,
-  TCustomCheckGroup_Items_Add,
-  TCustomCheckGroup_Items_Clear,
-  TCustomCheckGroup_Items_Count,
-  TCustomCheckGroup_Items_GetText,
   TCustomCheckGroup_GetChecked,
   TCustomCheckGroup_SetChecked,
 
@@ -5008,10 +4995,6 @@ exports
   TMaskEdit_SetEditMask,
 
   TTabControl_Create,
-  TTabControl_Tabs_Add,
-  TTabControl_Tabs_Clear,
-  TTabControl_Tabs_Count,
-  TTabControl_Tabs_GetText,
   TTabControl_GetTabIndex,
   TTabControl_SetTabIndex,
   TTabControl_SetOnChange,
@@ -5259,11 +5242,6 @@ exports
   TListItem_SetData,
   TListItem_GetIndex,
   TListItem_GetListView,
-  TListItem_SubItems_Add,
-  TListItem_SubItems_Clear,
-  TListItem_SubItems_Count,
-  TListItem_SubItems_GetText,
-  TListItem_SubItems_SetText,
   TListItem_Delete,
   TListItem_MakeVisible,
 
@@ -5496,7 +5474,35 @@ exports
   TCoolBand_GetTop,
   TCoolBand_GetRight,
   TCoolBand_GetHeight,
-  TCoolBand_AutosizeWidth;
+  TCoolBand_AutosizeWidth,
+  TCustomMemo_GetLines,
+  TCustomComboBox_GetItems,
+  TCustomListBox_GetItems,
+  TCustomRadioGroup_GetItems,
+  TCustomCheckGroup_GetItems,
+  TTabControl_GetTabs,
+  TListItem_GetSubItems,
+  TStrings_GetCount,
+  TStrings_GetStrings,
+  TStrings_SetStrings,
+  TStrings_GetObjects,
+  TStrings_SetObjects,
+  TStrings_Add,
+  TStrings_AddObject,
+  TStrings_Insert,
+  TStrings_Delete,
+  TStrings_Clear,
+  TStrings_IndexOf,
+  TStrings_Exchange,
+  TStrings_Move,
+  TStrings_BeginUpdate,
+  TStrings_EndUpdate,
+  TStrings_GetText,
+  TStrings_SetText,
+  TStrings_GetCommaText,
+  TStrings_SetCommaText,
+  TStrings_Assign,
+  TStrings_AddStrings;
 
 begin
   RequireDerivedFormResource := False;

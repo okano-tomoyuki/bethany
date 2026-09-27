@@ -150,11 +150,13 @@ Tier 1 の 1 バッチ目([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.m
    ([ADR 0016](adr/0016-control-align-and-splitter.md))。
 3. ✅ **Tier 5(メニュー)** は完了した([ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md))。
    あわせて、内部生成コンポーネントのラップの仕組み(`WrapExisting`)が入った。
-4. **Tier 2** はバッチに分けて進めている。1 バッチ目の TPageControl+TTabSheet([ADR 0018](adr/0018-pagecontrol-and-tabsheet.md))と、
+4. ✅ **Tier 2** はバッチに分けて進めた。1 バッチ目の TPageControl+TTabSheet([ADR 0018](adr/0018-pagecontrol-and-tabsheet.md))と、
    2 バッチ目の TTreeView([ADR 0019](adr/0019-treeview-and-non-component-items.md))、3 バッチ目の TListView
    ([ADR 0020](adr/0020-listview-and-shared-item-registry.md))、4 バッチ目の TDrawGrid/TStringGrid
    ([ADR 0021](adr/0021-drawgrid-and-stringgrid.md))、5 バッチ目の THeaderControl([ADR 0024](adr/0024-headercontrol.md))、6 バッチ目の TToolBar/TToolButton([ADR 0025](adr/0025-toolbar-and-toolbutton.md))、7 バッチ目の TCoolBar([ADR 0026](adr/0026-coolbar-and-item-free-observer.md))で完了した。TComponent ではない項目の寿命管理は
    `ItemRegistry` と項目の破棄通知(`ItemFree_SetCallback`)に共通化し、通知は TPersistent の観察者(`WatchItem`)から送る(ADR 0026)。
+   あわせて、横断的な課題だったインデックス付きプロパティの添字の書き方([ADR 0022](adr/0022-indexed-property-proxy.md)・[0023](adr/0023-remaining-indexed-properties.md))と、
+   TStrings(`Items->Add`・`Lines->Text` 等。[ADR 0027](adr/0027-tstrings.md))も VCL と同じ形にした。
 5. **Tier 3(TBitmap/TPicture)** は、TImage 単体のためというより、Tier 1/2 のいくつか(Glyph・ImageList)の
    完成度を上げるために必要になる。着手するタイミングで独立した ADR を書く。
 6. **Tier 4(ダイアログ)** は他とほぼ独立して進められるので、隙間で着手しやすい。

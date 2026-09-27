@@ -30,6 +30,51 @@ void CallNotify(const TNotifyEvent& handler, TObject* sender)
 
 } // namespace
 
+/* ---------------- TStrings ---------------- */
+
+TStrings::TStrings(TObject* owner, Accessor accessor)
+    : TPersistent(nullptr)
+    , Count(this, &TStrings::GetCountImpl)
+    , Strings(this, &TStrings::GetStringsImpl, &TStrings::SetStringsImpl)
+    , Objects(this, &TStrings::GetObjectsImpl, &TStrings::SetObjectsImpl)
+    , Text(this, &TStrings::GetTextImpl, &TStrings::SetTextImpl)
+    , CommaText(this, &TStrings::GetCommaTextImpl, &TStrings::SetCommaTextImpl)
+    , owner_(owner)
+    , accessor_(accessor)
+{}
+
+int  TStrings::Add(const std::string& S)                     { return no_vcl_TStrings_Add(Current(), S.c_str()); }
+int  TStrings::AddObject(const std::string& S, void* AObject) { return no_vcl_TStrings_AddObject(Current(), S.c_str(), AObject); }
+void TStrings::Insert(int Index, const std::string& S)       { no_vcl_TStrings_Insert(Current(), Index, S.c_str()); }
+void TStrings::Delete(int Index)                             { no_vcl_TStrings_Delete(Current(), Index); }
+void TStrings::Clear()                                       { no_vcl_TStrings_Clear(Current()); }
+int  TStrings::IndexOf(const std::string& S) const           { return no_vcl_TStrings_IndexOf(Current(), S.c_str()); }
+void TStrings::Exchange(int Index1, int Index2)              { no_vcl_TStrings_Exchange(Current(), Index1, Index2); }
+void TStrings::Move(int CurIndex, int NewIndex)              { no_vcl_TStrings_Move(Current(), CurIndex, NewIndex); }
+void TStrings::BeginUpdate()                                 { no_vcl_TStrings_BeginUpdate(Current()); }
+void TStrings::EndUpdate()                                   { no_vcl_TStrings_EndUpdate(Current()); }
+void TStrings::Assign(const TStrings* Source)                { no_vcl_TStrings_Assign(Current(), Source ? Source->Current() : nullptr); }
+void TStrings::AddStrings(const TStrings* Source)            { if (Source) no_vcl_TStrings_AddStrings(Current(), Source->Current()); }
+
+int TStrings::GetCountImpl(TObject* owner) { return no_vcl_TStrings_GetCount(static_cast<TStrings*>(owner)->Current()); }
+std::string TStrings::GetStringsImpl(TObject* owner, int Index)
+{
+    return std::string(no_vcl_TStrings_GetStrings(static_cast<TStrings*>(owner)->Current(), Index));
+}
+void TStrings::SetStringsImpl(TObject* owner, int Index, const std::string& value)
+{
+    no_vcl_TStrings_SetStrings(static_cast<TStrings*>(owner)->Current(), Index, value.c_str());
+}
+void* TStrings::GetObjectsImpl(TObject* owner, int Index) { return no_vcl_TStrings_GetObjects(static_cast<TStrings*>(owner)->Current(), Index); }
+void TStrings::SetObjectsImpl(TObject* owner, int Index, void* const& value)
+{
+    no_vcl_TStrings_SetObjects(static_cast<TStrings*>(owner)->Current(), Index, value);
+}
+std::string TStrings::GetTextImpl(TObject* owner) { return std::string(no_vcl_TStrings_GetText(static_cast<TStrings*>(owner)->Current())); }
+void TStrings::SetTextImpl(TObject* owner, const std::string& value) { no_vcl_TStrings_SetText(static_cast<TStrings*>(owner)->Current(), value.c_str()); }
+std::string TStrings::GetCommaTextImpl(TObject* owner) { return std::string(no_vcl_TStrings_GetCommaText(static_cast<TStrings*>(owner)->Current())); }
+void TStrings::SetCommaTextImpl(TObject* owner, const std::string& value) { no_vcl_TStrings_SetCommaText(static_cast<TStrings*>(owner)->Current(), value.c_str()); }
+
 /* ---------------- TComponent ---------------- */
 
 TComponent::TComponent(no_vcl_obj_t handle)
@@ -823,16 +868,11 @@ TCustomRadioGroup::TCustomRadioGroup(no_vcl_obj_t handle)
     : TCustomGroupBox(handle)
     , ItemIndex(this, &TCustomRadioGroup::GetItemIndexImpl, &TCustomRadioGroup::SetItemIndexImpl)
     , OnClick(this, &TCustomRadioGroup::GetOnClickImpl, &TCustomRadioGroup::SetOnClickImpl)
+    , Items(this, &TCustomRadioGroup::GetItemsImpl)
+    , items_(this, &no_vcl_TCustomRadioGroup_GetItems)
 {}
 
-void TCustomRadioGroup::ItemsAdd(const std::string& text) { no_vcl_TCustomRadioGroup_Items_Add(handle_, text.c_str()); }
-void TCustomRadioGroup::ItemsClear()                      { no_vcl_TCustomRadioGroup_Items_Clear(handle_); }
-int  TCustomRadioGroup::ItemsCount() const                { return no_vcl_TCustomRadioGroup_Items_Count(handle_); }
-
-std::string TCustomRadioGroup::ItemsGetText(int index) const
-{
-    return std::string(no_vcl_TCustomRadioGroup_Items_GetText(handle_, index));
-}
+TStrings* TCustomRadioGroup::GetItemsImpl(TObject* owner) { return &static_cast<TCustomRadioGroup*>(owner)->items_; }
 
 int  TCustomRadioGroup::GetItemIndexImpl(TObject* owner)                   { return no_vcl_TCustomRadioGroup_GetItemIndex(owner->Handle()); }
 void TCustomRadioGroup::SetItemIndexImpl(TObject* owner, const int& value) { no_vcl_TCustomRadioGroup_SetItemIndex(owner->Handle(), value); }
@@ -855,18 +895,13 @@ TRadioGroup::TRadioGroup(TComponent* AOwner)
     : TCustomRadioGroup(no_vcl_TRadioGroup_Create(HandleOf(AOwner)))
 {}
 
-void TCustomCheckGroup::ItemsAdd(const std::string& text) { no_vcl_TCustomCheckGroup_Items_Add(handle_, text.c_str()); }
-void TCustomCheckGroup::ItemsClear()                      { no_vcl_TCustomCheckGroup_Items_Clear(handle_); }
-int  TCustomCheckGroup::ItemsCount() const                { return no_vcl_TCustomCheckGroup_Items_Count(handle_); }
-
-std::string TCustomCheckGroup::ItemsGetText(int index) const
-{
-    return std::string(no_vcl_TCustomCheckGroup_Items_GetText(handle_, index));
-}
+TStrings* TCustomCheckGroup::GetItemsImpl(TObject* owner) { return &static_cast<TCustomCheckGroup*>(owner)->items_; }
 
 TCustomCheckGroup::TCustomCheckGroup(no_vcl_obj_t handle)
     : TCustomGroupBox(handle)
     , Checked(this, &TCustomCheckGroup::GetCheckedImpl, &TCustomCheckGroup::SetCheckedImpl)
+    , Items(this, &TCustomCheckGroup::GetItemsImpl)
+    , items_(this, &no_vcl_TCustomCheckGroup_GetItems)
 {}
 
 bool TCustomCheckGroup::GetCheckedImpl(TObject* owner, int index)                     { return no_vcl_TCustomCheckGroup_GetChecked(owner->Handle(), index) != 0; }
@@ -1071,16 +1106,11 @@ TTabControl::TTabControl(TComponent* AOwner)
     : TCustomTabControl(no_vcl_TTabControl_Create(HandleOf(AOwner)))
     , TabIndex(this, &TTabControl::GetTabIndexImpl, &TTabControl::SetTabIndexImpl)
     , OnChange(this, &TTabControl::GetOnChangeImpl, &TTabControl::SetOnChangeImpl)
+    , Tabs(this, &TTabControl::GetTabsImpl)
+    , tabs_(this, &no_vcl_TTabControl_GetTabs)
 {}
 
-void TTabControl::TabsAdd(const std::string& text) { no_vcl_TTabControl_Tabs_Add(handle_, text.c_str()); }
-void TTabControl::TabsClear()                      { no_vcl_TTabControl_Tabs_Clear(handle_); }
-int  TTabControl::TabsCount() const                { return no_vcl_TTabControl_Tabs_Count(handle_); }
-
-std::string TTabControl::TabsGetText(int index) const
-{
-    return std::string(no_vcl_TTabControl_Tabs_GetText(handle_, index));
-}
+TStrings* TTabControl::GetTabsImpl(TObject* owner) { return &static_cast<TTabControl*>(owner)->tabs_; }
 
 int  TTabControl::GetTabIndexImpl(TObject* owner)                   { return no_vcl_TTabControl_GetTabIndex(owner->Handle()); }
 void TTabControl::SetTabIndexImpl(TObject* owner, const int& value) { no_vcl_TTabControl_SetTabIndex(owner->Handle(), value); }
@@ -1551,13 +1581,11 @@ TListItem::TListItem(no_vcl_obj_t handle)
     , Data(this, &TListItem::GetDataImpl, &TListItem::SetDataImpl)
     , Index(this, &TListItem::GetIndexImpl)
     , ListView(this, &TListItem::GetListViewImpl)
+    , SubItems(this, &TListItem::GetSubItemsImpl)
+    , subItems_(this, &no_vcl_TListItem_GetSubItems)
 {}
 
-void TListItem::SubItemsAdd(const std::string& text)   { no_vcl_TListItem_SubItems_Add(handle_, text.c_str()); }
-void TListItem::SubItemsClear()                        { no_vcl_TListItem_SubItems_Clear(handle_); }
-int  TListItem::SubItemsCount() const                  { return no_vcl_TListItem_SubItems_Count(handle_); }
-std::string TListItem::SubItemsGetText(int index) const { return std::string(no_vcl_TListItem_SubItems_GetText(handle_, index)); }
-void TListItem::SubItemsSetText(int index, const std::string& text) { no_vcl_TListItem_SubItems_SetText(handle_, index, text.c_str()); }
+TStrings* TListItem::GetSubItemsImpl(TObject* owner) { return &static_cast<TListItem*>(owner)->subItems_; }
 void TListItem::Delete()                               { no_vcl_TListItem_Delete(handle_); }
 void TListItem::MakeVisible(bool PartialOK)            { no_vcl_TListItem_MakeVisible(handle_, PartialOK ? 1 : 0); }
 
@@ -1843,16 +1871,11 @@ TSplitter::TSplitter(TComponent* AOwner)
 TCustomMemo::TCustomMemo(no_vcl_obj_t handle)
     : TCustomEdit(handle)
     , ScrollBars(this, &TCustomMemo::GetScrollBarsImpl, &TCustomMemo::SetScrollBarsImpl)
+    , Lines(this, &TCustomMemo::GetLinesImpl)
+    , lines_(this, &no_vcl_TCustomMemo_GetLines)
 {}
 
-void TCustomMemo::LinesAdd(const std::string& text) { no_vcl_TCustomMemo_Lines_Add(handle_, text.c_str()); }
-void TCustomMemo::LinesClear()                      { no_vcl_TCustomMemo_Lines_Clear(handle_); }
-int  TCustomMemo::LinesCount() const                { return no_vcl_TCustomMemo_Lines_Count(handle_); }
-
-std::string TCustomMemo::LinesGetText(int index) const
-{
-    return std::string(no_vcl_TCustomMemo_Lines_GetText(handle_, index));
-}
+TStrings* TCustomMemo::GetLinesImpl(TObject* owner) { return &static_cast<TCustomMemo*>(owner)->lines_; }
 
 int  TCustomMemo::GetScrollBarsImpl(TObject* owner)                   { return no_vcl_TCustomMemo_GetScrollBars(owner->Handle()); }
 void TCustomMemo::SetScrollBarsImpl(TObject* owner, const int& value) { no_vcl_TCustomMemo_SetScrollBars(owner->Handle(), value); }
@@ -1866,16 +1889,11 @@ TMemo::TMemo(TComponent* AOwner)
 TCustomComboBox::TCustomComboBox(no_vcl_obj_t handle)
     : TWinControl(handle)
     , ItemIndex(this, &TCustomComboBox::GetItemIndexImpl, &TCustomComboBox::SetItemIndexImpl)
+    , Items(this, &TCustomComboBox::GetItemsImpl)
+    , items_(this, &no_vcl_TCustomComboBox_GetItems)
 {}
 
-void TCustomComboBox::ItemsAdd(const std::string& text) { no_vcl_TCustomComboBox_Items_Add(handle_, text.c_str()); }
-void TCustomComboBox::ItemsClear()                      { no_vcl_TCustomComboBox_Items_Clear(handle_); }
-int  TCustomComboBox::ItemsCount() const                { return no_vcl_TCustomComboBox_Items_Count(handle_); }
-
-std::string TCustomComboBox::ItemsGetText(int index) const
-{
-    return std::string(no_vcl_TCustomComboBox_Items_GetText(handle_, index));
-}
+TStrings* TCustomComboBox::GetItemsImpl(TObject* owner) { return &static_cast<TCustomComboBox*>(owner)->items_; }
 
 int  TCustomComboBox::GetItemIndexImpl(TObject* owner)                   { return no_vcl_TCustomComboBox_GetItemIndex(owner->Handle()); }
 void TCustomComboBox::SetItemIndexImpl(TObject* owner, const int& value) { no_vcl_TCustomComboBox_SetItemIndex(owner->Handle(), value); }
@@ -1913,16 +1931,11 @@ void NO_VCL_CALL TComboBox::ChangeTrampoline(no_vcl_obj_t sender, void*)
 TCustomListBox::TCustomListBox(no_vcl_obj_t handle)
     : TWinControl(handle)
     , ItemIndex(this, &TCustomListBox::GetItemIndexImpl, &TCustomListBox::SetItemIndexImpl)
+    , Items(this, &TCustomListBox::GetItemsImpl)
+    , items_(this, &no_vcl_TCustomListBox_GetItems)
 {}
 
-void TCustomListBox::ItemsAdd(const std::string& text) { no_vcl_TCustomListBox_Items_Add(handle_, text.c_str()); }
-void TCustomListBox::ItemsClear()                      { no_vcl_TCustomListBox_Items_Clear(handle_); }
-int  TCustomListBox::ItemsCount() const                { return no_vcl_TCustomListBox_Items_Count(handle_); }
-
-std::string TCustomListBox::ItemsGetText(int index) const
-{
-    return std::string(no_vcl_TCustomListBox_Items_GetText(handle_, index));
-}
+TStrings* TCustomListBox::GetItemsImpl(TObject* owner) { return &static_cast<TCustomListBox*>(owner)->items_; }
 
 int  TCustomListBox::GetItemIndexImpl(TObject* owner)                   { return no_vcl_TCustomListBox_GetItemIndex(owner->Handle()); }
 void TCustomListBox::SetItemIndexImpl(TObject* owner, const int& value) { no_vcl_TCustomListBox_SetItemIndex(owner->Handle(), value); }

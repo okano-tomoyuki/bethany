@@ -119,7 +119,7 @@ static void NO_VCL_CALL OnListBoxClick(no_vcl_obj_t sender, void* data)
 static void NO_VCL_CALL OnMemoChange(no_vcl_obj_t sender, void* data)
 {
     (void)data;
-    printf("Memo changed! LineCount=%d\n", no_vcl_TCustomMemo_Lines_Count(sender));
+    printf("Memo changed! LineCount=%d\n", no_vcl_TStrings_GetCount(no_vcl_TCustomMemo_GetLines(sender)));
     fflush(stdout);
 }
 
@@ -485,17 +485,24 @@ int main(void)
     no_vcl_TControl_SetHeight(groupBox, 60);
 
     comboBox = Place(no_vcl_TComboBox_Create(form), form, 220, 160);
-    no_vcl_TCustomComboBox_Items_Add(comboBox, "Combo A");
-    no_vcl_TCustomComboBox_Items_Add(comboBox, "Combo B");
-    no_vcl_TCustomComboBox_Items_Add(comboBox, "Combo C");
+    no_vcl_TStrings_Add(no_vcl_TCustomComboBox_GetItems(comboBox), "Combo A");
+    no_vcl_TStrings_Add(no_vcl_TCustomComboBox_GetItems(comboBox), "Combo B");
+    no_vcl_TStrings_Add(no_vcl_TCustomComboBox_GetItems(comboBox), "Combo C");
     no_vcl_TCustomComboBox_SetItemIndex(comboBox, 0);
     no_vcl_TControl_SetWidth(comboBox, 150);
     no_vcl_TComboBox_SetOnChange(comboBox, OnComboBoxChange, NULL);
 
     listBox = Place(no_vcl_TListBox_Create(form), form, 220, 190);
-    no_vcl_TCustomListBox_Items_Add(listBox, "List 1");
-    no_vcl_TCustomListBox_Items_Add(listBox, "List 2");
-    no_vcl_TCustomListBox_Items_Add(listBox, "List 3");
+    no_vcl_TStrings_Add(no_vcl_TCustomListBox_GetItems(listBox), "List 1");
+    no_vcl_TStrings_Add(no_vcl_TCustomListBox_GetItems(listBox), "List 2");
+    no_vcl_TStrings_Add(no_vcl_TCustomListBox_GetItems(listBox), "List 3");
+    {
+        /* TStrings のハンドルは保存せず、使うたびに取得する(LCL がウィンドウの生成時に中身を差し替えるため)。 */
+        char text[64];
+        snprintf(text, sizeof(text), "%s", no_vcl_TStrings_GetCommaText(no_vcl_TCustomListBox_GetItems(listBox)));
+        printf("ListBox Items CommaText=%s (expected \"List 1\",\"List 2\",\"List 3\"), IndexOf(\"List 2\")=%d (expected 1)\n",
+               text, no_vcl_TStrings_IndexOf(no_vcl_TCustomListBox_GetItems(listBox), "List 2"));
+    }
     no_vcl_TControl_SetWidth(listBox, 150);
     no_vcl_TControl_SetHeight(listBox, 80);
     /* 利用者による選択の変更(マウス・キー操作とも)で呼ばれる。プログラムからの ItemIndex の変更では呼ばれない。 */
@@ -503,8 +510,8 @@ int main(void)
     no_vcl_TCustomListBox_SetItemIndex(listBox, 1);
 
     memo = Place(no_vcl_TMemo_Create(form), form, 220, 280);
-    no_vcl_TCustomMemo_Lines_Add(memo, "Memo line 1");
-    no_vcl_TCustomMemo_Lines_Add(memo, "Memo line 2");
+    no_vcl_TStrings_Add(no_vcl_TCustomMemo_GetLines(memo), "Memo line 1");
+    no_vcl_TStrings_Add(no_vcl_TCustomMemo_GetLines(memo), "Memo line 2");
     no_vcl_TControl_SetWidth(memo, 150);
     no_vcl_TControl_SetHeight(memo, 80);
     no_vcl_TCustomEdit_SetOnChange(memo, OnMemoChange, NULL);
@@ -602,9 +609,9 @@ int main(void)
     no_vcl_TControl_SetCaption(radioGroup, "RadioGroup1");
     no_vcl_TControl_SetWidth(radioGroup, 180);
     no_vcl_TControl_SetHeight(radioGroup, 90);
-    no_vcl_TCustomRadioGroup_Items_Add(radioGroup, "Option A");
-    no_vcl_TCustomRadioGroup_Items_Add(radioGroup, "Option B");
-    no_vcl_TCustomRadioGroup_Items_Add(radioGroup, "Option C");
+    no_vcl_TStrings_Add(no_vcl_TCustomRadioGroup_GetItems(radioGroup), "Option A");
+    no_vcl_TStrings_Add(no_vcl_TCustomRadioGroup_GetItems(radioGroup), "Option B");
+    no_vcl_TStrings_Add(no_vcl_TCustomRadioGroup_GetItems(radioGroup), "Option C");
     no_vcl_TCustomRadioGroup_SetItemIndex(radioGroup, 1);
     no_vcl_TCustomRadioGroup_SetOnClick(radioGroup, OnRadioGroupClick, NULL);
 
@@ -612,18 +619,18 @@ int main(void)
     no_vcl_TControl_SetCaption(checkGroup, "CheckGroup1");
     no_vcl_TControl_SetWidth(checkGroup, 180);
     no_vcl_TControl_SetHeight(checkGroup, 90);
-    no_vcl_TCustomCheckGroup_Items_Add(checkGroup, "Feature X");
-    no_vcl_TCustomCheckGroup_Items_Add(checkGroup, "Feature Y");
-    no_vcl_TCustomCheckGroup_Items_Add(checkGroup, "Feature Z");
+    no_vcl_TStrings_Add(no_vcl_TCustomCheckGroup_GetItems(checkGroup), "Feature X");
+    no_vcl_TStrings_Add(no_vcl_TCustomCheckGroup_GetItems(checkGroup), "Feature Y");
+    no_vcl_TStrings_Add(no_vcl_TCustomCheckGroup_GetItems(checkGroup), "Feature Z");
     no_vcl_TCustomCheckGroup_SetChecked(checkGroup, 0, 1);
     no_vcl_TCustomCheckGroup_SetChecked(checkGroup, 2, 1);
 
     checkListBox = Place(no_vcl_TCheckListBox_Create(form), form, 400, 550);
     no_vcl_TControl_SetWidth(checkListBox, 180);
     no_vcl_TControl_SetHeight(checkListBox, 90);
-    no_vcl_TCustomListBox_Items_Add(checkListBox, "Item 1");
-    no_vcl_TCustomListBox_Items_Add(checkListBox, "Item 2");
-    no_vcl_TCustomListBox_Items_Add(checkListBox, "Item 3");
+    no_vcl_TStrings_Add(no_vcl_TCustomListBox_GetItems(checkListBox), "Item 1");
+    no_vcl_TStrings_Add(no_vcl_TCustomListBox_GetItems(checkListBox), "Item 2");
+    no_vcl_TStrings_Add(no_vcl_TCustomListBox_GetItems(checkListBox), "Item 3");
     no_vcl_TCustomCheckListBox_SetChecked(checkListBox, 1, 1);
     no_vcl_TCustomCheckListBox_SetOnClickCheck(checkListBox, OnCheckListBoxClickCheck, NULL);
     printf("RadioGroup ItemIndex=%d, CheckGroup Checked[0]/[1]/[2]=%d/%d/%d, CheckListBox Checked[1]=%d\n",
@@ -670,13 +677,13 @@ int main(void)
     tabControl = Place(no_vcl_TTabControl_Create(form), form, 20, 730);
     no_vcl_TControl_SetWidth(tabControl, 300);
     no_vcl_TControl_SetHeight(tabControl, 90);
-    no_vcl_TTabControl_Tabs_Add(tabControl, "Tab A");
-    no_vcl_TTabControl_Tabs_Add(tabControl, "Tab B");
-    no_vcl_TTabControl_Tabs_Add(tabControl, "Tab C");
+    no_vcl_TStrings_Add(no_vcl_TTabControl_GetTabs(tabControl), "Tab A");
+    no_vcl_TStrings_Add(no_vcl_TTabControl_GetTabs(tabControl), "Tab B");
+    no_vcl_TStrings_Add(no_vcl_TTabControl_GetTabs(tabControl), "Tab C");
     no_vcl_TTabControl_SetTabIndex(tabControl, 0);
     no_vcl_TTabControl_SetOnChange(tabControl, OnTabControlChange, NULL);
     printf("TabControl TabsCount=%d, TabIndex=%d\n",
-           no_vcl_TTabControl_Tabs_Count(tabControl), no_vcl_TTabControl_GetTabIndex(tabControl));
+           no_vcl_TStrings_GetCount(no_vcl_TTabControl_GetTabs(tabControl)), no_vcl_TTabControl_GetTabIndex(tabControl));
 
     /* TStatusBar も Run() の前に生成してよい(ADR 0015 の問題は DLL 側で回避済み)。 */
     statusBar = no_vcl_TStatusBar_Create(form);
@@ -851,10 +858,10 @@ int main(void)
     listItems = no_vcl_TCustomListView_GetItems(listView);
     listItem = no_vcl_TListItems_Add(listItems);
     no_vcl_TListItem_SetCaption(listItem, "Beta");
-    no_vcl_TListItem_SubItems_Add(listItem, "20");
+    no_vcl_TStrings_Add(no_vcl_TListItem_GetSubItems(listItem), "20");
     listItem = no_vcl_TListItems_Add(listItems);
     no_vcl_TListItem_SetCaption(listItem, "Alpha");
-    no_vcl_TListItem_SubItems_Add(listItem, "10");
+    no_vcl_TStrings_Add(no_vcl_TListItem_GetSubItems(listItem), "10");
     no_vcl_TListItem_SetCaption(no_vcl_TListItems_Add(listItems), "Temp");
     no_vcl_TListView_SetOnDeletion(listView, OnListViewDeletion, &listDeletions);
     no_vcl_TListView_SetOnSelectItem(listView, OnListViewSelectItem, NULL);
@@ -864,7 +871,7 @@ int main(void)
            no_vcl_TListColumns_GetCount(listColumns), no_vcl_TListItems_GetCount(listItems),
            no_vcl_TCustomListView_GetItemIndex(listView),
            no_vcl_TCustomListView_GetSelected(listView) == listItem ? "yes" : "no",
-           no_vcl_TListItem_SubItems_GetText(no_vcl_TListItems_GetItem(listItems, 0), 0));
+           no_vcl_TStrings_GetStrings(no_vcl_TListItem_GetSubItems(no_vcl_TListItems_GetItem(listItems, 0)), 0));
     /* SortColumn を先に設定する(既定の -1 のままでは並べ替えない)。 */
     no_vcl_TListView_SetSortColumn(listView, 0);
     no_vcl_TListView_SetSortType(listView, no_vcl_stText);

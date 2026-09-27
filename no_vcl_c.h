@@ -220,10 +220,8 @@ void          NO_VCL_CALL no_vcl_TCustomEdit_SetOnChange(no_vcl_obj_t Obj, no_vc
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TEdit_Create(no_vcl_obj_t Owner);
 
 /* TCustomMemo / TMemo */
-void          NO_VCL_CALL no_vcl_TCustomMemo_Lines_Add(no_vcl_obj_t Obj, no_vcl_str_t Text);
-void          NO_VCL_CALL no_vcl_TCustomMemo_Lines_Clear(no_vcl_obj_t Obj);
-no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomMemo_Lines_Count(no_vcl_obj_t Obj);
-no_vcl_str_t  NO_VCL_CALL no_vcl_TCustomMemo_Lines_GetText(no_vcl_obj_t Obj, no_vcl_int_t Index);
+/* Lines(TStrings。no_vcl_TStrings_* で操作する)。ハンドルは保存せず、使うたびに取得する(下の TStrings の節を参照)。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomMemo_GetLines(no_vcl_obj_t Obj);
 no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomMemo_GetScrollBars(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TCustomMemo_SetScrollBars(no_vcl_obj_t Obj, no_vcl_int_t Value);
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TMemo_Create(no_vcl_obj_t Owner);
@@ -231,10 +229,8 @@ no_vcl_obj_t  NO_VCL_CALL no_vcl_TMemo_Create(no_vcl_obj_t Owner);
 /* TCustomComboBox / TComboBox */
 no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomComboBox_GetItemIndex(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TCustomComboBox_SetItemIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
-void          NO_VCL_CALL no_vcl_TCustomComboBox_Items_Add(no_vcl_obj_t Obj, no_vcl_str_t Text);
-void          NO_VCL_CALL no_vcl_TCustomComboBox_Items_Clear(no_vcl_obj_t Obj);
-no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomComboBox_Items_Count(no_vcl_obj_t Obj);
-no_vcl_str_t  NO_VCL_CALL no_vcl_TCustomComboBox_Items_GetText(no_vcl_obj_t Obj, no_vcl_int_t Index);
+/* Items(TStrings。no_vcl_TStrings_* で操作する)。ハンドルは保存せず、使うたびに取得する(下の TStrings の節を参照)。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomComboBox_GetItems(no_vcl_obj_t Obj);
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TComboBox_Create(no_vcl_obj_t Owner);
 /* OnChange は TCustomComboBox では protected で、公開しているのは TComboBox だけ。 */
 void          NO_VCL_CALL no_vcl_TComboBox_SetOnChange(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
@@ -244,10 +240,8 @@ void          NO_VCL_CALL no_vcl_TComboBox_SetOnChange(no_vcl_obj_t Obj, no_vcl_
  * (LCL の ClickOnSelChange が既定で有効なため。VCL と同じ)。プログラムからの ItemIndex の変更では呼ばれない。 */
 no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomListBox_GetItemIndex(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TCustomListBox_SetItemIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
-void          NO_VCL_CALL no_vcl_TCustomListBox_Items_Add(no_vcl_obj_t Obj, no_vcl_str_t Text);
-void          NO_VCL_CALL no_vcl_TCustomListBox_Items_Clear(no_vcl_obj_t Obj);
-no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomListBox_Items_Count(no_vcl_obj_t Obj);
-no_vcl_str_t  NO_VCL_CALL no_vcl_TCustomListBox_Items_GetText(no_vcl_obj_t Obj, no_vcl_int_t Index);
+/* Items(TStrings。no_vcl_TStrings_* で操作する)。ハンドルは保存せず、使うたびに取得する(下の TStrings の節を参照)。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomListBox_GetItems(no_vcl_obj_t Obj);
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TListBox_Create(no_vcl_obj_t Owner);
 
 /* TCustomTimer / TTimer */
@@ -391,10 +385,8 @@ void          NO_VCL_CALL no_vcl_TUpDown_SetAssociate(no_vcl_obj_t Obj, no_vcl_o
 
 /* TRadioGroup */
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TRadioGroup_Create(no_vcl_obj_t Owner);
-void          NO_VCL_CALL no_vcl_TCustomRadioGroup_Items_Add(no_vcl_obj_t Obj, no_vcl_str_t Text);
-void          NO_VCL_CALL no_vcl_TCustomRadioGroup_Items_Clear(no_vcl_obj_t Obj);
-no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomRadioGroup_Items_Count(no_vcl_obj_t Obj);
-no_vcl_str_t  NO_VCL_CALL no_vcl_TCustomRadioGroup_Items_GetText(no_vcl_obj_t Obj, no_vcl_int_t Index);
+/* Items(TStrings。no_vcl_TStrings_* で操作する)。ハンドルは保存せず、使うたびに取得する(下の TStrings の節を参照)。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomRadioGroup_GetItems(no_vcl_obj_t Obj);
 no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomRadioGroup_GetItemIndex(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TCustomRadioGroup_SetItemIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
 /* OnClick は TCustomRadioGroup 自身のフィールドで、no_vcl_TControl_SetOnClick とは別物。 */
@@ -402,14 +394,12 @@ void          NO_VCL_CALL no_vcl_TCustomRadioGroup_SetOnClick(no_vcl_obj_t Obj, 
 
 /* TCheckGroup */
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TCheckGroup_Create(no_vcl_obj_t Owner);
-void          NO_VCL_CALL no_vcl_TCustomCheckGroup_Items_Add(no_vcl_obj_t Obj, no_vcl_str_t Text);
-void          NO_VCL_CALL no_vcl_TCustomCheckGroup_Items_Clear(no_vcl_obj_t Obj);
-no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomCheckGroup_Items_Count(no_vcl_obj_t Obj);
-no_vcl_str_t  NO_VCL_CALL no_vcl_TCustomCheckGroup_Items_GetText(no_vcl_obj_t Obj, no_vcl_int_t Index);
+/* Items(TStrings。no_vcl_TStrings_* で操作する)。ハンドルは保存せず、使うたびに取得する(下の TStrings の節を参照)。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomCheckGroup_GetItems(no_vcl_obj_t Obj);
 no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomCheckGroup_GetChecked(no_vcl_obj_t Obj, no_vcl_int_t Index);
 void          NO_VCL_CALL no_vcl_TCustomCheckGroup_SetChecked(no_vcl_obj_t Obj, no_vcl_int_t Index, no_vcl_bool_t Value);
 
-/* TCheckListBox。Items は no_vcl_TCustomListBox_Items_* を共有する(TCustomListBox の派生のため)。 */
+/* TCheckListBox。Items は no_vcl_TCustomListBox_GetItems を使う(TCustomListBox の派生のため)。 */
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TCheckListBox_Create(no_vcl_obj_t Owner);
 no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomCheckListBox_GetChecked(no_vcl_obj_t Obj, no_vcl_int_t Index);
 void          NO_VCL_CALL no_vcl_TCustomCheckListBox_SetChecked(no_vcl_obj_t Obj, no_vcl_int_t Index, no_vcl_bool_t Value);
@@ -476,10 +466,8 @@ void          NO_VCL_CALL no_vcl_TMaskEdit_SetEditMask(no_vcl_obj_t Obj, no_vcl_
  * 独自のフィールドで再宣言して published にしているため、関数名は no_vcl_TTabControl_* にする。
  * TPageControl/TTabSheet(所有ページの生成・破棄)は今回見送る。 */
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TTabControl_Create(no_vcl_obj_t Owner);
-void          NO_VCL_CALL no_vcl_TTabControl_Tabs_Add(no_vcl_obj_t Obj, no_vcl_str_t Text);
-void          NO_VCL_CALL no_vcl_TTabControl_Tabs_Clear(no_vcl_obj_t Obj);
-no_vcl_int_t  NO_VCL_CALL no_vcl_TTabControl_Tabs_Count(no_vcl_obj_t Obj);
-no_vcl_str_t  NO_VCL_CALL no_vcl_TTabControl_Tabs_GetText(no_vcl_obj_t Obj, no_vcl_int_t Index);
+/* Tabs(TStrings。no_vcl_TStrings_* で操作する)。ハンドルは保存せず、使うたびに取得する(下の TStrings の節を参照)。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TTabControl_GetTabs(no_vcl_obj_t Obj);
 no_vcl_int_t  NO_VCL_CALL no_vcl_TTabControl_GetTabIndex(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TTabControl_SetTabIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
 void          NO_VCL_CALL no_vcl_TTabControl_SetOnChange(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
@@ -866,11 +854,8 @@ void*         NO_VCL_CALL no_vcl_TListItem_GetData(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TListItem_SetData(no_vcl_obj_t Obj, void* Value);
 no_vcl_int_t  NO_VCL_CALL no_vcl_TListItem_GetIndex(no_vcl_obj_t Obj);
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TListItem_GetListView(no_vcl_obj_t Obj);
-void          NO_VCL_CALL no_vcl_TListItem_SubItems_Add(no_vcl_obj_t Obj, no_vcl_str_t Text);
-void          NO_VCL_CALL no_vcl_TListItem_SubItems_Clear(no_vcl_obj_t Obj);
-no_vcl_int_t  NO_VCL_CALL no_vcl_TListItem_SubItems_Count(no_vcl_obj_t Obj);
-no_vcl_str_t  NO_VCL_CALL no_vcl_TListItem_SubItems_GetText(no_vcl_obj_t Obj, no_vcl_int_t Index);
-void          NO_VCL_CALL no_vcl_TListItem_SubItems_SetText(no_vcl_obj_t Obj, no_vcl_int_t Index, no_vcl_str_t Text);
+/* SubItems(TStrings。no_vcl_TStrings_* で操作する)。ハンドルは保存せず、使うたびに取得する(下の TStrings の節を参照)。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TListItem_GetSubItems(no_vcl_obj_t Obj);
 /* この項目を削除する。OnDeletion と項目の破棄通知が呼ばれる。 */
 void          NO_VCL_CALL no_vcl_TListItem_Delete(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TListItem_MakeVisible(no_vcl_obj_t Obj, no_vcl_bool_t PartialOK);
@@ -1298,6 +1283,38 @@ no_vcl_int_t  NO_VCL_CALL no_vcl_TCoolBand_GetRight(no_vcl_obj_t Obj);
 no_vcl_int_t  NO_VCL_CALL no_vcl_TCoolBand_GetHeight(no_vcl_obj_t Obj);
 /* 幅を、置いているコントロールに合わせる。 */
 void          NO_VCL_CALL no_vcl_TCoolBand_AutosizeWidth(no_vcl_obj_t Obj);
+
+/* ---------------- TStrings(docs/adr/0027) ----------------
+ * 文字列の一覧(LCL の TStrings)。ハンドルは no_vcl_TCustomListBox_GetItems・no_vcl_TCustomMemo_GetLines 等で得る。
+ * ハンドルは所有者(コントロール・リストビューの項目)の持ち物で、LCL がウィンドウの生成・破棄のときに
+ * 中身の TStrings を差し替えることがある(TListBox・TComboBox・TMemo)。そのため、ハンドルは保存せず、使うたびに取得すること。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TStrings_GetCount(no_vcl_obj_t Obj);
+no_vcl_str_t  NO_VCL_CALL no_vcl_TStrings_GetStrings(no_vcl_obj_t Obj, no_vcl_int_t Index);
+void          NO_VCL_CALL no_vcl_TStrings_SetStrings(no_vcl_obj_t Obj, no_vcl_int_t Index, no_vcl_str_t Value);
+/* Objects[Index]。利用者データ(C 側のポインタ)として扱い、LCL は解釈も解放もしない。 */
+void*         NO_VCL_CALL no_vcl_TStrings_GetObjects(no_vcl_obj_t Obj, no_vcl_int_t Index);
+void          NO_VCL_CALL no_vcl_TStrings_SetObjects(no_vcl_obj_t Obj, no_vcl_int_t Index, void* Value);
+/* 末尾に追加し、追加した位置を返す(ソートされた一覧では挿入された位置)。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TStrings_Add(no_vcl_obj_t Obj, no_vcl_str_t S);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TStrings_AddObject(no_vcl_obj_t Obj, no_vcl_str_t S, void* AObject);
+void          NO_VCL_CALL no_vcl_TStrings_Insert(no_vcl_obj_t Obj, no_vcl_int_t Index, no_vcl_str_t S);
+void          NO_VCL_CALL no_vcl_TStrings_Delete(no_vcl_obj_t Obj, no_vcl_int_t Index);
+void          NO_VCL_CALL no_vcl_TStrings_Clear(no_vcl_obj_t Obj);
+/* 見つからなければ -1。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TStrings_IndexOf(no_vcl_obj_t Obj, no_vcl_str_t S);
+void          NO_VCL_CALL no_vcl_TStrings_Exchange(no_vcl_obj_t Obj, no_vcl_int_t Index1, no_vcl_int_t Index2);
+void          NO_VCL_CALL no_vcl_TStrings_Move(no_vcl_obj_t Obj, no_vcl_int_t CurIndex, no_vcl_int_t NewIndex);
+void          NO_VCL_CALL no_vcl_TStrings_BeginUpdate(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TStrings_EndUpdate(no_vcl_obj_t Obj);
+/* すべての行を改行でつないだ文字列。設定すると改行で分けて置き換える。 */
+no_vcl_str_t  NO_VCL_CALL no_vcl_TStrings_GetText(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TStrings_SetText(no_vcl_obj_t Obj, no_vcl_str_t Value);
+/* カンマ区切りの文字列(空白・カンマを含む要素は二重引用符で囲まれる)。 */
+no_vcl_str_t  NO_VCL_CALL no_vcl_TStrings_GetCommaText(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TStrings_SetCommaText(no_vcl_obj_t Obj, no_vcl_str_t Value);
+/* Source の内容(文字列と Objects)で置き換える / 末尾に加える。 */
+void          NO_VCL_CALL no_vcl_TStrings_Assign(no_vcl_obj_t Obj, no_vcl_obj_t Source);
+void          NO_VCL_CALL no_vcl_TStrings_AddStrings(no_vcl_obj_t Obj, no_vcl_obj_t Source);
 
 #ifdef __cplusplus
 }

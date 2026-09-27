@@ -160,6 +160,8 @@ public:
     TStringGrid*    StringGrid1;
     TDrawGrid*      DrawGrid1;
     int             drawnCells_ = 0;
+    // ウィンドウを作る前の ListBox1->Items の中身のハンドル(表示後に LCL が差し替えることの確認用)。
+    no_vcl_obj_t    listBoxItemsBeforeShow_ = nullptr;
     TTabSheet*      HeaderSheet;
     THeaderControl* HeaderControl1;
     TTabSheet*      ToolsSheet;
@@ -264,9 +266,9 @@ public:
 
         ComboBox1 = new TComboBox(this);
         ComboBox1->Parent = this;
-        ComboBox1->ItemsAdd("Combo A");
-        ComboBox1->ItemsAdd("Combo B");
-        ComboBox1->ItemsAdd("Combo C");
+        ComboBox1->Items->Add("Combo A");
+        ComboBox1->Items->Add("Combo B");
+        ComboBox1->Items->Add("Combo C");
         ComboBox1->ItemIndex = 0;
         ComboBox1->Left = 220;
         ComboBox1->Top = 160;
@@ -275,9 +277,10 @@ public:
 
         ListBox1 = new TListBox(this);
         ListBox1->Parent = this;
-        ListBox1->ItemsAdd("List 1");
-        ListBox1->ItemsAdd("List 2");
-        ListBox1->ItemsAdd("List 3");
+        ListBox1->Items->Add("List 1");
+        ListBox1->Items->Add("List 2");
+        ListBox1->Items->Add("List 3");
+        listBoxItemsBeforeShow_ = ListBox1->Items->Current();
         ListBox1->Left = 220;
         ListBox1->Top = 190;
         ListBox1->Width = 150;
@@ -287,8 +290,8 @@ public:
         // TMemo は TCustomEdit の派生なので、Edit1 と同じ TextChange を共有できる。
         Memo1 = new TMemo(this);
         Memo1->Parent = this;
-        Memo1->LinesAdd("Memo line 1");
-        Memo1->LinesAdd("Memo line 2");
+        Memo1->Lines->Add("Memo line 1");
+        Memo1->Lines->Add("Memo line 2");
         Memo1->Left = 220;
         Memo1->Top = 280;
         Memo1->Width = 150;
@@ -426,9 +429,9 @@ public:
         RadioGroup1->Top = 550;
         RadioGroup1->Width = 180;
         RadioGroup1->Height = 90;
-        RadioGroup1->ItemsAdd("Option A");
-        RadioGroup1->ItemsAdd("Option B");
-        RadioGroup1->ItemsAdd("Option C");
+        RadioGroup1->Items->Add("Option A");
+        RadioGroup1->Items->Add("Option B");
+        RadioGroup1->Items->Add("Option C");
         RadioGroup1->ItemIndex = 1;
         RadioGroup1->OnClick = [this](TObject* Sender) { RadioGroup1Click(Sender); };
 
@@ -439,9 +442,9 @@ public:
         CheckGroup1->Top = 550;
         CheckGroup1->Width = 180;
         CheckGroup1->Height = 90;
-        CheckGroup1->ItemsAdd("Feature X");
-        CheckGroup1->ItemsAdd("Feature Y");
-        CheckGroup1->ItemsAdd("Feature Z");
+        CheckGroup1->Items->Add("Feature X");
+        CheckGroup1->Items->Add("Feature Y");
+        CheckGroup1->Items->Add("Feature Z");
         CheckGroup1->Checked[0] = true;
         CheckGroup1->Checked[2] = true;
 
@@ -451,9 +454,9 @@ public:
         CheckListBox1->Top = 550;
         CheckListBox1->Width = 180;
         CheckListBox1->Height = 90;
-        CheckListBox1->ItemsAdd("Item 1");
-        CheckListBox1->ItemsAdd("Item 2");
-        CheckListBox1->ItemsAdd("Item 3");
+        CheckListBox1->Items->Add("Item 1");
+        CheckListBox1->Items->Add("Item 2");
+        CheckListBox1->Items->Add("Item 3");
         CheckListBox1->Checked[1] = true;
         CheckListBox1->OnClickCheck = [this](TObject* Sender) { CheckListBox1ClickCheck(Sender); };
 
@@ -509,9 +512,9 @@ public:
         TabControl1->Top = 730;
         TabControl1->Width = 300;
         TabControl1->Height = 90;
-        TabControl1->TabsAdd("Tab A");
-        TabControl1->TabsAdd("Tab B");
-        TabControl1->TabsAdd("Tab C");
+        TabControl1->Tabs->Add("Tab A");
+        TabControl1->Tabs->Add("Tab B");
+        TabControl1->Tabs->Add("Tab C");
         TabControl1->TabIndex = 0;
         TabControl1->OnChange = [this](TObject* Sender) { TabControl1Change(Sender); };
 
@@ -714,13 +717,13 @@ public:
         sizeColumn->Alignment = taRightJustify;
         AlphaItem = ListView1->Items->Add();
         AlphaItem->Caption = "Alpha";
-        AlphaItem->SubItemsAdd("10");
+        AlphaItem->SubItems->Add("10");
         BetaItem = ListView1->Items->Add();
         BetaItem->Caption = "Beta";
-        BetaItem->SubItemsAdd("20");
+        BetaItem->SubItems->Add("20");
         GammaItem = ListView1->Items->Add();
         GammaItem->Caption = "Gamma";
-        GammaItem->SubItemsAdd("30");
+        GammaItem->SubItems->Add("30");
         ListView1->OnSelectItem = [](TObject*, TListItem* Item, bool Selected) {
             std::printf("ListView1SelectItem: %s Selected=%d\n", std::string(Item->Caption).c_str(), Selected);
             std::fflush(stdout);
@@ -994,6 +997,11 @@ private:
     void FormShow(TObject*)
     {
         std::printf("FormShow\n");
+        // ウィンドウを作ると、LCL は ListBox の Items の中身を OS のリストの TStrings に差し替える(内容は引き継がれる)。
+        // TStrings のビューは操作のたびに所有者から中身を取り直すので、そのまま使える。
+        std::printf("ListBox1 Items replaced after the window was created: %s, Count=%d (expected 3), Strings[2]=%s (expected List 3)\n",
+                    ListBox1->Items->Current() != listBoxItemsBeforeShow_ ? "yes" : "no", (int)ListBox1->Items->Count,
+                    std::string(ListBox1->Items->Strings[2]).c_str());
         // Align による配置は、LCL ではフォームが表示されるまで行われない(VCL と異なる)。OnShow の時点では済んでいる。
         // LayoutPanel(280x90)のクライアント領域は、枠(BevelOuter)の 1px 分だけ内側の (1,1)-(279,89)。
         // expected は Win32 の値で、Linux/GTK2 ではクライアント領域が右と下に 4px 狭いため、Width/Height がその分小さくなる。
@@ -1278,20 +1286,20 @@ int main()
     std::printf("ProgressBar1 Position: %d (expected 42)\n", (int)Form1->ProgressBar1->Position);
     std::printf("UpDown1 Position: %d, Associate is UpDownEdit: %s\n",
                 (int)Form1->UpDown1->Position, Form1->UpDown1->Associate == Form1->UpDownEdit ? "yes" : "no");
-    std::printf("RadioGroup1 ItemsCount/ItemIndex: %d/%d (expected 3/1)\n",
-                Form1->RadioGroup1->ItemsCount(), (int)Form1->RadioGroup1->ItemIndex);
+    std::printf("RadioGroup1 Items->Count/ItemIndex: %d/%d (expected 3/1)\n",
+                (int)Form1->RadioGroup1->Items->Count, (int)Form1->RadioGroup1->ItemIndex);
     std::printf("CheckGroup1 Checked[0]/[1]/[2]: %d/%d/%d (expected 1/0/1)\n",
                 (bool)Form1->CheckGroup1->Checked[0], (bool)Form1->CheckGroup1->Checked[1], (bool)Form1->CheckGroup1->Checked[2]);
-    std::printf("CheckListBox1 ItemsCount/Checked[1]: %d/%d (expected 3/1)\n",
-                Form1->CheckListBox1->ItemsCount(), (bool)Form1->CheckListBox1->Checked[1]);
+    std::printf("CheckListBox1 Items->Count/Checked[1]: %d/%d (expected 3/1)\n",
+                (int)Form1->CheckListBox1->Items->Count, (bool)Form1->CheckListBox1->Checked[1]);
     std::printf("BitBtn1 Kind: %d (expected bkOK=1), Caption: %s\n",
                 (int)Form1->BitBtn1->Kind, std::string(Form1->BitBtn1->Caption).c_str());
     std::printf("FloatSpinEdit1 Value: %.1f (expected 2.5)\n", (double)Form1->FloatSpinEdit1->Value);
     // SpinEdit1->Value は int 版(TCustomSpinEdit)が基底の double 版を隠していることの確認。
     std::printf("SpinEdit1 Value: %d (expected 42, int hides the inherited double)\n", (int)Form1->SpinEdit1->Value);
     std::printf("MaskEdit1 EditMask: %s\n", std::string(Form1->MaskEdit1->EditMask).c_str());
-    std::printf("TabControl1 TabsCount/TabIndex: %d/%d (expected 3/0)\n",
-                Form1->TabControl1->TabsCount(), (int)Form1->TabControl1->TabIndex);
+    std::printf("TabControl1 Tabs->Count/TabIndex: %d/%d (expected 3/0)\n",
+                (int)Form1->TabControl1->Tabs->Count, (int)Form1->TabControl1->TabIndex);
     std::printf("StatusBar1 SimpleText: %s (expected Ready)\n", std::string(Form1->StatusBar1->SimpleText).c_str());
     // TStatusBar の Align の既定値は alBottom(Left/Top を指定しなくてもフォームの下端に付く)。
     std::printf("StatusBar1 Align: %d (expected alBottom=%d)\n", (int)Form1->StatusBar1->Align, (int)alBottom);
@@ -1441,7 +1449,7 @@ int main()
         std::printf("Items->Count=%d (expected 3), Item[1] is BetaItem: %s, SubItems[0]=%s (expected 20), "
                     "ListView is ListView1: %s\n",
                     (int)items->Count, items->Item[1] == f->BetaItem ? "yes" : "no",
-                    f->BetaItem->SubItemsGetText(0).c_str(), f->BetaItem->ListView == lv ? "yes" : "no");
+                    std::string(f->BetaItem->SubItems->Strings[0]).c_str(), f->BetaItem->ListView == lv ? "yes" : "no");
         std::printf("FindCaption(\"Gam\", partial) is GammaItem: %s\n",
                     items->FindCaption(0, "Gam", true, true, false) == f->GammaItem ? "yes" : "no");
 
@@ -1450,8 +1458,8 @@ int main()
                     lv->Selected == f->BetaItem ? "yes" : "no", (int)lv->ItemIndex, (int)lv->SelCount);
         f->GammaItem->Checked = true;
         std::printf("GammaItem Checked=%d (expected 1)\n", (bool)f->GammaItem->Checked);
-        f->GammaItem->SubItemsSetText(0, "33");
-        std::printf("GammaItem SubItems[0]=%s (expected 33)\n", f->GammaItem->SubItemsGetText(0).c_str());
+        f->GammaItem->SubItems->Strings[0] = "33";
+        std::printf("GammaItem SubItems[0]=%s (expected 33)\n", std::string(f->GammaItem->SubItems->Strings[0]).c_str());
 
         // Exchange で入れ替え、SortType = stText で Caption の順に並べ直す。
         items->Exchange(0, 2);
@@ -1644,6 +1652,61 @@ int main()
         std::printf("temp CoolBar Align = alLeft: Vertical=%d (expected 1), GrabStyle=%d (expected gsDouble=%d), ShowText=%d (expected 1)\n",
                     (bool)temp->Vertical, (int)(TGrabStyle)temp->GrabStyle, (int)gsDouble, (bool)temp->ShowText);
         temp->Free();
+    }
+
+    // TStrings(Items・Lines・Tabs・SubItems)。VCL と同じく Items->Add・Items->Strings[i] 等で操作する。
+    {
+        TMainForm* f = Form1;
+        TListBox* box = new TListBox(f);
+        TStrings* items = box->Items;
+        items->Add("Banana");
+        int appleIndex = items->Add("Apple");
+        items->Insert(0, "Cherry");
+        std::printf("TStrings Add returned %d (expected 1), Count=%d (expected 3), Strings[0]=%s (expected Cherry), "
+                    "IndexOf(\"Apple\")=%d (expected 2), IndexOf(\"none\")=%d (expected -1)\n",
+                    appleIndex, (int)items->Count, std::string(items->Strings[0]).c_str(), items->IndexOf("Apple"), items->IndexOf("none"));
+
+        items->Exchange(0, 2);
+        items->Move(0, 1);
+        items->Strings[2] = "Cherry!";
+        std::printf("After Exchange(0, 2), Move(0, 1), Strings[2] = \"Cherry!\": CommaText=%s (expected Banana,Apple,Cherry!)\n",
+                    std::string(items->CommaText).c_str());
+
+        // Objects は利用者データ(ポインタ)。
+        int tag = 42;
+        items->Objects[1] = &tag;
+        items->AddObject("Date", &tag);
+        std::printf("Objects[1] is &tag: %s, Objects[3] is &tag: %s, Objects[0] is null: %s\n",
+                    items->Objects[1] == &tag ? "yes" : "no", (void*)items->Objects[3] == &tag ? "yes" : "no",
+                    (void*)items->Objects[0] == nullptr ? "yes" : "no");
+
+        // Text は改行でつないだ文字列。CommaText は空白・カンマを含む要素を二重引用符で囲む。
+        items->Text = "one\ntwo\nthree";
+        std::printf("After Text = one/two/three: Count=%d (expected 3), Strings[1]=%s (expected two)\n",
+                    (int)items->Count, std::string(items->Strings[1]).c_str());
+        items->CommaText = "a,\"b c\",d";
+        std::printf("After CommaText = a,\"b c\",d: Count=%d (expected 3), Strings[1]=%s (expected b c), CommaText=%s\n",
+                    (int)items->Count, std::string(items->Strings[1]).c_str(), std::string(items->CommaText).c_str());
+
+        // Assign・AddStrings は別のコントロールの TStrings から写す(ListBox1->Items->Assign(Memo1->Lines) 等)。
+        items->Assign(f->Memo1->Lines);
+        std::printf("After Assign(Memo1->Lines): Count=%d (expected 2), Strings[0]=%s (expected Memo line 1)\n",
+                    (int)items->Count, std::string(items->Strings[0]).c_str());
+        items->AddStrings(f->ComboBox1->Items);
+        items->Delete(0);
+        std::printf("After AddStrings(ComboBox1->Items) and Delete(0): Count=%d (expected 4), Strings[1]=%s (expected Combo A)\n",
+                    (int)items->Count, std::string(items->Strings[1]).c_str());
+        items->BeginUpdate();
+        items->Clear();
+        items->EndUpdate();
+        std::printf("After Clear: Count=%d (expected 0)\n", (int)items->Count);
+        box->Free();
+
+        // 他の所有者の TStrings も同じ形で使える。
+        std::printf("Memo1 Lines->Count=%d (expected 2), TabControl1 Tabs->Strings[1]=%s (expected Tab B), "
+                    "BetaItem SubItems->Strings[0]=%s (expected 20), RadioGroup1 Items->Strings[2]=%s (expected Option C)\n",
+                    (int)f->Memo1->Lines->Count, std::string(f->TabControl1->Tabs->Strings[1]).c_str(),
+                    std::string(f->BetaItem->SubItems->Strings[0]).c_str(), std::string(f->RadioGroup1->Items->Strings[2]).c_str());
     }
 
     // 2 つ目以降に生成したフォームは MainForm にならない。

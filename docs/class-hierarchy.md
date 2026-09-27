@@ -120,10 +120,11 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 | OnCreate | TCustomForm(public) | TCustomForm | TCustomForm(public。発火は C++ 側、[ADR 0011](adr/0011-form-release-onclose-oncreate.md)) | (なし) |
 | Checked | TButtonControl(protected) | TCheckBox / TRadioButton | TButtonControl(protected)、TCheckBox / TRadioButton で `using` | `TButtonControl_GetChecked` / `SetChecked`(protected hack) |
 | MaxLength / ReadOnly / OnChange | TCustomEdit(public) | TCustomEdit | TCustomEdit(public) | `TCustomEdit_*` |
-| Lines / ScrollBars | TCustomMemo(public) | TCustomMemo | TCustomMemo(public) | `TCustomMemo_*` |
-| Items / ItemIndex | TCustomComboBox(public) | TCustomComboBox | TCustomComboBox(public) | `TCustomComboBox_*` |
+| Lines / ScrollBars | TCustomMemo(public) | TCustomMemo | TCustomMemo(public。Lines は `ReadOnlyProperty<TStrings*>`。ADR 0027) | `TCustomMemo_*` |
+| Items / ItemIndex | TCustomComboBox(public) | TCustomComboBox | TCustomComboBox(public。Items は `ReadOnlyProperty<TStrings*>`。ADR 0027) | `TCustomComboBox_*` |
 | OnChange(ComboBox) | TCustomComboBox(protected) | TComboBox のみ | TComboBox(public) | `TComboBox_SetOnChange` |
-| Items / ItemIndex | TCustomListBox(public) | TCustomListBox | TCustomListBox(public) | `TCustomListBox_*` |
+| Items / ItemIndex | TCustomListBox(public) | TCustomListBox | TCustomListBox(public。Items は `ReadOnlyProperty<TStrings*>`。ADR 0027) | `TCustomListBox_*` |
+| Count / Strings[i] / Objects[i] / Text / CommaText / Add / AddObject / Insert / Delete / Clear / IndexOf / Exchange / Move / BeginUpdate / EndUpdate / Assign / AddStrings | TStrings(public。TPersistent) | TStrings | TStrings(public。所有者から中身を都度取得するビュー) | `TStrings_*`([ADR 0027](adr/0027-tstrings.md)) |
 | Canvas / OnPaint | TPaintBox(public/published) | TPaintBox | TPaintBox(public) | `TPaintBox_*` |
 | AutoSnap / Beveled / MinSize / ResizeAnchor / ResizeStyle / OnMoved / Get・SetSplitterPosition | TCustomSplitter(public) | TCustomSplitter | TCustomSplitter(public) | `TCustomSplitter_*`([ADR 0016](adr/0016-control-align-and-splitter.md)) |
 | PopupMenu | TControl(public) | TControl | TControl(public) | `TControl_GetPopupMenu` / `SetPopupMenu`([ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md)) |
@@ -144,7 +145,7 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 | Items / Selected / ItemIndex / SelCount / Checkboxes / GridLines / MultiSelect / ReadOnly / RowSelect / Clear / BeginUpdate / EndUpdate / GetItemAt / ClearSelection / SelectAll | TCustomListView(public) | TCustomListView | TCustomListView(public) | `TCustomListView_*`([ADR 0020](adr/0020-listview-and-shared-item-registry.md)) |
 | Columns / ViewStyle / HideSelection / SortType / SortColumn / SortDirection / OnSelectItem / OnChange / OnDeletion / OnItemChecked / OnColumnClick | TCustomListView(protected) | TListView | TListView(public) | `TListView_*`(ADR 0020) |
 | Add / Insert / Delete / Clear / Count / Item[i] / IndexOf / FindCaption / Exchange / Move / BeginUpdate / EndUpdate | TListItems(public。TPersistent) | TListItems | TListItems(public。Item[i] は `ReadOnlyIndexedProperty`。ADR 0023) | `TListItems_*`(ADR 0020) |
-| Caption / Checked / Selected / Focused / Data / Index / ListView / SubItems / Delete / MakeVisible | TListItem(public。TPersistent) | TListItem | TListItem(public。SubItems は `SubItemsAdd` 等) | `TListItem_*`(ADR 0020) |
+| Caption / Checked / Selected / Focused / Data / Index / ListView / SubItems / Delete / MakeVisible | TListItem(public。TPersistent) | TListItem | TListItem(public。SubItems は `ReadOnlyProperty<TStrings*>`。ADR 0027) | `TListItem_*`(ADR 0020) |
 | Add / Count / Items[i] / Delete / Clear | TListColumns(public。TCollection) | TListColumns | TListColumns(public。Items[i] は `ReadOnlyIndexedProperty`。ADR 0023) | `TListColumns_*`(ADR 0020) |
 | Caption / Width / Alignment / AutoSize / Visible / Index | TListColumn(published。TCollectionItem) | TListColumn | TListColumn(public) | `TListColumn_*`(ADR 0020) |
 | BeginUpdate / EndUpdate / Clear / CellRect / MouseToCell | TCustomGrid(public) | TCustomGrid | TCustomGrid(public) | `TCustomGrid_*`([ADR 0021](adr/0021-drawgrid-and-stringgrid.md)) |
