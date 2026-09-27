@@ -755,6 +755,7 @@ void TApplication::Shutdown()
     if (Application)
         no_vcl_TComponent_DestroyComponents(Application->handle_);
     no_vcl_FreeNotify_SetCallback(nullptr, nullptr);
+    no_vcl_TreeNodeFree_SetCallback(nullptr, nullptr);
 }
 
 void TApplication::BeginCreateForm()
@@ -1228,6 +1229,313 @@ void TTabSheet::SetPageControlImpl(TObject* owner, TPageControl* const& value)
 }
 
 int TTabSheet::GetTabIndexImpl(TObject* owner) { return no_vcl_TTabSheet_GetTabIndex(owner->Handle()); }
+
+/* ---------------- TreeView ---------------- */
+
+// TTreeNode は TComponent ではないため、TComponent のレジストリ・破棄通知とは別に持つ。
+// ノードの削除は Pascal 側(TNoVclTreeView.Delete)から、OnDeletion の後に通知される。
+// 意図的に破棄しない(new したまま)。関数内 static の値にすると、初回の呼び出し(フォームの生成中)より前に
+// 登録された TApplication::Shutdown(atexit)よりも先に破棄されてしまい、Shutdown でフォームを破棄する際の
+// ノードの削除通知(FreeTrampoline)が、破棄済みのレジストリに触れることになる(未定義動作。実際に終了が数秒遅れた)。
+std::unordered_map<no_vcl_obj_t, TTreeNode*>& TTreeNode::Registry()
+{
+    static std::unordered_map<no_vcl_obj_t, TTreeNode*>* registry = new std::unordered_map<no_vcl_obj_t, TTreeNode*>();
+    return *registry;
+}
+
+TTreeNode* TTreeNode::Wrap(no_vcl_obj_t handle)
+{
+    if (!handle)
+        return nullptr;
+
+    static bool callbackInstalled = false;
+    if (!callbackInstalled)
+    {
+        no_vcl_TreeNodeFree_SetCallback(&TTreeNode::FreeTrampoline, nullptr);
+        callbackInstalled = true;
+    }
+
+    std::unordered_map<no_vcl_obj_t, TTreeNode*>& registry = Registry();
+    auto it = registry.find(handle);
+    if (it != registry.end())
+        return it->second;
+    TTreeNode* node = new TTreeNode(handle);
+    registry[handle] = node;
+    return node;
+}
+
+void NO_VCL_CALL TTreeNode::FreeTrampoline(no_vcl_obj_t handle, void*)
+{
+    std::unordered_map<no_vcl_obj_t, TTreeNode*>& registry = Registry();
+    auto it = registry.find(handle);
+    if (it == registry.end())
+        return;
+    TTreeNode* node = it->second;
+    registry.erase(it);
+    delete node;
+}
+
+TTreeNode::TTreeNode(no_vcl_obj_t handle)
+    : TPersistent(handle)
+    , Text(this, &TTreeNode::GetTextImpl, &TTreeNode::SetTextImpl)
+    , Expanded(this, &TTreeNode::GetExpandedImpl, &TTreeNode::SetExpandedImpl)
+    , Selected(this, &TTreeNode::GetSelectedImpl, &TTreeNode::SetSelectedImpl)
+    , HasChildren(this, &TTreeNode::GetHasChildrenImpl, &TTreeNode::SetHasChildrenImpl)
+    , Data(this, &TTreeNode::GetDataImpl, &TTreeNode::SetDataImpl)
+    , Count(this, &TTreeNode::GetCountImpl)
+    , Index(this, &TTreeNode::GetIndexImpl)
+    , Level(this, &TTreeNode::GetLevelImpl)
+    , AbsoluteIndex(this, &TTreeNode::GetAbsoluteIndexImpl)
+    , Parent(this, &TTreeNode::GetParentImpl)
+    , TreeView(this, &TTreeNode::GetTreeViewImpl)
+{}
+
+TTreeNode* TTreeNode::GetItem(int Index) const  { return Wrap(no_vcl_TTreeNode_GetItem(handle_, Index)); }
+TTreeNode* TTreeNode::GetFirstChild() const     { return Wrap(no_vcl_TTreeNode_GetFirstChild(handle_)); }
+TTreeNode* TTreeNode::GetLastChild() const      { return Wrap(no_vcl_TTreeNode_GetLastChild(handle_)); }
+TTreeNode* TTreeNode::GetNextSibling() const    { return Wrap(no_vcl_TTreeNode_GetNextSibling(handle_)); }
+TTreeNode* TTreeNode::GetPrevSibling() const    { return Wrap(no_vcl_TTreeNode_GetPrevSibling(handle_)); }
+TTreeNode* TTreeNode::GetNext() const           { return Wrap(no_vcl_TTreeNode_GetNext(handle_)); }
+TTreeNode* TTreeNode::GetPrev() const           { return Wrap(no_vcl_TTreeNode_GetPrev(handle_)); }
+int  TTreeNode::IndexOf(TTreeNode* Node) const  { return no_vcl_TTreeNode_IndexOf(handle_, Node ? Node->Handle() : nullptr); }
+void TTreeNode::Expand(bool Recurse)            { no_vcl_TTreeNode_Expand(handle_, Recurse ? 1 : 0); }
+void TTreeNode::Collapse(bool Recurse)          { no_vcl_TTreeNode_Collapse(handle_, Recurse ? 1 : 0); }
+void TTreeNode::Delete()                        { no_vcl_TTreeNode_Delete(handle_); }
+void TTreeNode::DeleteChildren()                { no_vcl_TTreeNode_DeleteChildren(handle_); }
+void TTreeNode::MakeVisible()                   { no_vcl_TTreeNode_MakeVisible(handle_); }
+
+void TTreeNode::MoveTo(TTreeNode* Destination, TNodeAttachMode Mode)
+{
+    no_vcl_TTreeNode_MoveTo(handle_, Destination ? Destination->Handle() : nullptr, Mode);
+}
+
+std::string TTreeNode::GetTextImpl(TObject* owner) { return std::string(no_vcl_TTreeNode_GetText(owner->Handle())); }
+void TTreeNode::SetTextImpl(TObject* owner, const std::string& value) { no_vcl_TTreeNode_SetText(owner->Handle(), value.c_str()); }
+bool TTreeNode::GetExpandedImpl(TObject* owner)                      { return no_vcl_TTreeNode_GetExpanded(owner->Handle()) != 0; }
+void TTreeNode::SetExpandedImpl(TObject* owner, const bool& value)    { no_vcl_TTreeNode_SetExpanded(owner->Handle(), value ? 1 : 0); }
+bool TTreeNode::GetSelectedImpl(TObject* owner)                      { return no_vcl_TTreeNode_GetSelected(owner->Handle()) != 0; }
+void TTreeNode::SetSelectedImpl(TObject* owner, const bool& value)    { no_vcl_TTreeNode_SetSelected(owner->Handle(), value ? 1 : 0); }
+bool TTreeNode::GetHasChildrenImpl(TObject* owner)                   { return no_vcl_TTreeNode_GetHasChildren(owner->Handle()) != 0; }
+void TTreeNode::SetHasChildrenImpl(TObject* owner, const bool& value) { no_vcl_TTreeNode_SetHasChildren(owner->Handle(), value ? 1 : 0); }
+void* TTreeNode::GetDataImpl(TObject* owner)                         { return no_vcl_TTreeNode_GetData(owner->Handle()); }
+void TTreeNode::SetDataImpl(TObject* owner, void* const& value)       { no_vcl_TTreeNode_SetData(owner->Handle(), value); }
+int  TTreeNode::GetCountImpl(TObject* owner)                         { return no_vcl_TTreeNode_GetCount(owner->Handle()); }
+int  TTreeNode::GetIndexImpl(TObject* owner)                         { return no_vcl_TTreeNode_GetIndex(owner->Handle()); }
+int  TTreeNode::GetLevelImpl(TObject* owner)                         { return no_vcl_TTreeNode_GetLevel(owner->Handle()); }
+int  TTreeNode::GetAbsoluteIndexImpl(TObject* owner)                 { return no_vcl_TTreeNode_GetAbsoluteIndex(owner->Handle()); }
+TTreeNode* TTreeNode::GetParentImpl(TObject* owner)                  { return Wrap(no_vcl_TTreeNode_GetParent(owner->Handle())); }
+
+TCustomTreeView* TTreeNode::GetTreeViewImpl(TObject* owner)
+{
+    // ツリービューは TComponent で、C++ ラッパーを介して作られていればレジストリにある。
+    return static_cast<TCustomTreeView*>(TCustomTreeView::FromHandle(no_vcl_TTreeNode_GetTreeView(owner->Handle())));
+}
+
+TTreeNodes::TTreeNodes(no_vcl_obj_t handle)
+    : TPersistent(handle)
+    , Count(this, &TTreeNodes::GetCountImpl)
+{}
+
+namespace
+{
+no_vcl_obj_t NodeHandle(const TTreeNode* node) { return node ? node->Handle() : nullptr; }
+}
+
+TTreeNode* TTreeNodes::Add(TTreeNode* Sibling, const std::string& S)
+{
+    return TTreeNode::Wrap(no_vcl_TTreeNodes_Add(handle_, NodeHandle(Sibling), S.c_str()));
+}
+
+TTreeNode* TTreeNodes::AddFirst(TTreeNode* Sibling, const std::string& S)
+{
+    return TTreeNode::Wrap(no_vcl_TTreeNodes_AddFirst(handle_, NodeHandle(Sibling), S.c_str()));
+}
+
+TTreeNode* TTreeNodes::AddChild(TTreeNode* Parent, const std::string& S)
+{
+    return TTreeNode::Wrap(no_vcl_TTreeNodes_AddChild(handle_, NodeHandle(Parent), S.c_str()));
+}
+
+TTreeNode* TTreeNodes::AddChildFirst(TTreeNode* Parent, const std::string& S)
+{
+    return TTreeNode::Wrap(no_vcl_TTreeNodes_AddChildFirst(handle_, NodeHandle(Parent), S.c_str()));
+}
+
+TTreeNode* TTreeNodes::Insert(TTreeNode* NextNode, const std::string& S)
+{
+    return TTreeNode::Wrap(no_vcl_TTreeNodes_Insert(handle_, NodeHandle(NextNode), S.c_str()));
+}
+
+void TTreeNodes::Clear()                   { no_vcl_TTreeNodes_Clear(handle_); }
+void TTreeNodes::Delete(TTreeNode* Node)   { no_vcl_TTreeNodes_Delete(handle_, NodeHandle(Node)); }
+TTreeNode* TTreeNodes::GetItem(int Index) const { return TTreeNode::Wrap(no_vcl_TTreeNodes_GetItem(handle_, Index)); }
+TTreeNode* TTreeNodes::GetFirstNode() const     { return TTreeNode::Wrap(no_vcl_TTreeNodes_GetFirstNode(handle_)); }
+
+TTreeNode* TTreeNodes::FindNodeWithText(const std::string& S) const
+{
+    return TTreeNode::Wrap(no_vcl_TTreeNodes_FindNodeWithText(handle_, S.c_str()));
+}
+
+void TTreeNodes::BeginUpdate()             { no_vcl_TTreeNodes_BeginUpdate(handle_); }
+void TTreeNodes::EndUpdate()               { no_vcl_TTreeNodes_EndUpdate(handle_); }
+int  TTreeNodes::GetCountImpl(TObject* owner) { return no_vcl_TTreeNodes_GetCount(owner->Handle()); }
+
+TCustomTreeView::TCustomTreeView(no_vcl_obj_t handle)
+    : TCustomControl(handle)
+    , Items(this, &TCustomTreeView::GetItemsImpl)
+    , Selected(this, &TCustomTreeView::GetSelectedImpl, &TCustomTreeView::SetSelectedImpl)
+    , items_(no_vcl_TCustomTreeView_GetItems(handle))
+{}
+
+void TCustomTreeView::FullExpand()   { no_vcl_TCustomTreeView_FullExpand(handle_); }
+void TCustomTreeView::FullCollapse() { no_vcl_TCustomTreeView_FullCollapse(handle_); }
+bool TCustomTreeView::AlphaSort()    { return no_vcl_TCustomTreeView_AlphaSort(handle_) != 0; }
+
+TTreeNode* TCustomTreeView::GetNodeAt(int X, int Y) const
+{
+    return TTreeNode::Wrap(no_vcl_TCustomTreeView_GetNodeAt(handle_, X, Y));
+}
+
+TTreeNodes* TCustomTreeView::GetItemsImpl(TObject* owner) { return &static_cast<TCustomTreeView*>(owner)->items_; }
+TTreeNode*  TCustomTreeView::GetSelectedImpl(TObject* owner) { return TTreeNode::Wrap(no_vcl_TCustomTreeView_GetSelected(owner->Handle())); }
+
+void TCustomTreeView::SetSelectedImpl(TObject* owner, TTreeNode* const& value)
+{
+    no_vcl_TCustomTreeView_SetSelected(owner->Handle(), NodeHandle(value));
+}
+
+TTreeView::TTreeView(TComponent* AOwner)
+    : TCustomTreeView(no_vcl_TTreeView_Create(HandleOf(AOwner)))
+    , ReadOnly(this, &TTreeView::GetReadOnlyImpl, &TTreeView::SetReadOnlyImpl)
+    , ShowLines(this, &TTreeView::GetShowLinesImpl, &TTreeView::SetShowLinesImpl)
+    , ShowRoot(this, &TTreeView::GetShowRootImpl, &TTreeView::SetShowRootImpl)
+    , ShowButtons(this, &TTreeView::GetShowButtonsImpl, &TTreeView::SetShowButtonsImpl)
+    , AutoExpand(this, &TTreeView::GetAutoExpandImpl, &TTreeView::SetAutoExpandImpl)
+    , HideSelection(this, &TTreeView::GetHideSelectionImpl, &TTreeView::SetHideSelectionImpl)
+    , RowSelect(this, &TTreeView::GetRowSelectImpl, &TTreeView::SetRowSelectImpl)
+    , OnChange(this, &TTreeView::GetOnChangeImpl, &TTreeView::SetOnChangeImpl)
+    , OnChanging(this, &TTreeView::GetOnChangingImpl, &TTreeView::SetOnChangingImpl)
+    , OnExpanding(this, &TTreeView::GetOnExpandingImpl, &TTreeView::SetOnExpandingImpl)
+    , OnExpanded(this, &TTreeView::GetOnExpandedImpl, &TTreeView::SetOnExpandedImpl)
+    , OnCollapsing(this, &TTreeView::GetOnCollapsingImpl, &TTreeView::SetOnCollapsingImpl)
+    , OnCollapsed(this, &TTreeView::GetOnCollapsedImpl, &TTreeView::SetOnCollapsedImpl)
+    , OnDeletion(this, &TTreeView::GetOnDeletionImpl, &TTreeView::SetOnDeletionImpl)
+{}
+
+bool TTreeView::GetReadOnlyImpl(TObject* owner)                     { return no_vcl_TTreeView_GetReadOnly(owner->Handle()) != 0; }
+void TTreeView::SetReadOnlyImpl(TObject* owner, const bool& value)   { no_vcl_TTreeView_SetReadOnly(owner->Handle(), value ? 1 : 0); }
+bool TTreeView::GetShowLinesImpl(TObject* owner)                    { return no_vcl_TTreeView_GetShowLines(owner->Handle()) != 0; }
+void TTreeView::SetShowLinesImpl(TObject* owner, const bool& value)  { no_vcl_TTreeView_SetShowLines(owner->Handle(), value ? 1 : 0); }
+bool TTreeView::GetShowRootImpl(TObject* owner)                     { return no_vcl_TTreeView_GetShowRoot(owner->Handle()) != 0; }
+void TTreeView::SetShowRootImpl(TObject* owner, const bool& value)   { no_vcl_TTreeView_SetShowRoot(owner->Handle(), value ? 1 : 0); }
+bool TTreeView::GetShowButtonsImpl(TObject* owner)                  { return no_vcl_TTreeView_GetShowButtons(owner->Handle()) != 0; }
+void TTreeView::SetShowButtonsImpl(TObject* owner, const bool& value) { no_vcl_TTreeView_SetShowButtons(owner->Handle(), value ? 1 : 0); }
+bool TTreeView::GetAutoExpandImpl(TObject* owner)                   { return no_vcl_TTreeView_GetAutoExpand(owner->Handle()) != 0; }
+void TTreeView::SetAutoExpandImpl(TObject* owner, const bool& value) { no_vcl_TTreeView_SetAutoExpand(owner->Handle(), value ? 1 : 0); }
+bool TTreeView::GetHideSelectionImpl(TObject* owner)                { return no_vcl_TTreeView_GetHideSelection(owner->Handle()) != 0; }
+void TTreeView::SetHideSelectionImpl(TObject* owner, const bool& value) { no_vcl_TTreeView_SetHideSelection(owner->Handle(), value ? 1 : 0); }
+bool TTreeView::GetRowSelectImpl(TObject* owner)                    { return no_vcl_TTreeView_GetRowSelect(owner->Handle()) != 0; }
+void TTreeView::SetRowSelectImpl(TObject* owner, const bool& value)  { no_vcl_TTreeView_SetRowSelect(owner->Handle(), value ? 1 : 0); }
+
+// ノードを対象とするイベントのトランポリンは、スロット(メンバへのポインタ)だけが異なるため共通化する。
+template<typename Event>
+void TTreeView::DispatchNode(no_vcl_obj_t sender, no_vcl_obj_t node, Event TTreeView::*slot)
+{
+    TTreeView* self = static_cast<TTreeView*>(FromHandle(sender));
+    if (!self || !(self->*slot))
+        return;
+    Event handler = self->*slot;
+    handler(self, TTreeNode::Wrap(node));
+}
+
+template<typename Event>
+void TTreeView::DispatchNodeAllow(no_vcl_obj_t sender, no_vcl_obj_t node, no_vcl_bool_t* allow, Event TTreeView::*slot)
+{
+    TTreeView* self = static_cast<TTreeView*>(FromHandle(sender));
+    if (!self || !(self->*slot))
+        return;
+    Event handler = self->*slot;
+    bool value = *allow != 0;
+    handler(self, TTreeNode::Wrap(node), value);
+    *allow = value ? 1 : 0;
+}
+
+void NO_VCL_CALL TTreeView::ChangeTrampoline(no_vcl_obj_t s, no_vcl_obj_t n, void*)    { DispatchNode(s, n, &TTreeView::onChange_); }
+void NO_VCL_CALL TTreeView::ExpandedTrampoline(no_vcl_obj_t s, no_vcl_obj_t n, void*)  { DispatchNode(s, n, &TTreeView::onExpanded_); }
+void NO_VCL_CALL TTreeView::CollapsedTrampoline(no_vcl_obj_t s, no_vcl_obj_t n, void*) { DispatchNode(s, n, &TTreeView::onCollapsed_); }
+void NO_VCL_CALL TTreeView::DeletionTrampoline(no_vcl_obj_t s, no_vcl_obj_t n, void*)  { DispatchNode(s, n, &TTreeView::onDeletion_); }
+
+void NO_VCL_CALL TTreeView::ChangingTrampoline(no_vcl_obj_t s, no_vcl_obj_t n, no_vcl_bool_t* a, void*)
+{
+    DispatchNodeAllow(s, n, a, &TTreeView::onChanging_);
+}
+
+void NO_VCL_CALL TTreeView::ExpandingTrampoline(no_vcl_obj_t s, no_vcl_obj_t n, no_vcl_bool_t* a, void*)
+{
+    DispatchNodeAllow(s, n, a, &TTreeView::onExpanding_);
+}
+
+void NO_VCL_CALL TTreeView::CollapsingTrampoline(no_vcl_obj_t s, no_vcl_obj_t n, no_vcl_bool_t* a, void*)
+{
+    DispatchNodeAllow(s, n, a, &TTreeView::onCollapsing_);
+}
+
+TTVChangedEvent    TTreeView::GetOnChangeImpl(TObject* owner)     { return static_cast<TTreeView*>(owner)->onChange_; }
+TTVChangingEvent   TTreeView::GetOnChangingImpl(TObject* owner)   { return static_cast<TTreeView*>(owner)->onChanging_; }
+TTVExpandingEvent  TTreeView::GetOnExpandingImpl(TObject* owner)  { return static_cast<TTreeView*>(owner)->onExpanding_; }
+TTVExpandedEvent   TTreeView::GetOnExpandedImpl(TObject* owner)   { return static_cast<TTreeView*>(owner)->onExpanded_; }
+TTVCollapsingEvent TTreeView::GetOnCollapsingImpl(TObject* owner) { return static_cast<TTreeView*>(owner)->onCollapsing_; }
+TTVExpandedEvent   TTreeView::GetOnCollapsedImpl(TObject* owner)  { return static_cast<TTreeView*>(owner)->onCollapsed_; }
+TTVExpandedEvent   TTreeView::GetOnDeletionImpl(TObject* owner)   { return static_cast<TTreeView*>(owner)->onDeletion_; }
+
+void TTreeView::SetOnChangeImpl(TObject* owner, const TTVChangedEvent& value)
+{
+    TTreeView* self = static_cast<TTreeView*>(owner);
+    SetSimpleEvent(self->handle_, self->onChange_, self->onChangeHooked_, value,
+                   &no_vcl_TTreeView_SetOnChange, &TTreeView::ChangeTrampoline);
+}
+
+void TTreeView::SetOnChangingImpl(TObject* owner, const TTVChangingEvent& value)
+{
+    TTreeView* self = static_cast<TTreeView*>(owner);
+    SetSimpleEvent(self->handle_, self->onChanging_, self->onChangingHooked_, value,
+                   &no_vcl_TTreeView_SetOnChanging, &TTreeView::ChangingTrampoline);
+}
+
+void TTreeView::SetOnExpandingImpl(TObject* owner, const TTVExpandingEvent& value)
+{
+    TTreeView* self = static_cast<TTreeView*>(owner);
+    SetSimpleEvent(self->handle_, self->onExpanding_, self->onExpandingHooked_, value,
+                   &no_vcl_TTreeView_SetOnExpanding, &TTreeView::ExpandingTrampoline);
+}
+
+void TTreeView::SetOnExpandedImpl(TObject* owner, const TTVExpandedEvent& value)
+{
+    TTreeView* self = static_cast<TTreeView*>(owner);
+    SetSimpleEvent(self->handle_, self->onExpanded_, self->onExpandedHooked_, value,
+                   &no_vcl_TTreeView_SetOnExpanded, &TTreeView::ExpandedTrampoline);
+}
+
+void TTreeView::SetOnCollapsingImpl(TObject* owner, const TTVCollapsingEvent& value)
+{
+    TTreeView* self = static_cast<TTreeView*>(owner);
+    SetSimpleEvent(self->handle_, self->onCollapsing_, self->onCollapsingHooked_, value,
+                   &no_vcl_TTreeView_SetOnCollapsing, &TTreeView::CollapsingTrampoline);
+}
+
+void TTreeView::SetOnCollapsedImpl(TObject* owner, const TTVExpandedEvent& value)
+{
+    TTreeView* self = static_cast<TTreeView*>(owner);
+    SetSimpleEvent(self->handle_, self->onCollapsed_, self->onCollapsedHooked_, value,
+                   &no_vcl_TTreeView_SetOnCollapsed, &TTreeView::CollapsedTrampoline);
+}
+
+void TTreeView::SetOnDeletionImpl(TObject* owner, const TTVExpandedEvent& value)
+{
+    TTreeView* self = static_cast<TTreeView*>(owner);
+    SetSimpleEvent(self->handle_, self->onDeletion_, self->onDeletionHooked_, value,
+                   &no_vcl_TTreeView_SetOnDeletion, &TTreeView::DeletionTrampoline);
+}
 
 TCustomSplitter::TCustomSplitter(no_vcl_obj_t handle)
     : TCustomControl(handle)

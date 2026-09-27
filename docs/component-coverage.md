@@ -59,7 +59,7 @@ TScrollingWinControl のいずれかで、いずれも実装済み。既存パ�
 | クラス | LCL 宣言ユニット | LCL での基底 | 必要になる補助 |
 |---|---|---|---|
 | ✅ TPageControl + TTabSheet | comctrls.pp(TCustomTabControl 系) | TWinControl | Tier 2 の 1 バッチ目([ADR 0018](adr/0018-pagecontrol-and-tabsheet.md))。AddTabSheet のページは `WrapExisting` でラップ。Clear は LCL の遅延破棄。Images/Style/Options は未対応 |
-| TTreeView | comctrls.pp(TCustomTreeView) | TCustomControl(実装済み) | TTreeNodes/TTreeNode 相当のノード操作 API(Add/Delete/Text/Parent/Expanded 等) |
+| ✅ TTreeView | comctrls.pp(TCustomTreeView) | TCustomControl(実装済み) | Tier 2 の 2 バッチ目([ADR 0019](adr/0019-treeview-and-non-component-items.md))。TTreeNode(TPersistent)は `TTreeNode*` で扱い、削除通知(TCustomTreeView.Delete の上書き)でラッパーの寿命を管理。画像・複数選択・ラベルの編集は未対応 |
 | TListView | comctrls.pp(TCustomListView) | TWinControl(実装済み) | TListItems/TListColumns 相当の行・列操作 API |
 | TStringGrid / TDrawGrid | grids.pas(TCustomGrid → TCustomDrawGrid) | TCustomControl(実装済み) | セル単位の Get/Set、OnDrawCell/OnSelectCell 等の専用イベント |
 | THeaderControl | comctrls.pp(TCustomHeaderControl) | TCustomControl(実装済み) | THeaderSections 相当のセクション操作 |
@@ -150,10 +150,10 @@ Tier 1 の 1 バッチ目([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.m
    ([ADR 0016](adr/0016-control-align-and-splitter.md))。
 3. ✅ **Tier 5(メニュー)** は完了した([ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md))。
    あわせて、内部生成コンポーネントのラップの仕組み(`WrapExisting`)が入った。
-4. **Tier 2** はバッチに分けて進めている。1 バッチ目の TPageControl+TTabSheet は完了した
-   ([ADR 0018](adr/0018-pagecontrol-and-tabsheet.md))。残りの TTreeView・TListView・TStringGrid は、それぞれ専用の
-   コレクション設計の ADR を書いてから着手する。特に TTreeNode・TListItem は TComponent ではない(TPersistent)ため、
-   破棄通知に頼らない寿命管理の設計が要る。
+4. **Tier 2** はバッチに分けて進めている。1 バッチ目の TPageControl+TTabSheet([ADR 0018](adr/0018-pagecontrol-and-tabsheet.md))と、
+   2 バッチ目の TTreeView([ADR 0019](adr/0019-treeview-and-non-component-items.md))は完了した。
+   TTreeView で「TComponent ではない項目を削除通知で寿命管理する」型ができたため、TListView の TListItem にも適用できる見込み。
+   残りの TListView・TStringGrid は、それぞれ専用のコレクション設計の ADR を書いてから着手する。
 5. **Tier 3(TBitmap/TPicture)** は、TImage 単体のためというより、Tier 1/2 のいくつか(Glyph・ImageList)の
    完成度を上げるために必要になる。着手するタイミングで独立した ADR を書く。
 6. **Tier 4(ダイアログ)** は他とほぼ独立して進められるので、隙間で着手しやすい。

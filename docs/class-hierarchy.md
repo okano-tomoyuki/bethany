@@ -137,6 +137,10 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 | ActivePage / ActivePageIndex / Pages[i] / AddTabSheet / Clear / SelectNextPage | TPageControl(public/published) | TPageControl | TPageControl(public。Pages[i] は `GetPage(i)`) | `TPageControl_*`(ADR 0018) |
 | PageIndex / TabVisible / OnShow / OnHide | TCustomPage(public) | TCustomPage | TCustomPage(public) | `TCustomPage_*`(ADR 0018) |
 | PageControl / TabIndex | TTabSheet(public) | TTabSheet | TTabSheet(public) | `TTabSheet_*`(ADR 0018) |
+| Items / Selected / FullExpand / FullCollapse / AlphaSort / GetNodeAt | TCustomTreeView(public) | TCustomTreeView | TCustomTreeView(public) | `TCustomTreeView_*`([ADR 0019](adr/0019-treeview-and-non-component-items.md)) |
+| ReadOnly / ShowLines / ShowRoot / ShowButtons / AutoExpand / HideSelection / RowSelect / OnChange / OnChanging / OnExpanding / OnExpanded / OnCollapsing / OnCollapsed / OnDeletion | TCustomTreeView(protected) | TTreeView | TTreeView(public) | `TTreeView_*`(ADR 0019) |
+| Add / AddFirst / AddChild / AddChildFirst / Insert / Clear / Delete / Count / Item[i] / GetFirstNode / FindNodeWithText / BeginUpdate / EndUpdate | TTreeNodes(public。TPersistent) | TTreeNodes | TTreeNodes(public。Item[i] は `GetItem(i)`) | `TTreeNodes_*`(ADR 0019) |
+| Text / Expanded / Selected / HasChildren / Data / Count / Index / Level / AbsoluteIndex / Parent / TreeView / Items[i] / GetFirstChild 等 / Expand / Collapse / Delete / DeleteChildren / MakeVisible / MoveTo | TTreeNode(public。TPersistent) | TTreeNode | TTreeNode(public。Items[i] は `GetItem(i)`) | `TTreeNode_*`(ADR 0019) |
 | Interval / Enabled / OnTimer | TCustomTimer(public) | TCustomTimer | TCustomTimer(public) | `TCustomTimer_*` |
 | Run / Terminate / Terminated / Title | TCustomApplication(public。Run・Terminate・Title は TApplication で再宣言) | TApplication | TApplication(public) | `TApplication_*` |
 | CreateForm / MainForm / ProcessMessages / ShowMainForm | TApplication(public) | TApplication | TApplication(public。CreateForm は型を引数から推論するテンプレート) | `TApplication_*`(CreateForm は素の TForm を返す) |
@@ -168,5 +172,11 @@ C API のコールバックは CanClose へのポインタを受け取る([ADR 0
   C++ で初めて取得した時点でラッパーが作られ(`TComponent::WrapExisting`)、以降は他のコンポーネントと同じく
   破棄通知で delete される。Pascal 側はそれを返す関数の中で破棄通知の対象に登録する
   ([ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md))。
+- ツリービューのノード(`TTreeNode`。TComponent ではない)は、初めて取得したときにラッパーが作られ、ノードの削除
+  (ツリービューの破棄に伴う削除も含む)の通知で delete される。Pascal 側は `TCustomTreeView.Delete` を上書きした
+  内部クラス(`TNoVclTreeView`)で、OnDeletion の後に通知する。`TTreeNodes` は TCanvas と同じくツリービューの値メンバ
+  ([ADR 0019](adr/0019-treeview-and-non-component-items.md))。
+- ラッパーのレジストリは、atexit で登録した終了処理(`TApplication::Shutdown`)の中でも使われるため、関数内 static の値ではなく
+  破棄しないオブジェクトにする(初回の構築が atexit 登録より後だと、Shutdown より先に破棄されてしまう。ADR 0019)。
 - Application が所有するフォームは、main から戻った後の C++ の終了処理でまとめて破棄される
   (デストラクタも呼ばれる)。DLL の切り離し時には破棄通知は呼ばれない([ADR 0010](adr/0010-application-object.md))。

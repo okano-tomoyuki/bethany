@@ -644,6 +644,116 @@ void          NO_VCL_CALL no_vcl_TCustomPage_SetTabVisible(no_vcl_obj_t Obj, no_
 void          NO_VCL_CALL no_vcl_TCustomPage_SetOnShow(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
 void          NO_VCL_CALL no_vcl_TCustomPage_SetOnHide(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
 
+/* docs/component-coverage.md の Tier 2、2 バッチ目(TTreeView)。docs/adr/0019-... を参照。
+ *
+ * ノード(TTreeNode)とノードの一覧(TTreeNodes)は TComponent ではない。
+ * - TTreeNodes(no_vcl_TCustomTreeView_GetItems)はツリービューが所有する非所有のハンドルで、ツリービューと寿命が一致する。
+ * - ノードは no_vcl_TTreeNodes_Add 等で追加し、no_vcl_TTreeNode_Delete 等で削除する(破棄は LCL が行う)。
+ *   ノードが削除されると(ツリービューの破棄に伴う削除も含め)、OnDeletion の後に
+ *   no_vcl_TreeNodeFree_SetCallback で登録したコールバックが呼ばれる(no_vcl_FreeNotify_SetCallback のノード版)。
+ *   C++ ラッパー(no_vcl.hpp)を使う場合はラッパーが登録するため、上書きしないこと。 */
+void          NO_VCL_CALL no_vcl_TreeNodeFree_SetCallback(no_vcl_callback_t Cb, void* Data);
+
+/* OnChange/OnExpanded/OnCollapsed/OnDeletion 用。node はイベントの対象のノード(OnChange では選択されたノードで、NULL もありうる)。 */
+typedef void (NO_VCL_CALL *no_vcl_node_callback_t)(no_vcl_obj_t sender, no_vcl_obj_t node, void* data);
+/* OnChanging/OnExpanding/OnCollapsing 用。*allow は 0 以外が入った状態で呼ばれ、0 を書き込むと取りやめる。 */
+typedef void (NO_VCL_CALL *no_vcl_node_allow_callback_t)(no_vcl_obj_t sender, no_vcl_obj_t node, no_vcl_bool_t* allow, void* data);
+
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TTreeView_Create(no_vcl_obj_t Owner);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomTreeView_GetItems(no_vcl_obj_t Obj);
+/* 選択されているノード(無ければ NULL)。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomTreeView_GetSelected(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomTreeView_SetSelected(no_vcl_obj_t Obj, no_vcl_obj_t Node);
+void          NO_VCL_CALL no_vcl_TCustomTreeView_FullExpand(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomTreeView_FullCollapse(no_vcl_obj_t Obj);
+/* ノードを文字列の順に並べ替える。 */
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomTreeView_AlphaSort(no_vcl_obj_t Obj);
+/* X, Y はツリービューのクライアント座標。そこにノードが無ければ NULL。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomTreeView_GetNodeAt(no_vcl_obj_t Obj, no_vcl_int_t X, no_vcl_int_t Y);
+/* 以下は LCL では TCustomTreeView の protected で、TTreeView が published にしている。 */
+no_vcl_bool_t NO_VCL_CALL no_vcl_TTreeView_GetReadOnly(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TTreeView_SetReadOnly(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TTreeView_GetShowLines(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TTreeView_SetShowLines(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TTreeView_GetShowRoot(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TTreeView_SetShowRoot(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TTreeView_GetShowButtons(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TTreeView_SetShowButtons(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TTreeView_GetAutoExpand(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TTreeView_SetAutoExpand(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TTreeView_GetHideSelection(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TTreeView_SetHideSelection(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TTreeView_GetRowSelect(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TTreeView_SetRowSelect(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* 選択が変わった後。 */
+void          NO_VCL_CALL no_vcl_TTreeView_SetOnChange(no_vcl_obj_t Obj, no_vcl_node_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TTreeView_SetOnExpanded(no_vcl_obj_t Obj, no_vcl_node_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TTreeView_SetOnCollapsed(no_vcl_obj_t Obj, no_vcl_node_callback_t Cb, void* Data);
+/* ノードが削除される直前(ノードはまだ有効)。 */
+void          NO_VCL_CALL no_vcl_TTreeView_SetOnDeletion(no_vcl_obj_t Obj, no_vcl_node_callback_t Cb, void* Data);
+/* 選択が変わる前。node は新しく選択されるノード。 */
+void          NO_VCL_CALL no_vcl_TTreeView_SetOnChanging(no_vcl_obj_t Obj, no_vcl_node_allow_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TTreeView_SetOnExpanding(no_vcl_obj_t Obj, no_vcl_node_allow_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TTreeView_SetOnCollapsing(no_vcl_obj_t Obj, no_vcl_node_allow_callback_t Cb, void* Data);
+
+/* TTreeNodes。Sibling/Parent に NULL を渡すと最上位のノードになる(LCL と同じ)。追加したノードを返す。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TTreeNodes_Add(no_vcl_obj_t Obj, no_vcl_obj_t Sibling, no_vcl_str_t Text);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TTreeNodes_AddFirst(no_vcl_obj_t Obj, no_vcl_obj_t Sibling, no_vcl_str_t Text);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TTreeNodes_AddChild(no_vcl_obj_t Obj, no_vcl_obj_t Parent, no_vcl_str_t Text);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TTreeNodes_AddChildFirst(no_vcl_obj_t Obj, no_vcl_obj_t Parent, no_vcl_str_t Text);
+/* NextNode の前に挿入する。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TTreeNodes_Insert(no_vcl_obj_t Obj, no_vcl_obj_t NextNode, no_vcl_str_t Text);
+void          NO_VCL_CALL no_vcl_TTreeNodes_Clear(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TTreeNodes_Delete(no_vcl_obj_t Obj, no_vcl_obj_t Node);
+/* すべてのノード(子孫を含む)の数。GetItem の Index は、上から順に数えた位置(AbsoluteIndex)。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TTreeNodes_GetCount(no_vcl_obj_t Obj);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TTreeNodes_GetItem(no_vcl_obj_t Obj, no_vcl_int_t Index);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TTreeNodes_GetFirstNode(no_vcl_obj_t Obj);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TTreeNodes_FindNodeWithText(no_vcl_obj_t Obj, no_vcl_str_t Text);
+void          NO_VCL_CALL no_vcl_TTreeNodes_BeginUpdate(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TTreeNodes_EndUpdate(no_vcl_obj_t Obj);
+
+/* TTreeNode。ノードを返す関数は、該当するノードが無ければ NULL を返す。 */
+enum { no_vcl_naAdd = 0, no_vcl_naAddFirst, no_vcl_naAddChild, no_vcl_naAddChildFirst, no_vcl_naInsert, no_vcl_naInsertBehind };
+no_vcl_str_t  NO_VCL_CALL no_vcl_TTreeNode_GetText(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TTreeNode_SetText(no_vcl_obj_t Obj, no_vcl_str_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TTreeNode_GetExpanded(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TTreeNode_SetExpanded(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TTreeNode_GetSelected(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TTreeNode_SetSelected(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TTreeNode_GetHasChildren(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TTreeNode_SetHasChildren(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* 利用者データ(LCL は解釈しない)。 */
+void*         NO_VCL_CALL no_vcl_TTreeNode_GetData(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TTreeNode_SetData(no_vcl_obj_t Obj, void* Value);
+/* 直下の子の数と、Index 番目の子(LCL の Items[Index])。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TTreeNode_GetCount(no_vcl_obj_t Obj);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TTreeNode_GetItem(no_vcl_obj_t Obj, no_vcl_int_t Index);
+/* 兄弟の中での位置・深さ(最上位が 0)・上から順に数えた位置。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TTreeNode_GetIndex(no_vcl_obj_t Obj);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TTreeNode_GetLevel(no_vcl_obj_t Obj);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TTreeNode_GetAbsoluteIndex(no_vcl_obj_t Obj);
+/* 最上位のノードなら NULL。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TTreeNode_GetParent(no_vcl_obj_t Obj);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TTreeNode_GetTreeView(no_vcl_obj_t Obj);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TTreeNode_GetFirstChild(no_vcl_obj_t Obj);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TTreeNode_GetLastChild(no_vcl_obj_t Obj);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TTreeNode_GetNextSibling(no_vcl_obj_t Obj);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TTreeNode_GetPrevSibling(no_vcl_obj_t Obj);
+/* 上から順(子孫を含む)の次/前のノード。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TTreeNode_GetNext(no_vcl_obj_t Obj);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TTreeNode_GetPrev(no_vcl_obj_t Obj);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TTreeNode_IndexOf(no_vcl_obj_t Obj, no_vcl_obj_t Node);
+void          NO_VCL_CALL no_vcl_TTreeNode_Expand(no_vcl_obj_t Obj, no_vcl_bool_t Recurse);
+void          NO_VCL_CALL no_vcl_TTreeNode_Collapse(no_vcl_obj_t Obj, no_vcl_bool_t Recurse);
+/* このノード(と子孫)を削除する。削除されたノードごとに OnDeletion とノードの破棄通知が呼ばれる。 */
+void          NO_VCL_CALL no_vcl_TTreeNode_Delete(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TTreeNode_DeleteChildren(no_vcl_obj_t Obj);
+/* 祖先を展開し、ノードが見えるようにスクロールする。 */
+void          NO_VCL_CALL no_vcl_TTreeNode_MakeVisible(no_vcl_obj_t Obj);
+/* Mode は no_vcl_na*。 */
+void          NO_VCL_CALL no_vcl_TTreeNode_MoveTo(no_vcl_obj_t Obj, no_vcl_obj_t Destination, no_vcl_int_t Mode);
+
 #ifdef __cplusplus
 }
 #endif

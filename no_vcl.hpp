@@ -1427,6 +1427,245 @@ private:
     static int           GetTabIndexImpl(TObject* owner);
 };
 
+class TCustomTreeView;
+class TTreeView;
+class TTreeNodes;
+
+// MoveTo の移動先の指定(LCL / VCL の TNodeAttachMode と同じ値)。
+enum TNodeAttachMode { naAdd, naAddFirst, naAddChild, naAddChildFirst, naInsert, naInsertBehind };
+
+// ツリービューのノード。TComponent ではない(LCL でも TPersistent)ため、new/Free() はせず、
+// TTreeNodes::Add 等で追加し、Delete() 等で削除する。
+// C++ のラッパーは初めて取得したときに作られ、同じノードには常に同じポインタが返る(ポインタ同士を比較してよい)。
+// ノードが削除されると(ツリービューの破棄に伴う削除も含め)、OnDeletion の後にラッパーも delete される。
+// 削除後にそのポインタへ触れてはならない。
+// Items[Index] は GetItem(Index)(インデックス付きプロパティは Get メソッドで表す、TMenuItem::GetItem と同じ形)。
+class TTreeNode : public TPersistent
+{
+public:
+    Property<std::string> Text;
+    Property<bool>        Expanded;
+    Property<bool>        Selected;
+    // 子が無くても展開ボタンを表示するとき(子を遅延で追加するとき等)に true にする。
+    Property<bool>        HasChildren;
+    // 利用者データ(LCL は解釈しない)。
+    Property<void*>       Data;
+
+    // 直下の子の数・兄弟の中での位置・深さ(最上位が 0)・上から順に数えた位置。
+    ReadOnlyProperty<int>              Count;
+    ReadOnlyProperty<int>              Index;
+    ReadOnlyProperty<int>              Level;
+    ReadOnlyProperty<int>              AbsoluteIndex;
+    // 最上位のノードなら nullptr。
+    ReadOnlyProperty<TTreeNode*>       Parent;
+    ReadOnlyProperty<TCustomTreeView*> TreeView;
+
+    // 以下のノードを返すメンバは、該当するノードが無ければ nullptr を返す。
+    TTreeNode* GetItem(int Index) const;
+    TTreeNode* GetFirstChild() const;
+    TTreeNode* GetLastChild() const;
+    TTreeNode* GetNextSibling() const;
+    TTreeNode* GetPrevSibling() const;
+    // 上から順(子孫を含む)の次/前のノード。
+    TTreeNode* GetNext() const;
+    TTreeNode* GetPrev() const;
+    int        IndexOf(TTreeNode* Node) const;
+
+    void Expand(bool Recurse);
+    void Collapse(bool Recurse);
+    // このノード(と子孫)を削除する。このラッパーも delete されるため、呼び出し後に触れてはならない。
+    void Delete();
+    void DeleteChildren();
+    // 祖先を展開し、ノードが見えるようにスクロールする。
+    void MakeVisible();
+    void MoveTo(TTreeNode* Destination, TNodeAttachMode Mode);
+
+private:
+    friend class TTreeNodes;
+    friend class TCustomTreeView;
+    friend class TTreeView;
+
+    explicit TTreeNode(no_vcl_obj_t handle);
+    ~TTreeNode() override = default;
+
+    // ハンドルからラッパーを得る(無ければ作る)。nullptr には nullptr を返す。
+    static TTreeNode* Wrap(no_vcl_obj_t handle);
+    static std::unordered_map<no_vcl_obj_t, TTreeNode*>& Registry();
+    static void NO_VCL_CALL FreeTrampoline(no_vcl_obj_t handle, void* data);
+
+    static std::string      GetTextImpl(TObject* owner);
+    static void             SetTextImpl(TObject* owner, const std::string& value);
+    static bool             GetExpandedImpl(TObject* owner);
+    static void             SetExpandedImpl(TObject* owner, const bool& value);
+    static bool             GetSelectedImpl(TObject* owner);
+    static void             SetSelectedImpl(TObject* owner, const bool& value);
+    static bool             GetHasChildrenImpl(TObject* owner);
+    static void             SetHasChildrenImpl(TObject* owner, const bool& value);
+    static void*            GetDataImpl(TObject* owner);
+    static void             SetDataImpl(TObject* owner, void* const& value);
+    static int              GetCountImpl(TObject* owner);
+    static int              GetIndexImpl(TObject* owner);
+    static int              GetLevelImpl(TObject* owner);
+    static int              GetAbsoluteIndexImpl(TObject* owner);
+    static TTreeNode*       GetParentImpl(TObject* owner);
+    static TCustomTreeView* GetTreeViewImpl(TObject* owner);
+};
+
+// ツリービューのノードの一覧(LCL の TTreeNodes)。ツリービューが所有する実体への非所有のビューで、
+// TCanvas と同じくツリービューのメンバとして持ち、ツリービューと寿命が一致する(TCustomTreeView::Items で参照する)。
+// Sibling/Parent に nullptr を渡すと最上位のノードになる(VCL と同じ)。
+class TTreeNodes : public TPersistent
+{
+public:
+    explicit TTreeNodes(no_vcl_obj_t handle);
+    ~TTreeNodes() override = default;
+
+    // すべてのノード(子孫を含む)の数。GetItem の Index は、上から順に数えた位置(AbsoluteIndex)。
+    ReadOnlyProperty<int> Count;
+
+    TTreeNode* Add(TTreeNode* Sibling, const std::string& S);
+    TTreeNode* AddFirst(TTreeNode* Sibling, const std::string& S);
+    TTreeNode* AddChild(TTreeNode* Parent, const std::string& S);
+    TTreeNode* AddChildFirst(TTreeNode* Parent, const std::string& S);
+    // NextNode の前に挿入する。
+    TTreeNode* Insert(TTreeNode* NextNode, const std::string& S);
+    void       Clear();
+    void       Delete(TTreeNode* Node);
+    TTreeNode* GetItem(int Index) const;
+    TTreeNode* GetFirstNode() const;
+    TTreeNode* FindNodeWithText(const std::string& S) const;
+    void       BeginUpdate();
+    void       EndUpdate();
+
+private:
+    static int GetCountImpl(TObject* owner);
+};
+
+// ノードを対象とするイベント。
+using TTVChangedEvent    = std::function<void(TObject* Sender, TTreeNode* Node)>;
+using TTVExpandedEvent   = TTVChangedEvent;
+// AllowChange 等には true が入っており、false にすると選択の変更・展開・折りたたみを取りやめる。
+using TTVChangingEvent   = std::function<void(TObject* Sender, TTreeNode* Node, bool& AllowChange)>;
+using TTVExpandingEvent  = std::function<void(TObject* Sender, TTreeNode* Node, bool& AllowExpansion)>;
+using TTVCollapsingEvent = std::function<void(TObject* Sender, TTreeNode* Node, bool& AllowCollapse)>;
+
+// 以下のメンバは LCL の TCustomTreeView の public。
+class TCustomTreeView : public TCustomControl
+{
+public:
+    ReadOnlyProperty<TTreeNodes*> Items;
+    // 選択されているノード(無ければ nullptr)。
+    Property<TTreeNode*>          Selected;
+
+    void       FullExpand();
+    void       FullCollapse();
+    // ノードを文字列の順に並べ替える。
+    bool       AlphaSort();
+    // X, Y はクライアント座標。そこにノードが無ければ nullptr。
+    TTreeNode* GetNodeAt(int X, int Y) const;
+
+protected:
+    explicit TCustomTreeView(no_vcl_obj_t handle);
+    ~TCustomTreeView() override = default;
+
+private:
+    friend class TTreeNode;  // TTreeNode::TreeView の Getter から FromHandle を使うため
+
+    TTreeNodes items_;
+
+    static TTreeNodes* GetItemsImpl(TObject* owner);
+    static TTreeNode*  GetSelectedImpl(TObject* owner);
+    static void        SetSelectedImpl(TObject* owner, TTreeNode* const& value);
+};
+
+// 以下のメンバは LCL では TCustomTreeView の protected で、TTreeView が published にしている。
+class TTreeView : public TCustomTreeView
+{
+public:
+    explicit TTreeView(TComponent* AOwner);
+
+    Property<bool> ReadOnly;
+    Property<bool> ShowLines;
+    Property<bool> ShowRoot;
+    Property<bool> ShowButtons;
+    Property<bool> AutoExpand;
+    Property<bool> HideSelection;
+    Property<bool> RowSelect;
+
+    // 選択が変わった後(Node は選択されたノードで、nullptr もありうる)。
+    Property<TTVChangedEvent>    OnChange;
+    // 選択が変わる前(Node は新しく選択されるノード)。
+    Property<TTVChangingEvent>   OnChanging;
+    Property<TTVExpandingEvent>  OnExpanding;
+    Property<TTVExpandedEvent>   OnExpanded;
+    Property<TTVCollapsingEvent> OnCollapsing;
+    Property<TTVExpandedEvent>   OnCollapsed;
+    // ノードが削除される直前(Node はまだ有効。ハンドラから戻った後にラッパーが delete される)。
+    Property<TTVExpandedEvent>   OnDeletion;
+
+protected:
+    ~TTreeView() override = default;
+
+private:
+    TTVChangedEvent    onChange_;
+    TTVChangingEvent   onChanging_;
+    TTVExpandingEvent  onExpanding_;
+    TTVExpandedEvent   onExpanded_;
+    TTVCollapsingEvent onCollapsing_;
+    TTVExpandedEvent   onCollapsed_;
+    TTVExpandedEvent   onDeletion_;
+    bool onChangeHooked_    = false;
+    bool onChangingHooked_  = false;
+    bool onExpandingHooked_ = false;
+    bool onExpandedHooked_  = false;
+    bool onCollapsingHooked_ = false;
+    bool onCollapsedHooked_ = false;
+    bool onDeletionHooked_  = false;
+
+    template<typename Event>
+    static void DispatchNode(no_vcl_obj_t sender, no_vcl_obj_t node, Event TTreeView::*slot);
+    template<typename Event>
+    static void DispatchNodeAllow(no_vcl_obj_t sender, no_vcl_obj_t node, no_vcl_bool_t* allow, Event TTreeView::*slot);
+
+    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender, no_vcl_obj_t node, void* data);
+    static void NO_VCL_CALL ChangingTrampoline(no_vcl_obj_t sender, no_vcl_obj_t node, no_vcl_bool_t* allow, void* data);
+    static void NO_VCL_CALL ExpandingTrampoline(no_vcl_obj_t sender, no_vcl_obj_t node, no_vcl_bool_t* allow, void* data);
+    static void NO_VCL_CALL ExpandedTrampoline(no_vcl_obj_t sender, no_vcl_obj_t node, void* data);
+    static void NO_VCL_CALL CollapsingTrampoline(no_vcl_obj_t sender, no_vcl_obj_t node, no_vcl_bool_t* allow, void* data);
+    static void NO_VCL_CALL CollapsedTrampoline(no_vcl_obj_t sender, no_vcl_obj_t node, void* data);
+    static void NO_VCL_CALL DeletionTrampoline(no_vcl_obj_t sender, no_vcl_obj_t node, void* data);
+
+    static bool GetReadOnlyImpl(TObject* owner);
+    static void SetReadOnlyImpl(TObject* owner, const bool& value);
+    static bool GetShowLinesImpl(TObject* owner);
+    static void SetShowLinesImpl(TObject* owner, const bool& value);
+    static bool GetShowRootImpl(TObject* owner);
+    static void SetShowRootImpl(TObject* owner, const bool& value);
+    static bool GetShowButtonsImpl(TObject* owner);
+    static void SetShowButtonsImpl(TObject* owner, const bool& value);
+    static bool GetAutoExpandImpl(TObject* owner);
+    static void SetAutoExpandImpl(TObject* owner, const bool& value);
+    static bool GetHideSelectionImpl(TObject* owner);
+    static void SetHideSelectionImpl(TObject* owner, const bool& value);
+    static bool GetRowSelectImpl(TObject* owner);
+    static void SetRowSelectImpl(TObject* owner, const bool& value);
+
+    static TTVChangedEvent    GetOnChangeImpl(TObject* owner);
+    static void               SetOnChangeImpl(TObject* owner, const TTVChangedEvent& value);
+    static TTVChangingEvent   GetOnChangingImpl(TObject* owner);
+    static void               SetOnChangingImpl(TObject* owner, const TTVChangingEvent& value);
+    static TTVExpandingEvent  GetOnExpandingImpl(TObject* owner);
+    static void               SetOnExpandingImpl(TObject* owner, const TTVExpandingEvent& value);
+    static TTVExpandedEvent   GetOnExpandedImpl(TObject* owner);
+    static void               SetOnExpandedImpl(TObject* owner, const TTVExpandedEvent& value);
+    static TTVCollapsingEvent GetOnCollapsingImpl(TObject* owner);
+    static void               SetOnCollapsingImpl(TObject* owner, const TTVCollapsingEvent& value);
+    static TTVExpandedEvent   GetOnCollapsedImpl(TObject* owner);
+    static void               SetOnCollapsedImpl(TObject* owner, const TTVExpandedEvent& value);
+    static TTVExpandedEvent   GetOnDeletionImpl(TObject* owner);
+    static void               SetOnDeletionImpl(TObject* owner, const TTVExpandedEvent& value);
+};
+
 // Splitter が寄せる辺(LCL の TAnchorKind と同じ値。VCL には無い)と、ドラッグ中の表示のしかた。
 enum TAnchorKind  { akTop, akLeft, akRight, akBottom };
 enum TResizeStyle { rsLine, rsNone, rsPattern, rsUpdate };

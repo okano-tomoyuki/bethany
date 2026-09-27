@@ -144,6 +144,13 @@ public:
     TTabSheet*      TabSheet1;
     TTabSheet*      TabSheet2;
     TTabSheet*      TabSheet3;
+    TTreeView*      TreeView1;
+    TTreeNode*      RootNode;
+    TTreeNode*      Child1Node;
+    TTreeNode*      Child2Node;
+    TTreeNode*      GrandchildNode;
+    TTreeNode*      Root2Node;
+    int             deletedNodes_ = 0;
 
     // C++Builder と同じく Owner を受け取り、TForm に渡す(Application->CreateForm が Application を渡す)。
     explicit TMainForm(TComponent* AOwner) : TForm(AOwner)
@@ -627,6 +634,38 @@ public:
         PageControl1->OnChange = [this](TObject* Sender) { PageControl1Change(Sender); };
         TabSheet2->OnShow = [](TObject*) { std::printf("TabSheet2Show\n"); std::fflush(stdout); };
 
+        // Tier 2、2 バッチ目(TTreeView)。TabSheet1 の上に置く。
+        TreeView1 = new TTreeView(this);
+        TreeView1->Parent = TabSheet1;
+        TreeView1->Left = 10;
+        TreeView1->Top = 30;
+        TreeView1->Width = 190;
+        TreeView1->Height = 95;
+        RootNode = TreeView1->Items->Add(nullptr, "Root");
+        Child1Node = TreeView1->Items->AddChild(RootNode, "Child 1");
+        Child2Node = TreeView1->Items->AddChild(RootNode, "Child 2");
+        GrandchildNode = TreeView1->Items->AddChild(Child1Node, "Grandchild");
+        Root2Node = TreeView1->Items->Add(RootNode, "Root 2");
+        RootNode->Expanded = true;
+        TreeView1->OnChange = [](TObject*, TTreeNode* Node) {
+            std::printf("TreeView1Change: %s\n", Node ? std::string(Node->Text).c_str() : "(none)");
+            std::fflush(stdout);
+        };
+        TreeView1->OnChanging = [](TObject*, TTreeNode* Node, bool& AllowChange) {
+            std::printf("TreeView1Changing: to %s (AllowChange=%d)\n", std::string(Node->Text).c_str(), AllowChange);
+            std::fflush(stdout);
+        };
+        TreeView1->OnExpanded = [](TObject*, TTreeNode* Node) {
+            std::printf("TreeView1Expanded: %s\n", std::string(Node->Text).c_str());
+            std::fflush(stdout);
+        };
+        // 名前が "Locked" のノードは折りたためないようにする。
+        TreeView1->OnCollapsing = [](TObject*, TTreeNode* Node, bool& AllowCollapse) {
+            if (std::string(Node->Text) == "Locked")
+                AllowCollapse = false;
+        };
+        TreeView1->OnDeletion = [this](TObject*, TTreeNode*) { ++deletedNodes_; };
+
         OnCreate = [this](TObject* Sender) { FormCreate(Sender); };
         OnShow = [this](TObject* Sender) { FormShow(Sender); };
         OnResize = [this](TObject* Sender) { FormResize(Sender); };
@@ -671,6 +710,9 @@ private:
         printBounds("AlignLeftPanel", AlignLeftPanel, "1,21,80,68");
         printBounds("Splitter1", Splitter1, "81,21,5,68");
         printBounds("AlignClientPanel", AlignClientPanel, "86,21,193,68");
+        // 表示後は、座標からノードを引ける(1 行目は Root)。
+        TTreeNode* atTop = TreeView1->GetNodeAt(30, 5);
+        std::printf("TreeView1->GetNodeAt(30, 5) is RootNode: %s\n", atTop == RootNode ? "yes" : "no");
         // プログラムから Splitter を動かすと、alLeft のパネルの幅と alClient のパネルが追随する。
         Splitter1->SetSplitterPosition(121);
         std::printf("After SetSplitterPosition(121): SplitterPosition=%d AlignLeftPanel->Width=%d AlignClientPanel->Left=%d\n",
@@ -1037,6 +1079,52 @@ int main()
         temp->Clear();
         std::printf("%d (expected 2/0)\n", (int)temp->PageCount);
         temp->Free();
+    }
+
+    // Tier 2、2 バッチ目(TTreeView)。
+    {
+        TMainForm* f = Form1;
+        TTreeView* tv = f->TreeView1;
+        TTreeNodes* items = tv->Items;
+        std::printf("TreeView1 Items->Count=%d (expected 5), RootNode->Count=%d (expected 2), GrandchildNode->Level=%d (expected 2)\n",
+                    (int)items->Count, (int)f->RootNode->Count, (int)f->GrandchildNode->Level);
+        // 同じノードには常に同じラッパーが返る。
+        std::printf("Child1Node->Parent is RootNode: %s, Items->GetItem(2) is GrandchildNode: %s, "
+                    "FindNodeWithText(\"Child 2\") is Child2Node: %s, RootNode->GetNextSibling() is Root2Node: %s\n",
+                    f->Child1Node->Parent == f->RootNode ? "yes" : "no",
+                    items->GetItem(2) == f->GrandchildNode ? "yes" : "no",
+                    items->FindNodeWithText("Child 2") == f->Child2Node ? "yes" : "no",
+                    f->RootNode->GetNextSibling() == f->Root2Node ? "yes" : "no");
+        std::printf("RootNode->Parent is null: %s, TreeView is TreeView1: %s\n",
+                    f->RootNode->Parent == nullptr ? "yes" : "no", f->RootNode->TreeView == tv ? "yes" : "no");
+
+        static int userData = 42;
+        f->Child2Node->Data = &userData;
+        std::printf("Child2Node->Data: %d (expected 42)\n", *static_cast<int*>((void*)f->Child2Node->Data));
+
+        tv->Selected = f->Child2Node;
+        std::printf("Selected is Child2Node: %s, Child2Node->Selected=%d\n",
+                    tv->Selected == f->Child2Node ? "yes" : "no", (bool)f->Child2Node->Selected);
+
+        // MoveTo: Child2 を Root 2 の子に移す。
+        f->Child2Node->MoveTo(f->Root2Node, naAddChild);
+        std::printf("After MoveTo: Child2Node->Parent is Root2Node: %s, RootNode->Count=%d (expected 1)\n",
+                    f->Child2Node->Parent == f->Root2Node ? "yes" : "no", (int)f->RootNode->Count);
+        f->Root2Node->Expand(false);
+        std::printf("Root2Node->Expanded=%d (expected 1)\n", (bool)f->Root2Node->Expanded);
+
+        // OnCollapsing で取りやめると、折りたたまれない。
+        TTreeNode* locked = items->Add(nullptr, "Locked");
+        items->AddChild(locked, "Inside");
+        locked->Expanded = true;
+        locked->Collapse(false);
+        std::printf("Locked->Expanded after Collapse=%d (expected 1: OnCollapsing refused)\n", (bool)locked->Expanded);
+
+        // Delete: 子孫も含めて削除され、ノードごとに OnDeletion が呼ばれ、ラッパーも delete される。
+        int before = f->deletedNodes_;
+        locked->Delete();
+        std::printf("After Delete: deleted=%d (expected 2), Items->Count=%d (expected 5)\n",
+                    f->deletedNodes_ - before, (int)items->Count);
     }
 
     // 2 つ目以降に生成したフォームは MainForm にならない。

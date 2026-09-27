@@ -273,6 +273,29 @@ static void NO_VCL_CALL OnPageControlChanging(no_vcl_obj_t sender, no_vcl_bool_t
     fflush(stdout);
 }
 
+/* ノードの破棄通知。data は破棄されたノードの数。 */
+static void NO_VCL_CALL OnTreeNodeFreed(no_vcl_obj_t node, void* data)
+{
+    (void)node;
+    ++*(int*)data;
+}
+
+static void NO_VCL_CALL OnTreeViewChange(no_vcl_obj_t sender, no_vcl_obj_t node, void* data)
+{
+    (void)sender; (void)data;
+    printf("TreeView changed! Selected=%s\n", node ? no_vcl_TTreeNode_GetText(node) : "(none)");
+    fflush(stdout);
+}
+
+/* "Locked" という名前のノードは折りたためないようにする。 */
+static void NO_VCL_CALL OnTreeViewCollapsing(no_vcl_obj_t sender, no_vcl_obj_t node, no_vcl_bool_t* allow, void* data)
+{
+    const char* text = no_vcl_TTreeNode_GetText(node);
+    (void)sender; (void)data;
+    if (text[0] == 'L')
+        *allow = 0;
+}
+
 /* data は Splitter が幅を変える alLeft のパネル。 */
 static void NO_VCL_CALL OnSplitterMoved(no_vcl_obj_t sender, void* data)
 {
@@ -347,6 +370,13 @@ int main(void)
     no_vcl_obj_t tabSheet1;
     no_vcl_obj_t tabSheet2;
     no_vcl_obj_t tempPageControl;
+    no_vcl_obj_t treeView;
+    no_vcl_obj_t treeItems;
+    no_vcl_obj_t rootNode;
+    no_vcl_obj_t childNode;
+    no_vcl_obj_t root2Node;
+    no_vcl_obj_t lockedNode;
+    int nodesFreed = 0;
 
     no_vcl_FreeNotify_SetCallback(OnComponentFreed, &freedCount);
 
@@ -738,6 +768,39 @@ int main(void)
         printf("freed after destroying temp=%d (expected 3: 2 pages + temp)\n", freedCount - freedBefore);
     }
 
+    /* Tier 2、2 バッチ目(TTreeView)。tabSheet1 の上に置く。ノードは TComponent ではないため、
+       破棄は no_vcl_FreeNotify_SetCallback ではなく no_vcl_TreeNodeFree_SetCallback で通知される。 */
+    no_vcl_TreeNodeFree_SetCallback(OnTreeNodeFreed, &nodesFreed);
+    treeView = Place(no_vcl_TTreeView_Create(form), tabSheet1, 10, 30);
+    no_vcl_TControl_SetWidth(treeView, 190);
+    no_vcl_TControl_SetHeight(treeView, 95);
+    treeItems = no_vcl_TCustomTreeView_GetItems(treeView);
+    rootNode = no_vcl_TTreeNodes_Add(treeItems, NULL, "Root");
+    childNode = no_vcl_TTreeNodes_AddChild(treeItems, rootNode, "Child");
+    no_vcl_TTreeNodes_AddChild(treeItems, childNode, "Grandchild");
+    root2Node = no_vcl_TTreeNodes_Add(treeItems, rootNode, "Root 2");
+    no_vcl_TTreeNode_SetExpanded(rootNode, 1);
+    no_vcl_TTreeView_SetOnChange(treeView, OnTreeViewChange, NULL);
+    no_vcl_TTreeView_SetOnCollapsing(treeView, OnTreeViewCollapsing, NULL);
+    printf("TreeView Count=%d (expected 4), root children=%d (expected 1), child Parent is root: %s, "
+           "Grandchild Level=%d (expected 2), root next sibling is Root 2: %s, GetItem(3) is Root 2: %s\n",
+           no_vcl_TTreeNodes_GetCount(treeItems), no_vcl_TTreeNode_GetCount(rootNode),
+           no_vcl_TTreeNode_GetParent(childNode) == rootNode ? "yes" : "no",
+           no_vcl_TTreeNode_GetLevel(no_vcl_TTreeNodes_FindNodeWithText(treeItems, "Grandchild")),
+           no_vcl_TTreeNode_GetNextSibling(rootNode) == root2Node ? "yes" : "no",
+           no_vcl_TTreeNodes_GetItem(treeItems, 3) == root2Node ? "yes" : "no");
+    printf("node TreeView is treeView: %s\n", no_vcl_TTreeNode_GetTreeView(childNode) == treeView ? "yes" : "no");
+
+    lockedNode = no_vcl_TTreeNodes_Add(treeItems, NULL, "Locked");
+    no_vcl_TTreeNodes_AddChild(treeItems, lockedNode, "Inside");
+    no_vcl_TTreeNode_Expand(lockedNode, 0);
+    no_vcl_TTreeNode_Collapse(lockedNode, 0);
+    printf("Locked Expanded after Collapse=%d (expected 1: OnCollapsing refused)\n",
+           no_vcl_TTreeNode_GetExpanded(lockedNode) != 0);
+    no_vcl_TTreeNode_Delete(lockedNode);
+    printf("After Delete: Count=%d (expected 4), nodes freed=%d (expected 2)\n",
+           no_vcl_TTreeNodes_GetCount(treeItems), nodesFreed);
+
     printf("Running (click the button, then close the window twice: the first close is blocked)...\n");
     fflush(stdout);
     /* MainForm を表示してメッセージループに入り、MainForm が閉じられると戻る。 */
@@ -747,7 +810,9 @@ int main(void)
     /* Application が所有するフォーム(と、フォームが所有するコントロール)をまとめて破棄する。
        呼ばなくても DLL の切り離し時に LCL が破棄するが、そのときは破棄通知が呼ばれない。 */
     no_vcl_TComponent_DestroyComponents(app);
-    printf("Clicks: %d, Freed components: %d (expected 59: form + 52 owned + 6 created inside LCL: 2 menu roots, a separator and 3 AddTabSheet pages)\n", clickCount, freedCount);
+    printf("Clicks: %d, Freed components: %d (expected 60: form + 53 owned + 6 created inside LCL: 2 menu roots, a separator and 3 AddTabSheet pages)\n", clickCount, freedCount);
+    /* ツリービューの破棄に伴って、残りのノード(4 つ)も破棄通知が届く。 */
+    printf("Tree nodes freed: %d (expected 6: 2 deleted + 4 with the tree view)\n", nodesFreed);
 
     printf("OK\n");
     return 0;

@@ -394,7 +394,83 @@ using no_vcl_module_t = void*;
     X(no_vcl_bool_t, TCustomPage_GetTabVisible,               (no_vcl_obj_t o),                                     (o)) \
     X(void,          TCustomPage_SetTabVisible,               (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
     X(void,          TCustomPage_SetOnShow,                   (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d)) \
-    X(void,          TCustomPage_SetOnHide,                   (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d))
+    X(void,          TCustomPage_SetOnHide,                   (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d)) \
+    \
+    X(void,          TreeNodeFree_SetCallback,                (no_vcl_callback_t cb, void* d),                      (cb, d)) \
+    X(no_vcl_obj_t,  TTreeView_Create,                        (no_vcl_obj_t owner),                                 (owner)) \
+    X(no_vcl_obj_t,  TCustomTreeView_GetItems,                (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TCustomTreeView_GetSelected,             (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomTreeView_SetSelected,             (no_vcl_obj_t o, no_vcl_obj_t n),                     (o, n)) \
+    X(void,          TCustomTreeView_FullExpand,              (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomTreeView_FullCollapse,            (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_bool_t, TCustomTreeView_AlphaSort,               (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TCustomTreeView_GetNodeAt,               (no_vcl_obj_t o, no_vcl_int_t x, no_vcl_int_t y),     (o, x, y)) \
+    X(no_vcl_bool_t, TTreeView_GetReadOnly,                   (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TTreeView_SetReadOnly,                   (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TTreeView_GetShowLines,                  (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TTreeView_SetShowLines,                  (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TTreeView_GetShowRoot,                   (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TTreeView_SetShowRoot,                   (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TTreeView_GetShowButtons,                (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TTreeView_SetShowButtons,                (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TTreeView_GetAutoExpand,                 (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TTreeView_SetAutoExpand,                 (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TTreeView_GetHideSelection,              (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TTreeView_SetHideSelection,              (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TTreeView_GetRowSelect,                  (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TTreeView_SetRowSelect,                  (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(void,          TTreeView_SetOnChange,                   (no_vcl_obj_t o, no_vcl_node_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TTreeView_SetOnExpanded,                 (no_vcl_obj_t o, no_vcl_node_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TTreeView_SetOnCollapsed,                (no_vcl_obj_t o, no_vcl_node_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TTreeView_SetOnDeletion,                 (no_vcl_obj_t o, no_vcl_node_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TTreeView_SetOnChanging,                 (no_vcl_obj_t o, no_vcl_node_allow_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TTreeView_SetOnExpanding,                (no_vcl_obj_t o, no_vcl_node_allow_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TTreeView_SetOnCollapsing,               (no_vcl_obj_t o, no_vcl_node_allow_callback_t cb, void* d), (o, cb, d)) \
+    \
+    X(no_vcl_obj_t,  TTreeNodes_Add,                          (no_vcl_obj_t o, no_vcl_obj_t n, no_vcl_str_t t),     (o, n, t)) \
+    X(no_vcl_obj_t,  TTreeNodes_AddFirst,                     (no_vcl_obj_t o, no_vcl_obj_t n, no_vcl_str_t t),     (o, n, t)) \
+    X(no_vcl_obj_t,  TTreeNodes_AddChild,                     (no_vcl_obj_t o, no_vcl_obj_t n, no_vcl_str_t t),     (o, n, t)) \
+    X(no_vcl_obj_t,  TTreeNodes_AddChildFirst,                (no_vcl_obj_t o, no_vcl_obj_t n, no_vcl_str_t t),     (o, n, t)) \
+    X(no_vcl_obj_t,  TTreeNodes_Insert,                       (no_vcl_obj_t o, no_vcl_obj_t n, no_vcl_str_t t),     (o, n, t)) \
+    X(void,          TTreeNodes_Clear,                        (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TTreeNodes_Delete,                       (no_vcl_obj_t o, no_vcl_obj_t n),                     (o, n)) \
+    X(no_vcl_int_t,  TTreeNodes_GetCount,                     (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TTreeNodes_GetItem,                      (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(no_vcl_obj_t,  TTreeNodes_GetFirstNode,                 (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TTreeNodes_FindNodeWithText,             (no_vcl_obj_t o, no_vcl_str_t t),                     (o, t)) \
+    X(void,          TTreeNodes_BeginUpdate,                  (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TTreeNodes_EndUpdate,                    (no_vcl_obj_t o),                                     (o)) \
+    \
+    X(no_vcl_str_t,  TTreeNode_GetText,                       (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TTreeNode_SetText,                       (no_vcl_obj_t o, no_vcl_str_t v),                     (o, v)) \
+    X(no_vcl_bool_t, TTreeNode_GetExpanded,                   (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TTreeNode_SetExpanded,                   (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TTreeNode_GetSelected,                   (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TTreeNode_SetSelected,                   (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TTreeNode_GetHasChildren,                (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TTreeNode_SetHasChildren,                (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(void*,         TTreeNode_GetData,                       (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TTreeNode_SetData,                       (no_vcl_obj_t o, void* v),                            (o, v)) \
+    X(no_vcl_int_t,  TTreeNode_GetCount,                      (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TTreeNode_GetItem,                       (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(no_vcl_int_t,  TTreeNode_GetIndex,                      (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_int_t,  TTreeNode_GetLevel,                      (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_int_t,  TTreeNode_GetAbsoluteIndex,              (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TTreeNode_GetParent,                     (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TTreeNode_GetTreeView,                   (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TTreeNode_GetFirstChild,                 (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TTreeNode_GetLastChild,                  (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TTreeNode_GetNextSibling,                (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TTreeNode_GetPrevSibling,                (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TTreeNode_GetNext,                       (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TTreeNode_GetPrev,                       (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_int_t,  TTreeNode_IndexOf,                       (no_vcl_obj_t o, no_vcl_obj_t n),                     (o, n)) \
+    X(void,          TTreeNode_Expand,                        (no_vcl_obj_t o, no_vcl_bool_t r),                    (o, r)) \
+    X(void,          TTreeNode_Collapse,                      (no_vcl_obj_t o, no_vcl_bool_t r),                    (o, r)) \
+    X(void,          TTreeNode_Delete,                        (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TTreeNode_DeleteChildren,                (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TTreeNode_MakeVisible,                   (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TTreeNode_MoveTo,                        (no_vcl_obj_t o, no_vcl_obj_t d, no_vcl_int_t m),     (o, d, m))
 
 namespace
 {

@@ -136,6 +136,9 @@ var
   GFreeNotifier: TFreeNotifier;
   GFreeCallback: TNoVclCallback = nil;
   GFreeData: Pointer = nil;
+  { TTreeNode(TComponent ではないため FreeNotification が無い)の破棄通知。TNoVclTreeView.Delete から呼ぶ。 }
+  GNodeFreeCallback: TNoVclCallback = nil;
+  GNodeFreeData: Pointer = nil;
   { DLL の切り離し中は True。LCL の終了処理で起きるイベント(フォームの OnDestroy・OnHide 等)を呼び出し側へ送らない。 }
   GDetaching: Boolean = False;
 
@@ -395,6 +398,8 @@ begin
   GDetaching := True;
   GFreeCallback := nil;
   GFreeData := nil;
+  GNodeFreeCallback := nil;
+  GNodeFreeData := nil;
 end;
 
 { FreeNotify }
@@ -2304,6 +2309,469 @@ begin
   TCustomPage(Obj).OnHide := @BridgeFor(TCustomPage(Obj), MethodData(TCustomPage(Obj).OnHide), Cb, Data).DoClick;
 end;
 
+{ docs/component-coverage.md の Tier 2、2 バッチ目(TTreeView)。docs/adr/0019-... を参照。
+  TTreeNode・TTreeNodes は TComponent ではなく TPersistent で、FreeNotification が使えない。
+  そこで TTreeView_Create は TTreeView の代わりに、ノードの削除(TCustomTreeView.Delete。protected virtual で、
+  TTreeNode.Destroy から必ず呼ばれ、OnDeletion を発生させる)を上書きした TNoVclTreeView を生成し、
+  利用者の OnDeletion(inherited)の後にノードの破棄通知(GNodeFreeCallback)を送る。 }
+
+type
+  TNoVclTreeView = class(TTreeView)
+  protected
+    procedure Delete(Node: TTreeNode); override;
+  end;
+
+  { OnChange/OnExpanded/OnCollapsed/OnDeletion(Sender, Node)用。 }
+  TNoVclNodeCallback = procedure(Sender: Pointer; Node: Pointer; Data: Pointer); NO_VCL_CALL;
+
+  TNodeCallbackBridge = class(TComponent)
+  private
+    FCallback: TNoVclNodeCallback;
+    FData: Pointer;
+  public
+    procedure DoNode(Sender: TObject; Node: TTreeNode);
+  end;
+
+  { OnChanging/OnExpanding/OnCollapsing(Sender, Node, var Allow)用。Allow は書き換え可能(0 = False)。 }
+  TNoVclNodeAllowCallback = procedure(Sender: Pointer; Node: Pointer; Allow: PInteger; Data: Pointer); NO_VCL_CALL;
+
+  TNodeAllowCallbackBridge = class(TComponent)
+  private
+    FCallback: TNoVclNodeAllowCallback;
+    FData: Pointer;
+  public
+    procedure DoNodeAllow(Sender: TObject; Node: TTreeNode; var Allow: Boolean);
+  end;
+
+procedure TNoVclTreeView.Delete(Node: TTreeNode);
+begin
+  inherited Delete(Node);
+  if Assigned(GNodeFreeCallback) then
+    GNodeFreeCallback(Pointer(Node), GNodeFreeData);
+end;
+
+procedure TNodeCallbackBridge.DoNode(Sender: TObject; Node: TTreeNode);
+begin
+  if not Assigned(FCallback) or GDetaching then
+    Exit;
+  FCallback(Pointer(Sender), Pointer(Node), FData);
+end;
+
+procedure TNodeAllowCallbackBridge.DoNodeAllow(Sender: TObject; Node: TTreeNode; var Allow: Boolean);
+var
+  A: Integer;
+begin
+  if not Assigned(FCallback) or GDetaching then
+    Exit;
+  if Allow then A := -1 else A := 0;
+  FCallback(Pointer(Sender), Pointer(Node), @A, FData);
+  Allow := A <> 0;
+end;
+
+{ BridgeFor と同じく、同じイベントに何度登録してもブリッジを再利用する。
+  イベントの型(TTVChangedEvent・TTVExpandedEvent 等)は構造が同じ別名の型のため、MethodData の多重定義ではなく
+  呼び出し側で TMethod(...).Data を渡す。 }
+function NodeBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclNodeCallback; Data: Pointer): TNodeCallbackBridge;
+begin
+  if (Current <> nil) and (TObject(Current) is TNodeCallbackBridge) and (TNodeCallbackBridge(Current).Owner = Owner) then
+    Result := TNodeCallbackBridge(Current)
+  else
+    Result := TNodeCallbackBridge.Create(Owner);
+  Result.FCallback := Cb;
+  Result.FData := Data;
+end;
+
+function NodeAllowBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclNodeAllowCallback; Data: Pointer): TNodeAllowCallbackBridge;
+begin
+  if (Current <> nil) and (TObject(Current) is TNodeAllowCallbackBridge) and (TNodeAllowCallbackBridge(Current).Owner = Owner) then
+    Result := TNodeAllowCallbackBridge(Current)
+  else
+    Result := TNodeAllowCallbackBridge.Create(Owner);
+  Result.FCallback := Cb;
+  Result.FData := Data;
+end;
+
+procedure TreeNodeFree_SetCallback(Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  GNodeFreeCallback := Cb;
+  GNodeFreeData := Data;
+end;
+
+{ TTreeView / TCustomTreeView }
+
+function TTreeView_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TNoVclTreeView.Create(TComponent(Owner)));
+end;
+
+{ Items(TTreeNodes)はツリービューが所有する非所有のハンドル(TCanvas と同じく、ツリービューと寿命が一致する)。 }
+function TCustomTreeView_GetItems(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomTreeView(Obj).Items);
+end;
+
+function TCustomTreeView_GetSelected(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomTreeView(Obj).Selected);
+end;
+
+procedure TCustomTreeView_SetSelected(Obj: Pointer; Node: Pointer); NO_VCL_CALL;
+begin
+  TCustomTreeView(Obj).Selected := TTreeNode(Node);
+end;
+
+procedure TCustomTreeView_FullExpand(Obj: Pointer); NO_VCL_CALL;
+begin
+  TCustomTreeView(Obj).FullExpand;
+end;
+
+procedure TCustomTreeView_FullCollapse(Obj: Pointer); NO_VCL_CALL;
+begin
+  TCustomTreeView(Obj).FullCollapse;
+end;
+
+function TCustomTreeView_AlphaSort(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomTreeView(Obj).AlphaSort;
+end;
+
+{ X, Y はツリービューのクライアント座標。そこにノードが無ければ nil。 }
+function TCustomTreeView_GetNodeAt(Obj: Pointer; X, Y: Integer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomTreeView(Obj).GetNodeAt(X, Y));
+end;
+
+{ TCustomTreeView の protected を TTreeView が published にしているプロパティ。 }
+
+function TTreeView_GetReadOnly(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TTreeView(Obj).ReadOnly;
+end;
+
+procedure TTreeView_SetReadOnly(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TTreeView(Obj).ReadOnly := Value;
+end;
+
+function TTreeView_GetShowLines(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TTreeView(Obj).ShowLines;
+end;
+
+procedure TTreeView_SetShowLines(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TTreeView(Obj).ShowLines := Value;
+end;
+
+function TTreeView_GetShowRoot(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TTreeView(Obj).ShowRoot;
+end;
+
+procedure TTreeView_SetShowRoot(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TTreeView(Obj).ShowRoot := Value;
+end;
+
+function TTreeView_GetShowButtons(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TTreeView(Obj).ShowButtons;
+end;
+
+procedure TTreeView_SetShowButtons(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TTreeView(Obj).ShowButtons := Value;
+end;
+
+function TTreeView_GetAutoExpand(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TTreeView(Obj).AutoExpand;
+end;
+
+procedure TTreeView_SetAutoExpand(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TTreeView(Obj).AutoExpand := Value;
+end;
+
+function TTreeView_GetHideSelection(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TTreeView(Obj).HideSelection;
+end;
+
+procedure TTreeView_SetHideSelection(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TTreeView(Obj).HideSelection := Value;
+end;
+
+function TTreeView_GetRowSelect(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TTreeView(Obj).RowSelect;
+end;
+
+procedure TTreeView_SetRowSelect(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TTreeView(Obj).RowSelect := Value;
+end;
+
+procedure TTreeView_SetOnChange(Obj: Pointer; Cb: TNoVclNodeCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TTreeView(Obj).OnChange := @NodeBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnChange).Data, Cb, Data).DoNode;
+end;
+
+procedure TTreeView_SetOnExpanded(Obj: Pointer; Cb: TNoVclNodeCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TTreeView(Obj).OnExpanded := @NodeBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnExpanded).Data, Cb, Data).DoNode;
+end;
+
+procedure TTreeView_SetOnCollapsed(Obj: Pointer; Cb: TNoVclNodeCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TTreeView(Obj).OnCollapsed := @NodeBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnCollapsed).Data, Cb, Data).DoNode;
+end;
+
+procedure TTreeView_SetOnDeletion(Obj: Pointer; Cb: TNoVclNodeCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TTreeView(Obj).OnDeletion := @NodeBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnDeletion).Data, Cb, Data).DoNode;
+end;
+
+procedure TTreeView_SetOnChanging(Obj: Pointer; Cb: TNoVclNodeAllowCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TTreeView(Obj).OnChanging := @NodeAllowBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnChanging).Data, Cb, Data).DoNodeAllow;
+end;
+
+procedure TTreeView_SetOnExpanding(Obj: Pointer; Cb: TNoVclNodeAllowCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TTreeView(Obj).OnExpanding := @NodeAllowBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnExpanding).Data, Cb, Data).DoNodeAllow;
+end;
+
+procedure TTreeView_SetOnCollapsing(Obj: Pointer; Cb: TNoVclNodeAllowCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TTreeView(Obj).OnCollapsing := @NodeAllowBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnCollapsing).Data, Cb, Data).DoNodeAllow;
+end;
+
+{ TTreeNodes。Sibling/Parent に nil を渡すと最上位のノードになる(LCL と同じ)。 }
+
+function TTreeNodes_Add(Obj: Pointer; Sibling: Pointer; Text: PChar): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TTreeNodes(Obj).Add(TTreeNode(Sibling), Text));
+end;
+
+function TTreeNodes_AddFirst(Obj: Pointer; Sibling: Pointer; Text: PChar): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TTreeNodes(Obj).AddFirst(TTreeNode(Sibling), Text));
+end;
+
+function TTreeNodes_AddChild(Obj: Pointer; Parent: Pointer; Text: PChar): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TTreeNodes(Obj).AddChild(TTreeNode(Parent), Text));
+end;
+
+function TTreeNodes_AddChildFirst(Obj: Pointer; Parent: Pointer; Text: PChar): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TTreeNodes(Obj).AddChildFirst(TTreeNode(Parent), Text));
+end;
+
+function TTreeNodes_Insert(Obj: Pointer; NextNode: Pointer; Text: PChar): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TTreeNodes(Obj).Insert(TTreeNode(NextNode), Text));
+end;
+
+procedure TTreeNodes_Clear(Obj: Pointer); NO_VCL_CALL;
+begin
+  TTreeNodes(Obj).Clear;
+end;
+
+procedure TTreeNodes_Delete(Obj: Pointer; Node: Pointer); NO_VCL_CALL;
+begin
+  TTreeNodes(Obj).Delete(TTreeNode(Node));
+end;
+
+{ すべてのノード(子孫を含む)の数。GetItem の Index は、上から順に数えた位置(AbsoluteIndex)。 }
+function TTreeNodes_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TTreeNodes(Obj).Count;
+end;
+
+function TTreeNodes_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TTreeNodes(Obj).Item[Index]);
+end;
+
+function TTreeNodes_GetFirstNode(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TTreeNodes(Obj).GetFirstNode);
+end;
+
+function TTreeNodes_FindNodeWithText(Obj: Pointer; Text: PChar): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TTreeNodes(Obj).FindNodeWithText(Text));
+end;
+
+procedure TTreeNodes_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
+begin
+  TTreeNodes(Obj).BeginUpdate;
+end;
+
+procedure TTreeNodes_EndUpdate(Obj: Pointer); NO_VCL_CALL;
+begin
+  TTreeNodes(Obj).EndUpdate;
+end;
+
+{ TTreeNode }
+
+function TTreeNode_GetText(Obj: Pointer): PChar; NO_VCL_CALL;
+begin
+  Result := ReturnStr(TTreeNode(Obj).Text);
+end;
+
+procedure TTreeNode_SetText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+begin
+  TTreeNode(Obj).Text := Value;
+end;
+
+function TTreeNode_GetExpanded(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TTreeNode(Obj).Expanded;
+end;
+
+procedure TTreeNode_SetExpanded(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TTreeNode(Obj).Expanded := Value;
+end;
+
+function TTreeNode_GetSelected(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TTreeNode(Obj).Selected;
+end;
+
+procedure TTreeNode_SetSelected(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TTreeNode(Obj).Selected := Value;
+end;
+
+function TTreeNode_GetHasChildren(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TTreeNode(Obj).HasChildren;
+end;
+
+procedure TTreeNode_SetHasChildren(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TTreeNode(Obj).HasChildren := Value;
+end;
+
+{ 利用者データ(LCL は解釈しない)。 }
+function TTreeNode_GetData(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := TTreeNode(Obj).Data;
+end;
+
+procedure TTreeNode_SetData(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TTreeNode(Obj).Data := Value;
+end;
+
+function TTreeNode_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TTreeNode(Obj).Count;
+end;
+
+function TTreeNode_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TTreeNode(Obj).Items[Index]);
+end;
+
+function TTreeNode_GetIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TTreeNode(Obj).Index;
+end;
+
+function TTreeNode_GetLevel(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TTreeNode(Obj).Level;
+end;
+
+function TTreeNode_GetAbsoluteIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TTreeNode(Obj).AbsoluteIndex;
+end;
+
+function TTreeNode_GetParent(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TTreeNode(Obj).Parent);
+end;
+
+function TTreeNode_GetTreeView(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TTreeNode(Obj).TreeView);
+end;
+
+function TTreeNode_GetFirstChild(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TTreeNode(Obj).GetFirstChild);
+end;
+
+function TTreeNode_GetLastChild(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TTreeNode(Obj).GetLastChild);
+end;
+
+function TTreeNode_GetNextSibling(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TTreeNode(Obj).GetNextSibling);
+end;
+
+function TTreeNode_GetPrevSibling(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TTreeNode(Obj).GetPrevSibling);
+end;
+
+{ 上から順(子孫を含む)の次/前のノード。 }
+function TTreeNode_GetNext(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TTreeNode(Obj).GetNext);
+end;
+
+function TTreeNode_GetPrev(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TTreeNode(Obj).GetPrev);
+end;
+
+function TTreeNode_IndexOf(Obj: Pointer; Node: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TTreeNode(Obj).IndexOf(TTreeNode(Node));
+end;
+
+procedure TTreeNode_Expand(Obj: Pointer; Recurse: LongBool); NO_VCL_CALL;
+begin
+  TTreeNode(Obj).Expand(Recurse);
+end;
+
+procedure TTreeNode_Collapse(Obj: Pointer; Recurse: LongBool); NO_VCL_CALL;
+begin
+  TTreeNode(Obj).Collapse(Recurse);
+end;
+
+{ このノード(と子孫)を削除する。削除されたノードごとに OnDeletion と破棄通知が呼ばれる。 }
+procedure TTreeNode_Delete(Obj: Pointer); NO_VCL_CALL;
+begin
+  TTreeNode(Obj).Delete;
+end;
+
+procedure TTreeNode_DeleteChildren(Obj: Pointer); NO_VCL_CALL;
+begin
+  TTreeNode(Obj).DeleteChildren;
+end;
+
+procedure TTreeNode_MakeVisible(Obj: Pointer); NO_VCL_CALL;
+begin
+  TTreeNode(Obj).MakeVisible;
+end;
+
+{ Mode は TNodeAttachMode の序数(naAdd=0, naAddFirst, naAddChild, naAddChildFirst, naInsert, naInsertBehind)。 }
+procedure TTreeNode_MoveTo(Obj: Pointer; Destination: Pointer; Mode: Integer); NO_VCL_CALL;
+begin
+  TTreeNode(Obj).MoveTo(TTreeNode(Destination), TNodeAttachMode(Mode));
+end;
+
 exports
   FreeNotify_SetCallback,
 
@@ -2685,7 +3153,83 @@ exports
   TCustomPage_GetTabVisible,
   TCustomPage_SetTabVisible,
   TCustomPage_SetOnShow,
-  TCustomPage_SetOnHide;
+  TCustomPage_SetOnHide,
+
+  TreeNodeFree_SetCallback,
+  TTreeView_Create,
+  TCustomTreeView_GetItems,
+  TCustomTreeView_GetSelected,
+  TCustomTreeView_SetSelected,
+  TCustomTreeView_FullExpand,
+  TCustomTreeView_FullCollapse,
+  TCustomTreeView_AlphaSort,
+  TCustomTreeView_GetNodeAt,
+  TTreeView_GetReadOnly,
+  TTreeView_SetReadOnly,
+  TTreeView_GetShowLines,
+  TTreeView_SetShowLines,
+  TTreeView_GetShowRoot,
+  TTreeView_SetShowRoot,
+  TTreeView_GetShowButtons,
+  TTreeView_SetShowButtons,
+  TTreeView_GetAutoExpand,
+  TTreeView_SetAutoExpand,
+  TTreeView_GetHideSelection,
+  TTreeView_SetHideSelection,
+  TTreeView_GetRowSelect,
+  TTreeView_SetRowSelect,
+  TTreeView_SetOnChange,
+  TTreeView_SetOnExpanded,
+  TTreeView_SetOnCollapsed,
+  TTreeView_SetOnDeletion,
+  TTreeView_SetOnChanging,
+  TTreeView_SetOnExpanding,
+  TTreeView_SetOnCollapsing,
+
+  TTreeNodes_Add,
+  TTreeNodes_AddFirst,
+  TTreeNodes_AddChild,
+  TTreeNodes_AddChildFirst,
+  TTreeNodes_Insert,
+  TTreeNodes_Clear,
+  TTreeNodes_Delete,
+  TTreeNodes_GetCount,
+  TTreeNodes_GetItem,
+  TTreeNodes_GetFirstNode,
+  TTreeNodes_FindNodeWithText,
+  TTreeNodes_BeginUpdate,
+  TTreeNodes_EndUpdate,
+
+  TTreeNode_GetText,
+  TTreeNode_SetText,
+  TTreeNode_GetExpanded,
+  TTreeNode_SetExpanded,
+  TTreeNode_GetSelected,
+  TTreeNode_SetSelected,
+  TTreeNode_GetHasChildren,
+  TTreeNode_SetHasChildren,
+  TTreeNode_GetData,
+  TTreeNode_SetData,
+  TTreeNode_GetCount,
+  TTreeNode_GetItem,
+  TTreeNode_GetIndex,
+  TTreeNode_GetLevel,
+  TTreeNode_GetAbsoluteIndex,
+  TTreeNode_GetParent,
+  TTreeNode_GetTreeView,
+  TTreeNode_GetFirstChild,
+  TTreeNode_GetLastChild,
+  TTreeNode_GetNextSibling,
+  TTreeNode_GetPrevSibling,
+  TTreeNode_GetNext,
+  TTreeNode_GetPrev,
+  TTreeNode_IndexOf,
+  TTreeNode_Expand,
+  TTreeNode_Collapse,
+  TTreeNode_Delete,
+  TTreeNode_DeleteChildren,
+  TTreeNode_MakeVisible,
+  TTreeNode_MoveTo;
 
 begin
   RequireDerivedFormResource := False;
