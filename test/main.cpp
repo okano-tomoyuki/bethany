@@ -130,6 +130,16 @@ public:
     TPanel*         AlignLeftPanel;
     TSplitter*      Splitter1;
     TPanel*         AlignClientPanel;
+    TMainMenu*      MainMenu1;
+    TMenuItem*      FileMenu;
+    TMenuItem*      FileNewItem;
+    TMenuItem*      FileExitItem;
+    TMenuItem*      ViewMenu;
+    TMenuItem*      ViewStatusBarItem;
+    TMenuItem*      ViewSmallItem;
+    TMenuItem*      ViewLargeItem;
+    TPopupMenu*     PopupMenu1;
+    TMenuItem*      PopupHelloItem;
 
     // C++Builder と同じく Owner を受け取り、TForm に渡す(Application->CreateForm が Application を渡す)。
     explicit TMainForm(TComponent* AOwner) : TForm(AOwner)
@@ -512,6 +522,67 @@ public:
         AlignClientPanel->Align = alClient;
         AlignClientPanel->Caption = "alClient";
 
+        // Tier 5(メニュー)。項目の Owner はフォームにし、親子関係は Add で組む。
+        // MainMenu1->Items はメニューのルート項目で、LCL が内部で生成したもの(初回アクセス時にラッパーができる)。
+        MainMenu1 = new TMainMenu(this);
+
+        FileMenu = new TMenuItem(this);
+        FileMenu->Caption = "&File";
+        MainMenu1->Items->Add(FileMenu);
+
+        FileNewItem = new TMenuItem(this);
+        FileNewItem->Caption = "&New";
+        FileNewItem->ShortCut = ShortCut('N', ssCtrl);
+        FileNewItem->OnClick = [this](TObject* Sender) { FileNewItemClick(Sender); };
+        FileMenu->Add(FileNewItem);
+
+        FileMenu->AddSeparator();
+
+        FileExitItem = new TMenuItem(this);
+        FileExitItem->Caption = "E&xit";
+        FileExitItem->OnClick = [](TObject*) { Application->Terminate(); };
+        FileMenu->Add(FileExitItem);
+
+        ViewMenu = new TMenuItem(this);
+        ViewMenu->Caption = "&View";
+        MainMenu1->Items->Add(ViewMenu);
+
+        ViewStatusBarItem = new TMenuItem(this);
+        ViewStatusBarItem->Caption = "&Status bar";
+        ViewStatusBarItem->AutoCheck = true;
+        ViewStatusBarItem->Checked = true;
+        ViewStatusBarItem->OnClick = [this](TObject*) { StatusBar1->Visible = (bool)ViewStatusBarItem->Checked; };
+        ViewMenu->Add(ViewStatusBarItem);
+
+        ViewMenu->AddSeparator();
+
+        // 同じ GroupIndex の RadioItem は、どれか 1 つだけが Checked になる。
+        ViewSmallItem = new TMenuItem(this);
+        ViewSmallItem->Caption = "S&mall";
+        ViewSmallItem->RadioItem = true;
+        ViewSmallItem->GroupIndex = 1;
+        ViewSmallItem->AutoCheck = true;
+        ViewSmallItem->Checked = true;
+        ViewMenu->Add(ViewSmallItem);
+
+        ViewLargeItem = new TMenuItem(this);
+        ViewLargeItem->Caption = "&Large";
+        ViewLargeItem->RadioItem = true;
+        ViewLargeItem->GroupIndex = 1;
+        ViewLargeItem->AutoCheck = true;
+        ViewMenu->Add(ViewLargeItem);
+
+        Menu = MainMenu1;
+
+        // Panel1 を右クリックすると開くメニュー。
+        PopupMenu1 = new TPopupMenu(this);
+        PopupHelloItem = new TMenuItem(this);
+        PopupHelloItem->Caption = "Say hello";
+        PopupHelloItem->OnClick = [](TObject*) { std::printf("PopupHelloItem clicked\n"); std::fflush(stdout); };
+        PopupMenu1->Items->Add(PopupHelloItem);
+        PopupMenu1->OnPopup = [this](TObject* Sender) { PopupMenu1Popup(Sender); };
+        Panel1->PopupMenu = PopupMenu1;
+
         OnCreate = [this](TObject* Sender) { FormCreate(Sender); };
         OnShow = [this](TObject* Sender) { FormShow(Sender); };
         OnResize = [this](TObject* Sender) { FormResize(Sender); };
@@ -688,6 +759,19 @@ private:
         std::fflush(stdout);
     }
 
+    void FileNewItemClick(TObject* Sender)
+    {
+        std::printf("FileNewItemClick: Sender is FileNewItem: %s\n", Sender == FileNewItem ? "yes" : "no");
+        std::fflush(stdout);
+    }
+
+    void PopupMenu1Popup(TObject* Sender)
+    {
+        TComponent* from = static_cast<TPopupMenu*>(Sender)->PopupComponent;
+        std::printf("PopupMenu1Popup: PopupComponent is Panel1: %s\n", from == Panel1 ? "yes" : "no");
+        std::fflush(stdout);
+    }
+
     void Splitter1Moved(TObject* Sender)
     {
         std::printf("Splitter1Moved: SplitterPosition=%d, AlignLeftPanel->Width=%d\n",
@@ -832,6 +916,47 @@ int main()
                     "ResizeAnchor=%d (expected akLeft=%d) ResizeStyle=%d (expected rsUpdate=%d)\n",
                     (int)sp->Align, (int)alLeft, (int)sp->MinSize, (bool)sp->Beveled, (bool)sp->AutoSnap,
                     (int)sp->ResizeAnchor, (int)akLeft, (int)sp->ResizeStyle, (int)rsUpdate);
+    }
+
+    // Tier 5(メニュー)。
+    {
+        TMainForm* f = Form1;
+        TMenuItem* root = f->MainMenu1->Items;
+        std::printf("Form1->Menu is MainMenu1: %s, Panel1->PopupMenu is PopupMenu1: %s\n",
+                    f->Menu == f->MainMenu1 ? "yes" : "no", f->Panel1->PopupMenu == f->PopupMenu1 ? "yes" : "no");
+        // ルート項目のラッパーは初回アクセス時に作られ、以降は同じものが返る。
+        std::printf("MainMenu1->Items is the same wrapper each time: %s, Count=%d (expected 2)\n",
+                    root == (TMenuItem*)f->MainMenu1->Items ? "yes" : "no", (int)root->Count);
+        std::printf("FileMenu->Parent is MainMenu1->Items: %s, Items->GetItem(1) is ViewMenu: %s\n",
+                    f->FileMenu->Parent == root ? "yes" : "no", root->GetItem(1) == f->ViewMenu ? "yes" : "no");
+        // AddSeparator の区切り線も LCL が内部で生成した項目で、GetItem で初めてラッパーができる。
+        TMenuItem* sep = f->FileMenu->GetItem(1);
+        std::printf("FileMenu Count=%d (expected 3), GetItem(1) IsLine=%d Caption=%s Parent is FileMenu: %s\n",
+                    (int)f->FileMenu->Count, sep->IsLine(), std::string(sep->Caption).c_str(),
+                    sep->Parent == f->FileMenu ? "yes" : "no");
+        std::printf("FileNewItem ShortCut=%s (0x%04x, TextToShortCut(\"Ctrl+N\") matches: %s)\n",
+                    ShortCutToText(f->FileNewItem->ShortCut).c_str(), (unsigned)(TShortCut)f->FileNewItem->ShortCut,
+                    TextToShortCut("Ctrl+N") == (TShortCut)f->FileNewItem->ShortCut ? "yes" : "no");
+
+        // Click() は利用者が選んだときと同じく、AutoCheck の反映と OnClick を行う。
+        f->FileNewItem->Click();
+        f->ViewLargeItem->Click();
+        std::printf("After clicking Large: Small/Large Checked=%d/%d (expected 0/1)\n",
+                    (bool)f->ViewSmallItem->Checked, (bool)f->ViewLargeItem->Checked);
+        f->ViewSmallItem->Click();
+        std::printf("After clicking Small: Small/Large Checked=%d/%d (expected 1/0)\n",
+                    (bool)f->ViewSmallItem->Checked, (bool)f->ViewLargeItem->Checked);
+
+        // Insert/Delete。Delete は外すだけで破棄しない。
+        TMenuItem* temp = new TMenuItem(f);
+        temp->Caption = "Temp";
+        f->FileMenu->Insert(0, temp);
+        std::printf("After Insert(0): IndexOf(temp)=%d (expected 0), Count=%d (expected 4)\n",
+                    f->FileMenu->IndexOf(temp), (int)f->FileMenu->Count);
+        f->FileMenu->Delete(0);
+        std::printf("After Delete(0): Count=%d (expected 3), temp->Parent is null: %s\n",
+                    (int)f->FileMenu->Count, temp->Parent == nullptr ? "yes" : "no");
+        temp->Free();
     }
 
     // 2 つ目以降に生成したフォームは MainForm にならない。

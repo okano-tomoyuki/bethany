@@ -43,7 +43,7 @@ TScrollingWinControl のいずれかで、いずれも実装済み。既存パ�
 | ✅ TRadioGroup | extctrls.pp(TCustomRadioGroup) | TCustomGroupBox(実装済み) | Items/ItemIndex/OnClick(ADR 0015 の 3 バッチ目)。OnClick は TControl のものとは別の独自フィールド |
 | ✅ TCheckGroup | extctrls.pp(TCustomCheckGroup) | TCustomGroupBox(実装済み) | Items + インデックス付き Checked(ADR 0015 の 3 バッチ目) |
 | ✅ TCheckListBox | checklst.pas(TCustomCheckListBox) | TCustomListBox(実装済み) | 基底の Items をそのまま使い、インデックス付き Checked と OnClickCheck を追加(ADR 0015 の 3 バッチ目) |
-| TLabeledEdit | extctrls.pp(TCustomLabeledEdit) | TCustomEdit(実装済み) | EditLabel は LCL が内部で生成する子コンポーネントで、no_vcl の `*_Create` を経由しないため C++ ラッパーが無い。下記「cross-cutting な既知の課題」を解決してから着手する |
+| TLabeledEdit | extctrls.pp(TCustomLabeledEdit) | TCustomEdit(実装済み) | EditLabel は LCL が内部で生成する子コンポーネント。ラップの仕組み(`WrapExisting`)は [ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md) で入ったため、着手可能になった |
 | ✅ TSpeedButton | buttons.pp(TCustomSpeedButton) | TGraphicControl(実装済み) | Down/GroupIndex/Flat/AllowAllUp(ADR 0015 の 4 バッチ目)。Glyph(ビットマップ)は未対応 |
 | ✅ TBitBtn | buttons.pp(TCustomBitBtn) | TCustomButton(実装済み) | Kind(bkOK 等)のみ実装(ADR 0015 の 4 バッチ目)。Kind を設定すると LCL が既定の Caption を自動設定する。Glyph は Tier 3 まで保留 |
 | ✅ TSpinEdit / TFloatSpinEdit | spin.pp | TCustomEdit(実装済み) | TCustomSpinEdit が Value 等を Integer で再宣言(TCustomFloatSpinEdit の Double 版を隠す)。C++ でも `Property<int>` で `Property<double>` を隠す形で再現した(ADR 0015 の 5 バッチ目) |
@@ -98,9 +98,9 @@ VCL アプリらしい UI に必須だが、TMenuItem がツリー構造の TCom
 
 | クラス | LCL 宣言ユニット | LCL での基底 | 備考 |
 |---|---|---|---|
-| TMenuItem | menus.pp | TLCLComponent(no_vcl では TComponent 直下に置く) | Caption/Checked/Enabled/ShortCut/OnClick、子 MenuItem を持つツリー |
-| TMainMenu | menus.pp(TMenu) | TLCLComponent → TComponent | フォームに割り当てる(TForm.Menu) |
-| TPopupMenu | menus.pp(TMenu) | TLCLComponent → TComponent | コントロールに割り当てる(TControl.PopupMenu、今回未実装のプロパティ) |
+| ✅ TMenuItem | menus.pp | TLCLComponent(no_vcl では TComponent 直下に置く) | Caption/Checked/Enabled/Visible/AutoCheck/RadioItem/GroupIndex/Default/ShortCut/Hint/OnClick と、子の項目の操作(GetItem/Count/Add/Insert/Delete/Remove/Clear/IndexOf/AddSeparator)([ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md))。Bitmap/ImageIndex は Tier 3 待ち |
+| ✅ TMainMenu | menus.pp(TMenu) | TLCLComponent → TComponent | フォームに割り当てる(TForm.Menu)。Items(ルート項目)は LCL が内部で生成するため、`WrapExisting` でラップする(ADR 0017)。Merge は未対応 |
+| ✅ TPopupMenu | menus.pp(TMenu) | TLCLComponent → TComponent | コントロールに割り当てる(TControl.PopupMenu)。AutoPopup/PopupComponent/OnPopup/OnClose/Popup(X, Y)(ADR 0017) |
 
 ### Tier 6 — 低優先・特殊
 
@@ -128,7 +128,10 @@ Tier 1 の 1 バッチ目([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.m
   LCL と同じく TControl の public プロパティとして追加し、あわせて TSplitter を追加した。
   LCL では Align による配置がフォームの表示まで行われない(VCL と異なる)点に注意。
   Anchors・BorderSpacing・Constraints・AutoSize は未実装。
-- **LCL が内部で生成する子コンポーネントをラップできない。** `TCustomLabeledEdit.EditLabel` のように、
+- ✅ **LCL が内部で生成する子コンポーネントをラップできない。** → 仕組みとしては解決済み
+  ([ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md))。ハンドルを返す C API の側で破棄通知に登録し、
+  C++ 側は `TComponent::WrapExisting<T>` で初回アクセス時にラッパーを作る。TMenu.Items で初めて使った。
+  以下は当初の記述。`TCustomLabeledEdit.EditLabel` のように、
   コンポーネントが自分の子を Pascal 側だけで生成する場合、その子は no_vcl の `*_Create` を経由しないため
   C++ 側にラッパーが登録されない(`TComponent::FromHandle` が nullptr を返す)。この種のプロパティを
   公開するには、「既存のハンドルを受け取って、初回アクセス時に遅延でラッパーを生成する」ような仕組みが要る。
@@ -140,11 +143,13 @@ Tier 1 の 1 バッチ目([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.m
 ## 4. 推奨する着手順序
 
 1. **Tier 1 は完了した**(19 クラス。[ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.md))。
-   TLabeledEdit(内部生成コンポーネントのラップ待ち)・TPageControl+TTabSheet(所有ページの設計が必要、
-   Tier 2 へ再分類)は cross-cutting な課題または複雑度の都合で見送った。
+   TLabeledEdit(内部生成コンポーネントのラップ待ち。ADR 0017 で仕組みが入ったため着手可能)・
+   TPageControl+TTabSheet(所有ページの設計が必要、Tier 2 へ再分類)は cross-cutting な課題または
+   複雑度の都合で見送った。
 2. ✅ **`TControl.Align` の追加**(上記 cross-cutting な課題)と、それを待っていた TSplitter は完了した
    ([ADR 0016](adr/0016-control-align-and-splitter.md))。
-3. **Tier 5(メニュー)** は複雑度は中程度だが、実用アプリでほぼ必須のため Tier 2 より先に着手する価値がある。
+3. ✅ **Tier 5(メニュー)** は完了した([ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md))。
+   あわせて、内部生成コンポーネントのラップの仕組み(`WrapExisting`)が入った。
 4. **Tier 2** のうち TTreeView・TListView・TStringGrid・TPageControl+TTabSheet は、それぞれ専用の
    コレクション/所有子コンポーネント設計の ADR を書いてから着手する(TStrings 的な List 操作や、
    内部生成コンポーネントのラップの共通パターンを固められる可能性がある)。

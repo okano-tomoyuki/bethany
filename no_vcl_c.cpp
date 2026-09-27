@@ -307,7 +307,62 @@ using no_vcl_module_t = void*;
     X(void,          TCustomSplitter_SetResizeStyle,          (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
     X(no_vcl_int_t,  TCustomSplitter_GetSplitterPosition,     (no_vcl_obj_t o),                                     (o)) \
     X(void,          TCustomSplitter_SetSplitterPosition,     (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
-    X(void,          TCustomSplitter_SetOnMoved,              (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d))
+    X(void,          TCustomSplitter_SetOnMoved,              (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d)) \
+    \
+    X(no_vcl_int_t,  ShortCut_Make,                           (no_vcl_int_t k, no_vcl_int_t s),                     (k, s)) \
+    X(no_vcl_int_t,  ShortCut_FromText,                       (no_vcl_str_t t),                                     (t)) \
+    X(no_vcl_str_t,  ShortCut_ToText,                         (no_vcl_int_t v),                                     (v)) \
+    \
+    X(no_vcl_obj_t,  TMenuItem_Create,                        (no_vcl_obj_t owner),                                 (owner)) \
+    X(no_vcl_str_t,  TMenuItem_GetCaption,                    (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TMenuItem_SetCaption,                    (no_vcl_obj_t o, no_vcl_str_t v),                     (o, v)) \
+    X(no_vcl_bool_t, TMenuItem_GetChecked,                    (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TMenuItem_SetChecked,                    (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TMenuItem_GetEnabled,                    (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TMenuItem_SetEnabled,                    (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TMenuItem_GetVisible,                    (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TMenuItem_SetVisible,                    (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TMenuItem_GetAutoCheck,                  (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TMenuItem_SetAutoCheck,                  (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TMenuItem_GetRadioItem,                  (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TMenuItem_SetRadioItem,                  (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_int_t,  TMenuItem_GetGroupIndex,                 (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TMenuItem_SetGroupIndex,                 (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_bool_t, TMenuItem_GetDefault,                    (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TMenuItem_SetDefault,                    (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_int_t,  TMenuItem_GetShortCut,                   (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TMenuItem_SetShortCut,                   (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_str_t,  TMenuItem_GetHint,                       (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TMenuItem_SetHint,                       (no_vcl_obj_t o, no_vcl_str_t v),                     (o, v)) \
+    X(void,          TMenuItem_SetOnClick,                    (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d)) \
+    X(no_vcl_int_t,  TMenuItem_GetCount,                      (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TMenuItem_GetItem,                       (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(no_vcl_obj_t,  TMenuItem_GetParent,                     (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TMenuItem_Add,                           (no_vcl_obj_t o, no_vcl_obj_t item),                  (o, item)) \
+    X(void,          TMenuItem_Insert,                        (no_vcl_obj_t o, no_vcl_int_t i, no_vcl_obj_t item),  (o, i, item)) \
+    X(void,          TMenuItem_Delete,                        (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(void,          TMenuItem_Remove,                        (no_vcl_obj_t o, no_vcl_obj_t item),                  (o, item)) \
+    X(void,          TMenuItem_Clear,                         (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_int_t,  TMenuItem_IndexOf,                       (no_vcl_obj_t o, no_vcl_obj_t item),                  (o, item)) \
+    X(void,          TMenuItem_AddSeparator,                  (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_bool_t, TMenuItem_IsLine,                        (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TMenuItem_Click,                         (no_vcl_obj_t o),                                     (o)) \
+    \
+    X(no_vcl_obj_t,  TMenu_GetItems,                          (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TMainMenu_Create,                        (no_vcl_obj_t owner),                                 (owner)) \
+    X(no_vcl_obj_t,  TPopupMenu_Create,                       (no_vcl_obj_t owner),                                 (owner)) \
+    X(void,          TPopupMenu_Popup,                        (no_vcl_obj_t o, no_vcl_int_t x, no_vcl_int_t y),     (o, x, y)) \
+    X(no_vcl_bool_t, TPopupMenu_GetAutoPopup,                 (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TPopupMenu_SetAutoPopup,                 (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_obj_t,  TPopupMenu_GetPopupComponent,            (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TPopupMenu_SetPopupComponent,            (no_vcl_obj_t o, no_vcl_obj_t v),                     (o, v)) \
+    X(void,          TPopupMenu_SetOnPopup,                   (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d)) \
+    X(void,          TPopupMenu_SetOnClose,                   (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d)) \
+    \
+    X(no_vcl_obj_t,  TCustomForm_GetMenu,                     (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomForm_SetMenu,                     (no_vcl_obj_t o, no_vcl_obj_t v),                     (o, v)) \
+    X(no_vcl_obj_t,  TControl_GetPopupMenu,                   (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TControl_SetPopupMenu,                   (no_vcl_obj_t o, no_vcl_obj_t v),                     (o, v))
 
 namespace
 {

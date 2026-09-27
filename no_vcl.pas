@@ -24,6 +24,8 @@ uses
   Buttons,
   Spin,
   MaskEdit,
+  Menus,
+  LCLProc,
   Graphics,
   CustomTimer
   {$ifdef LCLwin32}
@@ -1845,6 +1847,288 @@ begin
   TCustomSplitter(Obj).OnMoved := @BridgeFor(TCustomSplitter(Obj), MethodData(TCustomSplitter(Obj).OnMoved), Cb, Data).DoClick;
 end;
 
+{ docs/component-coverage.md の Tier 5(メニュー)。
+  TMenu.Items(ルートの TMenuItem)は LCL が TMenu の中で生成し、*_Create を経由しない。
+  このようにコンポーネントを返す関数のうち、LCL が内部で生成したものを返しうるもの(TMenu_GetItems・
+  TMenuItem_GetItem・TMenuItem_GetParent)は、返す前に Watch で破棄通知の対象に登録する
+  (FreeNotification は同じ相手に何度呼んでも 1 回分しか登録されない)。
+  これにより、C++ 側は初めて受け取ったハンドルにラッパーを後から作っても、破棄通知で寿命を合わせられる。 }
+
+{ ShortCut: Key は仮想キーコード、Shift は no_vcl_ss* のビット集合。VCL と同じ値(scShift=$2000 等)を返す。 }
+function ShortCut_Make(Key: Integer; Shift: LongWord): Integer; NO_VCL_CALL;
+begin
+  Result := Menus.ShortCut(Word(Key), IntToShiftState(Shift));
+end;
+
+function ShortCut_FromText(Text: PChar): Integer; NO_VCL_CALL;
+begin
+  Result := TextToShortCut(Text);
+end;
+
+function ShortCut_ToText(Value: Integer): PChar; NO_VCL_CALL;
+begin
+  Result := ReturnStr(ShortCutToText(TShortCut(Value)));
+end;
+
+{ TMenuItem }
+
+function TMenuItem_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TMenuItem.Create(TComponent(Owner)));
+end;
+
+function TMenuItem_GetCaption(Obj: Pointer): PChar; NO_VCL_CALL;
+begin
+  Result := ReturnStr(TMenuItem(Obj).Caption);
+end;
+
+procedure TMenuItem_SetCaption(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+begin
+  TMenuItem(Obj).Caption := Value;
+end;
+
+function TMenuItem_GetChecked(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TMenuItem(Obj).Checked;
+end;
+
+procedure TMenuItem_SetChecked(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TMenuItem(Obj).Checked := Value;
+end;
+
+function TMenuItem_GetEnabled(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TMenuItem(Obj).Enabled;
+end;
+
+procedure TMenuItem_SetEnabled(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TMenuItem(Obj).Enabled := Value;
+end;
+
+function TMenuItem_GetVisible(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TMenuItem(Obj).Visible;
+end;
+
+procedure TMenuItem_SetVisible(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TMenuItem(Obj).Visible := Value;
+end;
+
+function TMenuItem_GetAutoCheck(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TMenuItem(Obj).AutoCheck;
+end;
+
+procedure TMenuItem_SetAutoCheck(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TMenuItem(Obj).AutoCheck := Value;
+end;
+
+function TMenuItem_GetRadioItem(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TMenuItem(Obj).RadioItem;
+end;
+
+procedure TMenuItem_SetRadioItem(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TMenuItem(Obj).RadioItem := Value;
+end;
+
+function TMenuItem_GetGroupIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TMenuItem(Obj).GroupIndex;
+end;
+
+procedure TMenuItem_SetGroupIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TMenuItem(Obj).GroupIndex := Byte(Value);
+end;
+
+function TMenuItem_GetDefault(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TMenuItem(Obj).Default;
+end;
+
+procedure TMenuItem_SetDefault(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TMenuItem(Obj).Default := Value;
+end;
+
+function TMenuItem_GetShortCut(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TMenuItem(Obj).ShortCut;
+end;
+
+procedure TMenuItem_SetShortCut(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TMenuItem(Obj).ShortCut := TShortCut(Value);
+end;
+
+function TMenuItem_GetHint(Obj: Pointer): PChar; NO_VCL_CALL;
+begin
+  Result := ReturnStr(TMenuItem(Obj).Hint);
+end;
+
+procedure TMenuItem_SetHint(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+begin
+  TMenuItem(Obj).Hint := Value;
+end;
+
+procedure TMenuItem_SetOnClick(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TMenuItem(Obj).OnClick := @BridgeFor(TMenuItem(Obj), MethodData(TMenuItem(Obj).OnClick), Cb, Data).DoClick;
+end;
+
+function TMenuItem_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TMenuItem(Obj).Count;
+end;
+
+function TMenuItem_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TMenuItem(Obj).Items[Index]);
+end;
+
+{ 親の TMenuItem(TMenu のルートの Items 直下の項目なら、そのルート)。どこにも追加されていなければ nil。 }
+function TMenuItem_GetParent(Obj: Pointer): Pointer; NO_VCL_CALL;
+var
+  P: TMenuItem;
+begin
+  P := TMenuItem(Obj).Parent;
+  if P = nil then
+    Result := nil
+  else
+    Result := Watch(P);
+end;
+
+procedure TMenuItem_Add(Obj: Pointer; Item: Pointer); NO_VCL_CALL;
+begin
+  TMenuItem(Obj).Add(TMenuItem(Item));
+end;
+
+procedure TMenuItem_Insert(Obj: Pointer; Index: Integer; Item: Pointer); NO_VCL_CALL;
+begin
+  TMenuItem(Obj).Insert(Index, TMenuItem(Item));
+end;
+
+{ Delete/Remove は子から外すだけで破棄しない(VCL と同じ。破棄は Owner に任せるか、明示的に行う)。
+  Clear はすべての子を破棄する。 }
+procedure TMenuItem_Delete(Obj: Pointer; Index: Integer); NO_VCL_CALL;
+begin
+  TMenuItem(Obj).Delete(Index);
+end;
+
+procedure TMenuItem_Remove(Obj: Pointer; Item: Pointer); NO_VCL_CALL;
+begin
+  TMenuItem(Obj).Remove(TMenuItem(Item));
+end;
+
+procedure TMenuItem_Clear(Obj: Pointer); NO_VCL_CALL;
+begin
+  TMenuItem(Obj).Clear;
+end;
+
+function TMenuItem_IndexOf(Obj: Pointer; Item: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TMenuItem(Obj).IndexOf(TMenuItem(Item));
+end;
+
+{ 区切り線(Caption が '-' の項目)を末尾に追加する。追加される項目は LCL が内部で生成する(Owner はこの項目)。 }
+procedure TMenuItem_AddSeparator(Obj: Pointer); NO_VCL_CALL;
+begin
+  TMenuItem(Obj).AddSeparator;
+end;
+
+function TMenuItem_IsLine(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TMenuItem(Obj).IsLine;
+end;
+
+{ 利用者が項目を選んだときと同じ処理(AutoCheck の反映と OnClick)を行う。 }
+procedure TMenuItem_Click(Obj: Pointer); NO_VCL_CALL;
+begin
+  TMenuItem(Obj).Click;
+end;
+
+{ TMenu / TMainMenu / TPopupMenu }
+
+function TMenu_GetItems(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TMenu(Obj).Items);
+end;
+
+function TMainMenu_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TMainMenu.Create(TComponent(Owner)));
+end;
+
+function TPopupMenu_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TPopupMenu.Create(TComponent(Owner)));
+end;
+
+{ X, Y はスクリーン座標。Win32 ではメニューが閉じるまで戻らない。 }
+procedure TPopupMenu_Popup(Obj: Pointer; X, Y: Integer); NO_VCL_CALL;
+begin
+  TPopupMenu(Obj).PopUp(X, Y);
+end;
+
+function TPopupMenu_GetAutoPopup(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TPopupMenu(Obj).AutoPopup;
+end;
+
+procedure TPopupMenu_SetAutoPopup(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TPopupMenu(Obj).AutoPopup := Value;
+end;
+
+{ 右クリック等でメニューを開いたコントロール(OnPopup の中で、どのコントロールから開かれたかを知るのに使う)。 }
+function TPopupMenu_GetPopupComponent(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TPopupMenu(Obj).PopupComponent);
+end;
+
+procedure TPopupMenu_SetPopupComponent(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TPopupMenu(Obj).PopupComponent := TComponent(Value);
+end;
+
+procedure TPopupMenu_SetOnPopup(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TPopupMenu(Obj).OnPopup := @BridgeFor(TPopupMenu(Obj), MethodData(TPopupMenu(Obj).OnPopup), Cb, Data).DoClick;
+end;
+
+procedure TPopupMenu_SetOnClose(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TPopupMenu(Obj).OnClose := @BridgeFor(TPopupMenu(Obj), MethodData(TPopupMenu(Obj).OnClose), Cb, Data).DoClick;
+end;
+
+{ TCustomForm.Menu(public。TForm が published)と TControl.PopupMenu(public)。 }
+
+function TCustomForm_GetMenu(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomForm(Obj).Menu);
+end;
+
+procedure TCustomForm_SetMenu(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TCustomForm(Obj).Menu := TMainMenu(Value);
+end;
+
+function TControl_GetPopupMenu(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TControl(Obj).PopupMenu);
+end;
+
+procedure TControl_SetPopupMenu(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TControl(Obj).PopupMenu := TPopupMenu(Value);
+end;
+
 exports
   FreeNotify_SetCallback,
 
@@ -2139,7 +2423,62 @@ exports
   TCustomSplitter_SetResizeStyle,
   TCustomSplitter_GetSplitterPosition,
   TCustomSplitter_SetSplitterPosition,
-  TCustomSplitter_SetOnMoved;
+  TCustomSplitter_SetOnMoved,
+
+  ShortCut_Make,
+  ShortCut_FromText,
+  ShortCut_ToText,
+
+  TMenuItem_Create,
+  TMenuItem_GetCaption,
+  TMenuItem_SetCaption,
+  TMenuItem_GetChecked,
+  TMenuItem_SetChecked,
+  TMenuItem_GetEnabled,
+  TMenuItem_SetEnabled,
+  TMenuItem_GetVisible,
+  TMenuItem_SetVisible,
+  TMenuItem_GetAutoCheck,
+  TMenuItem_SetAutoCheck,
+  TMenuItem_GetRadioItem,
+  TMenuItem_SetRadioItem,
+  TMenuItem_GetGroupIndex,
+  TMenuItem_SetGroupIndex,
+  TMenuItem_GetDefault,
+  TMenuItem_SetDefault,
+  TMenuItem_GetShortCut,
+  TMenuItem_SetShortCut,
+  TMenuItem_GetHint,
+  TMenuItem_SetHint,
+  TMenuItem_SetOnClick,
+  TMenuItem_GetCount,
+  TMenuItem_GetItem,
+  TMenuItem_GetParent,
+  TMenuItem_Add,
+  TMenuItem_Insert,
+  TMenuItem_Delete,
+  TMenuItem_Remove,
+  TMenuItem_Clear,
+  TMenuItem_IndexOf,
+  TMenuItem_AddSeparator,
+  TMenuItem_IsLine,
+  TMenuItem_Click,
+
+  TMenu_GetItems,
+  TMainMenu_Create,
+  TPopupMenu_Create,
+  TPopupMenu_Popup,
+  TPopupMenu_GetAutoPopup,
+  TPopupMenu_SetAutoPopup,
+  TPopupMenu_GetPopupComponent,
+  TPopupMenu_SetPopupComponent,
+  TPopupMenu_SetOnPopup,
+  TPopupMenu_SetOnClose,
+
+  TCustomForm_GetMenu,
+  TCustomForm_SetMenu,
+  TControl_GetPopupMenu,
+  TControl_SetPopupMenu;
 
 begin
   RequireDerivedFormResource := False;

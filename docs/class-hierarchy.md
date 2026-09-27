@@ -126,6 +126,12 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 | Items / ItemIndex | TCustomListBox(public) | TCustomListBox | TCustomListBox(public) | `TCustomListBox_*` |
 | Canvas / OnPaint | TPaintBox(public/published) | TPaintBox | TPaintBox(public) | `TPaintBox_*` |
 | AutoSnap / Beveled / MinSize / ResizeAnchor / ResizeStyle / OnMoved / Get・SetSplitterPosition | TCustomSplitter(public) | TCustomSplitter | TCustomSplitter(public) | `TCustomSplitter_*`([ADR 0016](adr/0016-control-align-and-splitter.md)) |
+| PopupMenu | TControl(public) | TControl | TControl(public) | `TControl_GetPopupMenu` / `SetPopupMenu`([ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md)) |
+| Menu | TCustomForm(public。TForm が published) | TCustomForm | TCustomForm(public) | `TCustomForm_GetMenu` / `SetMenu`(ADR 0017) |
+| Caption / Checked / Enabled / Visible / AutoCheck / RadioItem / GroupIndex / Default / ShortCut / Hint / OnClick | TMenuItem(published) | TMenuItem | TMenuItem(public。TControl とは別に宣言) | `TMenuItem_*`(ADR 0017) |
+| Count / Items[i] / Parent / Add / Insert / Delete / Remove / Clear / IndexOf / AddSeparator / IsLine / Click | TMenuItem(public) | TMenuItem | TMenuItem(public。Items[i] は `GetItem(i)`) | `TMenuItem_*`(ADR 0017) |
+| Items | TMenu(published。LCL が内部で生成するルート項目) | TMenu | TMenu(public。`WrapExisting` でラップ) | `TMenu_GetItems`(ADR 0017) |
+| AutoPopup / PopupComponent / OnPopup / OnClose / Popup | TPopupMenu(public/published) | TPopupMenu | TPopupMenu(public) | `TPopupMenu_*`(ADR 0017) |
 | Interval / Enabled / OnTimer | TCustomTimer(public) | TCustomTimer | TCustomTimer(public) | `TCustomTimer_*` |
 | Run / Terminate / Terminated / Title | TCustomApplication(public。Run・Terminate・Title は TApplication で再宣言) | TApplication | TApplication(public) | `TApplication_*` |
 | CreateForm / MainForm / ProcessMessages / ShowMainForm | TApplication(public) | TApplication | TApplication(public。CreateForm は型を引数から推論するテンプレート) | `TApplication_*`(CreateForm は素の TForm を返す) |
@@ -153,5 +159,9 @@ C API のコールバックは CanClose へのポインタを受け取る([ADR 0
 - `TObject` から具象クラスまで、コンポーネント系の全クラスのデストラクタは protected
   (スタック生成・`delete`・`unique_ptr` はコンパイルエラー)。派生クラスを作る場合もデストラクタを protected で宣言する。
 - 非所有の `TCanvas`/`TPen`/`TBrush`/`TFont` は値メンバとして持つため、デストラクタは public。
+- LCL が内部で生成したコンポーネント(`TMenu::Items` のルート項目、`AddSeparator` の区切り線)は、
+  C++ で初めて取得した時点でラッパーが作られ(`TComponent::WrapExisting`)、以降は他のコンポーネントと同じく
+  破棄通知で delete される。Pascal 側はそれを返す関数の中で破棄通知の対象に登録する
+  ([ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md))。
 - Application が所有するフォームは、main から戻った後の C++ の終了処理でまとめて破棄される
   (デストラクタも呼ばれる)。DLL の切り離し時には破棄通知は呼ばれない([ADR 0010](adr/0010-application-object.md))。

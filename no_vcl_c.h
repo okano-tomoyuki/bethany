@@ -505,6 +505,91 @@ void          NO_VCL_CALL no_vcl_TCustomSplitter_SetSplitterPosition(no_vcl_obj_
 /* マウスでのドラッグが終わったときに呼ばれる(no_vcl_TCustomSplitter_SetSplitterPosition では呼ばれない)。 */
 void          NO_VCL_CALL no_vcl_TCustomSplitter_SetOnMoved(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
 
+/* docs/component-coverage.md の Tier 5(メニュー)。docs/adr/0017-... を参照。
+ *
+ * TMenuItem・TMainMenu・TPopupMenu は TControl ではない(Parent/Left 等は無い)。項目の親子関係は
+ * no_vcl_TMenuItem_Add 等で組み、破棄は Owner(no_vcl_TMenuItem_Create に渡したもの)に任せる。
+ * 親の項目が破棄されると、子の項目も(Owner が別でも)一緒に破棄される(LCL の仕様)。
+ *
+ * コンポーネントを返す関数のうち no_vcl_TMenu_GetItems・no_vcl_TMenuItem_GetItem・no_vcl_TMenuItem_GetParent は、
+ * LCL が内部で生成した項目(メニューのルートの Items、AddSeparator で追加した区切り線)を返すことがある。
+ * これらは返す時点で破棄通知の対象に登録されるため、*_Create で生成したものと同じく破棄通知が届く。 */
+
+/* ショートカットキー(TShortCut)。VCL と同じく、仮想キーコードに修飾キーのビット(no_vcl_sc*)を OR した値。 */
+enum { no_vcl_scShift = 0x2000, no_vcl_scCtrl = 0x4000, no_vcl_scAlt = 0x8000 };
+/* key は仮想キーコード、shift は no_vcl_ss* のビット集合(Shift/Ctrl/Alt 以外のビットは無視される)。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_ShortCut_Make(no_vcl_int_t Key, no_vcl_int_t Shift);
+/* "Ctrl+S" のような文字列との変換。解釈できない文字列は 0 になる。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_ShortCut_FromText(no_vcl_str_t Text);
+no_vcl_str_t  NO_VCL_CALL no_vcl_ShortCut_ToText(no_vcl_int_t Value);
+
+/* TMenuItem。Caption に "-" を設定すると区切り線になる。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TMenuItem_Create(no_vcl_obj_t Owner);
+no_vcl_str_t  NO_VCL_CALL no_vcl_TMenuItem_GetCaption(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TMenuItem_SetCaption(no_vcl_obj_t Obj, no_vcl_str_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TMenuItem_GetChecked(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TMenuItem_SetChecked(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TMenuItem_GetEnabled(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TMenuItem_SetEnabled(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TMenuItem_GetVisible(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TMenuItem_SetVisible(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* 0 以外にすると、選ばれるたびに Checked が反転する(RadioItem なら同じ GroupIndex の他の項目が外れる)。 */
+no_vcl_bool_t NO_VCL_CALL no_vcl_TMenuItem_GetAutoCheck(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TMenuItem_SetAutoCheck(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TMenuItem_GetRadioItem(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TMenuItem_SetRadioItem(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* 0〜255。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TMenuItem_GetGroupIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TMenuItem_SetGroupIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TMenuItem_GetDefault(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TMenuItem_SetDefault(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TMenuItem_GetShortCut(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TMenuItem_SetShortCut(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_str_t  NO_VCL_CALL no_vcl_TMenuItem_GetHint(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TMenuItem_SetHint(no_vcl_obj_t Obj, no_vcl_str_t Value);
+void          NO_VCL_CALL no_vcl_TMenuItem_SetOnClick(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+/* 子の項目(LCL の Items[Index] / Count)。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TMenuItem_GetCount(no_vcl_obj_t Obj);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TMenuItem_GetItem(no_vcl_obj_t Obj, no_vcl_int_t Index);
+/* 親の項目。メニューの直下の項目なら、そのメニューのルート(no_vcl_TMenu_GetItems)。どこにも追加されていなければ NULL。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TMenuItem_GetParent(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TMenuItem_Add(no_vcl_obj_t Obj, no_vcl_obj_t Item);
+void          NO_VCL_CALL no_vcl_TMenuItem_Insert(no_vcl_obj_t Obj, no_vcl_int_t Index, no_vcl_obj_t Item);
+/* Delete/Remove は子から外すだけで破棄しない(VCL と同じ)。Clear はすべての子を破棄する。 */
+void          NO_VCL_CALL no_vcl_TMenuItem_Delete(no_vcl_obj_t Obj, no_vcl_int_t Index);
+void          NO_VCL_CALL no_vcl_TMenuItem_Remove(no_vcl_obj_t Obj, no_vcl_obj_t Item);
+void          NO_VCL_CALL no_vcl_TMenuItem_Clear(no_vcl_obj_t Obj);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TMenuItem_IndexOf(no_vcl_obj_t Obj, no_vcl_obj_t Item);
+/* 区切り線を末尾に追加する(項目は LCL が内部で生成する。取得は no_vcl_TMenuItem_GetItem で)。 */
+void          NO_VCL_CALL no_vcl_TMenuItem_AddSeparator(no_vcl_obj_t Obj);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TMenuItem_IsLine(no_vcl_obj_t Obj);
+/* 利用者が項目を選んだときと同じ処理(AutoCheck の反映と OnClick)を行う。 */
+void          NO_VCL_CALL no_vcl_TMenuItem_Click(no_vcl_obj_t Obj);
+
+/* TMenu(TMainMenu・TPopupMenu の共通の基底)。Items はメニューのルートの項目で、メニュー自身が所有する。
+ * メニューに表示する項目は、このルートに no_vcl_TMenuItem_Add で追加する。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TMenu_GetItems(no_vcl_obj_t Obj);
+
+/* TMainMenu。フォームに表示するには no_vcl_TCustomForm_SetMenu で割り当てる。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TMainMenu_Create(no_vcl_obj_t Owner);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomForm_GetMenu(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomForm_SetMenu(no_vcl_obj_t Obj, no_vcl_obj_t Menu);
+
+/* TPopupMenu。no_vcl_TControl_SetPopupMenu でコントロールに割り当てると、右クリックで開く(AutoPopup が 0 以外のとき)。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TPopupMenu_Create(no_vcl_obj_t Owner);
+/* X, Y はスクリーン座標。Win32 ではメニューが閉じるまで戻らない。 */
+void          NO_VCL_CALL no_vcl_TPopupMenu_Popup(no_vcl_obj_t Obj, no_vcl_int_t X, no_vcl_int_t Y);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TPopupMenu_GetAutoPopup(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TPopupMenu_SetAutoPopup(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* 右クリックでメニューを開いたコントロール(OnPopup の中で、どこから開かれたかを知るのに使う)。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TPopupMenu_GetPopupComponent(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TPopupMenu_SetPopupComponent(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+/* OnPopup は開く直前、OnClose は閉じた後に呼ばれる。 */
+void          NO_VCL_CALL no_vcl_TPopupMenu_SetOnPopup(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TPopupMenu_SetOnClose(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TControl_GetPopupMenu(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TControl_SetPopupMenu(no_vcl_obj_t Obj, no_vcl_obj_t Menu);
+
 #ifdef __cplusplus
 }
 #endif

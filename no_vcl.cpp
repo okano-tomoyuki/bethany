@@ -101,6 +101,7 @@ TControl::TControl(no_vcl_obj_t handle)
     , Enabled(this, &TControl::GetEnabledImpl, &TControl::SetEnabledImpl)
     , Caption(this, &TControl::GetCaptionImpl, &TControl::SetCaptionImpl)
     , Align(this, &TControl::GetAlignImpl, &TControl::SetAlignImpl)
+    , PopupMenu(this, &TControl::GetPopupMenuImpl, &TControl::SetPopupMenuImpl)
     , OnClick(this, &TControl::GetOnClickImpl, &TControl::SetOnClickImpl)
     , OnDblClick(this, &TControl::GetOnDblClickImpl, &TControl::SetOnDblClickImpl)
     , OnResize(this, &TControl::GetOnResizeImpl, &TControl::SetOnResizeImpl)
@@ -184,6 +185,16 @@ void TControl::SetCaptionImpl(TObject* owner, const std::string& value)
 
 TAlign TControl::GetAlignImpl(TObject* owner)                  { return static_cast<TAlign>(no_vcl_TControl_GetAlign(owner->Handle())); }
 void   TControl::SetAlignImpl(TObject* owner, const TAlign& value) { no_vcl_TControl_SetAlign(owner->Handle(), value); }
+
+TPopupMenu* TControl::GetPopupMenuImpl(TObject* owner)
+{
+    return static_cast<TPopupMenu*>(FromHandle(no_vcl_TControl_GetPopupMenu(owner->Handle())));
+}
+
+void TControl::SetPopupMenuImpl(TObject* owner, TPopupMenu* const& value)
+{
+    no_vcl_TControl_SetPopupMenu(owner->Handle(), HandleOf(value));
+}
 
 std::string TControl::GetTextImpl(TObject* owner)
 {
@@ -557,6 +568,7 @@ TCustomForm::TCustomForm(no_vcl_obj_t handle)
     , OnCloseQuery(this, &TCustomForm::GetOnCloseQueryImpl, &TCustomForm::SetOnCloseQueryImpl)
     , OnClose(this, &TCustomForm::GetOnCloseImpl, &TCustomForm::SetOnCloseImpl)
     , OnDestroy(this, &TCustomForm::GetOnDestroyImpl, &TCustomForm::SetOnDestroyImpl)
+    , Menu(this, &TCustomForm::GetMenuImpl, &TCustomForm::SetMenuImpl)
 {
     // OnShow のブリッジは常に登録する。new で直接生成したフォームの OnCreate を、最初の表示の直前に呼ぶため。
     no_vcl_TCustomForm_SetOnShow(handle_, &TCustomForm::ShowTrampoline, nullptr);
@@ -678,6 +690,16 @@ void TCustomForm::SetOnDestroyImpl(TObject* owner, const TNotifyEvent& value)
     TCustomForm* self = static_cast<TCustomForm*>(owner);
     SetSimpleEvent(self->handle_, self->onDestroy_, self->onDestroyHooked_, value,
                  &no_vcl_TCustomForm_SetOnDestroy, &TCustomForm::DestroyTrampoline);
+}
+
+TMainMenu* TCustomForm::GetMenuImpl(TObject* owner)
+{
+    return static_cast<TMainMenu*>(FromHandle(no_vcl_TCustomForm_GetMenu(owner->Handle())));
+}
+
+void TCustomForm::SetMenuImpl(TObject* owner, TMainMenu* const& value)
+{
+    no_vcl_TCustomForm_SetMenu(owner->Handle(), HandleOf(value));
 }
 
 void TCustomForm::SetOnCloseQueryImpl(TObject* owner, const TCloseQueryEvent& value)
@@ -1400,5 +1422,147 @@ void TCustomTimer::SetEnabledImpl(TObject* owner, const bool& value) { no_vcl_TC
 TTimer::TTimer(TComponent* AOwner)
     : TCustomTimer(no_vcl_TTimer_Create(HandleOf(AOwner)))
 {}
+
+/* ---------------- メニュー ---------------- */
+
+TShortCut ShortCut(unsigned short Key, TShiftState Shift)
+{
+    return static_cast<TShortCut>(no_vcl_ShortCut_Make(Key, static_cast<no_vcl_int_t>(Shift)));
+}
+
+TShortCut TextToShortCut(const std::string& Text)
+{
+    return static_cast<TShortCut>(no_vcl_ShortCut_FromText(Text.c_str()));
+}
+
+std::string ShortCutToText(TShortCut ShortCut)
+{
+    return std::string(no_vcl_ShortCut_ToText(ShortCut));
+}
+
+TMenuItem::TMenuItem(TComponent* AOwner)
+    : TMenuItem(no_vcl_TMenuItem_Create(HandleOf(AOwner)))
+{}
+
+TMenuItem::TMenuItem(no_vcl_obj_t handle)
+    : TComponent(handle)
+    , Caption(this, &TMenuItem::GetCaptionImpl, &TMenuItem::SetCaptionImpl)
+    , Checked(this, &TMenuItem::GetCheckedImpl, &TMenuItem::SetCheckedImpl)
+    , Enabled(this, &TMenuItem::GetEnabledImpl, &TMenuItem::SetEnabledImpl)
+    , Visible(this, &TMenuItem::GetVisibleImpl, &TMenuItem::SetVisibleImpl)
+    , AutoCheck(this, &TMenuItem::GetAutoCheckImpl, &TMenuItem::SetAutoCheckImpl)
+    , RadioItem(this, &TMenuItem::GetRadioItemImpl, &TMenuItem::SetRadioItemImpl)
+    , GroupIndex(this, &TMenuItem::GetGroupIndexImpl, &TMenuItem::SetGroupIndexImpl)
+    , Default(this, &TMenuItem::GetDefaultImpl, &TMenuItem::SetDefaultImpl)
+    , ShortCut(this, &TMenuItem::GetShortCutImpl, &TMenuItem::SetShortCutImpl)
+    , Hint(this, &TMenuItem::GetHintImpl, &TMenuItem::SetHintImpl)
+    , OnClick(this, &TMenuItem::GetOnClickImpl, &TMenuItem::SetOnClickImpl)
+    , Count(this, &TMenuItem::GetCountImpl)
+    , Parent(this, &TMenuItem::GetParentImpl)
+{}
+
+TMenuItem* TMenuItem::GetItem(int Index) const { return WrapExisting<TMenuItem>(no_vcl_TMenuItem_GetItem(handle_, Index)); }
+void TMenuItem::Add(TMenuItem* Item)              { no_vcl_TMenuItem_Add(handle_, HandleOf(Item)); }
+void TMenuItem::Insert(int Index, TMenuItem* Item) { no_vcl_TMenuItem_Insert(handle_, Index, HandleOf(Item)); }
+void TMenuItem::Delete(int Index)                 { no_vcl_TMenuItem_Delete(handle_, Index); }
+void TMenuItem::Remove(TMenuItem* Item)           { no_vcl_TMenuItem_Remove(handle_, HandleOf(Item)); }
+void TMenuItem::Clear()                           { no_vcl_TMenuItem_Clear(handle_); }
+int  TMenuItem::IndexOf(TMenuItem* Item) const    { return no_vcl_TMenuItem_IndexOf(handle_, HandleOf(Item)); }
+void TMenuItem::AddSeparator()                    { no_vcl_TMenuItem_AddSeparator(handle_); }
+bool TMenuItem::IsLine() const                    { return no_vcl_TMenuItem_IsLine(handle_) != 0; }
+void TMenuItem::Click()                           { no_vcl_TMenuItem_Click(handle_); }
+
+std::string TMenuItem::GetCaptionImpl(TObject* owner) { return std::string(no_vcl_TMenuItem_GetCaption(owner->Handle())); }
+void TMenuItem::SetCaptionImpl(TObject* owner, const std::string& value) { no_vcl_TMenuItem_SetCaption(owner->Handle(), value.c_str()); }
+bool TMenuItem::GetCheckedImpl(TObject* owner)                     { return no_vcl_TMenuItem_GetChecked(owner->Handle()) != 0; }
+void TMenuItem::SetCheckedImpl(TObject* owner, const bool& value)   { no_vcl_TMenuItem_SetChecked(owner->Handle(), value ? 1 : 0); }
+bool TMenuItem::GetEnabledImpl(TObject* owner)                     { return no_vcl_TMenuItem_GetEnabled(owner->Handle()) != 0; }
+void TMenuItem::SetEnabledImpl(TObject* owner, const bool& value)   { no_vcl_TMenuItem_SetEnabled(owner->Handle(), value ? 1 : 0); }
+bool TMenuItem::GetVisibleImpl(TObject* owner)                     { return no_vcl_TMenuItem_GetVisible(owner->Handle()) != 0; }
+void TMenuItem::SetVisibleImpl(TObject* owner, const bool& value)   { no_vcl_TMenuItem_SetVisible(owner->Handle(), value ? 1 : 0); }
+bool TMenuItem::GetAutoCheckImpl(TObject* owner)                   { return no_vcl_TMenuItem_GetAutoCheck(owner->Handle()) != 0; }
+void TMenuItem::SetAutoCheckImpl(TObject* owner, const bool& value) { no_vcl_TMenuItem_SetAutoCheck(owner->Handle(), value ? 1 : 0); }
+bool TMenuItem::GetRadioItemImpl(TObject* owner)                   { return no_vcl_TMenuItem_GetRadioItem(owner->Handle()) != 0; }
+void TMenuItem::SetRadioItemImpl(TObject* owner, const bool& value) { no_vcl_TMenuItem_SetRadioItem(owner->Handle(), value ? 1 : 0); }
+int  TMenuItem::GetGroupIndexImpl(TObject* owner)                  { return no_vcl_TMenuItem_GetGroupIndex(owner->Handle()); }
+void TMenuItem::SetGroupIndexImpl(TObject* owner, const int& value) { no_vcl_TMenuItem_SetGroupIndex(owner->Handle(), value); }
+bool TMenuItem::GetDefaultImpl(TObject* owner)                     { return no_vcl_TMenuItem_GetDefault(owner->Handle()) != 0; }
+void TMenuItem::SetDefaultImpl(TObject* owner, const bool& value)   { no_vcl_TMenuItem_SetDefault(owner->Handle(), value ? 1 : 0); }
+TShortCut TMenuItem::GetShortCutImpl(TObject* owner) { return static_cast<TShortCut>(no_vcl_TMenuItem_GetShortCut(owner->Handle())); }
+void TMenuItem::SetShortCutImpl(TObject* owner, const TShortCut& value) { no_vcl_TMenuItem_SetShortCut(owner->Handle(), value); }
+std::string TMenuItem::GetHintImpl(TObject* owner) { return std::string(no_vcl_TMenuItem_GetHint(owner->Handle())); }
+void TMenuItem::SetHintImpl(TObject* owner, const std::string& value) { no_vcl_TMenuItem_SetHint(owner->Handle(), value.c_str()); }
+int  TMenuItem::GetCountImpl(TObject* owner) { return no_vcl_TMenuItem_GetCount(owner->Handle()); }
+TMenuItem* TMenuItem::GetParentImpl(TObject* owner) { return WrapExisting<TMenuItem>(no_vcl_TMenuItem_GetParent(owner->Handle())); }
+
+TNotifyEvent TMenuItem::GetOnClickImpl(TObject* owner) { return static_cast<TMenuItem*>(owner)->onClick_; }
+
+void TMenuItem::SetOnClickImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TMenuItem* self = static_cast<TMenuItem*>(owner);
+    SetSimpleEvent(self->handle_, self->onClick_, self->onClickHooked_, value,
+                   &no_vcl_TMenuItem_SetOnClick, &TMenuItem::ClickTrampoline);
+}
+
+void NO_VCL_CALL TMenuItem::ClickTrampoline(no_vcl_obj_t sender, void*)
+{
+    if (TMenuItem* self = static_cast<TMenuItem*>(FromHandle(sender)))
+        CallNotify(self->onClick_, self);
+}
+
+TMenu::TMenu(no_vcl_obj_t handle)
+    : TComponent(handle)
+    , Items(this, &TMenu::GetItemsImpl)
+{}
+
+TMenuItem* TMenu::GetItemsImpl(TObject* owner) { return WrapExisting<TMenuItem>(no_vcl_TMenu_GetItems(owner->Handle())); }
+
+TMainMenu::TMainMenu(TComponent* AOwner)
+    : TMenu(no_vcl_TMainMenu_Create(HandleOf(AOwner)))
+{}
+
+TPopupMenu::TPopupMenu(TComponent* AOwner)
+    : TMenu(no_vcl_TPopupMenu_Create(HandleOf(AOwner)))
+    , AutoPopup(this, &TPopupMenu::GetAutoPopupImpl, &TPopupMenu::SetAutoPopupImpl)
+    , PopupComponent(this, &TPopupMenu::GetPopupComponentImpl, &TPopupMenu::SetPopupComponentImpl)
+    , OnPopup(this, &TPopupMenu::GetOnPopupImpl, &TPopupMenu::SetOnPopupImpl)
+    , OnClose(this, &TPopupMenu::GetOnCloseImpl, &TPopupMenu::SetOnCloseImpl)
+{}
+
+void TPopupMenu::Popup(int X, int Y) { no_vcl_TPopupMenu_Popup(handle_, X, Y); }
+
+bool TPopupMenu::GetAutoPopupImpl(TObject* owner)                   { return no_vcl_TPopupMenu_GetAutoPopup(owner->Handle()) != 0; }
+void TPopupMenu::SetAutoPopupImpl(TObject* owner, const bool& value) { no_vcl_TPopupMenu_SetAutoPopup(owner->Handle(), value ? 1 : 0); }
+TComponent* TPopupMenu::GetPopupComponentImpl(TObject* owner) { return FromHandle(no_vcl_TPopupMenu_GetPopupComponent(owner->Handle())); }
+void TPopupMenu::SetPopupComponentImpl(TObject* owner, TComponent* const& value) { no_vcl_TPopupMenu_SetPopupComponent(owner->Handle(), HandleOf(value)); }
+
+TNotifyEvent TPopupMenu::GetOnPopupImpl(TObject* owner) { return static_cast<TPopupMenu*>(owner)->onPopup_; }
+TNotifyEvent TPopupMenu::GetOnCloseImpl(TObject* owner) { return static_cast<TPopupMenu*>(owner)->onClose_; }
+
+void TPopupMenu::SetOnPopupImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TPopupMenu* self = static_cast<TPopupMenu*>(owner);
+    SetSimpleEvent(self->handle_, self->onPopup_, self->onPopupHooked_, value,
+                   &no_vcl_TPopupMenu_SetOnPopup, &TPopupMenu::PopupTrampoline);
+}
+
+void TPopupMenu::SetOnCloseImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TPopupMenu* self = static_cast<TPopupMenu*>(owner);
+    SetSimpleEvent(self->handle_, self->onClose_, self->onCloseHooked_, value,
+                   &no_vcl_TPopupMenu_SetOnClose, &TPopupMenu::CloseTrampoline);
+}
+
+void NO_VCL_CALL TPopupMenu::PopupTrampoline(no_vcl_obj_t sender, void*)
+{
+    if (TPopupMenu* self = static_cast<TPopupMenu*>(FromHandle(sender)))
+        CallNotify(self->onPopup_, self);
+}
+
+void NO_VCL_CALL TPopupMenu::CloseTrampoline(no_vcl_obj_t sender, void*)
+{
+    if (TPopupMenu* self = static_cast<TPopupMenu*>(FromHandle(sender)))
+        CallNotify(self->onClose_, self);
+}
 
 } // namespace no_vcl

@@ -222,6 +222,20 @@ protected:
     static no_vcl_obj_t HandleOf(const TObject* obj) { return obj ? obj->Handle() : nullptr; }
     static TComponent*  FromHandle(no_vcl_obj_t handle);
 
+    // LCL が内部で生成したコンポーネント(TMenu::Items のルート項目等、*_Create を経由しないもの)のハンドルから
+    // ラッパーを得る。まだラッパーが無ければ、その場で作ってレジストリに登録する(以降は同じラッパーを返す)。
+    // ハンドルを返す C API の側で破棄通知の対象に登録しておくこと(登録されていないとラッパーが delete されない)。
+    // T は、ハンドルを受け取るコンストラクタを TComponent から呼べるようにしておく(friend class TComponent)。
+    template<typename T>
+    static T* WrapExisting(no_vcl_obj_t handle)
+    {
+        if (!handle)
+            return nullptr;
+        if (TComponent* existing = FromHandle(handle))
+            return static_cast<T*>(existing);
+        return new T(handle);
+    }
+
 private:
     // LCL オブジェクトの破棄通知によって delete されるときに true にする。
     // それ以外でデストラクタが走るのは、派生クラスのコンストラクタが例外を投げた場合(基底部分の巻き戻し)だけで、
@@ -230,6 +244,161 @@ private:
 
     static void NO_VCL_CALL FreeNotifyTrampoline(no_vcl_obj_t handle, void* data);
     static std::unordered_map<no_vcl_obj_t, TComponent*>& Registry();
+};
+
+// ショートカットキー(VCL の TShortCut と同じく、仮想キーコードに修飾キーのビットを OR した値)。
+using TShortCut = unsigned short;
+const TShortCut scShift = 0x2000;
+const TShortCut scCtrl  = 0x4000;
+const TShortCut scAlt   = 0x8000;
+
+// VCL の Menus ユニットの同名の関数に対応する。Shift のうち ssShift/ssCtrl/ssAlt 以外は無視される。
+TShortCut   ShortCut(unsigned short Key, TShiftState Shift);
+// "Ctrl+S" のような文字列との変換。解釈できない文字列は 0 になる。
+TShortCut   TextToShortCut(const std::string& Text);
+std::string ShortCutToText(TShortCut ShortCut);
+
+class TMenu;
+
+// メニューの項目。TControl ではない(Parent/Left 等は無く、画面上の親子関係は Add/Insert で組む)。
+// 子の項目は LCL の Items[Index] / Count に合わせ、GetItem(Index) / Count で参照する。
+// 親の項目が破棄されると、子の項目も(Owner が別でも)一緒に破棄される(LCL の仕様。ラッパーも delete される)。
+class TMenuItem : public TComponent
+{
+public:
+    explicit TMenuItem(TComponent* AOwner);
+
+    // "-" を設定すると区切り線になる。
+    Property<std::string>  Caption;
+    Property<bool>         Checked;
+    Property<bool>         Enabled;
+    Property<bool>         Visible;
+    // true にすると、選ばれるたびに Checked が反転する(RadioItem なら同じ GroupIndex の他の項目が外れる)。
+    Property<bool>         AutoCheck;
+    Property<bool>         RadioItem;
+    Property<int>          GroupIndex;
+    Property<bool>         Default;
+    Property<TShortCut>    ShortCut;
+    Property<std::string>  Hint;
+    Property<TNotifyEvent> OnClick;
+
+    ReadOnlyProperty<int>        Count;
+    // 親の項目。メニューの直下の項目なら、そのメニューの Items(ルート)。どこにも追加されていなければ nullptr。
+    ReadOnlyProperty<TMenuItem*> Parent;
+
+    TMenuItem* GetItem(int Index) const;
+    void Add(TMenuItem* Item);
+    void Insert(int Index, TMenuItem* Item);
+    // Delete/Remove は子から外すだけで破棄しない(VCL と同じ)。Clear はすべての子を破棄する。
+    void Delete(int Index);
+    void Remove(TMenuItem* Item);
+    void Clear();
+    int  IndexOf(TMenuItem* Item) const;
+    // 区切り線を末尾に追加する(項目は LCL が内部で生成する。GetItem で取得できる)。
+    void AddSeparator();
+    bool IsLine() const;
+    // 利用者が項目を選んだときと同じ処理(AutoCheck の反映と OnClick)を行う。
+    void Click();
+
+protected:
+    ~TMenuItem() override = default;
+
+private:
+    friend class TComponent;  // WrapExisting から、下のハンドルを受け取るコンストラクタを呼ぶため
+    explicit TMenuItem(no_vcl_obj_t handle);
+
+    TNotifyEvent onClick_;
+    bool         onClickHooked_ = false;
+    static void NO_VCL_CALL ClickTrampoline(no_vcl_obj_t sender, void* data);
+
+    static std::string  GetCaptionImpl(TObject* owner);
+    static void         SetCaptionImpl(TObject* owner, const std::string& value);
+    static bool         GetCheckedImpl(TObject* owner);
+    static void         SetCheckedImpl(TObject* owner, const bool& value);
+    static bool         GetEnabledImpl(TObject* owner);
+    static void         SetEnabledImpl(TObject* owner, const bool& value);
+    static bool         GetVisibleImpl(TObject* owner);
+    static void         SetVisibleImpl(TObject* owner, const bool& value);
+    static bool         GetAutoCheckImpl(TObject* owner);
+    static void         SetAutoCheckImpl(TObject* owner, const bool& value);
+    static bool         GetRadioItemImpl(TObject* owner);
+    static void         SetRadioItemImpl(TObject* owner, const bool& value);
+    static int          GetGroupIndexImpl(TObject* owner);
+    static void         SetGroupIndexImpl(TObject* owner, const int& value);
+    static bool         GetDefaultImpl(TObject* owner);
+    static void         SetDefaultImpl(TObject* owner, const bool& value);
+    static TShortCut    GetShortCutImpl(TObject* owner);
+    static void         SetShortCutImpl(TObject* owner, const TShortCut& value);
+    static std::string  GetHintImpl(TObject* owner);
+    static void         SetHintImpl(TObject* owner, const std::string& value);
+    static TNotifyEvent GetOnClickImpl(TObject* owner);
+    static void         SetOnClickImpl(TObject* owner, const TNotifyEvent& value);
+    static int          GetCountImpl(TObject* owner);
+    static TMenuItem*   GetParentImpl(TObject* owner);
+};
+
+// TMainMenu・TPopupMenu の共通の基底。Items はメニューのルートの項目で、メニュー自身が(LCL の内部で)生成・所有する。
+// メニューに表示する項目は Items->Add(...) で追加する。
+class TMenu : public TComponent
+{
+public:
+    ReadOnlyProperty<TMenuItem*> Items;
+
+protected:
+    explicit TMenu(no_vcl_obj_t handle);
+    ~TMenu() override = default;
+
+private:
+    static TMenuItem* GetItemsImpl(TObject* owner);
+};
+
+// フォームのメニューバー。TForm::Menu に割り当てると表示される。
+class TMainMenu : public TMenu
+{
+public:
+    explicit TMainMenu(TComponent* AOwner);
+
+protected:
+    ~TMainMenu() override = default;
+};
+
+// 右クリック等で開くメニュー。TControl::PopupMenu に割り当てると、そのコントロールの右クリックで開く(AutoPopup が true のとき)。
+class TPopupMenu : public TMenu
+{
+public:
+    explicit TPopupMenu(TComponent* AOwner);
+
+    Property<bool>         AutoPopup;
+    // 右クリックでメニューを開いたコンポーネント(OnPopup の中で、どこから開かれたかを知るのに使う)。
+    // C++ ラッパーを介さずに作られたコンポーネントの場合は nullptr になる。
+    Property<TComponent*>  PopupComponent;
+    // 開く直前に呼ばれる。
+    Property<TNotifyEvent> OnPopup;
+    // 閉じた後に呼ばれる。
+    Property<TNotifyEvent> OnClose;
+
+    // X, Y はスクリーン座標。Win32 ではメニューが閉じるまで戻らない。
+    void Popup(int X, int Y);
+
+protected:
+    ~TPopupMenu() override = default;
+
+private:
+    TNotifyEvent onPopup_;
+    TNotifyEvent onClose_;
+    bool         onPopupHooked_ = false;
+    bool         onCloseHooked_ = false;
+    static void NO_VCL_CALL PopupTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL CloseTrampoline(no_vcl_obj_t sender, void* data);
+
+    static bool         GetAutoPopupImpl(TObject* owner);
+    static void         SetAutoPopupImpl(TObject* owner, const bool& value);
+    static TComponent*  GetPopupComponentImpl(TObject* owner);
+    static void         SetPopupComponentImpl(TObject* owner, TComponent* const& value);
+    static TNotifyEvent GetOnPopupImpl(TObject* owner);
+    static void         SetOnPopupImpl(TObject* owner, const TNotifyEvent& value);
+    static TNotifyEvent GetOnCloseImpl(TObject* owner);
+    static void         SetOnCloseImpl(TObject* owner, const TNotifyEvent& value);
 };
 
 class TWinControl;
@@ -251,6 +420,8 @@ public:
     Property<std::string>  Caption;
     // 既定値はクラスごとに異なる(多くは alNone、TStatusBar は alBottom、TSplitter は alLeft)。
     Property<TAlign>       Align;
+    // 右クリックで開くメニュー。C++ ラッパーを介さずに作られたメニューの場合は nullptr になる。
+    Property<TPopupMenu*>  PopupMenu;
     Property<TNotifyEvent> OnClick;
     Property<TNotifyEvent> OnDblClick;
     // LCL では他のウィンドウメッセージへの応答等で発生し、必ずしもユーザー操作直後とは限らない。
@@ -340,6 +511,8 @@ private:
     static void         SetCaptionImpl(TObject* owner, const std::string& value);
     static TAlign       GetAlignImpl(TObject* owner);
     static void         SetAlignImpl(TObject* owner, const TAlign& value);
+    static TPopupMenu*  GetPopupMenuImpl(TObject* owner);
+    static void         SetPopupMenuImpl(TObject* owner, TPopupMenu* const& value);
     static std::string  GetTextImpl(TObject* owner);
     static void         SetTextImpl(TObject* owner, const std::string& value);
 };
@@ -577,6 +750,8 @@ public:
     Property<TCloseEvent>      OnClose;
     // 破棄の最初に呼ばれる(子コントロールはまだ有効)。このあとラッパーも delete される。
     Property<TNotifyEvent>     OnDestroy;
+    // フォームのメニューバー。nullptr を代入すると外す(メニュー自体は破棄されない)。
+    Property<TMainMenu*>       Menu;
 
 protected:
     explicit TCustomForm(no_vcl_obj_t handle);
@@ -628,6 +803,8 @@ private:
     static void             SetOnCloseImpl(TObject* owner, const TCloseEvent& value);
     static TNotifyEvent     GetOnDestroyImpl(TObject* owner);
     static void             SetOnDestroyImpl(TObject* owner, const TNotifyEvent& value);
+    static TMainMenu*       GetMenuImpl(TObject* owner);
+    static void             SetMenuImpl(TObject* owner, TMainMenu* const& value);
 };
 
 class TForm : public TCustomForm

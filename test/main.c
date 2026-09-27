@@ -237,6 +237,28 @@ static void NO_VCL_CALL OnTimerTick(no_vcl_obj_t sender, void* data)
     fflush(stdout);
 }
 
+static void NO_VCL_CALL OnMenuItemClick(no_vcl_obj_t sender, void* data)
+{
+    (void)data;
+    printf("Menu item clicked! Caption=%s\n", no_vcl_TMenuItem_GetCaption(sender));
+    fflush(stdout);
+}
+
+/* data は Application。 */
+static void NO_VCL_CALL OnExitItemClick(no_vcl_obj_t sender, void* data)
+{
+    (void)sender;
+    no_vcl_TApplication_Terminate((no_vcl_obj_t)data);
+}
+
+/* data は PopupMenu を割り当てたパネル。 */
+static void NO_VCL_CALL OnPopupMenuPopup(no_vcl_obj_t sender, void* data)
+{
+    printf("PopupMenu popup! PopupComponent is panel: %s\n",
+           no_vcl_TPopupMenu_GetPopupComponent(sender) == data ? "yes" : "no");
+    fflush(stdout);
+}
+
 /* data は Splitter が幅を変える alLeft のパネル。 */
 static void NO_VCL_CALL OnSplitterMoved(no_vcl_obj_t sender, void* data)
 {
@@ -299,6 +321,14 @@ int main(void)
     no_vcl_obj_t tabControl;
     no_vcl_obj_t layoutPanel;
     AlignedControls aligned;
+    no_vcl_obj_t mainMenu;
+    no_vcl_obj_t menuRoot;
+    no_vcl_obj_t fileMenu;
+    no_vcl_obj_t openItem;
+    no_vcl_obj_t exitItem;
+    no_vcl_obj_t separator;
+    no_vcl_obj_t popupMenu;
+    no_vcl_obj_t popupItem;
 
     no_vcl_FreeNotify_SetCallback(OnComponentFreed, &freedCount);
 
@@ -609,6 +639,51 @@ int main(void)
            no_vcl_TCustomSplitter_GetResizeAnchor(aligned.splitter), no_vcl_akLeft,
            no_vcl_TCustomSplitter_GetResizeStyle(aligned.splitter), no_vcl_rsUpdate);
 
+    /* Tier 5(メニュー)。項目の Owner はフォームにし、親子関係は no_vcl_TMenuItem_Add で組む。
+       menuRoot(メニューのルート項目)は LCL が内部で生成したもので、取得した時点で破棄通知の対象になる。 */
+    mainMenu = no_vcl_TMainMenu_Create(form);
+    menuRoot = no_vcl_TMenu_GetItems(mainMenu);
+    fileMenu = no_vcl_TMenuItem_Create(form);
+    no_vcl_TMenuItem_SetCaption(fileMenu, "&File");
+    no_vcl_TMenuItem_Add(menuRoot, fileMenu);
+    openItem = no_vcl_TMenuItem_Create(form);
+    no_vcl_TMenuItem_SetCaption(openItem, "&Open");
+    no_vcl_TMenuItem_SetShortCut(openItem, no_vcl_ShortCut_FromText("Ctrl+O"));
+    no_vcl_TMenuItem_SetOnClick(openItem, OnMenuItemClick, NULL);
+    no_vcl_TMenuItem_Add(fileMenu, openItem);
+    no_vcl_TMenuItem_AddSeparator(fileMenu);
+    exitItem = no_vcl_TMenuItem_Create(form);
+    no_vcl_TMenuItem_SetCaption(exitItem, "E&xit");
+    no_vcl_TMenuItem_SetOnClick(exitItem, OnExitItemClick, app);
+    no_vcl_TMenuItem_Add(fileMenu, exitItem);
+    no_vcl_TCustomForm_SetMenu(form, mainMenu);
+
+    separator = no_vcl_TMenuItem_GetItem(fileMenu, 1);
+    printf("Form Menu is mainMenu: %s, root Count=%d (expected 1), fileMenu Count=%d (expected 3)\n",
+           no_vcl_TCustomForm_GetMenu(form) == mainMenu ? "yes" : "no",
+           no_vcl_TMenuItem_GetCount(menuRoot), no_vcl_TMenuItem_GetCount(fileMenu));
+    printf("fileMenu Parent is root: %s, separator IsLine=%d, separator Parent is fileMenu: %s\n",
+           no_vcl_TMenuItem_GetParent(fileMenu) == menuRoot ? "yes" : "no",
+           no_vcl_TMenuItem_IsLine(separator) != 0,
+           no_vcl_TMenuItem_GetParent(separator) == fileMenu ? "yes" : "no");
+    printf("openItem ShortCut=0x%04x (expected Ctrl+O = 0x%04x) Text=%s\n",
+           (unsigned)no_vcl_TMenuItem_GetShortCut(openItem),
+           (unsigned)no_vcl_ShortCut_Make('O', no_vcl_ssCtrl),
+           no_vcl_ShortCut_ToText(no_vcl_TMenuItem_GetShortCut(openItem)));
+    no_vcl_TMenuItem_Click(openItem);
+
+    /* panel を右クリックすると開くメニュー。 */
+    popupMenu = no_vcl_TPopupMenu_Create(form);
+    popupItem = no_vcl_TMenuItem_Create(form);
+    no_vcl_TMenuItem_SetCaption(popupItem, "Popup item");
+    no_vcl_TMenuItem_SetOnClick(popupItem, OnMenuItemClick, NULL);
+    no_vcl_TMenuItem_Add(no_vcl_TMenu_GetItems(popupMenu), popupItem);
+    no_vcl_TPopupMenu_SetOnPopup(popupMenu, OnPopupMenuPopup, panel);
+    no_vcl_TControl_SetPopupMenu(panel, popupMenu);
+    printf("panel PopupMenu is popupMenu: %s, AutoPopup=%d\n",
+           no_vcl_TControl_GetPopupMenu(panel) == popupMenu ? "yes" : "no",
+           no_vcl_TPopupMenu_GetAutoPopup(popupMenu) != 0);
+
     printf("Running (click the button, then close the window twice: the first close is blocked)...\n");
     fflush(stdout);
     /* MainForm を表示してメッセージループに入り、MainForm が閉じられると戻る。 */
@@ -618,7 +693,7 @@ int main(void)
     /* Application が所有するフォーム(と、フォームが所有するコントロール)をまとめて破棄する。
        呼ばなくても DLL の切り離し時に LCL が破棄するが、そのときは破棄通知が呼ばれない。 */
     no_vcl_TComponent_DestroyComponents(app);
-    printf("Clicks: %d, Freed components: %d (expected 42: form + 41 owned)\n", clickCount, freedCount);
+    printf("Clicks: %d, Freed components: %d (expected 51: form + 47 owned + 3 created inside LCL: 2 menu roots and a separator)\n", clickCount, freedCount);
 
     printf("OK\n");
     return 0;
