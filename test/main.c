@@ -154,11 +154,39 @@ static void NO_VCL_CALL OnFormDestroy(no_vcl_obj_t sender, void* data)
     fflush(stdout);
 }
 
+/* Align で配置するコントロール(OnFormShow の data)。 */
+typedef struct
+{
+    no_vcl_obj_t topPanel;
+    no_vcl_obj_t leftPanel;
+    no_vcl_obj_t splitter;
+    no_vcl_obj_t clientPanel;
+} AlignedControls;
+
+static void PrintBounds(const char* name, no_vcl_obj_t control, const char* expected)
+{
+    printf("%s Bounds=(%d,%d,%d,%d) (expected %s)\n", name,
+           no_vcl_TControl_GetLeft(control), no_vcl_TControl_GetTop(control),
+           no_vcl_TControl_GetWidth(control), no_vcl_TControl_GetHeight(control), expected);
+}
+
 static void NO_VCL_CALL OnFormShow(no_vcl_obj_t sender, void* data)
 {
+    AlignedControls* aligned = (AlignedControls*)data;
     (void)sender;
-    (void)data;
     printf("Form shown\n");
+    /* Align による配置は、LCL ではフォームが表示されるまで行われない(VCL と異なる)。OnShow の時点では済んでいる。
+       layoutPanel(280x90)のクライアント領域は、枠(BevelOuter)の 1px 分だけ内側の (1,1)-(279,89)。
+       expected は Win32 の値で、Linux/GTK2 ではクライアント領域が右と下に 4px 狭いため、Width/Height がその分小さくなる。 */
+    PrintBounds("alTop panel", aligned->topPanel, "1,1,278,20");
+    PrintBounds("alLeft panel", aligned->leftPanel, "1,21,80,68");
+    PrintBounds("Splitter", aligned->splitter, "81,21,5,68");
+    PrintBounds("alClient panel", aligned->clientPanel, "86,21,193,68");
+    /* プログラムから Splitter を動かすと、alLeft のパネルの幅と alClient のパネルが追随する。 */
+    no_vcl_TCustomSplitter_SetSplitterPosition(aligned->splitter, 121);
+    printf("After SetSplitterPosition(121): SplitterPosition=%d, alLeft Width=%d, alClient Left=%d (expected 121/120/126)\n",
+           no_vcl_TCustomSplitter_GetSplitterPosition(aligned->splitter),
+           no_vcl_TControl_GetWidth(aligned->leftPanel), no_vcl_TControl_GetLeft(aligned->clientPanel));
     fflush(stdout);
 }
 
@@ -206,6 +234,14 @@ static void NO_VCL_CALL OnTimerTick(no_vcl_obj_t sender, void* data)
     snprintf(buf, sizeof(buf), "Tick: %d", tickCount);
     no_vcl_TControl_SetCaption((no_vcl_obj_t)data, buf);
     printf("Timer tick! count=%d\n", tickCount);
+    fflush(stdout);
+}
+
+/* data は Splitter が幅を変える alLeft のパネル。 */
+static void NO_VCL_CALL OnSplitterMoved(no_vcl_obj_t sender, void* data)
+{
+    printf("Splitter moved! SplitterPosition=%d, left pane Width=%d\n",
+           no_vcl_TCustomSplitter_GetSplitterPosition(sender), no_vcl_TControl_GetWidth((no_vcl_obj_t)data));
     fflush(stdout);
 }
 
@@ -261,6 +297,8 @@ int main(void)
     no_vcl_obj_t spinEdit;
     no_vcl_obj_t maskEdit;
     no_vcl_obj_t tabControl;
+    no_vcl_obj_t layoutPanel;
+    AlignedControls aligned;
 
     no_vcl_FreeNotify_SetCallback(OnComponentFreed, &freedCount);
 
@@ -277,7 +315,8 @@ int main(void)
     }
     printf("MainForm is form: %s\n", no_vcl_TApplication_GetMainForm(app) == form ? "yes" : "no");
     no_vcl_TCustomForm_SetOnClose(form, OnFormClose, &closeAttempts);
-    no_vcl_TCustomForm_SetOnShow(form, OnFormShow, NULL);
+    /* aligned の中身は下で Align のコントロールを生成したときに埋める(表示されるのは Run() の後)。 */
+    no_vcl_TCustomForm_SetOnShow(form, OnFormShow, &aligned);
 
     no_vcl_TControl_SetCaption(form, "Hello from FPC DLL");
     no_vcl_TControl_SetWidth(form, 640);
@@ -528,6 +567,47 @@ int main(void)
     no_vcl_TControl_SetParent(statusBar, form);
     no_vcl_TStatusBar_SetSimpleText(statusBar, "Ready");
     printf("StatusBar SimpleText: %s\n", no_vcl_TStatusBar_GetSimpleText(statusBar));
+    /* TStatusBar の Align の既定値は alBottom(Left/Top を指定しなくてもフォームの下端に付く)。 */
+    printf("StatusBar Align=%d (expected alBottom=%d)\n", no_vcl_TControl_GetAlign(statusBar), no_vcl_alBottom);
+
+    /* TControl.Align と TSplitter。layoutPanel の中を、上端の alTop、左の alLeft + Splitter、残りの alClient で分ける。
+       alLeft 同士は Left の小さい順に並ぶため、Splitter(既定の Align が alLeft)が alLeft のパネルの右に来るよう、
+       Parent より先に Left をパネルの幅より大きくしておく。 */
+    layoutPanel = Place(no_vcl_TPanel_Create(form), form, 340, 730);
+    no_vcl_TControl_SetWidth(layoutPanel, 280);
+    no_vcl_TControl_SetHeight(layoutPanel, 90);
+    no_vcl_TControl_SetCaption(layoutPanel, "");
+    aligned.topPanel = no_vcl_TPanel_Create(form);
+    no_vcl_TControl_SetParent(aligned.topPanel, layoutPanel);
+    no_vcl_TControl_SetAlign(aligned.topPanel, no_vcl_alTop);
+    no_vcl_TControl_SetHeight(aligned.topPanel, 20);
+    no_vcl_TControl_SetCaption(aligned.topPanel, "alTop");
+    aligned.leftPanel = no_vcl_TPanel_Create(form);
+    no_vcl_TControl_SetParent(aligned.leftPanel, layoutPanel);
+    no_vcl_TControl_SetAlign(aligned.leftPanel, no_vcl_alLeft);
+    no_vcl_TControl_SetWidth(aligned.leftPanel, 80);
+    no_vcl_TControl_SetCaption(aligned.leftPanel, "alLeft");
+    aligned.splitter = no_vcl_TSplitter_Create(form);
+    no_vcl_TControl_SetLeft(aligned.splitter, 100);
+    no_vcl_TControl_SetParent(aligned.splitter, layoutPanel);
+    no_vcl_TCustomSplitter_SetMinSize(aligned.splitter, 40);
+    no_vcl_TCustomSplitter_SetBeveled(aligned.splitter, 1);
+    no_vcl_TCustomSplitter_SetOnMoved(aligned.splitter, OnSplitterMoved, aligned.leftPanel);
+    aligned.clientPanel = no_vcl_TPanel_Create(form);
+    no_vcl_TControl_SetParent(aligned.clientPanel, layoutPanel);
+    no_vcl_TControl_SetAlign(aligned.clientPanel, no_vcl_alClient);
+    no_vcl_TControl_SetCaption(aligned.clientPanel, "alClient");
+    /* 配置後の位置・大きさは OnFormShow で確認する(表示されるまで Align による配置は行われない)。 */
+    printf("alTop/alLeft/alClient panel Align=%d/%d/%d (expected %d/%d/%d)\n",
+           no_vcl_TControl_GetAlign(aligned.topPanel), no_vcl_TControl_GetAlign(aligned.leftPanel),
+           no_vcl_TControl_GetAlign(aligned.clientPanel), no_vcl_alTop, no_vcl_alLeft, no_vcl_alClient);
+    printf("Splitter Align=%d (expected alLeft=%d) MinSize=%d Beveled=%d AutoSnap=%d "
+           "ResizeAnchor=%d (expected akLeft=%d) ResizeStyle=%d (expected rsUpdate=%d)\n",
+           no_vcl_TControl_GetAlign(aligned.splitter), no_vcl_alLeft,
+           no_vcl_TCustomSplitter_GetMinSize(aligned.splitter), no_vcl_TCustomSplitter_GetBeveled(aligned.splitter) != 0,
+           no_vcl_TCustomSplitter_GetAutoSnap(aligned.splitter) != 0,
+           no_vcl_TCustomSplitter_GetResizeAnchor(aligned.splitter), no_vcl_akLeft,
+           no_vcl_TCustomSplitter_GetResizeStyle(aligned.splitter), no_vcl_rsUpdate);
 
     printf("Running (click the button, then close the window twice: the first close is blocked)...\n");
     fflush(stdout);
@@ -538,7 +618,7 @@ int main(void)
     /* Application が所有するフォーム(と、フォームが所有するコントロール)をまとめて破棄する。
        呼ばなくても DLL の切り離し時に LCL が破棄するが、そのときは破棄通知が呼ばれない。 */
     no_vcl_TComponent_DestroyComponents(app);
-    printf("Clicks: %d, Freed components: %d (expected 38: form + 37 owned)\n", clickCount, freedCount);
+    printf("Clicks: %d, Freed components: %d (expected 42: form + 41 owned)\n", clickCount, freedCount);
 
     printf("OK\n");
     return 0;

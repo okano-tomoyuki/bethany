@@ -34,6 +34,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0013](adr/0013-string-return-bridge-reuse-ctor-exception.md) | 文字列はスレッドローカルバッファ経由で返し、イベントのブリッジは再利用し、コンストラクタが例外を投げたら LCL オブジェクトを破棄する | 承認 |
 | [0014](adr/0014-control-key-mouse-events.md) | TControl / TWinControl のキー入力・マウス操作イベントを追加し、TForm もこれを継承する | 承認 |
 | [0015](adr/0015-tier1-batch1-and-statusbar-issue.md) | Tier 1(19 クラス)をすべて追加し、TStatusBar の既知の問題を記録する | 承認 |
+| [0016](adr/0016-control-align-and-splitter.md) | TControl.Align を追加し、それを前提とする TSplitter を追加する | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。

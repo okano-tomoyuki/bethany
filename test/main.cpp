@@ -125,6 +125,11 @@ public:
     TSpinEdit*      SpinEdit1;
     TMaskEdit*      MaskEdit1;
     TTabControl*    TabControl1;
+    TPanel*         LayoutPanel;
+    TPanel*         AlignTopPanel;
+    TPanel*         AlignLeftPanel;
+    TSplitter*      Splitter1;
+    TPanel*         AlignClientPanel;
 
     // C++Builder と同じく Owner を受け取り、TForm に渡す(Application->CreateForm が Application を渡す)。
     explicit TMainForm(TComponent* AOwner) : TForm(AOwner)
@@ -472,6 +477,41 @@ public:
         StatusBar1->Parent = this;
         StatusBar1->SimpleText = "Ready";
 
+        // TControl.Align と TSplitter。LayoutPanel の中を、上端の alTop、左の alLeft + Splitter、残りの alClient で分ける。
+        // alLeft 同士は Left の小さい順に並ぶため、Splitter(既定の Align が alLeft)が alLeft のパネルの右に来るよう、
+        // Parent より先に Left をパネルの幅より大きくしておく。
+        LayoutPanel = new TPanel(this);
+        LayoutPanel->Parent = this;
+        LayoutPanel->Left = 340;
+        LayoutPanel->Top = 730;
+        LayoutPanel->Width = 280;
+        LayoutPanel->Height = 90;
+        LayoutPanel->Caption = "";
+
+        AlignTopPanel = new TPanel(this);
+        AlignTopPanel->Parent = LayoutPanel;
+        AlignTopPanel->Align = alTop;
+        AlignTopPanel->Height = 20;
+        AlignTopPanel->Caption = "alTop";
+
+        AlignLeftPanel = new TPanel(this);
+        AlignLeftPanel->Parent = LayoutPanel;
+        AlignLeftPanel->Align = alLeft;
+        AlignLeftPanel->Width = 80;
+        AlignLeftPanel->Caption = "alLeft";
+
+        Splitter1 = new TSplitter(this);
+        Splitter1->Left = 100;
+        Splitter1->Parent = LayoutPanel;
+        Splitter1->MinSize = 40;
+        Splitter1->Beveled = true;
+        Splitter1->OnMoved = [this](TObject* Sender) { Splitter1Moved(Sender); };
+
+        AlignClientPanel = new TPanel(this);
+        AlignClientPanel->Parent = LayoutPanel;
+        AlignClientPanel->Align = alClient;
+        AlignClientPanel->Caption = "alClient";
+
         OnCreate = [this](TObject* Sender) { FormCreate(Sender); };
         OnShow = [this](TObject* Sender) { FormShow(Sender); };
         OnResize = [this](TObject* Sender) { FormResize(Sender); };
@@ -505,6 +545,21 @@ private:
     void FormShow(TObject*)
     {
         std::printf("FormShow\n");
+        // Align による配置は、LCL ではフォームが表示されるまで行われない(VCL と異なる)。OnShow の時点では済んでいる。
+        // LayoutPanel(280x90)のクライアント領域は、枠(BevelOuter)の 1px 分だけ内側の (1,1)-(279,89)。
+        // expected は Win32 の値で、Linux/GTK2 ではクライアント領域が右と下に 4px 狭いため、Width/Height がその分小さくなる。
+        auto printBounds = [](const char* name, TControl* c, const char* expected) {
+            std::printf("%s Bounds=(%d,%d,%d,%d) (expected %s)\n", name,
+                        (int)c->Left, (int)c->Top, (int)c->Width, (int)c->Height, expected);
+        };
+        printBounds("AlignTopPanel", AlignTopPanel, "1,1,278,20");
+        printBounds("AlignLeftPanel", AlignLeftPanel, "1,21,80,68");
+        printBounds("Splitter1", Splitter1, "81,21,5,68");
+        printBounds("AlignClientPanel", AlignClientPanel, "86,21,193,68");
+        // プログラムから Splitter を動かすと、alLeft のパネルの幅と alClient のパネルが追随する。
+        Splitter1->SetSplitterPosition(121);
+        std::printf("After SetSplitterPosition(121): SplitterPosition=%d AlignLeftPanel->Width=%d AlignClientPanel->Left=%d\n",
+                    Splitter1->GetSplitterPosition(), (int)AlignLeftPanel->Width, (int)AlignClientPanel->Left);
         std::fflush(stdout);
     }
 
@@ -633,6 +688,13 @@ private:
         std::fflush(stdout);
     }
 
+    void Splitter1Moved(TObject* Sender)
+    {
+        std::printf("Splitter1Moved: SplitterPosition=%d, AlignLeftPanel->Width=%d\n",
+                    static_cast<TSplitter*>(Sender)->GetSplitterPosition(), (int)AlignLeftPanel->Width);
+        std::fflush(stdout);
+    }
+
     void TabControl1Change(TObject* Sender)
     {
         std::printf("TabControl1Change: TabIndex=%d\n", (int)static_cast<TTabControl*>(Sender)->TabIndex);
@@ -758,6 +820,19 @@ int main()
     std::printf("TabControl1 TabsCount/TabIndex: %d/%d (expected 3/0)\n",
                 Form1->TabControl1->TabsCount(), (int)Form1->TabControl1->TabIndex);
     std::printf("StatusBar1 SimpleText: %s (expected Ready)\n", std::string(Form1->StatusBar1->SimpleText).c_str());
+    // TStatusBar の Align の既定値は alBottom(Left/Top を指定しなくてもフォームの下端に付く)。
+    std::printf("StatusBar1 Align: %d (expected alBottom=%d)\n", (int)Form1->StatusBar1->Align, (int)alBottom);
+    // 配置後の位置・大きさは FormShow で確認する(表示されるまで Align による配置は行われない)。
+    std::printf("AlignTopPanel/AlignLeftPanel/AlignClientPanel Align: %d/%d/%d (expected alTop=%d/alLeft=%d/alClient=%d)\n",
+                (int)Form1->AlignTopPanel->Align, (int)Form1->AlignLeftPanel->Align, (int)Form1->AlignClientPanel->Align,
+                (int)alTop, (int)alLeft, (int)alClient);
+    {
+        TSplitter* sp = Form1->Splitter1;
+        std::printf("Splitter1 Align=%d (expected alLeft=%d) MinSize=%d Beveled=%d AutoSnap=%d "
+                    "ResizeAnchor=%d (expected akLeft=%d) ResizeStyle=%d (expected rsUpdate=%d)\n",
+                    (int)sp->Align, (int)alLeft, (int)sp->MinSize, (bool)sp->Beveled, (bool)sp->AutoSnap,
+                    (int)sp->ResizeAnchor, (int)akLeft, (int)sp->ResizeStyle, (int)rsUpdate);
+    }
 
     // 2 つ目以降に生成したフォームは MainForm にならない。
     TForm* subForm = new TForm(Application);

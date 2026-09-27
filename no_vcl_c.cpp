@@ -36,6 +36,8 @@ using no_vcl_module_t = void*;
     X(void,          TControl_SetEnabled,           (no_vcl_obj_t o, no_vcl_bool_t v),                        (o, v)) \
     X(no_vcl_str_t,  TControl_GetCaption,           (no_vcl_obj_t o),                                         (o)) \
     X(void,          TControl_SetCaption,           (no_vcl_obj_t o, no_vcl_str_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TControl_GetAlign,             (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TControl_SetAlign,             (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
     X(no_vcl_str_t,  TControl_GetText,              (no_vcl_obj_t o),                                         (o)) \
     X(void,          TControl_SetText,              (no_vcl_obj_t o, no_vcl_str_t v),                         (o, v)) \
     X(void,          TControl_Show,                 (no_vcl_obj_t o),                                         (o)) \
@@ -290,7 +292,22 @@ using no_vcl_module_t = void*;
     X(no_vcl_str_t,  TTabControl_Tabs_GetText,                (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
     X(no_vcl_int_t,  TTabControl_GetTabIndex,                 (no_vcl_obj_t o),                                     (o)) \
     X(void,          TTabControl_SetTabIndex,                 (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
-    X(void,          TTabControl_SetOnChange,                 (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d))
+    X(void,          TTabControl_SetOnChange,                 (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d)) \
+    \
+    X(no_vcl_obj_t,  TSplitter_Create,                        (no_vcl_obj_t owner),                                 (owner)) \
+    X(no_vcl_bool_t, TCustomSplitter_GetAutoSnap,             (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomSplitter_SetAutoSnap,             (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TCustomSplitter_GetBeveled,              (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomSplitter_SetBeveled,              (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_int_t,  TCustomSplitter_GetMinSize,              (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomSplitter_SetMinSize,              (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TCustomSplitter_GetResizeAnchor,         (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomSplitter_SetResizeAnchor,         (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TCustomSplitter_GetResizeStyle,          (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomSplitter_SetResizeStyle,          (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TCustomSplitter_GetSplitterPosition,     (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomSplitter_SetSplitterPosition,     (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(void,          TCustomSplitter_SetOnMoved,              (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d))
 
 namespace
 {

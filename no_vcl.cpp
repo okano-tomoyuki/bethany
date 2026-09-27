@@ -100,6 +100,7 @@ TControl::TControl(no_vcl_obj_t handle)
     , Visible(this, &TControl::GetVisibleImpl, &TControl::SetVisibleImpl)
     , Enabled(this, &TControl::GetEnabledImpl, &TControl::SetEnabledImpl)
     , Caption(this, &TControl::GetCaptionImpl, &TControl::SetCaptionImpl)
+    , Align(this, &TControl::GetAlignImpl, &TControl::SetAlignImpl)
     , OnClick(this, &TControl::GetOnClickImpl, &TControl::SetOnClickImpl)
     , OnDblClick(this, &TControl::GetOnDblClickImpl, &TControl::SetOnDblClickImpl)
     , OnResize(this, &TControl::GetOnResizeImpl, &TControl::SetOnResizeImpl)
@@ -180,6 +181,9 @@ void TControl::SetCaptionImpl(TObject* owner, const std::string& value)
 {
     no_vcl_TControl_SetCaption(owner->Handle(), value.c_str());
 }
+
+TAlign TControl::GetAlignImpl(TObject* owner)                  { return static_cast<TAlign>(no_vcl_TControl_GetAlign(owner->Handle())); }
+void   TControl::SetAlignImpl(TObject* owner, const TAlign& value) { no_vcl_TControl_SetAlign(owner->Handle(), value); }
 
 std::string TControl::GetTextImpl(TObject* owner)
 {
@@ -1066,6 +1070,50 @@ void NO_VCL_CALL TTabControl::ChangeTrampoline(no_vcl_obj_t sender, void*)
     if (TTabControl* self = static_cast<TTabControl*>(FromHandle(sender)))
         CallNotify(self->onChange_, self);
 }
+
+TCustomSplitter::TCustomSplitter(no_vcl_obj_t handle)
+    : TCustomControl(handle)
+    , AutoSnap(this, &TCustomSplitter::GetAutoSnapImpl, &TCustomSplitter::SetAutoSnapImpl)
+    , Beveled(this, &TCustomSplitter::GetBeveledImpl, &TCustomSplitter::SetBeveledImpl)
+    , MinSize(this, &TCustomSplitter::GetMinSizeImpl, &TCustomSplitter::SetMinSizeImpl)
+    , ResizeAnchor(this, &TCustomSplitter::GetResizeAnchorImpl, &TCustomSplitter::SetResizeAnchorImpl)
+    , ResizeStyle(this, &TCustomSplitter::GetResizeStyleImpl, &TCustomSplitter::SetResizeStyleImpl)
+    , OnMoved(this, &TCustomSplitter::GetOnMovedImpl, &TCustomSplitter::SetOnMovedImpl)
+{}
+
+int  TCustomSplitter::GetSplitterPosition() const  { return no_vcl_TCustomSplitter_GetSplitterPosition(handle_); }
+void TCustomSplitter::SetSplitterPosition(int pos) { no_vcl_TCustomSplitter_SetSplitterPosition(handle_, pos); }
+
+bool TCustomSplitter::GetAutoSnapImpl(TObject* owner)                   { return no_vcl_TCustomSplitter_GetAutoSnap(owner->Handle()) != 0; }
+void TCustomSplitter::SetAutoSnapImpl(TObject* owner, const bool& value) { no_vcl_TCustomSplitter_SetAutoSnap(owner->Handle(), value ? 1 : 0); }
+bool TCustomSplitter::GetBeveledImpl(TObject* owner)                    { return no_vcl_TCustomSplitter_GetBeveled(owner->Handle()) != 0; }
+void TCustomSplitter::SetBeveledImpl(TObject* owner, const bool& value)  { no_vcl_TCustomSplitter_SetBeveled(owner->Handle(), value ? 1 : 0); }
+int  TCustomSplitter::GetMinSizeImpl(TObject* owner)                    { return no_vcl_TCustomSplitter_GetMinSize(owner->Handle()); }
+void TCustomSplitter::SetMinSizeImpl(TObject* owner, const int& value)   { no_vcl_TCustomSplitter_SetMinSize(owner->Handle(), value); }
+
+TAnchorKind TCustomSplitter::GetResizeAnchorImpl(TObject* owner) { return static_cast<TAnchorKind>(no_vcl_TCustomSplitter_GetResizeAnchor(owner->Handle())); }
+void TCustomSplitter::SetResizeAnchorImpl(TObject* owner, const TAnchorKind& value) { no_vcl_TCustomSplitter_SetResizeAnchor(owner->Handle(), value); }
+TResizeStyle TCustomSplitter::GetResizeStyleImpl(TObject* owner) { return static_cast<TResizeStyle>(no_vcl_TCustomSplitter_GetResizeStyle(owner->Handle())); }
+void TCustomSplitter::SetResizeStyleImpl(TObject* owner, const TResizeStyle& value) { no_vcl_TCustomSplitter_SetResizeStyle(owner->Handle(), value); }
+
+TNotifyEvent TCustomSplitter::GetOnMovedImpl(TObject* owner) { return static_cast<TCustomSplitter*>(owner)->onMoved_; }
+
+void TCustomSplitter::SetOnMovedImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCustomSplitter* self = static_cast<TCustomSplitter*>(owner);
+    SetSimpleEvent(self->handle_, self->onMoved_, self->onMovedHooked_, value,
+                   &no_vcl_TCustomSplitter_SetOnMoved, &TCustomSplitter::MovedTrampoline);
+}
+
+void NO_VCL_CALL TCustomSplitter::MovedTrampoline(no_vcl_obj_t sender, void*)
+{
+    if (TCustomSplitter* self = static_cast<TCustomSplitter*>(FromHandle(sender)))
+        CallNotify(self->onMoved_, self);
+}
+
+TSplitter::TSplitter(TComponent* AOwner)
+    : TCustomSplitter(no_vcl_TSplitter_Create(HandleOf(AOwner)))
+{}
 
 TCustomMemo::TCustomMemo(no_vcl_obj_t handle)
     : TCustomEdit(handle)

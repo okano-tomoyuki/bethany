@@ -106,6 +106,7 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 | メンバ | LCL の宣言元(公開範囲) | LCL で公開しているクラス | no_vcl C++ | C API |
 |---|---|---|---|---|
 | Parent / Left / Top / Width / Height / Visible / Enabled / Caption | TControl(public/published) | TControl | TControl(public) | `TControl_*` |
+| Align | TControl(public。既定値は TStatusBar が alBottom、TCustomSplitter が alLeft に上書き) | TControl | TControl(public) | `TControl_GetAlign` / `SetAlign`([ADR 0016](adr/0016-control-align-and-splitter.md)) |
 | Show / Hide | TControl(public) | TControl | TControl(public) | `TControl_Show` / `Hide` |
 | OnClick | TControl(public) | TControl | `TControl::OnClick` | `TControl_SetOnClick` |
 | Text | TControl(protected) | TCustomEdit / TCustomComboBox | TControl(protected)、TCustomEdit / TCustomComboBox で `using` | `TControl_GetText` / `SetText`(protected hack) |
@@ -124,6 +125,7 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 | OnChange(ComboBox) | TCustomComboBox(protected) | TComboBox のみ | TComboBox(public) | `TComboBox_SetOnChange` |
 | Items / ItemIndex | TCustomListBox(public) | TCustomListBox | TCustomListBox(public) | `TCustomListBox_*` |
 | Canvas / OnPaint | TPaintBox(public/published) | TPaintBox | TPaintBox(public) | `TPaintBox_*` |
+| AutoSnap / Beveled / MinSize / ResizeAnchor / ResizeStyle / OnMoved / Get・SetSplitterPosition | TCustomSplitter(public) | TCustomSplitter | TCustomSplitter(public) | `TCustomSplitter_*`([ADR 0016](adr/0016-control-align-and-splitter.md)) |
 | Interval / Enabled / OnTimer | TCustomTimer(public) | TCustomTimer | TCustomTimer(public) | `TCustomTimer_*` |
 | Run / Terminate / Terminated / Title | TCustomApplication(public。Run・Terminate・Title は TApplication で再宣言) | TApplication | TApplication(public) | `TApplication_*` |
 | CreateForm / MainForm / ProcessMessages / ShowMainForm | TApplication(public) | TApplication | TApplication(public。CreateForm は型を引数から推論するテンプレート) | `TApplication_*`(CreateForm は素の TForm を返す) |

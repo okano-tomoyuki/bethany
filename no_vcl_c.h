@@ -131,6 +131,13 @@ void          NO_VCL_CALL no_vcl_TControl_SetEnabled(no_vcl_obj_t Obj, no_vcl_bo
 no_vcl_str_t  NO_VCL_CALL no_vcl_TControl_GetCaption(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TControl_SetCaption(no_vcl_obj_t Obj, no_vcl_str_t Value);
 
+/* Align は TAlign の序数(no_vcl_al*)。親のクライアント領域の上下左右に寄せる/残りを埋める配置で、
+ * 寄せた方向の Left/Top/Width/Height は LCL が決める(alTop なら Left/Top/Width が親に合わせられ、Height は保たれる)。
+ * 既定値はクラスごとに異なる(多くは no_vcl_alNone、TStatusBar は no_vcl_alBottom、TSplitter は no_vcl_alLeft)。 */
+enum { no_vcl_alNone = 0, no_vcl_alTop, no_vcl_alBottom, no_vcl_alLeft, no_vcl_alRight, no_vcl_alClient, no_vcl_alCustom };
+no_vcl_int_t  NO_VCL_CALL no_vcl_TControl_GetAlign(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TControl_SetAlign(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
 /* Text は LCL では TControl の protected。公開しているのは TCustomEdit / TCustomComboBox の系統。 */
 no_vcl_str_t  NO_VCL_CALL no_vcl_TControl_GetText(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TControl_SetText(no_vcl_obj_t Obj, no_vcl_str_t Value);
@@ -474,6 +481,29 @@ no_vcl_str_t  NO_VCL_CALL no_vcl_TTabControl_Tabs_GetText(no_vcl_obj_t Obj, no_v
 no_vcl_int_t  NO_VCL_CALL no_vcl_TTabControl_GetTabIndex(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TTabControl_SetTabIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
 void          NO_VCL_CALL no_vcl_TTabControl_SetOnChange(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+
+/* TSplitter。同じ Align を持つ直前のコントロール(alLeft なら、自分より左にある alLeft のコントロール)の
+ * 幅・高さを、ドラッグで変える。Align が no_vcl_alLeft/alRight なら縦のバー、alTop/alBottom なら横のバーになる。
+ * メンバはすべて TCustomSplitter の public。OnCanResize/OnCanOffset は今回未対応。 */
+enum { no_vcl_akTop = 0, no_vcl_akLeft, no_vcl_akRight, no_vcl_akBottom };
+enum { no_vcl_rsLine = 0, no_vcl_rsNone, no_vcl_rsPattern, no_vcl_rsUpdate };
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TSplitter_Create(no_vcl_obj_t Owner);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomSplitter_GetAutoSnap(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomSplitter_SetAutoSnap(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomSplitter_GetBeveled(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomSplitter_SetBeveled(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomSplitter_GetMinSize(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomSplitter_SetMinSize(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomSplitter_GetResizeAnchor(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomSplitter_SetResizeAnchor(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomSplitter_GetResizeStyle(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomSplitter_SetResizeStyle(no_vcl_obj_t Obj, no_vcl_int_t Value);
+/* SplitterPosition は LCL ではプロパティではなく GetSplitterPosition/SetSplitterPosition メソッド。
+ * 縦のバーなら Left、横のバーなら Top にあたる(親のクライアント座標)。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomSplitter_GetSplitterPosition(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomSplitter_SetSplitterPosition(no_vcl_obj_t Obj, no_vcl_int_t Value);
+/* マウスでのドラッグが終わったときに呼ばれる(no_vcl_TCustomSplitter_SetSplitterPosition では呼ばれない)。 */
+void          NO_VCL_CALL no_vcl_TCustomSplitter_SetOnMoved(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
 
 #ifdef __cplusplus
 }

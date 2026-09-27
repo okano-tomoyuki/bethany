@@ -38,7 +38,7 @@ TScrollingWinControl のいずれかで、いずれも実装済み。既存パ�
 | ✅ TShape | extctrls.pp(TCustomShape) | TGraphicControl(実装済み) | Shape/Pen/Brush(ADR 0015) |
 | ✅ TStaticText | stdctrls.pp(TCustomStaticText) | TWinControl(実装済み) | BorderStyle(ADR 0015) |
 | ✅ TStatusBar | comctrls.pp | TWinControl(実装済み) | SimpleText/SimplePanel のみ(Panels は未対応)。Run() 開始前の生成が失敗する LCL 側の問題は DLL 側で回避済み([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.md)) |
-| TSplitter | extctrls.pp(TCustomSplitter) | TCustomControl(実装済み) | `TControl.Align` が no_vcl に無いと実用にならないため保留(下記「cross-cutting な既知の課題」参照) |
+| ✅ TSplitter | extctrls.pp(TCustomSplitter) | TCustomControl(実装済み) | `TControl.Align` の追加とあわせて実装([ADR 0016](adr/0016-control-align-and-splitter.md))。AutoSnap/Beveled/MinSize/ResizeAnchor/ResizeStyle/SplitterPosition/OnMoved。OnCanResize/OnCanOffset は未対応 |
 | ✅ TScrollBar | stdctrls.pp(TCustomScrollBar) | TWinControl(実装済み) | Kind/Min/Max/Position/PageSize/OnChange(ADR 0015 の 2 バッチ目) |
 | ✅ TRadioGroup | extctrls.pp(TCustomRadioGroup) | TCustomGroupBox(実装済み) | Items/ItemIndex/OnClick(ADR 0015 の 3 バッチ目)。OnClick は TControl のものとは別の独自フィールド |
 | ✅ TCheckGroup | extctrls.pp(TCustomCheckGroup) | TCustomGroupBox(実装済み) | Items + インデックス付き Checked(ADR 0015 の 3 バッチ目) |
@@ -124,10 +124,10 @@ VCL アプリらしい UI に必須だが、TMenuItem がツリー構造の TCom
 Tier 1 の 1 バッチ目([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.md))を実装する過程で見つかった、
 個別のクラスの追加では解決できない課題。
 
-- **`TControl.Align` が無い。** レイアウトの基本(ツールバーを alTop、メインの領域を alClient 等)に
-  使う、実用上ほぼ必須のプロパティだが、現状のどのクラスにも実装していない。TSplitter は Align が無いと
-  意味を成さないため、Tier 1 から見送った。Align 自体は TForm を含む全コントロール共通の機能改善であり、
-  特定のコントロールを追加する作業とは切り離して着手すべきもの。
+- ✅ **`TControl.Align` が無い。** → 解決済み([ADR 0016](adr/0016-control-align-and-splitter.md))。
+  LCL と同じく TControl の public プロパティとして追加し、あわせて TSplitter を追加した。
+  LCL では Align による配置がフォームの表示まで行われない(VCL と異なる)点に注意。
+  Anchors・BorderSpacing・Constraints・AutoSize は未実装。
 - **LCL が内部で生成する子コンポーネントをラップできない。** `TCustomLabeledEdit.EditLabel` のように、
   コンポーネントが自分の子を Pascal 側だけで生成する場合、その子は no_vcl の `*_Create` を経由しないため
   C++ 側にラッパーが登録されない(`TComponent::FromHandle` が nullptr を返す)。この種のプロパティを
@@ -140,11 +140,10 @@ Tier 1 の 1 バッチ目([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.m
 ## 4. 推奨する着手順序
 
 1. **Tier 1 は完了した**(19 クラス。[ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.md))。
-   TSplitter(`TControl.Align` 待ち)・TLabeledEdit(内部生成コンポーネントのラップ待ち)・
-   TPageControl+TTabSheet(所有ページの設計が必要、Tier 2 へ再分類)は cross-cutting な課題または
-   複雑度の都合で見送った。
-2. **`TControl.Align` の追加**(上記 cross-cutting な課題)を次に着手する。TSplitter が使えるようになるほか、
-   ツールバー・ステータス領域を持つ実用的なレイアウトの再現に直結する。
+   TLabeledEdit(内部生成コンポーネントのラップ待ち)・TPageControl+TTabSheet(所有ページの設計が必要、
+   Tier 2 へ再分類)は cross-cutting な課題または複雑度の都合で見送った。
+2. ✅ **`TControl.Align` の追加**(上記 cross-cutting な課題)と、それを待っていた TSplitter は完了した
+   ([ADR 0016](adr/0016-control-align-and-splitter.md))。
 3. **Tier 5(メニュー)** は複雑度は中程度だが、実用アプリでほぼ必須のため Tier 2 より先に着手する価値がある。
 4. **Tier 2** のうち TTreeView・TListView・TStringGrid・TPageControl+TTabSheet は、それぞれ専用の
    コレクション/所有子コンポーネント設計の ADR を書いてから着手する(TStrings 的な List 操作や、

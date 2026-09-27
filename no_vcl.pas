@@ -493,6 +493,18 @@ begin
   TControl(Obj).Caption := Value;
 end;
 
+{ Align は TControl の public。TAlign の序数(alNone=0, alTop, alBottom, alLeft, alRight, alClient, alCustom)で受け渡す。
+  既定値はクラスごとに異なる(TControl は alNone、TStatusBar は alBottom、TSplitter は alLeft)。 }
+function TControl_GetAlign(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TControl(Obj).Align);
+end;
+
+procedure TControl_SetAlign(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TControl(Obj).Align := TAlign(Value);
+end;
+
 { Text は TControl で protected。TCustomEdit と TCustomComboBox がそれぞれ公開している。 }
 function TControl_GetText(Obj: Pointer): PChar; NO_VCL_CALL;
 begin
@@ -1757,6 +1769,82 @@ begin
   TTabControl(Obj).OnChange := @BridgeFor(TTabControl(Obj), MethodData(TTabControl(Obj).OnChange), Cb, Data).DoClick;
 end;
 
+{ TSplitter: 隣の Align 済みコントロール(同じ Align を持つ直前のコントロール)の幅・高さをドラッグで変える。
+  Align=alLeft/alRight なら縦のバー、alTop/alBottom なら横のバーになる(既定は alLeft)。
+  メンバはすべて TCustomSplitter の public。OnCanResize/OnCanOffset(var 引数 2 つの独自のイベント形)は今回見送る。 }
+
+function TSplitter_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TSplitter.Create(TComponent(Owner)));
+end;
+
+function TCustomSplitter_GetAutoSnap(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomSplitter(Obj).AutoSnap;
+end;
+
+procedure TCustomSplitter_SetAutoSnap(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomSplitter(Obj).AutoSnap := Value;
+end;
+
+function TCustomSplitter_GetBeveled(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomSplitter(Obj).Beveled;
+end;
+
+procedure TCustomSplitter_SetBeveled(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomSplitter(Obj).Beveled := Value;
+end;
+
+function TCustomSplitter_GetMinSize(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomSplitter(Obj).MinSize;
+end;
+
+procedure TCustomSplitter_SetMinSize(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomSplitter(Obj).MinSize := Value;
+end;
+
+{ TAnchorKind の序数(akTop=0, akLeft, akRight, akBottom)。 }
+function TCustomSplitter_GetResizeAnchor(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TCustomSplitter(Obj).ResizeAnchor);
+end;
+
+procedure TCustomSplitter_SetResizeAnchor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomSplitter(Obj).ResizeAnchor := TAnchorKind(Value);
+end;
+
+{ TResizeStyle の序数(rsLine=0, rsNone, rsPattern, rsUpdate)。 }
+function TCustomSplitter_GetResizeStyle(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TCustomSplitter(Obj).ResizeStyle);
+end;
+
+procedure TCustomSplitter_SetResizeStyle(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomSplitter(Obj).ResizeStyle := TResizeStyle(Value);
+end;
+
+function TCustomSplitter_GetSplitterPosition(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomSplitter(Obj).GetSplitterPosition;
+end;
+
+procedure TCustomSplitter_SetSplitterPosition(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomSplitter(Obj).SetSplitterPosition(Value);
+end;
+
+procedure TCustomSplitter_SetOnMoved(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TCustomSplitter(Obj).OnMoved := @BridgeFor(TCustomSplitter(Obj), MethodData(TCustomSplitter(Obj).OnMoved), Cb, Data).DoClick;
+end;
+
 exports
   FreeNotify_SetCallback,
 
@@ -1779,6 +1867,8 @@ exports
   TControl_SetEnabled,
   TControl_GetCaption,
   TControl_SetCaption,
+  TControl_GetAlign,
+  TControl_SetAlign,
   TControl_GetText,
   TControl_SetText,
   TControl_Show,
@@ -2034,7 +2124,22 @@ exports
   TTabControl_Tabs_GetText,
   TTabControl_GetTabIndex,
   TTabControl_SetTabIndex,
-  TTabControl_SetOnChange;
+  TTabControl_SetOnChange,
+
+  TSplitter_Create,
+  TCustomSplitter_GetAutoSnap,
+  TCustomSplitter_SetAutoSnap,
+  TCustomSplitter_GetBeveled,
+  TCustomSplitter_SetBeveled,
+  TCustomSplitter_GetMinSize,
+  TCustomSplitter_SetMinSize,
+  TCustomSplitter_GetResizeAnchor,
+  TCustomSplitter_SetResizeAnchor,
+  TCustomSplitter_GetResizeStyle,
+  TCustomSplitter_SetResizeStyle,
+  TCustomSplitter_GetSplitterPosition,
+  TCustomSplitter_SetSplitterPosition,
+  TCustomSplitter_SetOnMoved;
 
 begin
   RequireDerivedFormResource := False;

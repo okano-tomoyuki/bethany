@@ -234,6 +234,10 @@ private:
 
 class TWinControl;
 
+// 親のクライアント領域への寄せ方(LCL / VCL の TAlign と同じ値)。寄せた方向の位置・大きさは LCL が決める
+// (alTop なら Left/Top/Width が親に合わせられ、Height だけが保たれる。alClient は残りの領域をすべて埋める)。
+enum TAlign { alNone, alTop, alBottom, alLeft, alRight, alClient, alCustom };
+
 class TControl : public TComponent
 {
 public:
@@ -245,6 +249,8 @@ public:
     Property<bool>         Visible;
     Property<bool>         Enabled;
     Property<std::string>  Caption;
+    // 既定値はクラスごとに異なる(多くは alNone、TStatusBar は alBottom、TSplitter は alLeft)。
+    Property<TAlign>       Align;
     Property<TNotifyEvent> OnClick;
     Property<TNotifyEvent> OnDblClick;
     // LCL では他のウィンドウメッセージへの応答等で発生し、必ずしもユーザー操作直後とは限らない。
@@ -332,6 +338,8 @@ private:
     static void         SetEnabledImpl(TObject* owner, const bool& value);
     static std::string  GetCaptionImpl(TObject* owner);
     static void         SetCaptionImpl(TObject* owner, const std::string& value);
+    static TAlign       GetAlignImpl(TObject* owner);
+    static void         SetAlignImpl(TObject* owner, const TAlign& value);
     static std::string  GetTextImpl(TObject* owner);
     static void         SetTextImpl(TObject* owner, const std::string& value);
 };
@@ -1109,6 +1117,61 @@ private:
     static void          SetTabIndexImpl(TObject* owner, const int& value);
     static TNotifyEvent  GetOnChangeImpl(TObject* owner);
     static void          SetOnChangeImpl(TObject* owner, const TNotifyEvent& value);
+};
+
+// Splitter が寄せる辺(LCL の TAnchorKind と同じ値。VCL には無い)と、ドラッグ中の表示のしかた。
+enum TAnchorKind  { akTop, akLeft, akRight, akBottom };
+enum TResizeStyle { rsLine, rsNone, rsPattern, rsUpdate };
+
+// 同じ Align を持つ直前のコントロール(alLeft なら、自分より左にある alLeft のコントロール)の幅・高さを
+// ドラッグで変える区切りバー。Align が alLeft/alRight なら縦、alTop/alBottom なら横のバーになる(既定は alLeft)。
+// メンバはすべて LCL の TCustomSplitter の public。OnCanResize/OnCanOffset(var 引数 2 つの独自のイベント形)は
+// 今回は未対応。SplitterPosition は LCL ではプロパティではなくメソッドの組のため、そのまま Get/Set メソッドにする。
+class TCustomSplitter : public TCustomControl
+{
+public:
+    Property<bool>         AutoSnap;
+    Property<bool>         Beveled;
+    Property<int>          MinSize;
+    Property<TAnchorKind>  ResizeAnchor;
+    Property<TResizeStyle> ResizeStyle;
+    // マウスでのドラッグが終わったときに呼ばれる(SetSplitterPosition では呼ばれない)。
+    Property<TNotifyEvent> OnMoved;
+
+    // 縦のバーなら Left、横のバーなら Top にあたる(親のクライアント座標)。
+    int  GetSplitterPosition() const;
+    void SetSplitterPosition(int NewPosition);
+
+protected:
+    explicit TCustomSplitter(no_vcl_obj_t handle);
+    ~TCustomSplitter() override = default;
+
+private:
+    TNotifyEvent onMoved_;
+    bool         onMovedHooked_ = false;
+    static void NO_VCL_CALL MovedTrampoline(no_vcl_obj_t sender, void* data);
+
+    static bool         GetAutoSnapImpl(TObject* owner);
+    static void         SetAutoSnapImpl(TObject* owner, const bool& value);
+    static bool         GetBeveledImpl(TObject* owner);
+    static void         SetBeveledImpl(TObject* owner, const bool& value);
+    static int          GetMinSizeImpl(TObject* owner);
+    static void         SetMinSizeImpl(TObject* owner, const int& value);
+    static TAnchorKind  GetResizeAnchorImpl(TObject* owner);
+    static void         SetResizeAnchorImpl(TObject* owner, const TAnchorKind& value);
+    static TResizeStyle GetResizeStyleImpl(TObject* owner);
+    static void         SetResizeStyleImpl(TObject* owner, const TResizeStyle& value);
+    static TNotifyEvent GetOnMovedImpl(TObject* owner);
+    static void         SetOnMovedImpl(TObject* owner, const TNotifyEvent& value);
+};
+
+class TSplitter : public TCustomSplitter
+{
+public:
+    explicit TSplitter(TComponent* AOwner);
+
+protected:
+    ~TSplitter() override = default;
 };
 
 class TCustomMemo : public TCustomEdit
