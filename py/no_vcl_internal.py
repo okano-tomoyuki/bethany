@@ -33,12 +33,20 @@ else:
 
 
 class NoVclError(Exception):
-    """DLL の中で起きた例外。class_name は Pascal の例外クラス名(コールバック由来なら元の例外のクラス名)。"""
+    """DLL の中で起きた例外。class_name は Pascal の例外クラス名(コールバック由来なら元の例外のクラス名)。
+    C++ の no_vcl::Exception と同じ名前でも読める(E.Message・E.ClassName())。"""
 
     def __init__(self, class_name, message):
         super().__init__(f"{class_name}: {message}")
         self.class_name = class_name
         self.message = message
+
+    @property
+    def Message(self):
+        return self.message
+
+    def ClassName(self):
+        return self.class_name
 
 
 # 直前のエラー(docs/adr/0031)。DLL は失敗した呼び出しと同じスレッドで、その呼び出しから戻る前に知らせる。
@@ -75,7 +83,12 @@ def _guard(fn):
             fn(*args)
         except BaseException as e:
             _state.callback_exception = e
-            _dll.SetCallbackError(type(e).__name__.encode("utf-8"), str(e).encode("utf-8", "replace"))
+            if isinstance(e, NoVclError):
+                # DLL の例外・利用者が送出した NoVclError は、元のクラス名とメッセージのまま伝える
+                class_name, message = e.class_name, e.message
+            else:
+                class_name, message = type(e).__name__, str(e)
+            _dll.SetCallbackError(class_name.encode("utf-8"), message.encode("utf-8", "replace"))
 
     return guarded
 
@@ -91,7 +104,9 @@ def _key_of(value):
 
 
 def _to_callback(proto, fn):
-    if fn is None or isinstance(fn, proto):
+    if fn is None:
+        return proto()  # NULL(コールバックの解除)
+    if isinstance(fn, proto):
         return fn
     return proto(_guard(fn))
 

@@ -1,0 +1,2182 @@
+# このファイルは gen_api.py が no_vcl.hpp から生成する。直接編集しない。
+"""no_vcl の Python の公開 API。C++ の公開 API(no_vcl.hpp)と同じクラス・メンバを持つ。
+
+    from no_vcl import *
+
+    class TForm1(TForm):
+        def __init__(self, AOwner):
+            super().__init__(AOwner)
+            self.Caption = "Hello"
+            self.Button1 = TButton(self)
+            self.Button1.Parent = self
+            self.Button1.Caption = "OK"
+            self.Button1.OnClick = self.Button1Click
+
+        def Button1Click(self, Sender):
+            self.Caption = "Clicked"
+
+    Application.Initialize()
+    Form1 = Application.CreateForm(TForm1)
+    Application.Run()
+
+C++ との違い(詳しくは no_vcl_core.py):
+- 参照渡しの引数(int& Key・bool& CanClose・TCloseAction& Action 等)・メソッドの出力引数は Ref(.value を読み書きする)。
+- Application->CreateForm(&Form1) は Form1 = Application.CreateForm(TForm1)。
+- 利用者が生成するもの(TStringList・TBitmap・TPicture 等)の delete は Free()(参照が無くなったときにも破棄される)。
+- LCL オブジェクトが破棄された後にラッパーへ触ると ReferenceError(C++ では未定義動作)。
+- C++ の Exception は NoVclError(E.Message・E.ClassName())。
+"""
+import ctypes
+import enum
+
+from no_vcl_core import (NoVclError, Ref, TRect, TPoint, TObject, TPersistent, TComponent,
+                         ShortCut, TextToShortCut, ShortCutToText)
+from no_vcl_core import (lib, _mixins, _register, _event_types, _ItemMixin, _Prop, _Indexed, _Event,
+                         _int, _float, _bool, _str, _char, _ptr, _rect_conv, _enum, _comp, _existing, _item, _obj, _view,
+                         _str_key, _enc, _dec, _h, _b, _rect, _point, _to_enum, _to_comp, _to_existing, _to_item, _to_obj,
+                         _a_int, _a_bool, _a_rect, _a_enum, _a_comp, _a_item, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_enum)
+
+
+# ---------------- 列挙型 ----------------
+
+# フォームを閉じるときの動作(C++Builder / LCL の TCloseAction と同じ値)。
+class TCloseAction(enum.IntEnum):
+    caNone = 0  # 閉じない
+    caHide = 1  # 隠す(MainForm 以外の既定値)
+    caFree = 2  # 破棄する(MainForm の既定値。MainForm ならアプリケーションを終了する)
+    caMinimize = 3  # 最小化する
+
+caNone, caHide, caFree, caMinimize = TCloseAction.caNone, TCloseAction.caHide, TCloseAction.caFree, TCloseAction.caMinimize
+
+
+# マウスボタン(OnMouseDown / OnMouseUp の Button)。
+class TMouseButton(enum.IntEnum):
+    mbLeft = 0
+    mbRight = 1
+    mbMiddle = 2
+    mbExtra1 = 3
+    mbExtra2 = 4
+
+mbLeft, mbRight, mbMiddle, mbExtra1, mbExtra2 = TMouseButton.mbLeft, TMouseButton.mbRight, TMouseButton.mbMiddle, TMouseButton.mbExtra1, TMouseButton.mbExtra2
+
+
+# Sorted のときの重複の扱い(LCL の TDuplicates と同じ値)。
+class TDuplicates(enum.IntEnum):
+    dupIgnore = 0
+    dupAccept = 1
+    dupError = 2
+
+dupIgnore, dupAccept, dupError = TDuplicates.dupIgnore, TDuplicates.dupAccept, TDuplicates.dupError
+
+
+# 画素の形式(LCL の TPixelFormat と同じ値)。
+class TPixelFormat(enum.IntEnum):
+    pfDevice = 0
+    pf1bit = 1
+    pf4bit = 2
+    pf8bit = 3
+    pf15bit = 4
+    pf16bit = 5
+    pf24bit = 6
+    pf32bit = 7
+    pfCustom = 8
+
+pfDevice, pf1bit, pf4bit, pf8bit, pf15bit, pf16bit, pf24bit, pf32bit, pfCustom = TPixelFormat.pfDevice, TPixelFormat.pf1bit, TPixelFormat.pf4bit, TPixelFormat.pf8bit, TPixelFormat.pf15bit, TPixelFormat.pf16bit, TPixelFormat.pf24bit, TPixelFormat.pf32bit, TPixelFormat.pfCustom
+
+
+# Transparent のときに透過する色の決め方。tmAuto は左下の画素の色、tmFixed は TransparentColor。
+class TTransparentMode(enum.IntEnum):
+    tmAuto = 0
+    tmFixed = 1
+
+tmAuto, tmFixed = TTransparentMode.tmAuto, TTransparentMode.tmFixed
+
+
+# 画像リストの描き方(LCL の TDrawingStyle と同じ値)。
+class TDrawingStyle(enum.IntEnum):
+    dsFocus = 0
+    dsSelected = 1
+    dsNormal = 2
+    dsTransparent = 3
+
+dsFocus, dsSelected, dsNormal, dsTransparent = TDrawingStyle.dsFocus, TDrawingStyle.dsSelected, TDrawingStyle.dsNormal, TDrawingStyle.dsTransparent
+
+
+# 親のクライアント領域への寄せ方(LCL / VCL の TAlign と同じ値)。寄せた方向の位置・大きさは LCL が決める
+# (alTop なら Left/Top/Width が親に合わせられ、Height だけが保たれる。alClient は残りの領域をすべて埋める)。
+class TAlign(enum.IntEnum):
+    alNone = 0
+    alTop = 1
+    alBottom = 2
+    alLeft = 3
+    alRight = 4
+    alClient = 5
+    alCustom = 6
+
+alNone, alTop, alBottom, alLeft, alRight, alClient, alCustom = TAlign.alNone, TAlign.alTop, TAlign.alBottom, TAlign.alLeft, TAlign.alRight, TAlign.alClient, TAlign.alCustom
+
+
+# つまみを左右または上下にドラッグして値を選ぶスクロールバー。
+class TScrollBarKind(enum.IntEnum):
+    sbHorizontal = 0
+    sbVertical = 1
+
+sbHorizontal, sbVertical = TScrollBarKind.sbHorizontal, TScrollBarKind.sbVertical
+
+
+# 枠線や凹凸の表現に使う、単純な表示専用コントロール(TGraphicControl の直接の派生)。
+class TBevelShape(enum.IntEnum):
+    bsBox = 0
+    bsFrame = 1
+    bsTopLine = 2
+    bsBottomLine = 3
+    bsLeftLine = 4
+    bsRightLine = 5
+    bsSpacer = 6
+
+bsBox, bsFrame, bsTopLine, bsBottomLine, bsLeftLine, bsRightLine, bsSpacer = TBevelShape.bsBox, TBevelShape.bsFrame, TBevelShape.bsTopLine, TBevelShape.bsBottomLine, TBevelShape.bsLeftLine, TBevelShape.bsRightLine, TBevelShape.bsSpacer
+
+
+class TBevelStyle(enum.IntEnum):
+    bsLowered = 0
+    bsRaised = 1
+
+bsLowered, bsRaised = TBevelStyle.bsLowered, TBevelStyle.bsRaised
+
+
+# bkOK/bkCancel 等の定型ボタン(既定の Caption を LCL が設定する)。
+class TBitBtnKind(enum.IntEnum):
+    bkCustom = 0
+    bkOK = 1
+    bkCancel = 2
+    bkHelp = 3
+    bkYes = 4
+    bkNo = 5
+    bkClose = 6
+    bkAbort = 7
+    bkRetry = 8
+    bkIgnore = 9
+    bkAll = 10
+    bkNoToAll = 11
+    bkYesToAll = 12
+
+bkCustom, bkOK, bkCancel, bkHelp, bkYes, bkNo, bkClose, bkAbort, bkRetry, bkIgnore, bkAll, bkNoToAll, bkYesToAll = TBitBtnKind.bkCustom, TBitBtnKind.bkOK, TBitBtnKind.bkCancel, TBitBtnKind.bkHelp, TBitBtnKind.bkYes, TBitBtnKind.bkNo, TBitBtnKind.bkClose, TBitBtnKind.bkAbort, TBitBtnKind.bkRetry, TBitBtnKind.bkIgnore, TBitBtnKind.bkAll, TBitBtnKind.bkNoToAll, TBitBtnKind.bkYesToAll
+
+
+# ボタンの画像(Glyph)の位置。
+class TButtonLayout(enum.IntEnum):
+    blGlyphLeft = 0
+    blGlyphRight = 1
+    blGlyphTop = 2
+    blGlyphBottom = 3
+
+blGlyphLeft, blGlyphRight, blGlyphTop, blGlyphBottom = TButtonLayout.blGlyphLeft, TButtonLayout.blGlyphRight, TButtonLayout.blGlyphTop, TButtonLayout.blGlyphBottom
+
+
+# ラベルの位置(LCL の TLabelPosition と同じ値)。
+class TLabelPosition(enum.IntEnum):
+    lpAbove = 0
+    lpBelow = 1
+    lpLeft = 2
+    lpRight = 3
+
+lpAbove, lpBelow, lpLeft, lpRight = TLabelPosition.lpAbove, TLabelPosition.lpBelow, TLabelPosition.lpLeft, TLabelPosition.lpRight
+
+
+# タブの位置(LCL の TTabPosition と同じ値)。
+class TTabPosition(enum.IntEnum):
+    tpTop = 0
+    tpBottom = 1
+    tpLeft = 2
+    tpRight = 3
+
+tpTop, tpBottom, tpLeft, tpRight = TTabPosition.tpTop, TTabPosition.tpBottom, TTabPosition.tpLeft, TTabPosition.tpRight
+
+
+# MoveTo の移動先の指定(LCL / VCL の TNodeAttachMode と同じ値)。
+class TNodeAttachMode(enum.IntEnum):
+    naAdd = 0
+    naAddFirst = 1
+    naAddChild = 2
+    naAddChildFirst = 3
+    naInsert = 4
+    naInsertBehind = 5
+
+naAdd, naAddFirst, naAddChild, naAddChildFirst, naInsert, naInsertBehind = TNodeAttachMode.naAdd, TNodeAttachMode.naAddFirst, TNodeAttachMode.naAddChild, TNodeAttachMode.naAddChildFirst, TNodeAttachMode.naInsert, TNodeAttachMode.naInsertBehind
+
+
+# 表示形式・並べ替え・列の文字の寄せ方・OnChange の変更の種類(LCL / VCL と同じ値)。
+class TViewStyle(enum.IntEnum):
+    vsIcon = 0
+    vsSmallIcon = 1
+    vsList = 2
+    vsReport = 3
+
+vsIcon, vsSmallIcon, vsList, vsReport = TViewStyle.vsIcon, TViewStyle.vsSmallIcon, TViewStyle.vsList, TViewStyle.vsReport
+
+
+class TSortType(enum.IntEnum):
+    stNone = 0
+    stData = 1
+    stText = 2
+    stBoth = 3
+
+stNone, stData, stText, stBoth = TSortType.stNone, TSortType.stData, TSortType.stText, TSortType.stBoth
+
+
+class TSortDirection(enum.IntEnum):
+    sdAscending = 0
+    sdDescending = 1
+
+sdAscending, sdDescending = TSortDirection.sdAscending, TSortDirection.sdDescending
+
+
+class TAlignment(enum.IntEnum):
+    taLeftJustify = 0
+    taRightJustify = 1
+    taCenter = 2
+
+taLeftJustify, taRightJustify, taCenter = TAlignment.taLeftJustify, TAlignment.taRightJustify, TAlignment.taCenter
+
+
+class TItemChange(enum.IntEnum):
+    ctText = 0
+    ctImage = 1
+    ctState = 2
+
+ctText, ctImage, ctState = TItemChange.ctText, TItemChange.ctImage, TItemChange.ctState
+
+
+# Splitter が寄せる辺(LCL の TAnchorKind と同じ値。VCL には無い)と、ドラッグ中の表示のしかた。
+class TAnchorKind(enum.IntEnum):
+    akTop = 0
+    akLeft = 1
+    akRight = 2
+    akBottom = 3
+
+akTop, akLeft, akRight, akBottom = TAnchorKind.akTop, TAnchorKind.akLeft, TAnchorKind.akRight, TAnchorKind.akBottom
+
+
+class TResizeStyle(enum.IntEnum):
+    rsLine = 0
+    rsNone = 1
+    rsPattern = 2
+    rsUpdate = 3
+
+rsLine, rsNone, rsPattern, rsUpdate = TResizeStyle.rsLine, TResizeStyle.rsNone, TResizeStyle.rsPattern, TResizeStyle.rsUpdate
+
+
+# 枠線付きの表示専用テキスト(TLabel と異なりウィンドウを持つ)。
+class TStaticBorderStyle(enum.IntEnum):
+    sbsNone = 0
+    sbsSingle = 1
+    sbsSunken = 2
+
+sbsNone, sbsSingle, sbsSunken = TStaticBorderStyle.sbsNone, TStaticBorderStyle.sbsSingle, TStaticBorderStyle.sbsSunken
+
+
+# 矩形・楕円等の図形を描画する表示専用コントロール。Pen/Brush は TCanvas と同じく、
+# コントロールが所有する実体への非所有のビュー(コントロールと寿命が一致する)。
+class TShapeType(enum.IntEnum):
+    stRectangle = 0
+    stSquare = 1
+    stRoundRect = 2
+    stRoundSquare = 3
+    stEllipse = 4
+    stCircle = 5
+    stSquaredDiamond = 6
+    stDiamond = 7
+    stTriangle = 8
+    stTriangleLeft = 9
+    stTriangleRight = 10
+    stTriangleDown = 11
+    stStar = 12
+    stStarDown = 13
+    stPolygon = 14
+
+stRectangle, stSquare, stRoundRect, stRoundSquare, stEllipse, stCircle, stSquaredDiamond, stDiamond, stTriangle, stTriangleLeft, stTriangleRight, stTriangleDown, stStar, stStarDown, stPolygon = TShapeType.stRectangle, TShapeType.stSquare, TShapeType.stRoundRect, TShapeType.stRoundSquare, TShapeType.stEllipse, TShapeType.stCircle, TShapeType.stSquaredDiamond, TShapeType.stDiamond, TShapeType.stTriangle, TShapeType.stTriangleLeft, TShapeType.stTriangleRight, TShapeType.stTriangleDown, TShapeType.stStar, TShapeType.stStarDown, TShapeType.stPolygon
+
+
+# ドラッグで幅を変えている間の段階(LCL の TSectionTrackState と同じ値)。
+class TSectionTrackState(enum.IntEnum):
+    tsTrackBegin = 0
+    tsTrackMove = 1
+    tsTrackEnd = 2
+
+tsTrackBegin, tsTrackMove, tsTrackEnd = TSectionTrackState.tsTrackBegin, TSectionTrackState.tsTrackMove, TSectionTrackState.tsTrackEnd
+
+
+# 縁の描き方(LCL の TEdgeStyle と同じ値)。
+class TEdgeStyle(enum.IntEnum):
+    esNone = 0
+    esRaised = 1
+    esLowered = 2
+
+esNone, esRaised, esLowered = TEdgeStyle.esNone, TEdgeStyle.esRaised, TEdgeStyle.esLowered
+
+
+# ツールボタンの種類(LCL の TToolButtonStyle と同じ値)。
+class TToolButtonStyle(enum.IntEnum):
+    tbsButton = 0  # 普通のボタン
+    tbsCheck = 1  # クリックで Down が切り替わる(Grouped なら隣り合うボタンのどれか 1 つだけが Down)
+    tbsDropDown = 2  # 右に矢印が付き、矢印で DropdownMenu を表示する
+    tbsSeparator = 3  # 空白
+    tbsDivider = 4  # 線の入った区切り
+    tbsButtonDrop = 5  # ボタンと一体の矢印(どこを押しても DropdownMenu を表示する)
+
+tbsButton, tbsCheck, tbsDropDown, tbsSeparator, tbsDivider, tbsButtonDrop = TToolButtonStyle.tbsButton, TToolButtonStyle.tbsCheck, TToolButtonStyle.tbsDropDown, TToolButtonStyle.tbsSeparator, TToolButtonStyle.tbsDivider, TToolButtonStyle.tbsButtonDrop
+
+
+# バンドの左端のつまみの描き方(LCL の TGrabStyle と同じ値)。
+class TGrabStyle(enum.IntEnum):
+    gsSimple = 0
+    gsDouble = 1
+    gsHorLines = 2
+    gsVerLines = 3
+    gsGripper = 4
+    gsButton = 5
+
+gsSimple, gsDouble, gsHorLines, gsVerLines, gsGripper, gsButton = TGrabStyle.gsSimple, TGrabStyle.gsDouble, TGrabStyle.gsHorLines, TGrabStyle.gsVerLines, TGrabStyle.gsGripper, TGrabStyle.gsButton
+
+
+# ---------------- 集合・定数 ----------------
+
+class TShiftState(enum.IntFlag):
+    ssShift = 0x0001
+    ssAlt = 0x0002
+    ssCtrl = 0x0004
+    ssLeft = 0x0008  # マウスの左ボタンが押されている
+    ssRight = 0x0010
+    ssMiddle = 0x0020
+    ssDouble = 0x0040  # ダブルクリックの一部として発生した
+    ssMeta = 0x0080
+    ssSuper = 0x0100
+    ssHyper = 0x0200
+    ssAltGr = 0x0400
+    ssCaps = 0x0800
+    ssNum = 0x1000
+    ssScroll = 0x2000
+    ssTriple = 0x4000
+    ssQuad = 0x8000
+    ssExtra1 = 0x10000
+    ssExtra2 = 0x20000
+
+
+ssShift = TShiftState.ssShift
+ssAlt = TShiftState.ssAlt
+ssCtrl = TShiftState.ssCtrl
+ssLeft = TShiftState.ssLeft
+ssRight = TShiftState.ssRight
+ssMiddle = TShiftState.ssMiddle
+ssDouble = TShiftState.ssDouble
+ssMeta = TShiftState.ssMeta
+ssSuper = TShiftState.ssSuper
+ssHyper = TShiftState.ssHyper
+ssAltGr = TShiftState.ssAltGr
+ssCaps = TShiftState.ssCaps
+ssNum = TShiftState.ssNum
+ssScroll = TShiftState.ssScroll
+ssTriple = TShiftState.ssTriple
+ssQuad = TShiftState.ssQuad
+ssExtra1 = TShiftState.ssExtra1
+ssExtra2 = TShiftState.ssExtra2
+
+
+class TGridOptions(enum.IntFlag):
+    goFixedVertLine = 1 << 0
+    goFixedHorzLine = 1 << 1
+    goVertLine = 1 << 2
+    goHorzLine = 1 << 3
+    goRangeSelect = 1 << 4
+    goDrawFocusSelected = 1 << 5
+    goRowSizing = 1 << 6
+    goColSizing = 1 << 7
+    goRowMoving = 1 << 8
+    goColMoving = 1 << 9
+    goEditing = 1 << 10
+    goAutoAddRows = 1 << 11
+    goTabs = 1 << 12
+    goRowSelect = 1 << 13
+    goAlwaysShowEditor = 1 << 14
+    goThumbTracking = 1 << 15
+    goColSpanning = 1 << 16
+    goRelaxedRowSelect = 1 << 17
+    goDblClickAutoSize = 1 << 18
+    goSmoothScroll = 1 << 19
+    goFixedRowNumbering = 1 << 20
+    goScrollKeepVisible = 1 << 21
+    goHeaderHotTracking = 1 << 22
+    goHeaderPushedLook = 1 << 23
+    goSelectionActive = 1 << 24
+    goFixedColSizing = 1 << 25
+    goDontScrollPartCell = 1 << 26
+    goCellHints = 1 << 27
+    goTruncCellHints = 1 << 28
+    goCellEllipsis = 1 << 29
+    goAutoAddRowsSkipContentCheck = 1 << 30
+    goRowHighlight = 1 << 31
+
+
+goFixedVertLine = TGridOptions.goFixedVertLine
+goFixedHorzLine = TGridOptions.goFixedHorzLine
+goVertLine = TGridOptions.goVertLine
+goHorzLine = TGridOptions.goHorzLine
+goRangeSelect = TGridOptions.goRangeSelect
+goDrawFocusSelected = TGridOptions.goDrawFocusSelected
+goRowSizing = TGridOptions.goRowSizing
+goColSizing = TGridOptions.goColSizing
+goRowMoving = TGridOptions.goRowMoving
+goColMoving = TGridOptions.goColMoving
+goEditing = TGridOptions.goEditing
+goAutoAddRows = TGridOptions.goAutoAddRows
+goTabs = TGridOptions.goTabs
+goRowSelect = TGridOptions.goRowSelect
+goAlwaysShowEditor = TGridOptions.goAlwaysShowEditor
+goThumbTracking = TGridOptions.goThumbTracking
+goColSpanning = TGridOptions.goColSpanning
+goRelaxedRowSelect = TGridOptions.goRelaxedRowSelect
+goDblClickAutoSize = TGridOptions.goDblClickAutoSize
+goSmoothScroll = TGridOptions.goSmoothScroll
+goFixedRowNumbering = TGridOptions.goFixedRowNumbering
+goScrollKeepVisible = TGridOptions.goScrollKeepVisible
+goHeaderHotTracking = TGridOptions.goHeaderHotTracking
+goHeaderPushedLook = TGridOptions.goHeaderPushedLook
+goSelectionActive = TGridOptions.goSelectionActive
+goFixedColSizing = TGridOptions.goFixedColSizing
+goDontScrollPartCell = TGridOptions.goDontScrollPartCell
+goCellHints = TGridOptions.goCellHints
+goTruncCellHints = TGridOptions.goTruncCellHints
+goCellEllipsis = TGridOptions.goCellEllipsis
+goAutoAddRowsSkipContentCheck = TGridOptions.goAutoAddRowsSkipContentCheck
+goRowHighlight = TGridOptions.goRowHighlight
+
+
+class TGridDrawState(enum.IntFlag):
+    gdSelected = 0x01
+    gdFocused = 0x02
+    gdFixed = 0x04
+    gdHot = 0x08
+    gdPushed = 0x10
+    gdRowHighlight = 0x20
+
+
+gdSelected = TGridDrawState.gdSelected
+gdFocused = TGridDrawState.gdFocused
+gdFixed = TGridDrawState.gdFixed
+gdHot = TGridDrawState.gdHot
+gdPushed = TGridDrawState.gdPushed
+gdRowHighlight = TGridDrawState.gdRowHighlight
+
+
+class TEdgeBorders(enum.IntFlag):
+    ebLeft = 0x01
+    ebTop = 0x02
+    ebRight = 0x04
+    ebBottom = 0x08
+
+
+ebLeft = TEdgeBorders.ebLeft
+ebTop = TEdgeBorders.ebTop
+ebRight = TEdgeBorders.ebRight
+ebBottom = TEdgeBorders.ebBottom
+
+
+TColor = int
+clBlack = 0x000000
+clWhite = 0xFFFFFF
+clRed = 0x0000FF
+clGreen = 0x008000
+clBlue = 0xFF0000
+clYellow = 0x00FFFF
+
+TShortCut = int
+scShift = 0x2000
+scCtrl = 0x4000
+scAlt = 0x8000
+
+
+class TStrings(_mixins["TStrings"], TPersistent):
+    """文字列の一覧(LCL の TStrings)。コントロールの Items・Lines・Tabs 等として、所有者の値メンバで持つ非所有のビュー
+    (ListBox1->Items->Add("x"); ListBox1->Items->Strings[0]; Memo1->Lines->Text = "..."; のように VCL と同じく使う)。
+    LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがある(TListBox・TComboBox・TMemo)ため、
+    このビューは中身のハンドルを覚えず、操作のたびに所有者から取得する。そのため Handle() は nullptr を返す
+    (DLL の関数に渡すハンドルは Current() で得る。保存しないこと)。
+    利用者が生成する文字列の一覧は、派生の TStringList を使う(docs/adr/0028)。"""
+    Count = _Prop("TStrings_GetCount", None, _int)
+    Strings = _Indexed("TStrings_GetStrings", "TStrings_SetStrings", _str)
+    # 利用者データ(ポインタ)。LCL は解釈も解放もしない。
+    Objects = _Indexed("TStrings_GetObjects", "TStrings_SetObjects", _ptr)
+    # すべての行を改行でつないだ文字列。設定すると改行で分けて置き換える。
+    Text = _Prop("TStrings_GetText", "TStrings_SetText", _str)
+    # カンマ区切りの文字列(空白・カンマを含む要素は二重引用符で囲まれる)。
+    CommaText = _Prop("TStrings_GetCommaText", "TStrings_SetCommaText", _str)
+    # 名前=値 の形の行。Names[i] は '=' より前、ValueFromIndex[i] は後ろ。
+    # Values["name"] は name の行の値で、無ければ空文字列。無い名前に代入すると末尾に追加する。
+    # 空文字列を代入したとき、ValueFromIndex[i] はその行を削除するが、Values["name"] は値を空にするだけで行は残る
+    # (LCL(FPC)の仕様。VCL の Values は行を削除する)。
+    Names = _Indexed("TStrings_GetNames", None, _str)
+    Values = _Indexed("TStrings_GetValues", "TStrings_SetValues", _str, key=_str_key)
+    ValueFromIndex = _Indexed("TStrings_GetValueFromIndex", "TStrings_SetValueFromIndex", _str)
+    # Delimiter で区切った文字列(既定は ',')。StrictDelimiter が false(既定)なら、空白も区切りとして扱い、
+    # 空白・区切り文字を含む要素は二重引用符で囲まれる。
+    Delimiter = _Prop("TStrings_GetDelimiter", "TStrings_SetDelimiter", _char)
+    StrictDelimiter = _Prop("TStrings_GetStrictDelimiter", "TStrings_SetStrictDelimiter", _bool)
+    DelimitedText = _Prop("TStrings_GetDelimitedText", "TStrings_SetDelimitedText", _str)
+    # 末尾に追加し、追加した位置を返す(ソートされた一覧では挿入された位置)。
+    def Add(self, S):
+        _r = lib.TStrings_Add(self._current(), _enc(S))
+        return _r
+    def AddObject(self, S, AObject):
+        _r = lib.TStrings_AddObject(self._current(), _enc(S), AObject)
+        return _r
+    def Insert(self, Index, S):
+        lib.TStrings_Insert(self._current(), int(Index), _enc(S))
+    def Delete(self, Index):
+        lib.TStrings_Delete(self._current(), int(Index))
+    def Clear(self):
+        lib.TStrings_Clear(self._current())
+    # 見つからなければ -1。
+    def IndexOf(self, S):
+        _r = lib.TStrings_IndexOf(self._current(), _enc(S))
+        return _r
+    def Exchange(self, Index1, Index2):
+        lib.TStrings_Exchange(self._current(), int(Index1), int(Index2))
+    def Move(self, CurIndex, NewIndex):
+        lib.TStrings_Move(self._current(), int(CurIndex), int(NewIndex))
+    def BeginUpdate(self):
+        lib.TStrings_BeginUpdate(self._current())
+    def EndUpdate(self):
+        lib.TStrings_EndUpdate(self._current())
+    # Source の内容(文字列と Objects)で置き換える / 末尾に加える。
+    def Assign(self, Source):
+        lib.TStrings_Assign(self._current(), _h(Source))
+    # 名前=値 の行のうち、名前が Name の行の位置。見つからなければ -1。
+    def IndexOfName(self, Name):
+        _r = lib.TStrings_IndexOfName(self._current(), _enc(Name))
+        return _r
+    # ファイル名・内容とも UTF-8 のまま扱う(文字コードの変換はしない)。
+    def LoadFromFile(self, FileName):
+        lib.TStrings_LoadFromFile(self._current(), _enc(FileName))
+    def SaveToFile(self, FileName):
+        lib.TStrings_SaveToFile(self._current(), _enc(FileName))
+
+
+class TStringList(_mixins["TStringList"], TStrings):
+    """利用者が生成する文字列の一覧(LCL の TStringList)。TComponent ではないため、Owner も破棄通知も無く、
+    生成した側が破棄する(VCL と同じく new して delete する。スタックや値メンバに置いてもよい)。
+    TStrings* を受け取るもの(ListBox1->Items->Assign(List) 等)にそのまま渡せる。"""
+    def __init__(self):
+        self._init_owned(lib.TStringList_Create())
+    # true にすると並べ替え、以降の Add はソート順の位置に入る(Insert と Strings への代入は Exception を送出する)。
+    Sorted = _Prop("TStringList_GetSorted", "TStringList_SetSorted", _bool)
+    # Sorted のときの重複の扱い(既定は dupIgnore で、重複は加えない。dupError で重複を加えると Exception を送出する)。
+    Duplicates = _Prop("TStringList_GetDuplicates", "TStringList_SetDuplicates", _enum("TDuplicates"))
+    # 並べ替え・IndexOf・Find で大文字と小文字を区別するか(既定は false)。
+    CaseSensitive = _Prop("TStringList_GetCaseSensitive", "TStringList_SetCaseSensitive", _bool)
+    def Sort(self):
+        lib.TStringList_Sort(self._current())
+    # ソートされた一覧から S を二分探索する。見つからなければ、S を挿入すべき位置を Index に入れて false を返す。
+    # Sorted が false の一覧には使えない(Exception を送出する)。
+    def Find(self, S, Index):
+        _out_Index = ctypes.c_int()
+        _r = lib.TStringList_Find(self._current(), _enc(S), ctypes.byref(_out_Index))
+        Index.value = _out_Index.value
+        return _r != 0
+
+
+class TPen(TPersistent):
+    Color = _Prop("TPen_GetColor", "TPen_SetColor", _int)
+    Width = _Prop("TPen_GetWidth", "TPen_SetWidth", _int)
+
+
+class TBrush(TPersistent):
+    Color = _Prop("TBrush_GetColor", "TBrush_SetColor", _int)
+
+
+class TFont(TPersistent):
+    Name = _Prop("TFont_GetName", "TFont_SetName", _str)
+    Size = _Prop("TFont_GetSize", "TFont_SetSize", _int)
+    Color = _Prop("TFont_GetColor", "TFont_SetColor", _int)
+
+
+class TCanvas(_mixins["TCanvas"], TPersistent):
+    Pen = _Prop("TCanvas_GetPen", None, _obj("TPen"))
+    Brush = _Prop("TCanvas_GetBrush", None, _obj("TBrush"))
+    Font = _Prop("TCanvas_GetFont", None, _obj("TFont"))
+    # 1 画素の色(Canvas->Pixels[X][Y]。VCL の Pixels[X, Y])。
+    Pixels = _Indexed("TCanvas_GetPixels", "TCanvas_SetPixels", _int, dims=2)
+    def MoveTo(self, x, y):
+        lib.TCanvas_MoveTo(self._current(), int(x), int(y))
+    def LineTo(self, x, y):
+        lib.TCanvas_LineTo(self._current(), int(x), int(y))
+    def Rectangle(self, x1, y1, x2, y2):
+        lib.TCanvas_Rectangle(self._current(), int(x1), int(y1), int(x2), int(y2))
+    def Ellipse(self, x1, y1, x2, y2):
+        lib.TCanvas_Ellipse(self._current(), int(x1), int(y1), int(x2), int(y2))
+    def TextOut(self, x, y, text):
+        lib.TCanvas_TextOut(self._current(), int(x), int(y), _enc(text))
+    # Brush で塗りつぶす(枠は描かない)。
+    def FillRect(self, Rect):
+        lib.TCanvas_FillRect(self._current(), *_rect(Rect))
+
+
+class TGraphic(_mixins["TGraphic"], TPersistent):
+    """グラフィック(LCL の TGraphic。TPersistent で、TComponent ではない)。2 通りの持ち方がある。
+    - 利用者が生成するもの(new TBitmap 等): VCL と同じく delete で破棄する(LCL のオブジェクトも破棄される)。
+    スタックや値メンバに置いてもよい。
+    - 所有者の中身のビュー(Image1->Picture->Bitmap・BitBtn1->Glyph 等): TStrings と同じく中身のハンドルを覚えず、
+    操作のたびに所有者から取得する(TPicture は LoadFromFile 等のたびに中身を作り直すため)。Handle() は nullptr を返す
+    (DLL の関数に渡すハンドルは Current() で得る。保存しないこと)。
+    Picture->Graphic・Glyph 等への代入は、LCL と同じく内容のコピーになる(代入したものは代入した側の持ち物のまま)。
+    読み込めないファイル・形式の違うファイルでは Exception(EFOpenError 等)が送出される。"""
+    Width = _Prop("TGraphic_GetWidth", "TGraphic_SetWidth", _int)
+    Height = _Prop("TGraphic_GetHeight", "TGraphic_SetHeight", _int)
+    Empty = _Prop("TGraphic_GetEmpty", None, _bool)
+    Transparent = _Prop("TGraphic_GetTransparent", "TGraphic_SetTransparent", _bool)
+    # 形式はクラスで決まる(TBitmap に PNG のファイルは読めない)。拡張子で形式を選ぶのは TPicture::LoadFromFile。
+    # ファイル名は UTF-8。
+    def LoadFromFile(self, FileName):
+        lib.TGraphic_LoadFromFile(self._current(), _enc(FileName))
+    def SaveToFile(self, FileName):
+        lib.TGraphic_SaveToFile(self._current(), _enc(FileName))
+    # Source の内容で置き換える(別のクラスのグラフィックからは画素を写して変換する)。nullptr なら空にする。
+    def Assign(self, Source):
+        lib.TGraphic_Assign(self._current(), _h(Source))
+    def Clear(self):
+        lib.TGraphic_Clear(self._current())
+
+
+class TRasterImage(TGraphic):
+    """TBitmap・TPortableNetworkGraphic・TJPEGImage の共通の基底(LCL の TRasterImage)。"""
+    # グラフィックに描く先。グラフィックが所有し、中身が作り直されると別のものになる(ポインタを保存しないこと)。
+    Canvas = _Prop("TRasterImage_GetCanvas", None, _obj("TCanvas"))
+    PixelFormat = _Prop("TRasterImage_GetPixelFormat", "TRasterImage_SetPixelFormat", _enum("TPixelFormat"))
+    TransparentColor = _Prop("TRasterImage_GetTransparentColor", "TRasterImage_SetTransparentColor", _int)
+    TransparentMode = _Prop("TRasterImage_GetTransparentMode", "TRasterImage_SetTransparentMode", _enum("TTransparentMode"))
+
+
+class TCustomBitmap(TRasterImage):
+    def SetSize(self, AWidth, AHeight):
+        lib.TCustomBitmap_SetSize(self._current(), int(AWidth), int(AHeight))
+
+
+class TBitmap(TCustomBitmap):
+    """ビットマップ(.bmp)。new TBitmap で生成して delete で破棄する(VCL と同じ)。"""
+    def __init__(self):
+        self._init_owned(lib.TBitmap_Create())
+
+
+class TPortableNetworkGraphic(TCustomBitmap):
+    """PNG 画像(.png)。LCL の TPortableNetworkGraphic(VCL の TPngImage に当たる)。"""
+    def __init__(self):
+        self._init_owned(lib.TPortableNetworkGraphic_Create())
+
+
+class TJPEGImage(TCustomBitmap):
+    """JPEG 画像(.jpg)。"""
+    def __init__(self):
+        self._init_owned(lib.TJPEGImage_Create())
+    # 保存するときの品質(1〜100。既定は 75)。
+    CompressionQuality = _Prop("TJPEGImage_GetCompressionQuality", "TJPEGImage_SetCompressionQuality", _int)
+
+
+class TPicture(_mixins["TPicture"], TPersistent):
+    """形式を問わない画像の入れ物(LCL の TPicture)。Image1->Picture のように画像コントロールが持つもの(コントロールと寿命が一致する)と、
+    利用者が new TPicture で生成して delete で破棄するものがある。"""
+    def __init__(self):
+        self._init_owned(lib.TPicture_Create())
+    Width = _Prop("TPicture_GetWidth", None, _int)
+    Height = _Prop("TPicture_GetHeight", None, _int)
+    # 拡張子から形式(クラス)を選んで読み込む(.bmp・.png・.jpg 等)。ファイル名は UTF-8。
+    def LoadFromFile(self, FileName):
+        lib.TPicture_LoadFromFile(self._current(), _enc(FileName))
+    def SaveToFile(self, FileName):
+        lib.TPicture_SaveToFile(self._current(), _enc(FileName))
+    # Source の内容で置き換える。nullptr なら空にする。
+    def Assign(self, Source):
+        lib.TPicture_Assign(self._current(), _h(Source))
+    def Clear(self):
+        lib.TPicture_Clear(self._current())
+
+
+class TCustomImageList(TComponent):
+    """同じ大きさの画像の一覧(LCL の TCustomImageList)。TComponent なので、他のコンポーネントと同じく new で生成し、
+    Owner に任せるか Free() で破棄する。ツリービュー・ツールバー等の Images に設定し、項目の ImageIndex で画像を選ぶ。
+    画像を受け取るメソッドは、画像を写して加える(渡したグラフィックは呼び出し側の持ち物のまま)。
+    Add・Insert 等は、画像を Width・Height の大きさに伸縮して 1 つとして加える(VCL と違い、幅が Width の倍数でも分けない)。
+    横に並んだ複数の画像を分けて加えるのは AddSliced。
+    画像リストを破棄すると(Free()・Owner の破棄)、それを Images 等に設定していたコントロールの Images は LCL が nullptr に戻す。"""
+    # 画像の大きさ(既定は 16x16)。
+    Width = _Prop("TCustomImageList_GetWidth", "TCustomImageList_SetWidth", _int)
+    Height = _Prop("TCustomImageList_GetHeight", "TCustomImageList_SetHeight", _int)
+    Count = _Prop("TCustomImageList_GetCount", None, _int)
+    Masked = _Prop("TCustomImageList_GetMasked", "TCustomImageList_SetMasked", _bool)
+    BkColor = _Prop("TCustomImageList_GetBkColor", "TCustomImageList_SetBkColor", _int)
+    DrawingStyle = _Prop("TCustomImageList_GetDrawingStyle", "TCustomImageList_SetDrawingStyle", _enum("TDrawingStyle"))
+    # Clear・Delete・Move・BkColor の変更で呼ばれる(LCL の仕様で、Add・Insert 等では呼ばれない。
+    # BeginUpdate の間は EndUpdate まで遅れる)。
+    OnChange = _Event("TCustomImageList_SetOnChange", "TNotifyEvent")
+    # Mask は nullptr でよい。
+    def Add(self, Image, Mask):
+        _r = lib.TCustomImageList_Add(self._current(), _h(Image), _h(Mask))
+        return _r
+    # Image を横 AHorizontalCount・縦 AVerticalCount に分けて、それぞれを画像として加える。加えた最初の画像の位置を返す。
+    def AddSliced(self, Image, AHorizontalCount, AVerticalCount):
+        _r = lib.TCustomImageList_AddSliced(self._current(), _h(Image), int(AHorizontalCount), int(AVerticalCount))
+        return _r
+    # MaskColor の画素を透明として加える。
+    def AddMasked(self, Image, MaskColor):
+        _r = lib.TCustomImageList_AddMasked(self._current(), _h(Image), int(MaskColor))
+        return _r
+    def Insert(self, Index, Image, Mask):
+        lib.TCustomImageList_Insert(self._current(), int(Index), _h(Image), _h(Mask))
+    def Replace(self, Index, Image, Mask):
+        lib.TCustomImageList_Replace(self._current(), int(Index), _h(Image), _h(Mask))
+    def Delete(self, Index):
+        lib.TCustomImageList_Delete(self._current(), int(Index))
+    def Clear(self):
+        lib.TCustomImageList_Clear(self._current())
+    def Move(self, CurIndex, NewIndex):
+        lib.TCustomImageList_Move(self._current(), int(CurIndex), int(NewIndex))
+    # Index 番目の画像を Image に写す。
+    def GetBitmap(self, Index, Image):
+        lib.TCustomImageList_GetBitmap(self._current(), int(Index), _h(Image))
+    # Canvas の (X, Y) に Index 番目の画像を描く。Enabled が false なら無効の見た目で描く。
+    def Draw(self, Canvas, X, Y, Index, Enabled=True):
+        lib.TCustomImageList_Draw(self._current(), _h(Canvas), int(X), int(Y), int(Index), _b(Enabled))
+    def BeginUpdate(self):
+        lib.TCustomImageList_BeginUpdate(self._current())
+    def EndUpdate(self):
+        lib.TCustomImageList_EndUpdate(self._current())
+
+
+class TImageList(TCustomImageList):
+    """LCL の TImageList は TDragImageList(ドラッグ中の画像の表示)の派生だが、その機能は公開していないため省いた。"""
+    def __init__(self, AOwner):
+        self._attach(lib.TImageList_Create(_h(AOwner)))
+
+
+class TMenuItem(TComponent):
+    """メニューの項目。TControl ではない(Parent/Left 等は無く、画面上の親子関係は Add/Insert で組む)。
+    子の項目は LCL の Items[Index] / Count に合わせ、Items[Index] / Count で参照する。
+    親の項目が破棄されると、子の項目も(Owner が別でも)一緒に破棄される(LCL の仕様。ラッパーも delete される)。"""
+    def __init__(self, AOwner):
+        self._attach(lib.TMenuItem_Create(_h(AOwner)))
+    # "-" を設定すると区切り線になる。
+    Caption = _Prop("TMenuItem_GetCaption", "TMenuItem_SetCaption", _str)
+    Checked = _Prop("TMenuItem_GetChecked", "TMenuItem_SetChecked", _bool)
+    Enabled = _Prop("TMenuItem_GetEnabled", "TMenuItem_SetEnabled", _bool)
+    Visible = _Prop("TMenuItem_GetVisible", "TMenuItem_SetVisible", _bool)
+    # true にすると、選ばれるたびに Checked が反転する(RadioItem なら同じ GroupIndex の他の項目が外れる)。
+    AutoCheck = _Prop("TMenuItem_GetAutoCheck", "TMenuItem_SetAutoCheck", _bool)
+    RadioItem = _Prop("TMenuItem_GetRadioItem", "TMenuItem_SetRadioItem", _bool)
+    # 0〜255。
+    GroupIndex = _Prop("TMenuItem_GetGroupIndex", "TMenuItem_SetGroupIndex", _int)
+    Default = _Prop("TMenuItem_GetDefault", "TMenuItem_SetDefault", _bool)
+    ShortCut = _Prop("TMenuItem_GetShortCut", "TMenuItem_SetShortCut", _int)
+    Hint = _Prop("TMenuItem_GetHint", "TMenuItem_SetHint", _str)
+    OnClick = _Event("TMenuItem_SetOnClick", "TNotifyEvent")
+    Count = _Prop("TMenuItem_GetCount", None, _int)
+    # 親の項目。メニューの直下の項目なら、そのメニューの Items(ルート)。どこにも追加されていなければ nullptr。
+    Parent = _Prop("TMenuItem_GetParent", None, _existing("TMenuItem"))
+    # 子の項目(MenuItem->Items[i]->Caption のように使う)。
+    Items = _Indexed("TMenuItem_GetItem", None, _existing("TMenuItem"))
+    # 画像の、メニューの Images(または親の項目の SubMenuImages)での位置(-1 なら無し。docs/adr/0030)。
+    ImageIndex = _Prop("TMenuItem_GetImageIndex", "TMenuItem_SetImageIndex", _int)
+    # 子の項目の画像リスト(設定すると、子の項目は TMenu::Images の代わりにこれを使う)。
+    SubMenuImages = _Prop("TMenuItem_GetSubMenuImages", "TMenuItem_SetSubMenuImages", _comp("TCustomImageList"))
+    # 項目の画像(ImageIndex を使わない場合)。項目が所有する TBitmap のビューで、初めて参照したときに作られる。代入は内容のコピー。
+    Bitmap = _Prop("TMenuItem_GetBitmap", "TMenuItem_SetBitmap", _view("TBitmap"))
+    def Add(self, Item):
+        lib.TMenuItem_Add(self._current(), _h(Item))
+    def Insert(self, Index, Item):
+        lib.TMenuItem_Insert(self._current(), int(Index), _h(Item))
+    # Delete/Remove は子から外すだけで破棄しない(VCL と同じ)。Clear はすべての子を破棄する。
+    def Delete(self, Index):
+        lib.TMenuItem_Delete(self._current(), int(Index))
+    def Remove(self, Item):
+        lib.TMenuItem_Remove(self._current(), _h(Item))
+    def Clear(self):
+        lib.TMenuItem_Clear(self._current())
+    def IndexOf(self, Item):
+        _r = lib.TMenuItem_IndexOf(self._current(), _h(Item))
+        return _r
+    # 区切り線を末尾に追加する(項目は LCL が内部で生成する。GetItem で取得できる)。
+    def AddSeparator(self):
+        lib.TMenuItem_AddSeparator(self._current())
+    def IsLine(self):
+        _r = lib.TMenuItem_IsLine(self._current())
+        return _r != 0
+    # 利用者が項目を選んだときと同じ処理(AutoCheck の反映と OnClick)を行う。
+    def Click(self):
+        lib.TMenuItem_Click(self._current())
+
+
+class TMenu(TComponent):
+    """TMainMenu・TPopupMenu の共通の基底。Items はメニューのルートの項目で、メニュー自身が(LCL の内部で)生成・所有する。
+    メニューに表示する項目は Items->Add(...) で追加する。"""
+    Items = _Prop("TMenu_GetItems", None, _existing("TMenuItem"))
+    # 項目の画像リスト(docs/adr/0030)。各項目の画像は TMenuItem::ImageIndex。
+    Images = _Prop("TMenu_GetImages", "TMenu_SetImages", _comp("TCustomImageList"))
+
+
+class TMainMenu(TMenu):
+    """フォームのメニューバー。TForm::Menu に割り当てると表示される。"""
+    def __init__(self, AOwner):
+        self._attach(lib.TMainMenu_Create(_h(AOwner)))
+
+
+class TPopupMenu(TMenu):
+    """右クリック等で開くメニュー。TControl::PopupMenu に割り当てると、そのコントロールの右クリックで開く(AutoPopup が true のとき)。"""
+    def __init__(self, AOwner):
+        self._attach(lib.TPopupMenu_Create(_h(AOwner)))
+    AutoPopup = _Prop("TPopupMenu_GetAutoPopup", "TPopupMenu_SetAutoPopup", _bool)
+    # 右クリックでメニューを開いたコンポーネント(OnPopup の中で、どこから開かれたかを知るのに使う)。
+    # C++ ラッパーを介さずに作られたコンポーネントの場合は nullptr になる。
+    PopupComponent = _Prop("TPopupMenu_GetPopupComponent", "TPopupMenu_SetPopupComponent", _comp("TComponent"))
+    # 開く直前に呼ばれる。
+    OnPopup = _Event("TPopupMenu_SetOnPopup", "TNotifyEvent")
+    # 閉じた後に呼ばれる。
+    OnClose = _Event("TPopupMenu_SetOnClose", "TNotifyEvent")
+    # X, Y はスクリーン座標。Win32 ではメニューが閉じるまで戻らない。
+    def Popup(self, X, Y):
+        lib.TPopupMenu_Popup(self._current(), int(X), int(Y))
+
+
+class TControl(TComponent):
+    Parent = _Prop("TControl_GetParent", "TControl_SetParent", _comp("TWinControl"))
+    Left = _Prop("TControl_GetLeft", "TControl_SetLeft", _int)
+    Top = _Prop("TControl_GetTop", "TControl_SetTop", _int)
+    Width = _Prop("TControl_GetWidth", "TControl_SetWidth", _int)
+    Height = _Prop("TControl_GetHeight", "TControl_SetHeight", _int)
+    Visible = _Prop("TControl_GetVisible", "TControl_SetVisible", _bool)
+    Enabled = _Prop("TControl_GetEnabled", "TControl_SetEnabled", _bool)
+    Caption = _Prop("TControl_GetCaption", "TControl_SetCaption", _str)
+    # 既定値はクラスごとに異なる(多くは alNone、TStatusBar は alBottom、TSplitter は alLeft)。
+    Align = _Prop("TControl_GetAlign", "TControl_SetAlign", _enum("TAlign"))
+    # true にすると、内容(TImage なら画像)に合わせて大きさを LCL が決める(docs/adr/0029)。
+    AutoSize = _Prop("TControl_GetAutoSize", "TControl_SetAutoSize", _bool)
+    # 右クリックで開くメニュー。C++ ラッパーを介さずに作られたメニューの場合は nullptr になる。
+    PopupMenu = _Prop("TControl_GetPopupMenu", "TControl_SetPopupMenu", _comp("TPopupMenu"))
+    OnClick = _Event("TControl_SetOnClick", "TNotifyEvent")
+    OnDblClick = _Event("TControl_SetOnDblClick", "TNotifyEvent")
+    # LCL では他のウィンドウメッセージへの応答等で発生し、必ずしもユーザー操作直後とは限らない。
+    OnResize = _Event("TControl_SetOnResize", "TNotifyEvent")
+    OnMouseDown = _Event("TControl_SetOnMouseDown", "TMouseEvent")
+    OnMouseUp = _Event("TControl_SetOnMouseUp", "TMouseEvent")
+    OnMouseMove = _Event("TControl_SetOnMouseMove", "TMouseMoveEvent")
+    OnMouseEnter = _Event("TControl_SetOnMouseEnter", "TNotifyEvent")
+    OnMouseLeave = _Event("TControl_SetOnMouseLeave", "TNotifyEvent")
+    OnMouseWheel = _Event("TControl_SetOnMouseWheel", "TMouseWheelEvent")
+    def Show(self):
+        lib.TControl_Show(self._current())
+    def Hide(self):
+        lib.TControl_Hide(self._current())
+    # LCL では TControl の protected。TCustomEdit / TCustomComboBox が公開する。
+    _Text = _Prop("TControl_GetText", "TControl_SetText", _str)
+
+
+class TWinControl(TControl):
+    OnKeyDown = _Event("TWinControl_SetOnKeyDown", "TKeyEvent")
+    OnKeyUp = _Event("TWinControl_SetOnKeyUp", "TKeyEvent")
+    OnKeyPress = _Event("TWinControl_SetOnKeyPress", "TKeyPressEvent")
+
+
+class TCustomScrollBar(TWinControl):
+    Kind = _Prop("TCustomScrollBar_GetKind", "TCustomScrollBar_SetKind", _enum("TScrollBarKind"))
+    Min = _Prop("TCustomScrollBar_GetMin", "TCustomScrollBar_SetMin", _int)
+    Max = _Prop("TCustomScrollBar_GetMax", "TCustomScrollBar_SetMax", _int)
+    Position = _Prop("TCustomScrollBar_GetPosition", "TCustomScrollBar_SetPosition", _int)
+    PageSize = _Prop("TCustomScrollBar_GetPageSize", "TCustomScrollBar_SetPageSize", _int)
+    OnChange = _Event("TCustomScrollBar_SetOnChange", "TNotifyEvent")
+
+
+class TScrollBar(TCustomScrollBar):
+    def __init__(self, AOwner):
+        self._attach(lib.TScrollBar_Create(_h(AOwner)))
+
+
+class TCustomTrackBar(TWinControl):
+    """つまみをドラッグして値を選ぶスライダー。"""
+    Min = _Prop("TCustomTrackBar_GetMin", "TCustomTrackBar_SetMin", _int)
+    Max = _Prop("TCustomTrackBar_GetMax", "TCustomTrackBar_SetMax", _int)
+    Position = _Prop("TCustomTrackBar_GetPosition", "TCustomTrackBar_SetPosition", _int)
+    OnChange = _Event("TCustomTrackBar_SetOnChange", "TNotifyEvent")
+
+
+class TTrackBar(TCustomTrackBar):
+    def __init__(self, AOwner):
+        self._attach(lib.TTrackBar_Create(_h(AOwner)))
+
+
+class TCustomProgressBar(TWinControl):
+    """進捗を表示する表示専用コントロール(イベントは無い)。"""
+    Min = _Prop("TCustomProgressBar_GetMin", "TCustomProgressBar_SetMin", _int)
+    Max = _Prop("TCustomProgressBar_GetMax", "TCustomProgressBar_SetMax", _int)
+    Position = _Prop("TCustomProgressBar_GetPosition", "TCustomProgressBar_SetPosition", _int)
+
+
+class TProgressBar(TCustomProgressBar):
+    def __init__(self, AOwner):
+        self._attach(lib.TProgressBar_Create(_h(AOwner)))
+
+
+class TGraphicControl(TControl):
+    pass
+
+
+class TCustomControl(TWinControl):
+    pass
+
+
+class TUpDown(TCustomControl):
+    """Edit 等に付属する上下矢印。Min/Max/Position/Increment/Associate は LCL では TCustomUpDown の
+    protected だが、唯一の具象クラス TUpDown が published にしているため、TUpDown に直接置く
+    (TCheckBox の Checked と同じ形)。OnClick/OnChanging は独自のシグネチャのため今回は未対応。"""
+    def __init__(self, AOwner):
+        self._attach(lib.TUpDown_Create(_h(AOwner)))
+    Min = _Prop("TUpDown_GetMin", "TUpDown_SetMin", _int)
+    Max = _Prop("TUpDown_GetMax", "TUpDown_SetMax", _int)
+    Position = _Prop("TUpDown_GetPosition", "TUpDown_SetPosition", _int)
+    Increment = _Prop("TUpDown_GetIncrement", "TUpDown_SetIncrement", _int)
+    # 値を増減させる対象のコントロール(TEdit 等)。
+    Associate = _Prop("TUpDown_GetAssociate", "TUpDown_SetAssociate", _comp("TWinControl"))
+
+
+class TScrollingWinControl(TCustomControl):
+    pass
+
+
+class TScrollBox(TScrollingWinControl):
+    """スクロール可能な汎用コンテナ。TScrollingWinControl の直接の派生で、追加のメンバは無い。"""
+    def __init__(self, AOwner):
+        self._attach(lib.TScrollBox_Create(_h(AOwner)))
+
+
+class TCustomForm(_mixins["TCustomForm"], TScrollingWinControl):
+    # LCL の TCustomForm は Show/Hide を独自に宣言している(TControl のものを隠す)。
+    def Show(self):
+        lib.TCustomForm_Show(self._current())
+    def Hide(self):
+        lib.TCustomForm_Hide(self._current())
+    def ShowModal(self):
+        _r = lib.TCustomForm_ShowModal(self._current())
+        return _r
+    def Close(self):
+        lib.TCustomForm_Close(self._current())
+    # 保留中のメッセージを処理し終えてから破棄する(破棄後はラッパーも delete される)。
+    # Free() と違い、フォーム自身やその子のイベントハンドラの中からでも安全に呼べる。
+    def Release(self):
+        lib.TCustomForm_Release(self._current())
+    OnHide = _Event("TCustomForm_SetOnHide", "TNotifyEvent")
+    OnActivate = _Event("TCustomForm_SetOnActivate", "TNotifyEvent")
+    OnDeactivate = _Event("TCustomForm_SetOnDeactivate", "TNotifyEvent")
+    OnCloseQuery = _Event("TCustomForm_SetOnCloseQuery", "TCloseQueryEvent")
+    OnClose = _Event("TCustomForm_SetOnClose", "TCloseEvent")
+    # 破棄の最初に呼ばれる(子コントロールはまだ有効)。このあとラッパーも delete される。
+    OnDestroy = _Event("TCustomForm_SetOnDestroy", "TNotifyEvent")
+    # フォームのメニューバー。nullptr を代入すると外す(メニュー自体は破棄されない)。
+    Menu = _Prop("TCustomForm_GetMenu", "TCustomForm_SetMenu", _comp("TMainMenu"))
+
+
+class TForm(_mixins["TForm"], TCustomForm):
+    pass
+
+
+class TApplication(_mixins["TApplication"], TComponent):
+    """C++Builder の TApplication。LCL の TApplication は FCL の TCustomApplication の派生だが、
+    C++Builder に合わせて TComponent 直下に置く。インスタンスはグローバル変数 Application の 1 つだけ。
+    Application が所有するフォーム(CreateForm や new TForm(Application) で生成したもの)は、
+    プログラムの終了時(main から戻った後)にまとめて破棄され、ラッパーのデストラクタも呼ばれる。"""
+    # CreateForm で最初に生成したフォーム。Run はこれを表示し、これが閉じられると戻る。
+    MainForm = _Prop("TApplication_GetMainForm", None, _comp("TForm"))
+    Terminated = _Prop("TApplication_GetTerminated", None, _bool)
+    Title = _Prop("TApplication_GetTitle", "TApplication_SetTitle", _str)
+    ShowMainForm = _Prop("TApplication_GetShowMainForm", "TApplication_SetShowMainForm", _bool)
+    def Run(self):
+        lib.TApplication_Run(self._current())
+    def ProcessMessages(self):
+        lib.TApplication_ProcessMessages(self._current())
+    def Terminate(self):
+        lib.TApplication_Terminate(self._current())
+
+
+class TCustomPanel(TCustomControl):
+    pass
+
+
+class TPanel(TCustomPanel):
+    def __init__(self, AOwner):
+        self._attach(lib.TPanel_Create(_h(AOwner)))
+
+
+class TCustomGroupBox(TWinControl):
+    pass
+
+
+class TGroupBox(TCustomGroupBox):
+    def __init__(self, AOwner):
+        self._attach(lib.TGroupBox_Create(_h(AOwner)))
+
+
+class TCustomRadioGroup(TCustomGroupBox):
+    """ラジオボタンの一覧を項目文字列から自動生成するグループ。OnClick は TControl のものとは別の、
+    このクラス自身のイベント(いずれかのボタンが押されたときに呼ばれる)。"""
+    ItemIndex = _Prop("TCustomRadioGroup_GetItemIndex", "TCustomRadioGroup_SetItemIndex", _int)
+    OnClick = _Event("TCustomRadioGroup_SetOnClick", "TNotifyEvent")
+    # 文字列の一覧(TStrings。RadioGroup1->Items->Add("x") のように使う)。
+    Items = _Prop("TCustomRadioGroup_GetItems", None, _view("TStrings"))
+
+
+class TRadioGroup(TCustomRadioGroup):
+    def __init__(self, AOwner):
+        self._attach(lib.TRadioGroup_Create(_h(AOwner)))
+
+
+class TCustomCheckGroup(TCustomGroupBox):
+    """チェックボックスの一覧を項目文字列から自動生成するグループ。"""
+    # 文字列の一覧(TStrings。CheckGroup1->Items->Add("x") のように使う)。
+    Items = _Prop("TCustomCheckGroup_GetItems", None, _view("TStrings"))
+    # 項目ごとのチェックの状態(CheckGroup1->Checked[i] = true;)。
+    Checked = _Indexed("TCustomCheckGroup_GetChecked", "TCustomCheckGroup_SetChecked", _bool)
+
+
+class TCheckGroup(TCustomCheckGroup):
+    def __init__(self, AOwner):
+        self._attach(lib.TCheckGroup_Create(_h(AOwner)))
+
+
+class TCustomLabel(TGraphicControl):
+    pass
+
+
+class TLabel(TCustomLabel):
+    def __init__(self, AOwner):
+        self._attach(lib.TLabel_Create(_h(AOwner)))
+
+
+class TBoundLabel(TCustomLabel):
+    """TLabeledEdit の EditLabel。LCL が LabeledEdit の生成時に内部で作るラベルで、利用者は生成しない
+    (LabeledEdit と一緒に破棄される)。Caption 等は TControl のものを使う。"""
+
+
+class TBevel(TGraphicControl):
+    def __init__(self, AOwner):
+        self._attach(lib.TBevel_Create(_h(AOwner)))
+    Shape = _Prop("TBevel_GetShape", "TBevel_SetShape", _enum("TBevelShape"))
+    Style = _Prop("TBevel_GetStyle", "TBevel_SetStyle", _enum("TBevelStyle"))
+
+
+class TButtonControl(TWinControl):
+    # LCL では TButtonControl の protected。TCheckBox / TRadioButton が公開する。
+    _Checked = _Prop("TButtonControl_GetChecked", "TButtonControl_SetChecked", _bool)
+
+
+class TCustomButton(TButtonControl):
+    pass
+
+
+class TButton(TCustomButton):
+    def __init__(self, AOwner):
+        self._attach(lib.TButton_Create(_h(AOwner)))
+
+
+class TCustomBitBtn(TCustomButton):
+    Kind = _Prop("TCustomBitBtn_GetKind", "TCustomBitBtn_SetKind", _enum("TBitBtnKind"))
+    # ボタンの画像。ボタンが所有する TBitmap のビューで、ボタンと寿命が一致する(docs/adr/0029)。
+    # 代入は内容のコピー(nullptr なら画像を無くす)。代入すると NumGlyphs は画像の幅と高さの比から LCL が決め直す。
+    Glyph = _Prop("TCustomBitBtn_GetGlyph", "TCustomBitBtn_SetGlyph", _view("TBitmap"))
+    # 横に並べた状態別(通常・無効・押下・下がったまま)の画像の数(1〜4)。
+    NumGlyphs = _Prop("TCustomBitBtn_GetNumGlyphs", "TCustomBitBtn_SetNumGlyphs", _int)
+    Layout = _Prop("TCustomBitBtn_GetLayout", "TCustomBitBtn_SetLayout", _enum("TButtonLayout"))
+    # 端から画像までの距離(-1(既定)なら画像と文字列をまとめて中央に置く)。
+    Margin = _Prop("TCustomBitBtn_GetMargin", "TCustomBitBtn_SetMargin", _int)
+    # 画像と文字列の間隔。
+    Spacing = _Prop("TCustomBitBtn_GetSpacing", "TCustomBitBtn_SetSpacing", _int)
+    # 画像リスト(docs/adr/0030)。設定すると、Glyph の代わりに Images の ImageIndex 番目の画像を表示する。
+    Images = _Prop("TCustomBitBtn_GetImages", "TCustomBitBtn_SetImages", _comp("TCustomImageList"))
+    ImageIndex = _Prop("TCustomBitBtn_GetImageIndex", "TCustomBitBtn_SetImageIndex", _int)
+
+
+class TBitBtn(TCustomBitBtn):
+    def __init__(self, AOwner):
+        self._attach(lib.TBitBtn_Create(_h(AOwner)))
+
+
+class TCustomCheckBox(TButtonControl):
+    pass
+
+
+class TCheckBox(TCustomCheckBox):
+    Checked = TButtonControl._Checked
+    def __init__(self, AOwner):
+        self._attach(lib.TCheckBox_Create(_h(AOwner)))
+
+
+class TRadioButton(TCustomCheckBox):
+    Checked = TButtonControl._Checked
+    def __init__(self, AOwner):
+        self._attach(lib.TRadioButton_Create(_h(AOwner)))
+
+
+class TToggleBox(TCustomCheckBox):
+    """オン/オフの状態をボタン風の見た目で表す。TCustomCheckBox の直接の派生で、Checked を共有する。"""
+    Checked = TButtonControl._Checked
+    def __init__(self, AOwner):
+        self._attach(lib.TToggleBox_Create(_h(AOwner)))
+
+
+class TCustomEdit(TWinControl):
+    Text = TControl._Text
+    MaxLength = _Prop("TCustomEdit_GetMaxLength", "TCustomEdit_SetMaxLength", _int)
+    ReadOnly = _Prop("TCustomEdit_GetReadOnly", "TCustomEdit_SetReadOnly", _bool)
+    OnChange = _Event("TCustomEdit_SetOnChange", "TNotifyEvent")
+
+
+class TEdit(TCustomEdit):
+    def __init__(self, AOwner):
+        self._attach(lib.TEdit_Create(_h(AOwner)))
+
+
+class TCustomFloatSpinEdit(TCustomEdit):
+    """実数のスピンエディット。OnChange は基底 TCustomEdit のものをそのまま使う。"""
+    Value = _Prop("TCustomFloatSpinEdit_GetValue", "TCustomFloatSpinEdit_SetValue", _float)
+    MinValue = _Prop("TCustomFloatSpinEdit_GetMinValue", "TCustomFloatSpinEdit_SetMinValue", _float)
+    MaxValue = _Prop("TCustomFloatSpinEdit_GetMaxValue", "TCustomFloatSpinEdit_SetMaxValue", _float)
+    Increment = _Prop("TCustomFloatSpinEdit_GetIncrement", "TCustomFloatSpinEdit_SetIncrement", _float)
+    DecimalPlaces = _Prop("TCustomFloatSpinEdit_GetDecimalPlaces", "TCustomFloatSpinEdit_SetDecimalPlaces", _int)
+
+
+class TFloatSpinEdit(TCustomFloatSpinEdit):
+    def __init__(self, AOwner):
+        self._attach(lib.TFloatSpinEdit_Create(_h(AOwner)))
+
+
+class TCustomSpinEdit(TCustomFloatSpinEdit):
+    """整数のスピンエディット。LCL では TCustomFloatSpinEdit の派生で、Value/MinValue/MaxValue/Increment を
+    Integer で再宣言して Double 版を隠す。C++ でも同じ名前の Property<int> で基底の Property<double> を隠す
+    (C++ の名前隠蔽により、TCustomSpinEdit* 経由では int 版だけが見える)。"""
+    Value = _Prop("TCustomSpinEdit_GetValue", "TCustomSpinEdit_SetValue", _int)
+    MinValue = _Prop("TCustomSpinEdit_GetMinValue", "TCustomSpinEdit_SetMinValue", _int)
+    MaxValue = _Prop("TCustomSpinEdit_GetMaxValue", "TCustomSpinEdit_SetMaxValue", _int)
+    Increment = _Prop("TCustomSpinEdit_GetIncrement", "TCustomSpinEdit_SetIncrement", _int)
+
+
+class TSpinEdit(TCustomSpinEdit):
+    def __init__(self, AOwner):
+        self._attach(lib.TSpinEdit_Create(_h(AOwner)))
+
+
+class TMaskEdit(TCustomEdit):
+    """書式付き入力(郵便番号・電話番号等)。EditMask は TCustomMaskEdit では protected だが、
+    唯一の具象クラス TMaskEdit が published にしているため、TMaskEdit に直接置く(TUpDown と同じ形)。"""
+    def __init__(self, AOwner):
+        self._attach(lib.TMaskEdit_Create(_h(AOwner)))
+    EditMask = _Prop("TMaskEdit_GetEditMask", "TMaskEdit_SetEditMask", _str)
+
+
+class TCustomLabeledEdit(TCustomEdit):
+    """ラベル付きのエディット。EditLabel は LCL が内部で生成したラベルで、初めて取得したときにラッパーが作られる(docs/adr/0028)。
+    ラベルの Parent と位置は、エディットの Parent・LabelPosition・LabelSpacing に合わせて LCL が決める
+    (位置の反映はフォームの配置が行われるとき。Align と同じく、表示までは行われないことがある)。"""
+    EditLabel = _Prop("TCustomLabeledEdit_GetEditLabel", None, _existing("TBoundLabel"))
+    LabelPosition = _Prop("TCustomLabeledEdit_GetLabelPosition", "TCustomLabeledEdit_SetLabelPosition", _enum("TLabelPosition"))
+    # ラベルとエディットの間隔(既定は 3)。
+    LabelSpacing = _Prop("TCustomLabeledEdit_GetLabelSpacing", "TCustomLabeledEdit_SetLabelSpacing", _int)
+
+
+class TLabeledEdit(TCustomLabeledEdit):
+    def __init__(self, AOwner):
+        self._attach(lib.TLabeledEdit_Create(_h(AOwner)))
+
+
+class TCustomTabControl(TWinControl):
+    """TTabControl と TPageControl の共通の基底。以下のメンバは LCL の TCustomTabControl の public。"""
+    # ページ(TPageControl なら TTabSheet)の数。TTabControl では Tabs の数と同じ。
+    PageCount = _Prop("TCustomTabControl_GetPageCount", None, _int)
+    MultiLine = _Prop("TCustomTabControl_GetMultiLine", "TCustomTabControl_SetMultiLine", _bool)
+    ShowTabs = _Prop("TCustomTabControl_GetShowTabs", "TCustomTabControl_SetShowTabs", _bool)
+    TabPosition = _Prop("TCustomTabControl_GetTabPosition", "TCustomTabControl_SetTabPosition", _enum("TTabPosition"))
+    # 利用者の操作でページが切り替わる前に呼ばれる。
+    OnChanging = _Event("TCustomTabControl_SetOnChanging", "TTabChangingEvent")
+    # タブの画像リスト(docs/adr/0030)。各ページの画像は TCustomPage::ImageIndex。
+    Images = _Prop("TCustomTabControl_GetImages", "TCustomTabControl_SetImages", _comp("TCustomImageList"))
+
+
+class TTabControl(TCustomTabControl):
+    """単純なタブの切り替え UI(ページはコントロール自身では管理しない)。Tabs/TabIndex/OnChange は
+    LCL では TCustomTabControl の protected だが、TTabControl が独自のフィールドで再宣言して published に
+    しているため、すべて TTabControl に直接置く(TUpDown と同じ形)。ページ付きのタブは TPageControl。"""
+    def __init__(self, AOwner):
+        self._attach(lib.TTabControl_Create(_h(AOwner)))
+    TabIndex = _Prop("TTabControl_GetTabIndex", "TTabControl_SetTabIndex", _int)
+    OnChange = _Event("TTabControl_SetOnChange", "TNotifyEvent")
+    # 文字列の一覧(TStrings。TabControl1->Tabs->Add("x") のように使う)。
+    Tabs = _Prop("TTabControl_GetTabs", None, _view("TStrings"))
+
+
+class TPageControl(TCustomTabControl):
+    """ページ付きのタブ。ページ(TTabSheet)は VCL と同じく、TTabSheet を生成して PageControl を設定するか、
+    AddTabSheet で追加する。ページの上のコントロールは、ページを Parent にして置く。
+    Pages[Index] は読み取り専用のインデックス付きプロパティ(ReadOnlyIndexedProperty)。"""
+    def __init__(self, AOwner):
+        self._attach(lib.TPageControl_Create(_h(AOwner)))
+    # ページが 1 つも無ければ nullptr。
+    ActivePage = _Prop("TPageControl_GetActivePage", "TPageControl_SetActivePage", _existing("TTabSheet"))
+    ActivePageIndex = _Prop("TPageControl_GetActivePageIndex", "TPageControl_SetActivePageIndex", _int)
+    # 表示されているタブの中での位置(TabVisible が false のページは数えない)。
+    TabIndex = _Prop("TPageControl_GetTabIndex", "TPageControl_SetTabIndex", _int)
+    # ページが切り替わった後に呼ばれる。プログラムからの ActivePage・ActivePageIndex の変更では呼ばれないが、
+    # TCustomPage::PageIndex でページを並べ替えたときは(表示中のページの位置が変わるため)呼ばれる。
+    OnChange = _Event("TPageControl_SetOnChange", "TNotifyEvent")
+    Pages = _Indexed("TPageControl_GetPage", None, _existing("TTabSheet"))
+    # ページを末尾に追加する。ページは LCL が内部で生成し、Owner はこのページコントロールになる。
+    def AddTabSheet(self):
+        _r = lib.TPageControl_AddTabSheet(self._current())
+        return _to_existing("TTabSheet", _r)
+    # すべてのページを外して破棄する。破棄は LCL の遅延破棄(Application.ReleaseComponent)で、次にメッセージを
+    # 処理したとき(または Owner の破棄時)に行われ、そのときにページのラッパーも delete される。
+    def Clear(self):
+        lib.TPageControl_Clear(self._current())
+    def SelectNextPage(self, GoForward):
+        lib.TPageControl_SelectNextPage(self._current(), _b(GoForward))
+
+
+class TCustomPage(TWinControl):
+    """ページの共通の基底(LCL の TCustomPage。TWinControl の直接の派生)。"""
+    # ページの並び順。書き換えるとタブの位置が移動する。
+    PageIndex = _Prop("TCustomPage_GetPageIndex", "TCustomPage_SetPageIndex", _int)
+    TabVisible = _Prop("TCustomPage_GetTabVisible", "TCustomPage_SetTabVisible", _bool)
+    # ページが表示された/隠されたときに呼ばれる。
+    OnShow = _Event("TCustomPage_SetOnShow", "TNotifyEvent")
+    OnHide = _Event("TCustomPage_SetOnHide", "TNotifyEvent")
+    # タブに表示する画像の、PageControl の Images での位置(-1 なら無し。docs/adr/0030)。
+    ImageIndex = _Prop("TCustomPage_GetImageIndex", "TCustomPage_SetImageIndex", _int)
+
+
+class TTabSheet(TCustomPage):
+    """TPageControl のページ。タブの文字列は Caption。"""
+    def __init__(self, AOwner):
+        self._attach(lib.TTabSheet_Create(_h(AOwner)))
+    # 設定するとそのページコントロールの末尾に追加される(nullptr で外す)。
+    PageControl = _Prop("TTabSheet_GetPageControl", "TTabSheet_SetPageControl", _comp("TPageControl"))
+    # 表示されているタブの中での位置(TabVisible が false なら -1)。
+    TabIndex = _Prop("TTabSheet_GetTabIndex", None, _int)
+
+
+class TTreeNode(TPersistent, _ItemMixin):
+    """ツリービューのノード。TComponent ではない(LCL でも TPersistent)ため、new/Free() はせず、
+    TTreeNodes::Add 等で追加し、Delete() 等で削除する。
+    C++ のラッパーは初めて取得したときに作られ、同じノードには常に同じポインタが返る(ポインタ同士を比較してよい)。
+    ノードが削除されると(ツリービューの破棄に伴う削除も含め)、OnDeletion などの削除の処理がすべて終わった後にラッパーも delete される。
+    削除後にそのポインタへ触れてはならない。
+    Items[Index] は直下の子(読み取り専用のインデックス付きプロパティ)。"""
+    Text = _Prop("TTreeNode_GetText", "TTreeNode_SetText", _str)
+    Expanded = _Prop("TTreeNode_GetExpanded", "TTreeNode_SetExpanded", _bool)
+    Selected = _Prop("TTreeNode_GetSelected", "TTreeNode_SetSelected", _bool)
+    # 子が無くても展開ボタンを表示するとき(子を遅延で追加するとき等)に true にする。
+    HasChildren = _Prop("TTreeNode_GetHasChildren", "TTreeNode_SetHasChildren", _bool)
+    # 利用者データ(LCL は解釈しない)。
+    Data = _Prop("TTreeNode_GetData", "TTreeNode_SetData", _ptr)
+    # 直下の子の数・兄弟の中での位置・深さ(最上位が 0)・上から順に数えた位置。
+    Count = _Prop("TTreeNode_GetCount", None, _int)
+    Index = _Prop("TTreeNode_GetIndex", None, _int)
+    Level = _Prop("TTreeNode_GetLevel", None, _int)
+    AbsoluteIndex = _Prop("TTreeNode_GetAbsoluteIndex", None, _int)
+    # 最上位のノードなら nullptr。
+    Parent = _Prop("TTreeNode_GetParent", None, _item("TTreeNode"))
+    TreeView = _Prop("TTreeNode_GetTreeView", None, _comp("TCustomTreeView"))
+    # 直下の子(Node->Items[i])。
+    Items = _Indexed("TTreeNode_GetItem", None, _item("TTreeNode"))
+    # 画像の、ツリービューの Images での位置(-1 なら無し。docs/adr/0030)。SelectedIndex は選択中の画像(-1 なら ImageIndex と同じ)。
+    ImageIndex = _Prop("TTreeNode_GetImageIndex", "TTreeNode_SetImageIndex", _int)
+    SelectedIndex = _Prop("TTreeNode_GetSelectedIndex", "TTreeNode_SetSelectedIndex", _int)
+    # StateImages での位置。OverlayIndex は重ねて描く画像の、Images での位置。
+    StateIndex = _Prop("TTreeNode_GetStateIndex", "TTreeNode_SetStateIndex", _int)
+    OverlayIndex = _Prop("TTreeNode_GetOverlayIndex", "TTreeNode_SetOverlayIndex", _int)
+    # 以下のノードを返すメンバは、該当するノードが無ければ nullptr を返す。
+    def GetFirstChild(self):
+        _r = lib.TTreeNode_GetFirstChild(self._current())
+        return _to_item("TTreeNode", _r)
+    def GetLastChild(self):
+        _r = lib.TTreeNode_GetLastChild(self._current())
+        return _to_item("TTreeNode", _r)
+    def GetNextSibling(self):
+        _r = lib.TTreeNode_GetNextSibling(self._current())
+        return _to_item("TTreeNode", _r)
+    def GetPrevSibling(self):
+        _r = lib.TTreeNode_GetPrevSibling(self._current())
+        return _to_item("TTreeNode", _r)
+    # 上から順(子孫を含む)の次/前のノード。
+    def GetNext(self):
+        _r = lib.TTreeNode_GetNext(self._current())
+        return _to_item("TTreeNode", _r)
+    def GetPrev(self):
+        _r = lib.TTreeNode_GetPrev(self._current())
+        return _to_item("TTreeNode", _r)
+    def IndexOf(self, Node):
+        _r = lib.TTreeNode_IndexOf(self._current(), _h(Node))
+        return _r
+    def Expand(self, Recurse):
+        lib.TTreeNode_Expand(self._current(), _b(Recurse))
+    def Collapse(self, Recurse):
+        lib.TTreeNode_Collapse(self._current(), _b(Recurse))
+    # このノード(と子孫)を削除する。このラッパーも delete されるため、呼び出し後に触れてはならない。
+    def Delete(self):
+        lib.TTreeNode_Delete(self._current())
+    def DeleteChildren(self):
+        lib.TTreeNode_DeleteChildren(self._current())
+    # 祖先を展開し、ノードが見えるようにスクロールする。
+    def MakeVisible(self):
+        lib.TTreeNode_MakeVisible(self._current())
+    def MoveTo(self, Destination, Mode):
+        lib.TTreeNode_MoveTo(self._current(), _h(Destination), int(Mode))
+
+
+class TTreeNodes(TPersistent):
+    """ツリービューのノードの一覧(LCL の TTreeNodes)。ツリービューが所有する実体への非所有のビューで、
+    TCanvas と同じくツリービューのメンバとして持ち、ツリービューと寿命が一致する(TCustomTreeView::Items で参照する)。
+    Sibling/Parent に nullptr を渡すと最上位のノードになる(VCL と同じ)。"""
+    # すべてのノード(子孫を含む)の数。GetItem の Index は、上から順に数えた位置(AbsoluteIndex)。
+    Count = _Prop("TTreeNodes_GetCount", None, _int)
+    # 上から順(子孫を含む)に数えた位置のノード(TreeView1->Items->Item[i])。
+    Item = _Indexed("TTreeNodes_GetItem", None, _item("TTreeNode"))
+    def Add(self, Sibling, S):
+        _r = lib.TTreeNodes_Add(self._current(), _h(Sibling), _enc(S))
+        return _to_item("TTreeNode", _r)
+    def AddFirst(self, Sibling, S):
+        _r = lib.TTreeNodes_AddFirst(self._current(), _h(Sibling), _enc(S))
+        return _to_item("TTreeNode", _r)
+    def AddChild(self, Parent, S):
+        _r = lib.TTreeNodes_AddChild(self._current(), _h(Parent), _enc(S))
+        return _to_item("TTreeNode", _r)
+    def AddChildFirst(self, Parent, S):
+        _r = lib.TTreeNodes_AddChildFirst(self._current(), _h(Parent), _enc(S))
+        return _to_item("TTreeNode", _r)
+    # NextNode の前に挿入する。
+    def Insert(self, NextNode, S):
+        _r = lib.TTreeNodes_Insert(self._current(), _h(NextNode), _enc(S))
+        return _to_item("TTreeNode", _r)
+    def Clear(self):
+        lib.TTreeNodes_Clear(self._current())
+    def Delete(self, Node):
+        lib.TTreeNodes_Delete(self._current(), _h(Node))
+    def GetFirstNode(self):
+        _r = lib.TTreeNodes_GetFirstNode(self._current())
+        return _to_item("TTreeNode", _r)
+    def FindNodeWithText(self, S):
+        _r = lib.TTreeNodes_FindNodeWithText(self._current(), _enc(S))
+        return _to_item("TTreeNode", _r)
+    def BeginUpdate(self):
+        lib.TTreeNodes_BeginUpdate(self._current())
+    def EndUpdate(self):
+        lib.TTreeNodes_EndUpdate(self._current())
+
+
+class TCustomTreeView(TCustomControl):
+    """以下のメンバは LCL の TCustomTreeView の public。"""
+    Items = _Prop("TCustomTreeView_GetItems", None, _obj("TTreeNodes"))
+    # 選択されているノード(無ければ nullptr)。
+    Selected = _Prop("TCustomTreeView_GetSelected", "TCustomTreeView_SetSelected", _item("TTreeNode"))
+    # ノードの画像リスト(docs/adr/0030)。各ノードの画像は TTreeNode::ImageIndex・SelectedIndex。
+    Images = _Prop("TCustomTreeView_GetImages", "TCustomTreeView_SetImages", _comp("TCustomImageList"))
+    # 状態(チェック等)の画像リスト。各ノードの画像は TTreeNode::StateIndex。
+    StateImages = _Prop("TCustomTreeView_GetStateImages", "TCustomTreeView_SetStateImages", _comp("TCustomImageList"))
+    def FullExpand(self):
+        lib.TCustomTreeView_FullExpand(self._current())
+    def FullCollapse(self):
+        lib.TCustomTreeView_FullCollapse(self._current())
+    # ノードを文字列の順に並べ替える。
+    def AlphaSort(self):
+        _r = lib.TCustomTreeView_AlphaSort(self._current())
+        return _r != 0
+    # X, Y はクライアント座標。そこにノードが無ければ nullptr。
+    def GetNodeAt(self, X, Y):
+        _r = lib.TCustomTreeView_GetNodeAt(self._current(), int(X), int(Y))
+        return _to_item("TTreeNode", _r)
+
+
+class TTreeView(TCustomTreeView):
+    """以下のメンバは LCL では TCustomTreeView の protected で、TTreeView が published にしている。"""
+    def __init__(self, AOwner):
+        self._attach(lib.TTreeView_Create(_h(AOwner)))
+    ReadOnly = _Prop("TTreeView_GetReadOnly", "TTreeView_SetReadOnly", _bool)
+    ShowLines = _Prop("TTreeView_GetShowLines", "TTreeView_SetShowLines", _bool)
+    ShowRoot = _Prop("TTreeView_GetShowRoot", "TTreeView_SetShowRoot", _bool)
+    ShowButtons = _Prop("TTreeView_GetShowButtons", "TTreeView_SetShowButtons", _bool)
+    AutoExpand = _Prop("TTreeView_GetAutoExpand", "TTreeView_SetAutoExpand", _bool)
+    HideSelection = _Prop("TTreeView_GetHideSelection", "TTreeView_SetHideSelection", _bool)
+    RowSelect = _Prop("TTreeView_GetRowSelect", "TTreeView_SetRowSelect", _bool)
+    # 選択が変わった後(Node は選択されたノードで、nullptr もありうる)。
+    OnChange = _Event("TTreeView_SetOnChange", "TTVChangedEvent")
+    # 選択が変わる前(Node は新しく選択されるノード)。
+    OnChanging = _Event("TTreeView_SetOnChanging", "TTVChangingEvent")
+    OnExpanding = _Event("TTreeView_SetOnExpanding", "TTVExpandingEvent")
+    OnExpanded = _Event("TTreeView_SetOnExpanded", "TTVChangedEvent")
+    OnCollapsing = _Event("TTreeView_SetOnCollapsing", "TTVCollapsingEvent")
+    OnCollapsed = _Event("TTreeView_SetOnCollapsed", "TTVChangedEvent")
+    # ノードが削除される直前(Node はまだ有効。ハンドラから戻った後にラッパーが delete される)。
+    OnDeletion = _Event("TTreeView_SetOnDeletion", "TTVChangedEvent")
+
+
+class TListItem(TPersistent, _ItemMixin):
+    """リストビューの項目。TTreeNode と同じく TComponent ではないため、new/Free() はせず TListItems::Add 等で追加し、
+    Delete() 等で削除する。同じ項目には常に同じポインタが返り、項目が削除されると(リストビューの破棄に伴う削除も含め)
+    OnDeletion などの削除の処理がすべて終わった後にラッパーも delete される。
+    Caption は 1 列目、SubItems は 2 列目以降の文字列(ViewStyle が vsReport のときに表示される)。
+    SubItems(TStrings)は Item->SubItems->Add("x"); のように操作する。"""
+    Caption = _Prop("TListItem_GetCaption", "TListItem_SetCaption", _str)
+    Checked = _Prop("TListItem_GetChecked", "TListItem_SetChecked", _bool)
+    Selected = _Prop("TListItem_GetSelected", "TListItem_SetSelected", _bool)
+    Focused = _Prop("TListItem_GetFocused", "TListItem_SetFocused", _bool)
+    # 利用者データ(LCL は解釈しない)。
+    Data = _Prop("TListItem_GetData", "TListItem_SetData", _ptr)
+    Index = _Prop("TListItem_GetIndex", None, _int)
+    ListView = _Prop("TListItem_GetListView", None, _comp("TCustomListView"))
+    # 文字列の一覧(TStrings。Item->SubItems->Add("x") のように使う)。
+    SubItems = _Prop("TListItem_GetSubItems", None, _view("TStrings"))
+    # 画像の、リストビューの SmallImages・LargeImages での位置(-1 なら無し。docs/adr/0030)。StateIndex は StateImages での位置。
+    ImageIndex = _Prop("TListItem_GetImageIndex", "TListItem_SetImageIndex", _int)
+    StateIndex = _Prop("TListItem_GetStateIndex", "TListItem_SetStateIndex", _int)
+    # この項目を削除する。このラッパーも delete されるため、呼び出し後に触れてはならない。
+    def Delete(self):
+        lib.TListItem_Delete(self._current())
+    def MakeVisible(self, PartialOK):
+        lib.TListItem_MakeVisible(self._current(), _b(PartialOK))
+
+
+class TListItems(TPersistent):
+    """リストビューの項目の一覧(LCL の TListItems)。TTreeNodes と同じく、リストビューの値メンバとして持つ非所有のビュー。
+    Item[Index] は LCL と同じ名前(Items ではない)。"""
+    Count = _Prop("TListItems_GetCount", None, _int)
+    # ListView1->Items->Item[i]。
+    Item = _Indexed("TListItems_GetItem", None, _item("TListItem"))
+    # 末尾に(Insert は Index の位置に)空の項目を追加して返す(Caption 等はその後で設定する。VCL と同じ)。
+    def Add(self):
+        _r = lib.TListItems_Add(self._current())
+        return _to_item("TListItem", _r)
+    def Insert(self, Index):
+        _r = lib.TListItems_Insert(self._current(), int(Index))
+        return _to_item("TListItem", _r)
+    def Delete(self, Index):
+        lib.TListItems_Delete(self._current(), int(Index))
+    def Clear(self):
+        lib.TListItems_Clear(self._current())
+    def IndexOf(self, Item):
+        _r = lib.TListItems_IndexOf(self._current(), _h(Item))
+        return _r
+    # StartIndex の次(Inclusive なら StartIndex から)から Caption を探す。Partial なら前方一致、Wrap なら末尾から先頭へ続けて探す。
+    def FindCaption(self, StartIndex, Value, Partial, Inclusive, Wrap):
+        _r = lib.TListItems_FindCaption(self._current(), int(StartIndex), _enc(Value), _b(Partial), _b(Inclusive), _b(Wrap))
+        return _to_item("TListItem", _r)
+    def Exchange(self, Index1, Index2):
+        lib.TListItems_Exchange(self._current(), int(Index1), int(Index2))
+    def Move(self, FromIndex, ToIndex):
+        lib.TListItems_Move(self._current(), int(FromIndex), int(ToIndex))
+    def BeginUpdate(self):
+        lib.TListItems_BeginUpdate(self._current())
+    def EndUpdate(self):
+        lib.TListItems_EndUpdate(self._current())
+
+
+class TListColumn(TPersistent, _ItemMixin):
+    """リストビューの列(LCL の TListColumn。TCollectionItem)。項目と同じく同じ列には常に同じポインタが返る。
+    列のラッパーは、列が破棄されたとき(TListColumns::Delete・Clear、リストビューの破棄)に delete される。"""
+    Caption = _Prop("TListColumn_GetCaption", "TListColumn_SetCaption", _str)
+    Width = _Prop("TListColumn_GetWidth", "TListColumn_SetWidth", _int)
+    Alignment = _Prop("TListColumn_GetAlignment", "TListColumn_SetAlignment", _enum("TAlignment"))
+    AutoSize = _Prop("TListColumn_GetAutoSize", "TListColumn_SetAutoSize", _bool)
+    Visible = _Prop("TListColumn_GetVisible", "TListColumn_SetVisible", _bool)
+    # 列の並び順。書き換えると列が移動する。
+    Index = _Prop("TListColumn_GetIndex", "TListColumn_SetIndex", _int)
+    # 見出しの画像の、SmallImages での位置(-1 なら無し。docs/adr/0030)。
+    ImageIndex = _Prop("TListColumn_GetImageIndex", "TListColumn_SetImageIndex", _int)
+
+
+class TListColumns(TPersistent):
+    """リストビューの列の一覧(LCL の TListColumns)。リストビューの値メンバとして持つ非所有のビュー。Items[Index] で列を参照する。"""
+    Count = _Prop("TListColumns_GetCount", None, _int)
+    # ListView1->Columns->Items[i]。
+    Items = _Indexed("TListColumns_GetItem", None, _item("TListColumn"))
+    def Add(self):
+        _r = lib.TListColumns_Add(self._current())
+        return _to_item("TListColumn", _r)
+    # 列を削除する(列のラッパーも delete される)。
+    def Delete(self, Index):
+        lib.TListColumns_Delete(self._current(), int(Index))
+    def Clear(self):
+        lib.TListColumns_Clear(self._current())
+
+
+class TCustomListView(TWinControl):
+    """以下のメンバは LCL の TCustomListView の public。"""
+    Items = _Prop("TCustomListView_GetItems", None, _obj("TListItems"))
+    # 選択されている項目(MultiSelect なら最初の 1 つ。無ければ nullptr)と、その位置(無ければ -1)。
+    # 表示前(フォームのコンストラクタ等)に設定しても選択される(LCL 単体では選択されないため DLL 側で補っている)。
+    Selected = _Prop("TCustomListView_GetSelected", "TCustomListView_SetSelected", _item("TListItem"))
+    ItemIndex = _Prop("TCustomListView_GetItemIndex", "TCustomListView_SetItemIndex", _int)
+    SelCount = _Prop("TCustomListView_GetSelCount", None, _int)
+    Checkboxes = _Prop("TCustomListView_GetCheckboxes", "TCustomListView_SetCheckboxes", _bool)
+    GridLines = _Prop("TCustomListView_GetGridLines", "TCustomListView_SetGridLines", _bool)
+    MultiSelect = _Prop("TCustomListView_GetMultiSelect", "TCustomListView_SetMultiSelect", _bool)
+    ReadOnly = _Prop("TCustomListView_GetReadOnly", "TCustomListView_SetReadOnly", _bool)
+    RowSelect = _Prop("TCustomListView_GetRowSelect", "TCustomListView_SetRowSelect", _bool)
+    # すべての項目を削除する(列は残る)。
+    def Clear(self):
+        lib.TCustomListView_Clear(self._current())
+    def BeginUpdate(self):
+        lib.TCustomListView_BeginUpdate(self._current())
+    def EndUpdate(self):
+        lib.TCustomListView_EndUpdate(self._current())
+    # X, Y はクライアント座標。そこに項目が無ければ nullptr。
+    def GetItemAt(self, X, Y):
+        _r = lib.TCustomListView_GetItemAt(self._current(), int(X), int(Y))
+        return _to_item("TListItem", _r)
+    def ClearSelection(self):
+        lib.TCustomListView_ClearSelection(self._current())
+    def SelectAll(self):
+        lib.TCustomListView_SelectAll(self._current())
+
+
+class TListView(TCustomListView):
+    """以下のメンバは LCL では TCustomListView の protected で、TListView が published にしている。"""
+    def __init__(self, AOwner):
+        self._attach(lib.TListView_Create(_h(AOwner)))
+    Columns = _Prop("TListView_GetColumns", None, _obj("TListColumns"))
+    # 列見出しと SubItems が表示されるのは vsReport のとき。
+    ViewStyle = _Prop("TListView_GetViewStyle", "TListView_SetViewStyle", _enum("TViewStyle"))
+    HideSelection = _Prop("TListView_GetHideSelection", "TListView_SetHideSelection", _bool)
+    # SortType が stText のとき、SortColumn の列(0 が Caption の列)の文字列の順に並ぶ。
+    # SortColumn が既定の -1 のままでは並べ替えない(LCL の仕様。先に SortColumn を設定する)。
+    SortType = _Prop("TListView_GetSortType", "TListView_SetSortType", _enum("TSortType"))
+    SortColumn = _Prop("TListView_GetSortColumn", "TListView_SetSortColumn", _int)
+    SortDirection = _Prop("TListView_GetSortDirection", "TListView_SetSortDirection", _enum("TSortDirection"))
+    # 項目の選択状態が変わったとき。
+    OnSelectItem = _Event("TListView_SetOnSelectItem", "TLVSelectItemEvent")
+    # 項目が変わったとき(Change は変更の種類)。
+    OnChange = _Event("TListView_SetOnChange", "TLVChangeEvent")
+    # 項目が削除される直前(Item はまだ有効。ハンドラから戻った後にラッパーが delete される)。
+    # リストビュー自身の破棄に伴う削除では呼ばれない(LCL はリストビューの破棄通知の後に項目を削除し、
+    # そのときにはリストビューのラッパーが delete されているため)。
+    OnDeletion = _Event("TListView_SetOnDeletion", "TLVDeletedEvent")
+    # チェックボックス(Checkboxes)が切り替わったとき。
+    OnItemChecked = _Event("TListView_SetOnItemChecked", "TLVDeletedEvent")
+    # 列見出しがクリックされたとき。
+    OnColumnClick = _Event("TListView_SetOnColumnClick", "TLVColumnClickEvent")
+    # 画像リスト(docs/adr/0030)。LCL では TCustomListView の protected で、TListView が公開する。LargeImages は vsIcon、SmallImages はそれ以外の表示形式で使う。
+    LargeImages = _Prop("TListView_GetLargeImages", "TListView_SetLargeImages", _comp("TCustomImageList"))
+    SmallImages = _Prop("TListView_GetSmallImages", "TListView_SetSmallImages", _comp("TCustomImageList"))
+    StateImages = _Prop("TListView_GetStateImages", "TListView_SetStateImages", _comp("TCustomImageList"))
+
+
+class TCustomSplitter(TCustomControl):
+    """同じ Align を持つ直前のコントロール(alLeft なら、自分より左にある alLeft のコントロール)の幅・高さを
+    ドラッグで変える区切りバー。Align が alLeft/alRight なら縦、alTop/alBottom なら横のバーになる(既定は alLeft)。
+    メンバはすべて LCL の TCustomSplitter の public。OnCanResize/OnCanOffset(var 引数 2 つの独自のイベント形)は
+    今回は未対応。SplitterPosition は LCL ではプロパティではなくメソッドの組のため、そのまま Get/Set メソッドにする。"""
+    AutoSnap = _Prop("TCustomSplitter_GetAutoSnap", "TCustomSplitter_SetAutoSnap", _bool)
+    Beveled = _Prop("TCustomSplitter_GetBeveled", "TCustomSplitter_SetBeveled", _bool)
+    MinSize = _Prop("TCustomSplitter_GetMinSize", "TCustomSplitter_SetMinSize", _int)
+    ResizeAnchor = _Prop("TCustomSplitter_GetResizeAnchor", "TCustomSplitter_SetResizeAnchor", _enum("TAnchorKind"))
+    ResizeStyle = _Prop("TCustomSplitter_GetResizeStyle", "TCustomSplitter_SetResizeStyle", _enum("TResizeStyle"))
+    # マウスでのドラッグが終わったときに呼ばれる(SetSplitterPosition では呼ばれない)。
+    OnMoved = _Event("TCustomSplitter_SetOnMoved", "TNotifyEvent")
+    # 縦のバーなら Left、横のバーなら Top にあたる(親のクライアント座標)。
+    def GetSplitterPosition(self):
+        _r = lib.TCustomSplitter_GetSplitterPosition(self._current())
+        return _r
+    def SetSplitterPosition(self, NewPosition):
+        lib.TCustomSplitter_SetSplitterPosition(self._current(), int(NewPosition))
+
+
+class TSplitter(TCustomSplitter):
+    def __init__(self, AOwner):
+        self._attach(lib.TSplitter_Create(_h(AOwner)))
+
+
+class TCustomMemo(TCustomEdit):
+    ScrollBars = _Prop("TCustomMemo_GetScrollBars", "TCustomMemo_SetScrollBars", _int)
+    # 文字列の一覧(TStrings。Memo1->Lines->Add("x") のように使う)。
+    Lines = _Prop("TCustomMemo_GetLines", None, _view("TStrings"))
+
+
+class TMemo(TCustomMemo):
+    def __init__(self, AOwner):
+        self._attach(lib.TMemo_Create(_h(AOwner)))
+
+
+class TCustomComboBox(TWinControl):
+    Text = TControl._Text
+    ItemIndex = _Prop("TCustomComboBox_GetItemIndex", "TCustomComboBox_SetItemIndex", _int)
+    # 文字列の一覧(TStrings。ComboBox1->Items->Add("x") のように使う)。
+    Items = _Prop("TCustomComboBox_GetItems", None, _view("TStrings"))
+
+
+class TComboBox(TCustomComboBox):
+    # LCL では TCustomComboBox の protected で、公開しているのは TComboBox だけ。
+    OnChange = _Event("TComboBox_SetOnChange", "TNotifyEvent")
+    def __init__(self, AOwner):
+        self._attach(lib.TComboBox_Create(_h(AOwner)))
+
+
+class TCustomListBox(TWinControl):
+    """利用者による選択の変更(マウス・キー操作とも)では OnClick が呼ばれる(VCL と同じ)。
+    プログラムからの ItemIndex の変更では呼ばれない。"""
+    ItemIndex = _Prop("TCustomListBox_GetItemIndex", "TCustomListBox_SetItemIndex", _int)
+    # 文字列の一覧(TStrings。ListBox1->Items->Add("x") のように使う)。
+    Items = _Prop("TCustomListBox_GetItems", None, _view("TStrings"))
+
+
+class TListBox(TCustomListBox):
+    def __init__(self, AOwner):
+        self._attach(lib.TListBox_Create(_h(AOwner)))
+
+
+class TCustomCheckListBox(TCustomListBox):
+    """各項目にチェックボックスを持つリストボックス。Items は基底 TCustomListBox のものをそのまま使う。"""
+    OnClickCheck = _Event("TCustomCheckListBox_SetOnClickCheck", "TNotifyEvent")
+    # 項目ごとのチェックの状態(CheckListBox1->Checked[i] = true;)。
+    Checked = _Indexed("TCustomCheckListBox_GetChecked", "TCustomCheckListBox_SetChecked", _bool)
+
+
+class TCheckListBox(TCustomCheckListBox):
+    def __init__(self, AOwner):
+        self._attach(lib.TCheckListBox_Create(_h(AOwner)))
+
+
+class TCustomStaticText(TWinControl):
+    BorderStyle = _Prop("TCustomStaticText_GetBorderStyle", "TCustomStaticText_SetBorderStyle", _enum("TStaticBorderStyle"))
+
+
+class TStaticText(TCustomStaticText):
+    def __init__(self, AOwner):
+        self._attach(lib.TStaticText_Create(_h(AOwner)))
+
+
+class TStatusBar(TWinControl):
+    """ステータス行。LCL では中間の TCustomStatusBar が無く、TWinControl の直接の派生。
+    Panels(複数区画のコレクション)は今回未対応で、SimpleText/SimplePanel のみ。
+    他のコントロールと同じく、フォームのコンストラクタの中で生成・配置してよい
+    (LCL の Win32 実装が DLL で失敗する問題は DLL 側で回避済み。docs/adr/0015-... を参照)。"""
+    def __init__(self, AOwner):
+        self._attach(lib.TStatusBar_Create(_h(AOwner)))
+    SimpleText = _Prop("TStatusBar_GetSimpleText", "TStatusBar_SetSimpleText", _str)
+    SimplePanel = _Prop("TStatusBar_GetSimplePanel", "TStatusBar_SetSimplePanel", _bool)
+
+
+class TCustomShape(TGraphicControl):
+    Pen = _Prop("TCustomShape_GetPen", None, _obj("TPen"))
+    Brush = _Prop("TCustomShape_GetBrush", None, _obj("TBrush"))
+    Shape = _Prop("TCustomShape_GetShape", "TCustomShape_SetShape", _enum("TShapeType"))
+
+
+class TShape(TCustomShape):
+    def __init__(self, AOwner):
+        self._attach(lib.TShape_Create(_h(AOwner)))
+
+
+class TCustomSpeedButton(TGraphicControl):
+    """クリックで押し込まれた状態を保つ(GroupIndex でラジオボタン風のグループも作れる)グラフィックボタン。
+    Down/GroupIndex/Flat/AllowAllUp はいずれも LCL では public。Caption/OnClick は TControl から共有する。
+    Glyph 等の意味は TCustomBitBtn と同じ。"""
+    Down = _Prop("TCustomSpeedButton_GetDown", "TCustomSpeedButton_SetDown", _bool)
+    GroupIndex = _Prop("TCustomSpeedButton_GetGroupIndex", "TCustomSpeedButton_SetGroupIndex", _int)
+    Flat = _Prop("TCustomSpeedButton_GetFlat", "TCustomSpeedButton_SetFlat", _bool)
+    AllowAllUp = _Prop("TCustomSpeedButton_GetAllowAllUp", "TCustomSpeedButton_SetAllowAllUp", _bool)
+    Glyph = _Prop("TCustomSpeedButton_GetGlyph", "TCustomSpeedButton_SetGlyph", _view("TBitmap"))
+    NumGlyphs = _Prop("TCustomSpeedButton_GetNumGlyphs", "TCustomSpeedButton_SetNumGlyphs", _int)
+    Layout = _Prop("TCustomSpeedButton_GetLayout", "TCustomSpeedButton_SetLayout", _enum("TButtonLayout"))
+    Margin = _Prop("TCustomSpeedButton_GetMargin", "TCustomSpeedButton_SetMargin", _int)
+    Spacing = _Prop("TCustomSpeedButton_GetSpacing", "TCustomSpeedButton_SetSpacing", _int)
+    # 画像リスト(docs/adr/0030)。意味は TCustomBitBtn と同じ。
+    Images = _Prop("TCustomSpeedButton_GetImages", "TCustomSpeedButton_SetImages", _comp("TCustomImageList"))
+    ImageIndex = _Prop("TCustomSpeedButton_GetImageIndex", "TCustomSpeedButton_SetImageIndex", _int)
+
+
+class TSpeedButton(TCustomSpeedButton):
+    def __init__(self, AOwner):
+        self._attach(lib.TSpeedButton_Create(_h(AOwner)))
+
+
+class TPaintBox(TGraphicControl):
+    Canvas = _Prop("TPaintBox_GetCanvas", None, _obj("TCanvas"))
+    OnPaint = _Event("TPaintBox_SetOnPaint", "TNotifyEvent")
+    def __init__(self, AOwner):
+        self._attach(lib.TPaintBox_Create(_h(AOwner)))
+
+
+class TCustomImage(TGraphicControl):
+    """画像を表示するコントロール(LCL の TCustomImage。docs/adr/0029)。AutoSize は TControl のもの。"""
+    # 表示する画像。コントロールが所有し、コントロールと寿命が一致する。代入は内容のコピー。
+    Picture = _Prop("TCustomImage_GetPicture", "TCustomImage_SetPicture", _obj("TPicture"))
+    # 画像に描く先。Picture が空なら、コントロールの大きさの TBitmap を作ってからその Canvas を返す(描いた内容は Picture に残る)。
+    # Picture の中身が作り直されると別のものになる(ポインタを保存しないこと)。
+    Canvas = _Prop("TCustomImage_GetCanvas", None, _obj("TCanvas"))
+    HasGraphic = _Prop("TCustomImage_GetHasGraphic", None, _bool)
+    Center = _Prop("TCustomImage_GetCenter", "TCustomImage_SetCenter", _bool)
+    # コントロールの大きさに伸縮する。StretchOutEnabled・StretchInEnabled を false にすると、拡大・縮小を個別に禁止できる。
+    Stretch = _Prop("TCustomImage_GetStretch", "TCustomImage_SetStretch", _bool)
+    StretchOutEnabled = _Prop("TCustomImage_GetStretchOutEnabled", "TCustomImage_SetStretchOutEnabled", _bool)
+    StretchInEnabled = _Prop("TCustomImage_GetStretchInEnabled", "TCustomImage_SetStretchInEnabled", _bool)
+    # 縦横比を保ってコントロールに収める。
+    Proportional = _Prop("TCustomImage_GetProportional", "TCustomImage_SetProportional", _bool)
+    Transparent = _Prop("TCustomImage_GetTransparent", "TCustomImage_SetTransparent", _bool)
+    # Picture(またはその中身)が変わったときに呼ばれる。
+    OnPictureChanged = _Event("TCustomImage_SetOnPictureChanged", "TNotifyEvent")
+    # 画像リスト(docs/adr/0030)。設定すると、Picture が空のとき Images の ImageIndex 番目の画像を表示する。
+    Images = _Prop("TCustomImage_GetImages", "TCustomImage_SetImages", _comp("TCustomImageList"))
+    ImageIndex = _Prop("TCustomImage_GetImageIndex", "TCustomImage_SetImageIndex", _int)
+
+
+class TImage(TCustomImage):
+    def __init__(self, AOwner):
+        self._attach(lib.TImage_Create(_h(AOwner)))
+
+
+class TCustomGrid(TCustomControl):
+    """グリッドの共通の基底。以下のメンバは LCL の TCustomGrid の public。
+    セルは(列, 行)の位置で指定する(0 始まり。固定行・固定列を含む)。"""
+    def BeginUpdate(self):
+        lib.TCustomGrid_BeginUpdate(self._current())
+    def EndUpdate(self):
+        lib.TCustomGrid_EndUpdate(self._current())
+    # すべての行・列を削除する(ColCount・RowCount が 0 になる)。セルの文字列だけを消すのは TCustomStringGrid::Clean。
+    def Clear(self):
+        lib.TCustomGrid_Clear(self._current())
+    # セルのクライアント座標での矩形。
+    def CellRect(self, ACol, ARow):
+        _r = [ctypes.c_int() for _ in range(4)]
+        lib.TCustomGrid_CellRect(self._current(), int(ACol), int(ARow), *(ctypes.byref(x) for x in _r))
+        return TRect(*(x.value for x in _r))
+    # クライアント座標 X, Y にあるセル。セルの外なら -1。
+    def MouseToCell(self, X, Y, ACol, ARow):
+        _out_ACol = ctypes.c_int()
+        _out_ARow = ctypes.c_int()
+        lib.TCustomGrid_MouseToCell(self._current(), int(X), int(Y), ctypes.byref(_out_ACol), ctypes.byref(_out_ARow))
+        ACol.value = _out_ACol.value
+        ARow.value = _out_ARow.value
+
+
+class TCustomDrawGrid(TCustomGrid):
+    """以下のメンバは LCL では TCustomGrid の protected で、TCustomDrawGrid が public にしている。"""
+    # OnDrawCell の中で描画する先。グリッドが所有する実体への非所有のビュー(TPaintBox::Canvas と同じ)。
+    Canvas = _Prop("TCustomDrawGrid_GetCanvas", None, _obj("TCanvas"))
+    ColCount = _Prop("TCustomDrawGrid_GetColCount", "TCustomDrawGrid_SetColCount", _int)
+    RowCount = _Prop("TCustomDrawGrid_GetRowCount", "TCustomDrawGrid_SetRowCount", _int)
+    # 固定列・固定行(見出し)の数。既定は 1。
+    FixedCols = _Prop("TCustomDrawGrid_GetFixedCols", "TCustomDrawGrid_SetFixedCols", _int)
+    FixedRows = _Prop("TCustomDrawGrid_GetFixedRows", "TCustomDrawGrid_SetFixedRows", _int)
+    # 現在のセル(フォーカスのあるセル)の列・行。
+    Col = _Prop("TCustomDrawGrid_GetCol", "TCustomDrawGrid_SetCol", _int)
+    Row = _Prop("TCustomDrawGrid_GetRow", "TCustomDrawGrid_SetRow", _int)
+    DefaultColWidth = _Prop("TCustomDrawGrid_GetDefaultColWidth", "TCustomDrawGrid_SetDefaultColWidth", _int)
+    DefaultRowHeight = _Prop("TCustomDrawGrid_GetDefaultRowHeight", "TCustomDrawGrid_SetDefaultRowHeight", _int)
+    Options = _Prop("TCustomDrawGrid_GetOptions", "TCustomDrawGrid_SetOptions", _enum("TGridOptions"))
+    # 選択範囲(単一のセルなら Left = Right、Top = Bottom)。
+    Selection = _Prop("TCustomDrawGrid_GetSelection", "TCustomDrawGrid_SetSelection", _rect_conv)
+    # スクロール位置(表示されている最初の列・行)。
+    LeftCol = _Prop("TCustomDrawGrid_GetLeftCol", "TCustomDrawGrid_SetLeftCol", _int)
+    TopRow = _Prop("TCustomDrawGrid_GetTopRow", "TCustomDrawGrid_SetTopRow", _int)
+    # false にすると、OnDrawCell の前にセルの既定の描画(背景・文字列)を行わない。
+    DefaultDrawing = _Prop("TCustomDrawGrid_GetDefaultDrawing", "TCustomDrawGrid_SetDefaultDrawing", _bool)
+    FixedColor = _Prop("TCustomDrawGrid_GetFixedColor", "TCustomDrawGrid_SetFixedColor", _int)
+    # セルの編集中か(goEditing のとき)。true を設定すると現在のセルの編集を始める。
+    EditorMode = _Prop("TCustomDrawGrid_GetEditorMode", "TCustomDrawGrid_SetEditorMode", _bool)
+    OnDrawCell = _Event("TCustomDrawGrid_SetOnDrawCell", "TOnDrawCell")
+    OnSelectCell = _Event("TCustomDrawGrid_SetOnSelectCell", "TOnSelectCellEvent")
+    OnSelection = _Event("TCustomDrawGrid_SetOnSelection", "TOnSelectEvent")
+    OnHeaderClick = _Event("TCustomDrawGrid_SetOnHeaderClick", "THdrEvent")
+    # 列ごとの幅・行ごとの高さ(Grid->ColWidths[0] = 80;)。
+    ColWidths = _Indexed("TCustomDrawGrid_GetColWidths", "TCustomDrawGrid_SetColWidths", _int)
+    RowHeights = _Indexed("TCustomDrawGrid_GetRowHeights", "TCustomDrawGrid_SetRowHeights", _int)
+    def InsertColRow(self, IsColumn, Index):
+        lib.TCustomDrawGrid_InsertColRow(self._current(), _b(IsColumn), int(Index))
+    def DeleteColRow(self, IsColumn, Index):
+        lib.TCustomDrawGrid_DeleteColRow(self._current(), _b(IsColumn), int(Index))
+    def MoveColRow(self, IsColumn, FromIndex, ToIndex):
+        lib.TCustomDrawGrid_MoveColRow(self._current(), _b(IsColumn), int(FromIndex), int(ToIndex))
+    # IsColumn が true なら、列 Index の値で行を並べ替える(固定行は除く)。false なら行 Index の値で列を並べ替える。
+    def SortColRow(self, IsColumn, Index):
+        lib.TCustomDrawGrid_SortColRow(self._current(), _b(IsColumn), int(Index))
+
+
+class TDrawGrid(TCustomDrawGrid):
+    """セルの内容を OnDrawCell で利用者が描画するグリッド(セルの文字列は持たない)。"""
+    def __init__(self, AOwner):
+        self._attach(lib.TDrawGrid_Create(_h(AOwner)))
+
+
+class TCustomStringGrid(TCustomDrawGrid):
+    """以下のメンバは LCL の TCustomStringGrid の public。"""
+    # セルの文字列。C++Builder と同じく StringGrid1->Cells[ACol][ARow] = "x"; と書く(1 つ目が列、2 つ目が行)。
+    Cells = _Indexed("TCustomStringGrid_GetCells", "TCustomStringGrid_SetCells", _str, dims=2)
+    # すべてのセルの文字列を消す(行・列の数は変わらない)。
+    def Clean(self):
+        lib.TCustomStringGrid_Clean(self._current())
+    # 列の幅を文字列に合わせる。
+    def AutoSizeColumns(self):
+        lib.TCustomStringGrid_AutoSizeColumns(self._current())
+    def AutoSizeColumn(self, ACol):
+        lib.TCustomStringGrid_AutoSizeColumn(self._current(), int(ACol))
+
+
+class TStringGrid(TCustomStringGrid):
+    """セルごとに文字列を持つグリッド。"""
+    def __init__(self, AOwner):
+        self._attach(lib.TStringGrid_Create(_h(AOwner)))
+
+
+class THeaderSection(TPersistent, _ItemMixin):
+    """ヘッダーコントロールのセクション(LCL の THeaderSection。TCollectionItem)。同じセクションには常に同じポインタが返る。
+    ラッパーは、セクションが破棄されたとき(THeaderSections::Delete・Clear、ヘッダーコントロールの破棄)に delete される。"""
+    Text = _Prop("THeaderSection_GetText", "THeaderSection_SetText", _str)
+    # Visible が false なら 0 を返す。
+    Width = _Prop("THeaderSection_GetWidth", "THeaderSection_SetWidth", _int)
+    MinWidth = _Prop("THeaderSection_GetMinWidth", "THeaderSection_SetMinWidth", _int)
+    MaxWidth = _Prop("THeaderSection_GetMaxWidth", "THeaderSection_SetMaxWidth", _int)
+    Alignment = _Prop("THeaderSection_GetAlignment", "THeaderSection_SetAlignment", _enum("TAlignment"))
+    Visible = _Prop("THeaderSection_GetVisible", "THeaderSection_SetVisible", _bool)
+    # 並び順。書き換えるとセクションが移動する。
+    Index = _Prop("THeaderSection_GetIndex", "THeaderSection_SetIndex", _int)
+    # クライアント座標での左端・右端。
+    Left = _Prop("THeaderSection_GetLeft", None, _int)
+    Right = _Prop("THeaderSection_GetRight", None, _int)
+    # 並べ替えても変わらない位置。
+    OriginalIndex = _Prop("THeaderSection_GetOriginalIndex", None, _int)
+    # 画像の、ヘッダーの Images での位置(-1 なら無し。docs/adr/0030)。
+    ImageIndex = _Prop("THeaderSection_GetImageIndex", "THeaderSection_SetImageIndex", _int)
+
+
+class THeaderSections(TPersistent):
+    """セクションの一覧(LCL の THeaderSections。TCollection)。ヘッダーコントロールの値メンバとして持つ非所有のビュー。"""
+    Count = _Prop("THeaderSections_GetCount", None, _int)
+    # HeaderControl1->Sections->Items[i]。
+    Items = _Indexed("THeaderSections_GetItem", None, _item("THeaderSection"))
+    # 末尾に(Insert は Index の位置に)空のセクションを追加して返す(Text 等はその後で設定する。VCL と同じ)。
+    def Add(self):
+        _r = lib.THeaderSections_Add(self._current())
+        return _to_item("THeaderSection", _r)
+    def Insert(self, Index):
+        _r = lib.THeaderSections_Insert(self._current(), int(Index))
+        return _to_item("THeaderSection", _r)
+    # セクションを削除する(セクションのラッパーも delete される)。
+    def Delete(self, Index):
+        lib.THeaderSections_Delete(self._current(), int(Index))
+    def Clear(self):
+        lib.THeaderSections_Clear(self._current())
+    def BeginUpdate(self):
+        lib.THeaderSections_BeginUpdate(self._current())
+    def EndUpdate(self):
+        lib.THeaderSections_EndUpdate(self._current())
+
+
+class TCustomHeaderControl(TCustomControl):
+    """以下のメンバは LCL の TCustomHeaderControl の public/published。セクションは OS のコントロールではなく LCL が描画する。"""
+    Sections = _Prop("TCustomHeaderControl_GetSections", None, _obj("THeaderSections"))
+    # true にすると、セクションをドラッグで並べ替えられる。
+    DragReorder = _Prop("TCustomHeaderControl_GetDragReorder", "TCustomHeaderControl_SetDragReorder", _bool)
+    # 並べ替えても変わらない位置(OriginalIndex)のセクション。無ければ nullptr。
+    SectionFromOriginalIndex = _Indexed("TCustomHeaderControl_GetSectionFromOriginalIndex", None, _item("THeaderSection"))
+    # セクションがクリックされたとき。
+    OnSectionClick = _Event("TCustomHeaderControl_SetOnSectionClick", "TCustomSectionNotifyEvent")
+    # ドラッグで幅を変え終えたとき。
+    OnSectionResize = _Event("TCustomHeaderControl_SetOnSectionResize", "TCustomSectionNotifyEvent")
+    # セクションの境界がダブルクリックされたとき。
+    OnSectionSeparatorDblClick = _Event("TCustomHeaderControl_SetOnSectionSeparatorDblClick", "TCustomSectionNotifyEvent")
+    # ドラッグで幅を変えている間(開始・移動・終了)。
+    OnSectionTrack = _Event("TCustomHeaderControl_SetOnSectionTrack", "TCustomSectionTrackEvent")
+    OnSectionDrag = _Event("TCustomHeaderControl_SetOnSectionDrag", "TSectionDragEvent")
+    # ドラッグでの並べ替えが終わったとき。
+    OnSectionEndDrag = _Event("TCustomHeaderControl_SetOnSectionEndDrag", "TNotifyEvent")
+    # セクションの画像リスト(docs/adr/0030)。各セクションの画像は THeaderSection::ImageIndex。
+    Images = _Prop("TCustomHeaderControl_GetImages", "TCustomHeaderControl_SetImages", _comp("TCustomImageList"))
+    # クライアント座標 P にあるセクションの位置。無ければ -1。
+    def GetSectionAt(self, P):
+        _r = lib.TCustomHeaderControl_GetSectionAt(self._current(), *_point(P))
+        return _r
+
+
+class THeaderControl(TCustomHeaderControl):
+    """列の見出しを並べたコントロール。"""
+    def __init__(self, AOwner):
+        self._attach(lib.THeaderControl_Create(_h(AOwner)))
+
+
+class TToolWindow(TCustomControl):
+    """以下のメンバは LCL の TToolWindow の public(TToolBar が published にしている)。"""
+    EdgeBorders = _Prop("TToolWindow_GetEdgeBorders", "TToolWindow_SetEdgeBorders", _enum("TEdgeBorders"))
+    EdgeInner = _Prop("TToolWindow_GetEdgeInner", "TToolWindow_SetEdgeInner", _enum("TEdgeStyle"))
+    EdgeOuter = _Prop("TToolWindow_GetEdgeOuter", "TToolWindow_SetEdgeOuter", _enum("TEdgeStyle"))
+    def BeginUpdate(self):
+        lib.TToolWindow_BeginUpdate(self._current())
+    def EndUpdate(self):
+        lib.TToolWindow_EndUpdate(self._current())
+
+
+class TToolBar(TToolWindow):
+    """ツールバー。ボタン(TToolButton)は、Parent をツールバーにすると追加される(VCL と同じ)。既定の Align は alTop。"""
+    def __init__(self, AOwner):
+        self._attach(lib.TToolBar_Create(_h(AOwner)))
+    ButtonCount = _Prop("TToolBar_GetButtonCount", None, _int)
+    # 並び順のボタン(ToolBar1->Buttons[i])。
+    Buttons = _Indexed("TToolBar_GetButton", None, _comp("TToolButton"))
+    # LCL では行数ではなく、Wrapable が false のときに Wrap のボタンで折り返した回数(折り返しが無ければ 0)。
+    RowCount = _Prop("TToolBar_GetRowCount", None, _int)
+    ButtonHeight = _Prop("TToolBar_GetButtonHeight", "TToolBar_SetButtonHeight", _int)
+    ButtonWidth = _Prop("TToolBar_GetButtonWidth", "TToolBar_SetButtonWidth", _int)
+    # tbsDropDown のボタンの矢印部分の幅。
+    DropDownWidth = _Prop("TToolBar_GetDropDownWidth", "TToolBar_SetDropDownWidth", _int)
+    # 最初のボタンの左の余白。
+    Indent = _Prop("TToolBar_GetIndent", "TToolBar_SetIndent", _int)
+    Flat = _Prop("TToolBar_GetFlat", "TToolBar_SetFlat", _bool)
+    # true なら、ボタンの文字をアイコンの右に置く。
+    List = _Prop("TToolBar_GetList", "TToolBar_SetList", _bool)
+    # true なら、ボタンに Caption を表示する(既定は false)。
+    ShowCaptions = _Prop("TToolBar_GetShowCaptions", "TToolBar_SetShowCaptions", _bool)
+    Transparent = _Prop("TToolBar_GetTransparent", "TToolBar_SetTransparent", _bool)
+    # true なら、幅に収まらないボタンを次の行へ折り返す(既定は true)。
+    Wrapable = _Prop("TToolBar_GetWrapable", "TToolBar_SetWrapable", _bool)
+    # ボタンの画像リスト(docs/adr/0030)。HotImages はマウスが上にあるとき、DisabledImages は無効のときに使う(設定しなければ Images から LCL が作る)。各ボタンの画像は TToolButton::ImageIndex。
+    Images = _Prop("TToolBar_GetImages", "TToolBar_SetImages", _comp("TCustomImageList"))
+    HotImages = _Prop("TToolBar_GetHotImages", "TToolBar_SetHotImages", _comp("TCustomImageList"))
+    DisabledImages = _Prop("TToolBar_GetDisabledImages", "TToolBar_SetDisabledImages", _comp("TCustomImageList"))
+    def SetButtonSize(self, NewButtonWidth, NewButtonHeight):
+        lib.TToolBar_SetButtonSize(self._current(), int(NewButtonWidth), int(NewButtonHeight))
+
+
+class TToolButton(TGraphicControl):
+    """ツールバーのボタン。Caption・OnClick は TControl のものを使う。"""
+    def __init__(self, AOwner):
+        self._attach(lib.TToolButton_Create(_h(AOwner)))
+    # tbsCheck で Grouped のとき、すべてのボタンを上げた状態にできるか。
+    AllowAllUp = _Prop("TToolButton_GetAllowAllUp", "TToolButton_SetAllowAllUp", _bool)
+    # 押された状態(tbsCheck はクリックで切り替わる)。
+    Down = _Prop("TToolButton_GetDown", "TToolButton_SetDown", _bool)
+    Grouped = _Prop("TToolButton_GetGrouped", "TToolButton_SetGrouped", _bool)
+    Indeterminate = _Prop("TToolButton_GetIndeterminate", "TToolButton_SetIndeterminate", _bool)
+    Marked = _Prop("TToolButton_GetMarked", "TToolButton_SetMarked", _bool)
+    ShowCaption = _Prop("TToolButton_GetShowCaption", "TToolButton_SetShowCaption", _bool)
+    # true なら、このボタンの後で行を折り返す。
+    Wrap = _Prop("TToolButton_GetWrap", "TToolButton_SetWrap", _bool)
+    Style = _Prop("TToolButton_GetStyle", "TToolButton_SetStyle", _enum("TToolButtonStyle"))
+    # tbsDropDown・tbsButtonDrop の矢印で表示するポップアップメニュー。
+    DropdownMenu = _Prop("TToolButton_GetDropdownMenu", "TToolButton_SetDropdownMenu", _comp("TPopupMenu"))
+    # 設定すると、そのメニュー項目の Caption・Enabled 等を写す。マウスで押すと、その項目の OnClick を呼んでから
+    # 子の項目をポップアップメニューとして表示する(DropdownMenu と同じく、メニューを閉じるまで戻らない)。
+    MenuItem = _Prop("TToolButton_GetMenuItem", "TToolButton_SetMenuItem", _existing("TMenuItem"))
+    # tbsDropDown・tbsButtonDrop の矢印がクリックされたとき(DropdownMenu を表示する前)。
+    OnArrowClick = _Event("TToolButton_SetOnArrowClick", "TNotifyEvent")
+    # ツールバーの中での位置(ツールバーに置かれていなければ -1)。
+    Index = _Prop("TToolButton_GetIndex", None, _int)
+    # 画像の、ツールバーの Images での位置(-1 なら無し。docs/adr/0030)。
+    ImageIndex = _Prop("TToolButton_GetImageIndex", "TToolButton_SetImageIndex", _int)
+    # OnClick を呼ぶ(tbsCheck の Down は変えない。Down の切り替えはマウスを離したときに LCL が行う)。
+    def Click(self):
+        lib.TToolButton_Click(self._current())
+    # OnArrowClick を呼ぶ(DropdownMenu は表示しない)。
+    def ArrowClick(self):
+        lib.TToolButton_ArrowClick(self._current())
+    # ボタンのクライアント座標 X, Y が矢印の部分にあるか。
+    def PointInArrow(self, X, Y):
+        _r = lib.TToolButton_PointInArrow(self._current(), int(X), int(Y))
+        return _r != 0
+
+
+class TCoolBand(TPersistent, _ItemMixin):
+    """クールバーのバンド(LCL の TCoolBand。TCollectionItem)。同じバンドには常に同じポインタが返る。
+    ウィンドウを持つコントロールの Parent をクールバーにすると LCL がバンドを自動で追加し、コントロールを外すと削除する。
+    ラッパーは、バンドが破棄されたとき(どの経路でも)に delete される。"""
+    Text = _Prop("TCoolBand_GetText", "TCoolBand_SetText", _str)
+    Width = _Prop("TCoolBand_GetWidth", "TCoolBand_SetWidth", _int)
+    MinWidth = _Prop("TCoolBand_GetMinWidth", "TCoolBand_SetMinWidth", _int)
+    MinHeight = _Prop("TCoolBand_GetMinHeight", "TCoolBand_SetMinHeight", _int)
+    # true なら、このバンドから新しい行を始める(既定は true)。
+    Break = _Prop("TCoolBand_GetBreak", "TCoolBand_SetBreak", _bool)
+    Visible = _Prop("TCoolBand_GetVisible", "TCoolBand_SetVisible", _bool)
+    FixedSize = _Prop("TCoolBand_GetFixedSize", "TCoolBand_SetFixedSize", _bool)
+    FixedBackground = _Prop("TCoolBand_GetFixedBackground", "TCoolBand_SetFixedBackground", _bool)
+    HorizontalOnly = _Prop("TCoolBand_GetHorizontalOnly", "TCoolBand_SetHorizontalOnly", _bool)
+    Color = _Prop("TCoolBand_GetColor", "TCoolBand_SetColor", _int)
+    ParentColor = _Prop("TCoolBand_GetParentColor", "TCoolBand_SetParentColor", _bool)
+    # 並び順。書き換えるとバンドが移動する。
+    Index = _Prop("TCoolBand_GetIndex", "TCoolBand_SetIndex", _int)
+    # バンドに置くコントロール。設定するとそのコントロールの Parent がクールバーになり、Align は alNone になる。
+    Control = _Prop("TCoolBand_GetControl", "TCoolBand_SetControl", _comp("TControl"))
+    # クールバーのクライアント座標での位置(配置の計算の後で決まる)。
+    Left = _Prop("TCoolBand_GetLeft", None, _int)
+    Top = _Prop("TCoolBand_GetTop", None, _int)
+    Right = _Prop("TCoolBand_GetRight", None, _int)
+    Height = _Prop("TCoolBand_GetHeight", None, _int)
+    # 画像の、クールバーの Images での位置(-1 なら無し。docs/adr/0030)。
+    ImageIndex = _Prop("TCoolBand_GetImageIndex", "TCoolBand_SetImageIndex", _int)
+    # 背景の画像。バンドが所有する TBitmap のビューで、代入は内容のコピー。
+    Bitmap = _Prop("TCoolBand_GetBitmap", "TCoolBand_SetBitmap", _view("TBitmap"))
+    # 幅を、置いているコントロールに合わせる。
+    def AutosizeWidth(self):
+        lib.TCoolBand_AutosizeWidth(self._current())
+
+
+class TCoolBands(TPersistent):
+    """バンドの一覧(LCL の TCoolBands。TCollection)。クールバーの値メンバとして持つ非所有のビュー。"""
+    Count = _Prop("TCoolBands_GetCount", None, _int)
+    # CoolBar1->Bands->Items[i]。
+    Items = _Indexed("TCoolBands_GetItem", None, _item("TCoolBand"))
+    # 空のバンドを末尾に追加して返す(Text・Control 等はその後で設定する)。
+    def Add(self):
+        _r = lib.TCoolBands_Add(self._current())
+        return _to_item("TCoolBand", _r)
+    # バンドを削除する(バンドのラッパーも delete される。置いていたコントロールは破棄されない)。
+    def Delete(self, Index):
+        lib.TCoolBands_Delete(self._current(), int(Index))
+    def Clear(self):
+        lib.TCoolBands_Clear(self._current())
+    def BeginUpdate(self):
+        lib.TCoolBands_BeginUpdate(self._current())
+    def EndUpdate(self):
+        lib.TCoolBands_EndUpdate(self._current())
+    # Control がそのコントロールのバンド(無ければ nullptr・-1)。
+    def FindBand(self, AControl):
+        _r = lib.TCoolBands_FindBand(self._current(), _h(AControl))
+        return _to_item("TCoolBand", _r)
+    def FindBandIndex(self, AControl):
+        _r = lib.TCoolBands_FindBandIndex(self._current(), _h(AControl))
+        return _r
+
+
+class TCustomCoolBar(TToolWindow):
+    """以下のメンバは LCL の TCustomCoolBar の public(TCoolBar が published にしている)。
+    Align は TControl のものを使う(alLeft/alRight にすると Vertical も true になる)。既定は alTop。"""
+    Bands = _Prop("TCustomCoolBar_GetBands", None, _obj("TCoolBands"))
+    # true なら、ドラッグでバンドの幅を変えられない。
+    FixedSize = _Prop("TCustomCoolBar_GetFixedSize", "TCustomCoolBar_SetFixedSize", _bool)
+    # true なら、ドラッグでバンドを並べ替えられない。
+    FixedOrder = _Prop("TCustomCoolBar_GetFixedOrder", "TCustomCoolBar_SetFixedOrder", _bool)
+    GrabStyle = _Prop("TCustomCoolBar_GetGrabStyle", "TCustomCoolBar_SetGrabStyle", _enum("TGrabStyle"))
+    GrabWidth = _Prop("TCustomCoolBar_GetGrabWidth", "TCustomCoolBar_SetGrabWidth", _int)
+    HorizontalSpacing = _Prop("TCustomCoolBar_GetHorizontalSpacing", "TCustomCoolBar_SetHorizontalSpacing", _int)
+    VerticalSpacing = _Prop("TCustomCoolBar_GetVerticalSpacing", "TCustomCoolBar_SetVerticalSpacing", _int)
+    # true なら、バンドの Text を表示する(既定は true)。
+    ShowText = _Prop("TCustomCoolBar_GetShowText", "TCustomCoolBar_SetShowText", _bool)
+    Themed = _Prop("TCustomCoolBar_GetThemed", "TCustomCoolBar_SetThemed", _bool)
+    Vertical = _Prop("TCustomCoolBar_GetVertical", "TCustomCoolBar_SetVertical", _bool)
+    # ドラッグでバンドを動かす・幅を変えて、マウスを離したとき。
+    OnChange = _Event("TCustomCoolBar_SetOnChange", "TNotifyEvent")
+    # バンドの画像リスト(docs/adr/0030)。各バンドの画像は TCoolBand::ImageIndex。
+    Images = _Prop("TCustomCoolBar_GetImages", "TCustomCoolBar_SetImages", _comp("TCustomImageList"))
+    # 背景の画像。クールバーが所有する TBitmap のビューで、代入は内容のコピー。
+    Bitmap = _Prop("TCustomCoolBar_GetBitmap", "TCustomCoolBar_SetBitmap", _view("TBitmap"))
+    # すべてのバンドの幅を、置いているコントロールに合わせる。
+    def AutosizeBands(self):
+        lib.TCustomCoolBar_AutosizeBands(self._current())
+    # クライアント座標 X, Y にあるバンドの表示上の位置(ABand。無ければ負)と、つまみの上か(AGrabber)。
+    def MouseToBandPos(self, X, Y, ABand, AGrabber):
+        _out_ABand = ctypes.c_int()
+        _out_AGrabber = ctypes.c_int()
+        lib.TCustomCoolBar_MouseToBandPos(self._current(), int(X), int(Y), ctypes.byref(_out_ABand), ctypes.byref(_out_AGrabber))
+        ABand.value = _out_ABand.value
+        AGrabber.value = _out_AGrabber.value != 0
+
+
+class TCoolBar(TCustomCoolBar):
+    """並べ替え・幅の変更ができるバンドに、コントロールを置くバー。"""
+    def __init__(self, AOwner):
+        self._attach(lib.TCoolBar_Create(_h(AOwner)))
+
+
+class TCustomTimer(TComponent):
+    Interval = _Prop("TCustomTimer_GetInterval", "TCustomTimer_SetInterval", _int)
+    Enabled = _Prop("TCustomTimer_GetEnabled", "TCustomTimer_SetEnabled", _bool)
+    OnTimer = _Event("TCustomTimer_SetOnTimer", "TNotifyEvent")
+
+
+class TTimer(TCustomTimer):
+    def __init__(self, AOwner):
+        self._attach(lib.TTimer_Create(_h(AOwner)))
+
+
+# ---------------- イベントの型(Sender 以外の引数) ----------------
+
+_event_types.update({
+    "TNotifyEvent": (),  # (Sender)
+    "TCloseEvent": (_a_ref_enum("TCloseAction"), ),  # (Sender, Action)
+    "TCloseQueryEvent": (_a_ref_bool, ),  # (Sender, CanClose)
+    "TKeyEvent": (_a_ref_int, _a_enum("TShiftState"), ),  # (Sender, Key, Shift)
+    "TKeyPressEvent": (_a_ref_char, ),  # (Sender, Key)
+    "TMouseEvent": (_a_enum("TMouseButton"), _a_enum("TShiftState"), _a_int, _a_int, ),  # (Sender, Button, Shift, X, Y)
+    "TMouseMoveEvent": (_a_enum("TShiftState"), _a_int, _a_int, ),  # (Sender, Shift, X, Y)
+    "TMouseWheelEvent": (_a_enum("TShiftState"), _a_int, _a_int, _a_int, _a_ref_bool, ),  # (Sender, Shift, WheelDelta, X, Y, Handled)
+    "TTabChangingEvent": (_a_ref_bool, ),  # (Sender, AllowChange)
+    "TTVChangedEvent": (_a_item("TTreeNode"), ),  # (Sender, Node)
+    "TTVChangingEvent": (_a_item("TTreeNode"), _a_ref_bool, ),  # (Sender, Node, AllowChange)
+    "TTVExpandingEvent": (_a_item("TTreeNode"), _a_ref_bool, ),  # (Sender, Node, AllowExpansion)
+    "TTVCollapsingEvent": (_a_item("TTreeNode"), _a_ref_bool, ),  # (Sender, Node, AllowCollapse)
+    "TLVDeletedEvent": (_a_item("TListItem"), ),  # (Sender, Item)
+    "TLVSelectItemEvent": (_a_item("TListItem"), _a_bool, ),  # (Sender, Item, Selected)
+    "TLVChangeEvent": (_a_item("TListItem"), _a_enum("TItemChange"), ),  # (Sender, Item, Change)
+    "TLVColumnClickEvent": (_a_item("TListColumn"), ),  # (Sender, Column)
+    "TOnDrawCell": (_a_int, _a_int, _a_rect, _a_enum("TGridDrawState"), ),  # (Sender, ACol, ARow, ARect, AState)
+    "TOnSelectCellEvent": (_a_int, _a_int, _a_ref_bool, ),  # (Sender, ACol, ARow, CanSelect)
+    "TOnSelectEvent": (_a_int, _a_int, ),  # (Sender, ACol, ARow)
+    "THdrEvent": (_a_bool, _a_int, ),  # (Sender, IsColumn, Index)
+    "TCustomSectionNotifyEvent": (_a_item("THeaderSection"), ),  # (Sender, Section)
+    "TCustomSectionTrackEvent": (_a_item("THeaderSection"), _a_int, _a_enum("TSectionTrackState"), ),  # (Sender, Section, Width, State)
+    "TSectionDragEvent": (_a_item("THeaderSection"), _a_item("THeaderSection"), _a_ref_bool, ),  # (Sender, FromSection, ToSection, AllowDrag)
+})
+
+_register(globals())
+
+# C++Builder と同じく、アプリケーションに 1 つのグローバル変数として公開する。
+Application = TApplication._global()
+
+__all__ = [
+    "NoVclError", "Ref", "TRect", "TPoint", "TObject", "TPersistent", "TComponent", "ShortCut", "TextToShortCut",
+    "ShortCutToText", "Application", "TCloseAction", "caNone", "caHide", "caFree", "caMinimize", "TMouseButton",
+    "mbLeft", "mbRight", "mbMiddle", "mbExtra1", "mbExtra2", "TDuplicates", "dupIgnore", "dupAccept", "dupError",
+    "TPixelFormat", "pfDevice", "pf1bit", "pf4bit", "pf8bit", "pf15bit", "pf16bit", "pf24bit", "pf32bit",
+    "pfCustom", "TTransparentMode", "tmAuto", "tmFixed", "TDrawingStyle", "dsFocus", "dsSelected", "dsNormal",
+    "dsTransparent", "TAlign", "alNone", "alTop", "alBottom", "alLeft", "alRight", "alClient", "alCustom",
+    "TScrollBarKind", "sbHorizontal", "sbVertical", "TBevelShape", "bsBox", "bsFrame", "bsTopLine", "bsBottomLine",
+    "bsLeftLine", "bsRightLine", "bsSpacer", "TBevelStyle", "bsLowered", "bsRaised", "TBitBtnKind", "bkCustom",
+    "bkOK", "bkCancel", "bkHelp", "bkYes", "bkNo", "bkClose", "bkAbort", "bkRetry", "bkIgnore", "bkAll",
+    "bkNoToAll", "bkYesToAll", "TButtonLayout", "blGlyphLeft", "blGlyphRight", "blGlyphTop", "blGlyphBottom",
+    "TLabelPosition", "lpAbove", "lpBelow", "lpLeft", "lpRight", "TTabPosition", "tpTop", "tpBottom", "tpLeft",
+    "tpRight", "TNodeAttachMode", "naAdd", "naAddFirst", "naAddChild", "naAddChildFirst", "naInsert",
+    "naInsertBehind", "TViewStyle", "vsIcon", "vsSmallIcon", "vsList", "vsReport", "TSortType", "stNone", "stData",
+    "stText", "stBoth", "TSortDirection", "sdAscending", "sdDescending", "TAlignment", "taLeftJustify",
+    "taRightJustify", "taCenter", "TItemChange", "ctText", "ctImage", "ctState", "TAnchorKind", "akTop", "akLeft",
+    "akRight", "akBottom", "TResizeStyle", "rsLine", "rsNone", "rsPattern", "rsUpdate", "TStaticBorderStyle",
+    "sbsNone", "sbsSingle", "sbsSunken", "TShapeType", "stRectangle", "stSquare", "stRoundRect", "stRoundSquare",
+    "stEllipse", "stCircle", "stSquaredDiamond", "stDiamond", "stTriangle", "stTriangleLeft", "stTriangleRight",
+    "stTriangleDown", "stStar", "stStarDown", "stPolygon", "TSectionTrackState", "tsTrackBegin", "tsTrackMove",
+    "tsTrackEnd", "TEdgeStyle", "esNone", "esRaised", "esLowered", "TToolButtonStyle", "tbsButton", "tbsCheck",
+    "tbsDropDown", "tbsSeparator", "tbsDivider", "tbsButtonDrop", "TGrabStyle", "gsSimple", "gsDouble",
+    "gsHorLines", "gsVerLines", "gsGripper", "gsButton", "TShiftState", "ssShift", "ssAlt", "ssCtrl", "ssLeft",
+    "ssRight", "ssMiddle", "ssDouble", "ssMeta", "ssSuper", "ssHyper", "ssAltGr", "ssCaps", "ssNum", "ssScroll",
+    "ssTriple", "ssQuad", "ssExtra1", "ssExtra2", "TGridOptions", "goFixedVertLine", "goFixedHorzLine",
+    "goVertLine", "goHorzLine", "goRangeSelect", "goDrawFocusSelected", "goRowSizing", "goColSizing",
+    "goRowMoving", "goColMoving", "goEditing", "goAutoAddRows", "goTabs", "goRowSelect", "goAlwaysShowEditor",
+    "goThumbTracking", "goColSpanning", "goRelaxedRowSelect", "goDblClickAutoSize", "goSmoothScroll",
+    "goFixedRowNumbering", "goScrollKeepVisible", "goHeaderHotTracking", "goHeaderPushedLook", "goSelectionActive",
+    "goFixedColSizing", "goDontScrollPartCell", "goCellHints", "goTruncCellHints", "goCellEllipsis",
+    "goAutoAddRowsSkipContentCheck", "goRowHighlight", "TGridDrawState", "gdSelected", "gdFocused", "gdFixed",
+    "gdHot", "gdPushed", "gdRowHighlight", "TEdgeBorders", "ebLeft", "ebTop", "ebRight", "ebBottom", "TColor",
+    "clBlack", "clWhite", "clRed", "clGreen", "clBlue", "clYellow", "TShortCut", "scShift", "scCtrl", "scAlt",
+    "TStrings", "TStringList", "TPen", "TBrush", "TFont", "TCanvas", "TGraphic", "TRasterImage", "TCustomBitmap",
+    "TBitmap", "TPortableNetworkGraphic", "TJPEGImage", "TPicture", "TCustomImageList", "TImageList", "TMenuItem",
+    "TMenu", "TMainMenu", "TPopupMenu", "TControl", "TWinControl", "TCustomScrollBar", "TScrollBar",
+    "TCustomTrackBar", "TTrackBar", "TCustomProgressBar", "TProgressBar", "TGraphicControl", "TCustomControl",
+    "TUpDown", "TScrollingWinControl", "TScrollBox", "TCustomForm", "TForm", "TApplication", "TCustomPanel",
+    "TPanel", "TCustomGroupBox", "TGroupBox", "TCustomRadioGroup", "TRadioGroup", "TCustomCheckGroup",
+    "TCheckGroup", "TCustomLabel", "TLabel", "TBoundLabel", "TBevel", "TButtonControl", "TCustomButton", "TButton",
+    "TCustomBitBtn", "TBitBtn", "TCustomCheckBox", "TCheckBox", "TRadioButton", "TToggleBox", "TCustomEdit",
+    "TEdit", "TCustomFloatSpinEdit", "TFloatSpinEdit", "TCustomSpinEdit", "TSpinEdit", "TMaskEdit",
+    "TCustomLabeledEdit", "TLabeledEdit", "TCustomTabControl", "TTabControl", "TPageControl", "TCustomPage",
+    "TTabSheet", "TTreeNode", "TTreeNodes", "TCustomTreeView", "TTreeView", "TListItem", "TListItems",
+    "TListColumn", "TListColumns", "TCustomListView", "TListView", "TCustomSplitter", "TSplitter", "TCustomMemo",
+    "TMemo", "TCustomComboBox", "TComboBox", "TCustomListBox", "TListBox", "TCustomCheckListBox", "TCheckListBox",
+    "TCustomStaticText", "TStaticText", "TStatusBar", "TCustomShape", "TShape", "TCustomSpeedButton",
+    "TSpeedButton", "TPaintBox", "TCustomImage", "TImage", "TCustomGrid", "TCustomDrawGrid", "TDrawGrid",
+    "TCustomStringGrid", "TStringGrid", "THeaderSection", "THeaderSections", "TCustomHeaderControl",
+    "THeaderControl", "TToolWindow", "TToolBar", "TToolButton", "TCoolBand", "TCoolBands", "TCustomCoolBar",
+    "TCoolBar", "TCustomTimer", "TTimer",
+]
