@@ -140,6 +140,10 @@ public:
     TMenuItem*      ViewLargeItem;
     TPopupMenu*     PopupMenu1;
     TMenuItem*      PopupHelloItem;
+    TPageControl*   PageControl1;
+    TTabSheet*      TabSheet1;
+    TTabSheet*      TabSheet2;
+    TTabSheet*      TabSheet3;
 
     // C++Builder と同じく Owner を受け取り、TForm に渡す(Application->CreateForm が Application を渡す)。
     explicit TMainForm(TComponent* AOwner) : TForm(AOwner)
@@ -583,6 +587,46 @@ public:
         PopupMenu1->OnPopup = [this](TObject* Sender) { PopupMenu1Popup(Sender); };
         Panel1->PopupMenu = PopupMenu1;
 
+        // Tier 2、1 バッチ目(TPageControl + TTabSheet)。
+        PageControl1 = new TPageControl(this);
+        PageControl1->Parent = this;
+        PageControl1->Left = 400;
+        PageControl1->Top = 200;
+        PageControl1->Width = 220;
+        PageControl1->Height = 160;
+
+        // VCL と同じく、TTabSheet を生成して PageControl を設定する。
+        TabSheet1 = new TTabSheet(this);
+        TabSheet1->PageControl = PageControl1;
+        TabSheet1->Caption = "Page 1";
+        TLabel* pageLabel = new TLabel(this);
+        pageLabel->Parent = TabSheet1;
+        pageLabel->Left = 10;
+        pageLabel->Top = 10;
+        pageLabel->Caption = "On page 1";
+
+        // AddTabSheet のページは LCL が生成する(ラッパーは初回の取得時に作られる)。
+        TabSheet2 = PageControl1->AddTabSheet();
+        TabSheet2->Caption = "Page 2";
+        TButton* pageButton = new TButton(this);
+        pageButton->Parent = TabSheet2;
+        pageButton->Left = 10;
+        pageButton->Top = 10;
+        pageButton->Caption = "On page 2";
+
+        TabSheet3 = new TTabSheet(this);
+        TabSheet3->PageControl = PageControl1;
+        TabSheet3->Caption = "Hidden";
+        TabSheet3->TabVisible = false;
+
+        PageControl1->ActivePage = TabSheet1;
+        PageControl1->OnChanging = [](TObject*, bool& AllowChange) {
+            std::printf("PageControl1Changing (AllowChange=%d)\n", AllowChange);
+            std::fflush(stdout);
+        };
+        PageControl1->OnChange = [this](TObject* Sender) { PageControl1Change(Sender); };
+        TabSheet2->OnShow = [](TObject*) { std::printf("TabSheet2Show\n"); std::fflush(stdout); };
+
         OnCreate = [this](TObject* Sender) { FormCreate(Sender); };
         OnShow = [this](TObject* Sender) { FormShow(Sender); };
         OnResize = [this](TObject* Sender) { FormResize(Sender); };
@@ -756,6 +800,14 @@ private:
         TCheckListBox* box = static_cast<TCheckListBox*>(Sender);
         std::printf("CheckListBox1ClickCheck: Checked[0]=%d Checked[1]=%d Checked[2]=%d\n",
                     box->GetChecked(0), box->GetChecked(1), box->GetChecked(2));
+        std::fflush(stdout);
+    }
+
+    void PageControl1Change(TObject* Sender)
+    {
+        TPageControl* pc = static_cast<TPageControl*>(Sender);
+        std::printf("PageControl1Change: ActivePageIndex=%d Caption=%s\n",
+                    (int)pc->ActivePageIndex, std::string(pc->ActivePage->Caption).c_str());
         std::fflush(stdout);
     }
 
@@ -956,6 +1008,34 @@ int main()
         f->FileMenu->Delete(0);
         std::printf("After Delete(0): Count=%d (expected 3), temp->Parent is null: %s\n",
                     (int)f->FileMenu->Count, temp->Parent == nullptr ? "yes" : "no");
+        temp->Free();
+    }
+
+    // Tier 2、1 バッチ目(TPageControl + TTabSheet)。
+    {
+        TMainForm* f = Form1;
+        TPageControl* pc = f->PageControl1;
+        std::printf("PageControl1 PageCount=%d (expected 3), ActivePage is TabSheet1: %s, ActivePageIndex=%d (expected 0)\n",
+                    (int)pc->PageCount, pc->ActivePage == f->TabSheet1 ? "yes" : "no", (int)pc->ActivePageIndex);
+        std::printf("GetPage(1) is TabSheet2 (AddTabSheet): %s, TabSheet2->PageControl is PageControl1: %s\n",
+                    pc->GetPage(1) == f->TabSheet2 ? "yes" : "no", f->TabSheet2->PageControl == pc ? "yes" : "no");
+        std::printf("TabSheet3 TabVisible=%d TabIndex=%d (expected 0/-1), PageIndex=%d (expected 2)\n",
+                    (bool)f->TabSheet3->TabVisible, (int)f->TabSheet3->TabIndex, (int)f->TabSheet3->PageIndex);
+        // PageIndex を書き換えるとページの並びが変わる。
+        f->TabSheet2->PageIndex = 0;
+        std::printf("After TabSheet2->PageIndex = 0: GetPage(0) is TabSheet2: %s, TabSheet1 PageIndex=%d (expected 1)\n",
+                    pc->GetPage(0) == f->TabSheet2 ? "yes" : "no", (int)f->TabSheet1->PageIndex);
+        f->TabSheet2->PageIndex = 1;
+        std::printf("TabPosition=%d (expected tpTop=%d), ShowTabs=%d, MultiLine=%d\n",
+                    (int)pc->TabPosition, (int)tpTop, (bool)pc->ShowTabs, (bool)pc->MultiLine);
+
+        // Clear はすべてのページを外して遅延破棄する。ここでは直後の temp->Free() で Owner と一緒に破棄される。
+        TPageControl* temp = new TPageControl(f);
+        temp->AddTabSheet()->Caption = "A";
+        temp->AddTabSheet()->Caption = "B";
+        std::printf("temp PageCount before/after Clear: %d/", (int)temp->PageCount);
+        temp->Clear();
+        std::printf("%d (expected 2/0)\n", (int)temp->PageCount);
         temp->Free();
     }
 

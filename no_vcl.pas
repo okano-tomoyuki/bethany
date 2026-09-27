@@ -259,6 +259,11 @@ begin
   Result := TMethod(M).Data;
 end;
 
+function MethodData(const M: TTabChangingEvent): Pointer; overload;
+begin
+  Result := TMethod(M).Data;
+end;
+
 function MethodData(const M: TKeyEvent): Pointer; overload;
 begin
   Result := TMethod(M).Data;
@@ -2129,6 +2134,176 @@ begin
   TControl(Obj).PopupMenu := TPopupMenu(Value);
 end;
 
+{ docs/component-coverage.md の Tier 2、1 バッチ目(TPageControl + TTabSheet)。
+  TPageControl は TTabControl と同じ TCustomTabControl の派生。TabIndex/OnChange は TCustomTabControl の protected を
+  TPageControl が published にしているため、TPageControl(Obj) で直接アクセスする(関数名も TPageControl_*)。
+  AddTabSheet が生成するページは LCL の内部で生成される(Owner はページコントロール)ため、ページを返す関数は
+  TMenu_GetItems と同じく Watch してから返す(docs/adr/0017-... を参照)。 }
+
+function TPageControl_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TPageControl.Create(TComponent(Owner)));
+end;
+
+function WatchOrNil(C: TComponent): Pointer;
+begin
+  if C = nil then
+    Result := nil
+  else
+    Result := Watch(C);
+end;
+
+function TPageControl_GetActivePage(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := WatchOrNil(TPageControl(Obj).ActivePage);
+end;
+
+procedure TPageControl_SetActivePage(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TPageControl(Obj).ActivePage := TTabSheet(Value);
+end;
+
+function TPageControl_GetActivePageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TPageControl(Obj).ActivePageIndex;
+end;
+
+procedure TPageControl_SetActivePageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TPageControl(Obj).ActivePageIndex := Value;
+end;
+
+function TPageControl_GetPage(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
+begin
+  Result := WatchOrNil(TPageControl(Obj).Pages[Index]);
+end;
+
+function TCustomTabControl_GetPageCount(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomTabControl(Obj).PageCount;
+end;
+
+function TPageControl_AddTabSheet(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TPageControl(Obj).AddTabSheet);
+end;
+
+{ すべてのページを外して破棄する。LCL の TNBPages.Delete は Application.ReleaseComponent を使うため、
+  破棄は遅延され、次にメッセージを処理したとき(または Owner の破棄時)に行われる。 }
+procedure TPageControl_Clear(Obj: Pointer); NO_VCL_CALL;
+begin
+  TPageControl(Obj).Clear;
+end;
+
+procedure TPageControl_SelectNextPage(Obj: Pointer; GoForward: LongBool); NO_VCL_CALL;
+begin
+  TPageControl(Obj).SelectNextPage(GoForward);
+end;
+
+function TPageControl_GetTabIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TPageControl(Obj).TabIndex;
+end;
+
+procedure TPageControl_SetTabIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TPageControl(Obj).TabIndex := Value;
+end;
+
+procedure TPageControl_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TPageControl(Obj).OnChange := @BridgeFor(TPageControl(Obj), MethodData(TPageControl(Obj).OnChange), Cb, Data).DoClick;
+end;
+
+{ OnChanging(TTabChangingEvent: Sender, var AllowChange)は OnCloseQuery と同じ形のため、同じブリッジ(DoCloseQuery)を使う。 }
+procedure TCustomTabControl_SetOnChanging(Obj: Pointer; Cb: TNoVclVarCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TCustomTabControl(Obj).OnChanging := @VarBridgeFor(TComponent(Obj), MethodData(TCustomTabControl(Obj).OnChanging), Cb, Data).DoCloseQuery;
+end;
+
+function TCustomTabControl_GetMultiLine(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomTabControl(Obj).MultiLine;
+end;
+
+procedure TCustomTabControl_SetMultiLine(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomTabControl(Obj).MultiLine := Value;
+end;
+
+function TCustomTabControl_GetShowTabs(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomTabControl(Obj).ShowTabs;
+end;
+
+procedure TCustomTabControl_SetShowTabs(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomTabControl(Obj).ShowTabs := Value;
+end;
+
+{ TTabPosition の序数(tpTop=0, tpBottom, tpLeft, tpRight)。 }
+function TCustomTabControl_GetTabPosition(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TCustomTabControl(Obj).TabPosition);
+end;
+
+procedure TCustomTabControl_SetTabPosition(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomTabControl(Obj).TabPosition := TTabPosition(Value);
+end;
+
+{ TTabSheet(TCustomPage の派生)。タブの文字列は Caption(TControl_SetCaption)。 }
+
+function TTabSheet_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TTabSheet.Create(TComponent(Owner)));
+end;
+
+function TTabSheet_GetPageControl(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TTabSheet(Obj).PageControl);
+end;
+
+procedure TTabSheet_SetPageControl(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TTabSheet(Obj).PageControl := TPageControl(Value);
+end;
+
+function TTabSheet_GetTabIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TTabSheet(Obj).TabIndex;
+end;
+
+function TCustomPage_GetPageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomPage(Obj).PageIndex;
+end;
+
+procedure TCustomPage_SetPageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomPage(Obj).PageIndex := Value;
+end;
+
+function TCustomPage_GetTabVisible(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomPage(Obj).TabVisible;
+end;
+
+procedure TCustomPage_SetTabVisible(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomPage(Obj).TabVisible := Value;
+end;
+
+procedure TCustomPage_SetOnShow(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TCustomPage(Obj).OnShow := @BridgeFor(TCustomPage(Obj), MethodData(TCustomPage(Obj).OnShow), Cb, Data).DoClick;
+end;
+
+procedure TCustomPage_SetOnHide(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TCustomPage(Obj).OnHide := @BridgeFor(TCustomPage(Obj), MethodData(TCustomPage(Obj).OnHide), Cb, Data).DoClick;
+end;
+
 exports
   FreeNotify_SetCallback,
 
@@ -2478,7 +2653,39 @@ exports
   TCustomForm_GetMenu,
   TCustomForm_SetMenu,
   TControl_GetPopupMenu,
-  TControl_SetPopupMenu;
+  TControl_SetPopupMenu,
+
+  TPageControl_Create,
+  TPageControl_GetActivePage,
+  TPageControl_SetActivePage,
+  TPageControl_GetActivePageIndex,
+  TPageControl_SetActivePageIndex,
+  TPageControl_GetPage,
+  TCustomTabControl_GetPageCount,
+  TPageControl_AddTabSheet,
+  TPageControl_Clear,
+  TPageControl_SelectNextPage,
+  TPageControl_GetTabIndex,
+  TPageControl_SetTabIndex,
+  TPageControl_SetOnChange,
+  TCustomTabControl_SetOnChanging,
+  TCustomTabControl_GetMultiLine,
+  TCustomTabControl_SetMultiLine,
+  TCustomTabControl_GetShowTabs,
+  TCustomTabControl_SetShowTabs,
+  TCustomTabControl_GetTabPosition,
+  TCustomTabControl_SetTabPosition,
+
+  TTabSheet_Create,
+  TTabSheet_GetPageControl,
+  TTabSheet_SetPageControl,
+  TTabSheet_GetTabIndex,
+  TCustomPage_GetPageIndex,
+  TCustomPage_SetPageIndex,
+  TCustomPage_GetTabVisible,
+  TCustomPage_SetTabVisible,
+  TCustomPage_SetOnShow,
+  TCustomPage_SetOnHide;
 
 begin
   RequireDerivedFormResource := False;

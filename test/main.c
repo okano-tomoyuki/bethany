@@ -259,6 +259,20 @@ static void NO_VCL_CALL OnPopupMenuPopup(no_vcl_obj_t sender, void* data)
     fflush(stdout);
 }
 
+static void NO_VCL_CALL OnPageControlChange(no_vcl_obj_t sender, void* data)
+{
+    (void)data;
+    printf("PageControl changed! ActivePageIndex=%d\n", no_vcl_TPageControl_GetActivePageIndex(sender));
+    fflush(stdout);
+}
+
+static void NO_VCL_CALL OnPageControlChanging(no_vcl_obj_t sender, no_vcl_bool_t* allowChange, void* data)
+{
+    (void)sender; (void)data;
+    printf("PageControl changing! allowChange=%d\n", *allowChange != 0);
+    fflush(stdout);
+}
+
 /* data は Splitter が幅を変える alLeft のパネル。 */
 static void NO_VCL_CALL OnSplitterMoved(no_vcl_obj_t sender, void* data)
 {
@@ -329,6 +343,10 @@ int main(void)
     no_vcl_obj_t separator;
     no_vcl_obj_t popupMenu;
     no_vcl_obj_t popupItem;
+    no_vcl_obj_t pageControl;
+    no_vcl_obj_t tabSheet1;
+    no_vcl_obj_t tabSheet2;
+    no_vcl_obj_t tempPageControl;
 
     no_vcl_FreeNotify_SetCallback(OnComponentFreed, &freedCount);
 
@@ -684,6 +702,42 @@ int main(void)
            no_vcl_TControl_GetPopupMenu(panel) == popupMenu ? "yes" : "no",
            no_vcl_TPopupMenu_GetAutoPopup(popupMenu) != 0);
 
+    /* Tier 2、1 バッチ目(TPageControl + TTabSheet)。tabSheet1 は VCL と同じく生成して PageControl を設定し、
+       tabSheet2 は AddTabSheet で追加する(LCL が生成し、Owner は pageControl。返す時点で破棄通知の対象になる)。 */
+    pageControl = Place(no_vcl_TPageControl_Create(form), form, 400, 200);
+    no_vcl_TControl_SetWidth(pageControl, 220);
+    no_vcl_TControl_SetHeight(pageControl, 160);
+    tabSheet1 = no_vcl_TTabSheet_Create(form);
+    no_vcl_TTabSheet_SetPageControl(tabSheet1, pageControl);
+    no_vcl_TControl_SetCaption(tabSheet1, "Page 1");
+    no_vcl_TControl_SetCaption(Place(no_vcl_TLabel_Create(form), tabSheet1, 10, 10), "On page 1");
+    tabSheet2 = no_vcl_TPageControl_AddTabSheet(pageControl);
+    no_vcl_TControl_SetCaption(tabSheet2, "Page 2");
+    no_vcl_TControl_SetCaption(Place(no_vcl_TButton_Create(form), tabSheet2, 10, 10), "On page 2");
+    no_vcl_TPageControl_SetActivePage(pageControl, tabSheet1);
+    no_vcl_TPageControl_SetOnChange(pageControl, OnPageControlChange, NULL);
+    no_vcl_TCustomTabControl_SetOnChanging(pageControl, OnPageControlChanging, NULL);
+    printf("PageControl PageCount=%d (expected 2), ActivePage is tabSheet1: %s, GetPage(1) is tabSheet2: %s, "
+           "tabSheet2 PageControl is pageControl: %s\n",
+           no_vcl_TCustomTabControl_GetPageCount(pageControl),
+           no_vcl_TPageControl_GetActivePage(pageControl) == tabSheet1 ? "yes" : "no",
+           no_vcl_TPageControl_GetPage(pageControl, 1) == tabSheet2 ? "yes" : "no",
+           no_vcl_TTabSheet_GetPageControl(tabSheet2) == pageControl ? "yes" : "no");
+
+    /* Clear はすべてのページを外して、遅延破棄する(Application.ReleaseComponent)。
+       Clear の時点ではまだ破棄されず、ここでは Owner(tempPageControl)の破棄と一緒に破棄される。 */
+    tempPageControl = no_vcl_TPageControl_Create(form);
+    no_vcl_TPageControl_AddTabSheet(tempPageControl);
+    no_vcl_TPageControl_AddTabSheet(tempPageControl);
+    {
+        int freedBefore = freedCount;
+        no_vcl_TPageControl_Clear(tempPageControl);
+        printf("temp PageCount after Clear=%d (expected 0), freed right after Clear=%d (expected 0: deferred)\n",
+               no_vcl_TCustomTabControl_GetPageCount(tempPageControl), freedCount - freedBefore);
+        no_vcl_TComponent_Destroy(tempPageControl);
+        printf("freed after destroying temp=%d (expected 3: 2 pages + temp)\n", freedCount - freedBefore);
+    }
+
     printf("Running (click the button, then close the window twice: the first close is blocked)...\n");
     fflush(stdout);
     /* MainForm を表示してメッセージループに入り、MainForm が閉じられると戻る。 */
@@ -693,7 +747,7 @@ int main(void)
     /* Application が所有するフォーム(と、フォームが所有するコントロール)をまとめて破棄する。
        呼ばなくても DLL の切り離し時に LCL が破棄するが、そのときは破棄通知が呼ばれない。 */
     no_vcl_TComponent_DestroyComponents(app);
-    printf("Clicks: %d, Freed components: %d (expected 51: form + 47 owned + 3 created inside LCL: 2 menu roots and a separator)\n", clickCount, freedCount);
+    printf("Clicks: %d, Freed components: %d (expected 59: form + 52 owned + 6 created inside LCL: 2 menu roots, a separator and 3 AddTabSheet pages)\n", clickCount, freedCount);
 
     printf("OK\n");
     return 0;

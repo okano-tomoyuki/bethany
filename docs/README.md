@@ -36,6 +36,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0015](adr/0015-tier1-batch1-and-statusbar-issue.md) | Tier 1(19 クラス)をすべて追加し、TStatusBar の既知の問題を記録する | 承認 |
 | [0016](adr/0016-control-align-and-splitter.md) | TControl.Align を追加し、それを前提とする TSplitter を追加する | 承認 |
 | [0017](adr/0017-menus-and-wrapping-lcl-created-components.md) | メニュー(TMenuItem・TMainMenu・TPopupMenu)を追加し、LCL が内部で生成したコンポーネントを後からラップする仕組みを入れる | 承認 |
+| [0018](adr/0018-pagecontrol-and-tabsheet.md) | Tier 2 の 1 バッチ目として TPageControl と TTabSheet を追加する | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。

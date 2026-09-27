@@ -1093,6 +1093,142 @@ void NO_VCL_CALL TTabControl::ChangeTrampoline(no_vcl_obj_t sender, void*)
         CallNotify(self->onChange_, self);
 }
 
+TCustomTabControl::TCustomTabControl(no_vcl_obj_t handle)
+    : TWinControl(handle)
+    , PageCount(this, &TCustomTabControl::GetPageCountImpl)
+    , MultiLine(this, &TCustomTabControl::GetMultiLineImpl, &TCustomTabControl::SetMultiLineImpl)
+    , ShowTabs(this, &TCustomTabControl::GetShowTabsImpl, &TCustomTabControl::SetShowTabsImpl)
+    , TabPosition(this, &TCustomTabControl::GetTabPositionImpl, &TCustomTabControl::SetTabPositionImpl)
+    , OnChanging(this, &TCustomTabControl::GetOnChangingImpl, &TCustomTabControl::SetOnChangingImpl)
+{}
+
+int  TCustomTabControl::GetPageCountImpl(TObject* owner)                 { return no_vcl_TCustomTabControl_GetPageCount(owner->Handle()); }
+bool TCustomTabControl::GetMultiLineImpl(TObject* owner)                 { return no_vcl_TCustomTabControl_GetMultiLine(owner->Handle()) != 0; }
+void TCustomTabControl::SetMultiLineImpl(TObject* owner, const bool& value) { no_vcl_TCustomTabControl_SetMultiLine(owner->Handle(), value ? 1 : 0); }
+bool TCustomTabControl::GetShowTabsImpl(TObject* owner)                  { return no_vcl_TCustomTabControl_GetShowTabs(owner->Handle()) != 0; }
+void TCustomTabControl::SetShowTabsImpl(TObject* owner, const bool& value)  { no_vcl_TCustomTabControl_SetShowTabs(owner->Handle(), value ? 1 : 0); }
+TTabPosition TCustomTabControl::GetTabPositionImpl(TObject* owner) { return static_cast<TTabPosition>(no_vcl_TCustomTabControl_GetTabPosition(owner->Handle())); }
+void TCustomTabControl::SetTabPositionImpl(TObject* owner, const TTabPosition& value) { no_vcl_TCustomTabControl_SetTabPosition(owner->Handle(), value); }
+
+TTabChangingEvent TCustomTabControl::GetOnChangingImpl(TObject* owner) { return static_cast<TCustomTabControl*>(owner)->onChanging_; }
+
+void TCustomTabControl::SetOnChangingImpl(TObject* owner, const TTabChangingEvent& value)
+{
+    TCustomTabControl* self = static_cast<TCustomTabControl*>(owner);
+    SetSimpleEvent(self->handle_, self->onChanging_, self->onChangingHooked_, value,
+                   &no_vcl_TCustomTabControl_SetOnChanging, &TCustomTabControl::ChangingTrampoline);
+}
+
+void NO_VCL_CALL TCustomTabControl::ChangingTrampoline(no_vcl_obj_t sender, no_vcl_bool_t* allowChange, void*)
+{
+    TCustomTabControl* self = static_cast<TCustomTabControl*>(FromHandle(sender));
+    if (!self || !self->onChanging_)
+        return;
+    TTabChangingEvent handler = self->onChanging_;
+    bool value = *allowChange != 0;
+    handler(self, value);
+    *allowChange = value ? 1 : 0;
+}
+
+TPageControl::TPageControl(TComponent* AOwner)
+    : TCustomTabControl(no_vcl_TPageControl_Create(HandleOf(AOwner)))
+    , ActivePage(this, &TPageControl::GetActivePageImpl, &TPageControl::SetActivePageImpl)
+    , ActivePageIndex(this, &TPageControl::GetActivePageIndexImpl, &TPageControl::SetActivePageIndexImpl)
+    , TabIndex(this, &TPageControl::GetTabIndexImpl, &TPageControl::SetTabIndexImpl)
+    , OnChange(this, &TPageControl::GetOnChangeImpl, &TPageControl::SetOnChangeImpl)
+{}
+
+TTabSheet* TPageControl::GetPage(int Index) const { return WrapExisting<TTabSheet>(no_vcl_TPageControl_GetPage(handle_, Index)); }
+TTabSheet* TPageControl::AddTabSheet()            { return WrapExisting<TTabSheet>(no_vcl_TPageControl_AddTabSheet(handle_)); }
+void TPageControl::Clear()                        { no_vcl_TPageControl_Clear(handle_); }
+void TPageControl::SelectNextPage(bool GoForward) { no_vcl_TPageControl_SelectNextPage(handle_, GoForward ? 1 : 0); }
+
+TTabSheet* TPageControl::GetActivePageImpl(TObject* owner) { return WrapExisting<TTabSheet>(no_vcl_TPageControl_GetActivePage(owner->Handle())); }
+void TPageControl::SetActivePageImpl(TObject* owner, TTabSheet* const& value) { no_vcl_TPageControl_SetActivePage(owner->Handle(), HandleOf(value)); }
+int  TPageControl::GetActivePageIndexImpl(TObject* owner)                  { return no_vcl_TPageControl_GetActivePageIndex(owner->Handle()); }
+void TPageControl::SetActivePageIndexImpl(TObject* owner, const int& value) { no_vcl_TPageControl_SetActivePageIndex(owner->Handle(), value); }
+int  TPageControl::GetTabIndexImpl(TObject* owner)                         { return no_vcl_TPageControl_GetTabIndex(owner->Handle()); }
+void TPageControl::SetTabIndexImpl(TObject* owner, const int& value)        { no_vcl_TPageControl_SetTabIndex(owner->Handle(), value); }
+
+TNotifyEvent TPageControl::GetOnChangeImpl(TObject* owner) { return static_cast<TPageControl*>(owner)->onChange_; }
+
+void TPageControl::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TPageControl* self = static_cast<TPageControl*>(owner);
+    SetSimpleEvent(self->handle_, self->onChange_, self->onChangeHooked_, value,
+                   &no_vcl_TPageControl_SetOnChange, &TPageControl::ChangeTrampoline);
+}
+
+void NO_VCL_CALL TPageControl::ChangeTrampoline(no_vcl_obj_t sender, void*)
+{
+    if (TPageControl* self = static_cast<TPageControl*>(FromHandle(sender)))
+        CallNotify(self->onChange_, self);
+}
+
+TCustomPage::TCustomPage(no_vcl_obj_t handle)
+    : TWinControl(handle)
+    , PageIndex(this, &TCustomPage::GetPageIndexImpl, &TCustomPage::SetPageIndexImpl)
+    , TabVisible(this, &TCustomPage::GetTabVisibleImpl, &TCustomPage::SetTabVisibleImpl)
+    , OnShow(this, &TCustomPage::GetOnShowImpl, &TCustomPage::SetOnShowImpl)
+    , OnHide(this, &TCustomPage::GetOnHideImpl, &TCustomPage::SetOnHideImpl)
+{}
+
+int  TCustomPage::GetPageIndexImpl(TObject* owner)                   { return no_vcl_TCustomPage_GetPageIndex(owner->Handle()); }
+void TCustomPage::SetPageIndexImpl(TObject* owner, const int& value)  { no_vcl_TCustomPage_SetPageIndex(owner->Handle(), value); }
+bool TCustomPage::GetTabVisibleImpl(TObject* owner)                  { return no_vcl_TCustomPage_GetTabVisible(owner->Handle()) != 0; }
+void TCustomPage::SetTabVisibleImpl(TObject* owner, const bool& value) { no_vcl_TCustomPage_SetTabVisible(owner->Handle(), value ? 1 : 0); }
+
+TNotifyEvent TCustomPage::GetOnShowImpl(TObject* owner) { return static_cast<TCustomPage*>(owner)->onShow_; }
+TNotifyEvent TCustomPage::GetOnHideImpl(TObject* owner) { return static_cast<TCustomPage*>(owner)->onHide_; }
+
+void TCustomPage::SetOnShowImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCustomPage* self = static_cast<TCustomPage*>(owner);
+    SetSimpleEvent(self->handle_, self->onShow_, self->onShowHooked_, value,
+                   &no_vcl_TCustomPage_SetOnShow, &TCustomPage::ShowTrampoline);
+}
+
+void TCustomPage::SetOnHideImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCustomPage* self = static_cast<TCustomPage*>(owner);
+    SetSimpleEvent(self->handle_, self->onHide_, self->onHideHooked_, value,
+                   &no_vcl_TCustomPage_SetOnHide, &TCustomPage::HideTrampoline);
+}
+
+void NO_VCL_CALL TCustomPage::ShowTrampoline(no_vcl_obj_t sender, void*)
+{
+    if (TCustomPage* self = static_cast<TCustomPage*>(FromHandle(sender)))
+        CallNotify(self->onShow_, self);
+}
+
+void NO_VCL_CALL TCustomPage::HideTrampoline(no_vcl_obj_t sender, void*)
+{
+    if (TCustomPage* self = static_cast<TCustomPage*>(FromHandle(sender)))
+        CallNotify(self->onHide_, self);
+}
+
+TTabSheet::TTabSheet(TComponent* AOwner)
+    : TTabSheet(no_vcl_TTabSheet_Create(HandleOf(AOwner)))
+{}
+
+TTabSheet::TTabSheet(no_vcl_obj_t handle)
+    : TCustomPage(handle)
+    , PageControl(this, &TTabSheet::GetPageControlImpl, &TTabSheet::SetPageControlImpl)
+    , TabIndex(this, &TTabSheet::GetTabIndexImpl)
+{}
+
+TPageControl* TTabSheet::GetPageControlImpl(TObject* owner)
+{
+    return static_cast<TPageControl*>(FromHandle(no_vcl_TTabSheet_GetPageControl(owner->Handle())));
+}
+
+void TTabSheet::SetPageControlImpl(TObject* owner, TPageControl* const& value)
+{
+    no_vcl_TTabSheet_SetPageControl(owner->Handle(), HandleOf(value));
+}
+
+int TTabSheet::GetTabIndexImpl(TObject* owner) { return no_vcl_TTabSheet_GetTabIndex(owner->Handle()); }
+
 TCustomSplitter::TCustomSplitter(no_vcl_obj_t handle)
     : TCustomControl(handle)
     , AutoSnap(this, &TCustomSplitter::GetAutoSnapImpl, &TCustomSplitter::SetAutoSnapImpl)

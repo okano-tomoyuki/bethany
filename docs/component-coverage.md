@@ -52,13 +52,13 @@ TScrollingWinControl のいずれかで、いずれも実装済み。既存パ�
 | ✅ TProgressBar | comctrls.pp(TCustomProgressBar) | TWinControl(実装済み) | Min/Max/Position のみで表示専用。問題無しを確認済み(ADR 0015 の 2 バッチ目) |
 | ✅ TUpDown | comctrls.pp(TCustomUpDown) | TCustomControl(実装済み) | Min/Max/Position/Increment/Associate(対象の Edit と連動)。問題無しを確認済み(ADR 0015 の 2 バッチ目) |
 | ✅ TTabControl | comctrls.pp(TCustomTabControl) | TWinControl(実装済み) | Tabs/TabIndex/OnChange のみ(単純なタブ切り替え UI。ADR 0015 の 6 バッチ目) |
-| TPageControl + TTabSheet | comctrls.pp | TWinControl | 所有ページ(TTabSheet)の生成・破棄の設計が要るため Tier 1 では見送り、Tier 2 に位置づけ直す |
+| TPageControl + TTabSheet | comctrls.pp | TWinControl | 所有ページ(TTabSheet)の生成・破棄の設計が要るため Tier 1 では見送り、Tier 2 に位置づけ直した(Tier 2 の 1 バッチ目で実装済み) |
 
 ### Tier 2 — 中コスト(新しいコレクション型が必要)
 
 | クラス | LCL 宣言ユニット | LCL での基底 | 必要になる補助 |
 |---|---|---|---|
-| TPageControl + TTabSheet | comctrls.pp(TCustomTabControl 系) | TWinControl | 所有ページ(TTabSheet)の生成・破棄の設計が要る。単純な TTabControl は Tier 1 で実装済み |
+| ✅ TPageControl + TTabSheet | comctrls.pp(TCustomTabControl 系) | TWinControl | Tier 2 の 1 バッチ目([ADR 0018](adr/0018-pagecontrol-and-tabsheet.md))。AddTabSheet のページは `WrapExisting` でラップ。Clear は LCL の遅延破棄。Images/Style/Options は未対応 |
 | TTreeView | comctrls.pp(TCustomTreeView) | TCustomControl(実装済み) | TTreeNodes/TTreeNode 相当のノード操作 API(Add/Delete/Text/Parent/Expanded 等) |
 | TListView | comctrls.pp(TCustomListView) | TWinControl(実装済み) | TListItems/TListColumns 相当の行・列操作 API |
 | TStringGrid / TDrawGrid | grids.pas(TCustomGrid → TCustomDrawGrid) | TCustomControl(実装済み) | セル単位の Get/Set、OnDrawCell/OnSelectCell 等の専用イベント |
@@ -150,9 +150,10 @@ Tier 1 の 1 バッチ目([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.m
    ([ADR 0016](adr/0016-control-align-and-splitter.md))。
 3. ✅ **Tier 5(メニュー)** は完了した([ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md))。
    あわせて、内部生成コンポーネントのラップの仕組み(`WrapExisting`)が入った。
-4. **Tier 2** のうち TTreeView・TListView・TStringGrid・TPageControl+TTabSheet は、それぞれ専用の
-   コレクション/所有子コンポーネント設計の ADR を書いてから着手する(TStrings 的な List 操作や、
-   内部生成コンポーネントのラップの共通パターンを固められる可能性がある)。
+4. **Tier 2** はバッチに分けて進めている。1 バッチ目の TPageControl+TTabSheet は完了した
+   ([ADR 0018](adr/0018-pagecontrol-and-tabsheet.md))。残りの TTreeView・TListView・TStringGrid は、それぞれ専用の
+   コレクション設計の ADR を書いてから着手する。特に TTreeNode・TListItem は TComponent ではない(TPersistent)ため、
+   破棄通知に頼らない寿命管理の設計が要る。
 5. **Tier 3(TBitmap/TPicture)** は、TImage 単体のためというより、Tier 1/2 のいくつか(Glyph・ImageList)の
    完成度を上げるために必要になる。着手するタイミングで独立した ADR を書く。
 6. **Tier 4(ダイアログ)** は他とほぼ独立して進められるので、隙間で着手しやすい。

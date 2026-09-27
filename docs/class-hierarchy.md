@@ -132,6 +132,11 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 | Count / Items[i] / Parent / Add / Insert / Delete / Remove / Clear / IndexOf / AddSeparator / IsLine / Click | TMenuItem(public) | TMenuItem | TMenuItem(public。Items[i] は `GetItem(i)`) | `TMenuItem_*`(ADR 0017) |
 | Items | TMenu(published。LCL が内部で生成するルート項目) | TMenu | TMenu(public。`WrapExisting` でラップ) | `TMenu_GetItems`(ADR 0017) |
 | AutoPopup / PopupComponent / OnPopup / OnClose / Popup | TPopupMenu(public/published) | TPopupMenu | TPopupMenu(public) | `TPopupMenu_*`(ADR 0017) |
+| PageCount / MultiLine / ShowTabs / TabPosition / OnChanging | TCustomTabControl(public) | TCustomTabControl | TCustomTabControl(public。TTabControl でも使える) | `TCustomTabControl_*`([ADR 0018](adr/0018-pagecontrol-and-tabsheet.md)) |
+| TabIndex / OnChange(PageControl) | TCustomTabControl(protected) | TPageControl(TTabControl は独自のフィールドで再宣言) | TPageControl(public) | `TPageControl_GetTabIndex` / `SetTabIndex` / `SetOnChange`(ADR 0018) |
+| ActivePage / ActivePageIndex / Pages[i] / AddTabSheet / Clear / SelectNextPage | TPageControl(public/published) | TPageControl | TPageControl(public。Pages[i] は `GetPage(i)`) | `TPageControl_*`(ADR 0018) |
+| PageIndex / TabVisible / OnShow / OnHide | TCustomPage(public) | TCustomPage | TCustomPage(public) | `TCustomPage_*`(ADR 0018) |
+| PageControl / TabIndex | TTabSheet(public) | TTabSheet | TTabSheet(public) | `TTabSheet_*`(ADR 0018) |
 | Interval / Enabled / OnTimer | TCustomTimer(public) | TCustomTimer | TCustomTimer(public) | `TCustomTimer_*` |
 | Run / Terminate / Terminated / Title | TCustomApplication(public。Run・Terminate・Title は TApplication で再宣言) | TApplication | TApplication(public) | `TApplication_*` |
 | CreateForm / MainForm / ProcessMessages / ShowMainForm | TApplication(public) | TApplication | TApplication(public。CreateForm は型を引数から推論するテンプレート) | `TApplication_*`(CreateForm は素の TForm を返す) |

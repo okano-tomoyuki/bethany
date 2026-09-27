@@ -590,6 +590,60 @@ void          NO_VCL_CALL no_vcl_TPopupMenu_SetOnClose(no_vcl_obj_t Obj, no_vcl_
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TControl_GetPopupMenu(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TControl_SetPopupMenu(no_vcl_obj_t Obj, no_vcl_obj_t Menu);
 
+/* docs/component-coverage.md の Tier 2、1 バッチ目(TPageControl + TTabSheet)。docs/adr/0018-... を参照。
+ *
+ * TPageControl は TTabControl と同じ TCustomTabControl の派生で、no_vcl_TCustomTabControl_* は両方に使える。
+ * ページ(TTabSheet)は、VCL と同じく no_vcl_TTabSheet_Create で生成して no_vcl_TTabSheet_SetPageControl で追加するか、
+ * no_vcl_TPageControl_AddTabSheet で追加する(こちらは LCL が内部で生成し、Owner はページコントロール)。
+ * ページを返す関数(GetActivePage・GetPage・AddTabSheet)は、返す時点でそのページを破棄通知の対象に登録する。
+ * ページの上のコントロールは、ページを Parent にして置く。 */
+enum { no_vcl_tpTop = 0, no_vcl_tpBottom, no_vcl_tpLeft, no_vcl_tpRight };
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TPageControl_Create(no_vcl_obj_t Owner);
+/* ページが 1 つも無ければ NULL。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TPageControl_GetActivePage(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TPageControl_SetActivePage(no_vcl_obj_t Obj, no_vcl_obj_t Page);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TPageControl_GetActivePageIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TPageControl_SetActivePageIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+/* LCL の Pages[Index]。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TPageControl_GetPage(no_vcl_obj_t Obj, no_vcl_int_t Index);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomTabControl_GetPageCount(no_vcl_obj_t Obj);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TPageControl_AddTabSheet(no_vcl_obj_t Obj);
+/* すべてのページを外して破棄する。破棄は LCL の Application.ReleaseComponent による遅延破棄で、
+ * 次にメッセージを処理したとき(または Owner の破棄時)に行われ、そのときに破棄通知が届く。 */
+void          NO_VCL_CALL no_vcl_TPageControl_Clear(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TPageControl_SelectNextPage(no_vcl_obj_t Obj, no_vcl_bool_t GoForward);
+/* TabIndex は表示されているタブの中での位置(TabVisible が 0 のページは数えない)。ページの位置は ActivePageIndex。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TPageControl_GetTabIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TPageControl_SetTabIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+/* ページが切り替わった後に呼ばれる。プログラムからの ActivePage・ActivePageIndex の変更では呼ばれないが、
+ * no_vcl_TCustomPage_SetPageIndex でページを並べ替えたときは呼ばれる。 */
+void          NO_VCL_CALL no_vcl_TPageControl_SetOnChange(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+/* 利用者の操作でページが切り替わる前に呼ばれる。*allowChange に 0 を書き込むと切り替えを取りやめる
+ * (コールバックの形は OnCloseQuery と同じ)。 */
+void          NO_VCL_CALL no_vcl_TCustomTabControl_SetOnChanging(no_vcl_obj_t Obj, no_vcl_close_query_callback_t Cb, void* Data);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomTabControl_GetMultiLine(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomTabControl_SetMultiLine(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomTabControl_GetShowTabs(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomTabControl_SetShowTabs(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomTabControl_GetTabPosition(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomTabControl_SetTabPosition(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+/* TTabSheet(TCustomPage の派生)。タブの文字列は no_vcl_TControl_SetCaption。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TTabSheet_Create(no_vcl_obj_t Owner);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TTabSheet_GetPageControl(no_vcl_obj_t Obj);
+/* ページコントロールの末尾に追加する(NULL で外す)。 */
+void          NO_VCL_CALL no_vcl_TTabSheet_SetPageControl(no_vcl_obj_t Obj, no_vcl_obj_t PageControl);
+/* 表示されているタブの中での位置(TabVisible が 0 なら -1)。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TTabSheet_GetTabIndex(no_vcl_obj_t Obj);
+/* ページの並び順。書き換えるとタブの位置が移動する。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomPage_GetPageIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomPage_SetPageIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomPage_GetTabVisible(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomPage_SetTabVisible(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* ページが表示された/隠されたときに呼ばれる。 */
+void          NO_VCL_CALL no_vcl_TCustomPage_SetOnShow(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TCustomPage_SetOnHide(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+
 #ifdef __cplusplus
 }
 #endif

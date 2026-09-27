@@ -362,7 +362,39 @@ using no_vcl_module_t = void*;
     X(no_vcl_obj_t,  TCustomForm_GetMenu,                     (no_vcl_obj_t o),                                     (o)) \
     X(void,          TCustomForm_SetMenu,                     (no_vcl_obj_t o, no_vcl_obj_t v),                     (o, v)) \
     X(no_vcl_obj_t,  TControl_GetPopupMenu,                   (no_vcl_obj_t o),                                     (o)) \
-    X(void,          TControl_SetPopupMenu,                   (no_vcl_obj_t o, no_vcl_obj_t v),                     (o, v))
+    X(void,          TControl_SetPopupMenu,                   (no_vcl_obj_t o, no_vcl_obj_t v),                     (o, v)) \
+    \
+    X(no_vcl_obj_t,  TPageControl_Create,                     (no_vcl_obj_t owner),                                 (owner)) \
+    X(no_vcl_obj_t,  TPageControl_GetActivePage,              (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TPageControl_SetActivePage,              (no_vcl_obj_t o, no_vcl_obj_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TPageControl_GetActivePageIndex,         (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TPageControl_SetActivePageIndex,         (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_obj_t,  TPageControl_GetPage,                    (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(no_vcl_int_t,  TCustomTabControl_GetPageCount,          (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TPageControl_AddTabSheet,                (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TPageControl_Clear,                      (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TPageControl_SelectNextPage,             (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_int_t,  TPageControl_GetTabIndex,                (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TPageControl_SetTabIndex,                (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(void,          TPageControl_SetOnChange,                (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d)) \
+    X(void,          TCustomTabControl_SetOnChanging,         (no_vcl_obj_t o, no_vcl_close_query_callback_t cb, void* d), (o, cb, d)) \
+    X(no_vcl_bool_t, TCustomTabControl_GetMultiLine,          (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomTabControl_SetMultiLine,          (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TCustomTabControl_GetShowTabs,           (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomTabControl_SetShowTabs,           (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_int_t,  TCustomTabControl_GetTabPosition,        (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomTabControl_SetTabPosition,        (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    \
+    X(no_vcl_obj_t,  TTabSheet_Create,                        (no_vcl_obj_t owner),                                 (owner)) \
+    X(no_vcl_obj_t,  TTabSheet_GetPageControl,                (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TTabSheet_SetPageControl,                (no_vcl_obj_t o, no_vcl_obj_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TTabSheet_GetTabIndex,                   (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_int_t,  TCustomPage_GetPageIndex,                (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomPage_SetPageIndex,                (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_bool_t, TCustomPage_GetTabVisible,               (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomPage_SetTabVisible,               (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(void,          TCustomPage_SetOnShow,                   (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d)) \
+    X(void,          TCustomPage_SetOnHide,                   (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d))
 
 namespace
 {

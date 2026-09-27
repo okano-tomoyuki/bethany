@@ -1258,17 +1258,47 @@ private:
     static void         SetEditMaskImpl(TObject* owner, const std::string& value);
 };
 
-// 単純なタブの切り替え UI(ページはコントロール自身では管理しない)。Tabs/TabIndex/OnChange は
-// LCL では TCustomTabControl の protected だが、唯一の具象クラス TTabControl が独自のフィールドで
-// 再宣言して published にしているため、すべて TTabControl に直接置く(TUpDown と同じ形)。
-// ページ付きの TPageControl/TTabSheet(所有ページの生成・破棄が必要)は今回見送る。
+// タブの位置(LCL の TTabPosition と同じ値)。
+enum TTabPosition { tpTop, tpBottom, tpLeft, tpRight };
+
+// OnChanging の型。AllowChange には true が入っており、false にするとページの切り替えを取りやめる。
+using TTabChangingEvent = std::function<void(TObject* Sender, bool& AllowChange)>;
+
+// TTabControl と TPageControl の共通の基底。以下のメンバは LCL の TCustomTabControl の public。
 class TCustomTabControl : public TWinControl
 {
+public:
+    // ページ(TPageControl なら TTabSheet)の数。TTabControl では Tabs の数と同じ。
+    ReadOnlyProperty<int>       PageCount;
+    Property<bool>              MultiLine;
+    Property<bool>              ShowTabs;
+    Property<TTabPosition>      TabPosition;
+    // 利用者の操作でページが切り替わる前に呼ばれる。
+    Property<TTabChangingEvent> OnChanging;
+
 protected:
-    explicit TCustomTabControl(no_vcl_obj_t handle) : TWinControl(handle) {}
+    explicit TCustomTabControl(no_vcl_obj_t handle);
     ~TCustomTabControl() override = default;
+
+private:
+    TTabChangingEvent onChanging_;
+    bool              onChangingHooked_ = false;
+    static void NO_VCL_CALL ChangingTrampoline(no_vcl_obj_t sender, no_vcl_bool_t* allowChange, void* data);
+
+    static int               GetPageCountImpl(TObject* owner);
+    static bool              GetMultiLineImpl(TObject* owner);
+    static void              SetMultiLineImpl(TObject* owner, const bool& value);
+    static bool              GetShowTabsImpl(TObject* owner);
+    static void              SetShowTabsImpl(TObject* owner, const bool& value);
+    static TTabPosition      GetTabPositionImpl(TObject* owner);
+    static void              SetTabPositionImpl(TObject* owner, const TTabPosition& value);
+    static TTabChangingEvent GetOnChangingImpl(TObject* owner);
+    static void              SetOnChangingImpl(TObject* owner, const TTabChangingEvent& value);
 };
 
+// 単純なタブの切り替え UI(ページはコントロール自身では管理しない)。Tabs/TabIndex/OnChange は
+// LCL では TCustomTabControl の protected だが、TTabControl が独自のフィールドで再宣言して published に
+// しているため、すべて TTabControl に直接置く(TUpDown と同じ形)。ページ付きのタブは TPageControl。
 class TTabControl : public TCustomTabControl
 {
 public:
@@ -1294,6 +1324,107 @@ private:
     static void          SetTabIndexImpl(TObject* owner, const int& value);
     static TNotifyEvent  GetOnChangeImpl(TObject* owner);
     static void          SetOnChangeImpl(TObject* owner, const TNotifyEvent& value);
+};
+
+class TTabSheet;
+
+// ページ付きのタブ。ページ(TTabSheet)は VCL と同じく、TTabSheet を生成して PageControl を設定するか、
+// AddTabSheet で追加する。ページの上のコントロールは、ページを Parent にして置く。
+// Pages[Index] は GetPage(Index)(インデックス付きプロパティは Get メソッドで表す、TMenuItem::GetItem と同じ形)。
+class TPageControl : public TCustomTabControl
+{
+public:
+    explicit TPageControl(TComponent* AOwner);
+
+    // ページが 1 つも無ければ nullptr。
+    Property<TTabSheet*>   ActivePage;
+    Property<int>          ActivePageIndex;
+    // 表示されているタブの中での位置(TabVisible が false のページは数えない)。
+    Property<int>          TabIndex;
+    // ページが切り替わった後に呼ばれる。プログラムからの ActivePage・ActivePageIndex の変更では呼ばれないが、
+    // TCustomPage::PageIndex でページを並べ替えたときは(表示中のページの位置が変わるため)呼ばれる。
+    Property<TNotifyEvent> OnChange;
+
+    TTabSheet* GetPage(int Index) const;
+    // ページを末尾に追加する。ページは LCL が内部で生成し、Owner はこのページコントロールになる。
+    TTabSheet* AddTabSheet();
+    // すべてのページを外して破棄する。破棄は LCL の遅延破棄(Application.ReleaseComponent)で、次にメッセージを
+    // 処理したとき(または Owner の破棄時)に行われ、そのときにページのラッパーも delete される。
+    void       Clear();
+    void       SelectNextPage(bool GoForward);
+
+protected:
+    ~TPageControl() override = default;
+
+private:
+    TNotifyEvent onChange_;
+    bool         onChangeHooked_ = false;
+    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender, void* data);
+
+    static TTabSheet*   GetActivePageImpl(TObject* owner);
+    static void         SetActivePageImpl(TObject* owner, TTabSheet* const& value);
+    static int          GetActivePageIndexImpl(TObject* owner);
+    static void         SetActivePageIndexImpl(TObject* owner, const int& value);
+    static int          GetTabIndexImpl(TObject* owner);
+    static void         SetTabIndexImpl(TObject* owner, const int& value);
+    static TNotifyEvent GetOnChangeImpl(TObject* owner);
+    static void         SetOnChangeImpl(TObject* owner, const TNotifyEvent& value);
+};
+
+// ページの共通の基底(LCL の TCustomPage。TWinControl の直接の派生)。
+class TCustomPage : public TWinControl
+{
+public:
+    // ページの並び順。書き換えるとタブの位置が移動する。
+    Property<int>          PageIndex;
+    Property<bool>         TabVisible;
+    // ページが表示された/隠されたときに呼ばれる。
+    Property<TNotifyEvent> OnShow;
+    Property<TNotifyEvent> OnHide;
+
+protected:
+    explicit TCustomPage(no_vcl_obj_t handle);
+    ~TCustomPage() override = default;
+
+private:
+    TNotifyEvent onShow_;
+    TNotifyEvent onHide_;
+    bool         onShowHooked_ = false;
+    bool         onHideHooked_ = false;
+    static void NO_VCL_CALL ShowTrampoline(no_vcl_obj_t sender, void* data);
+    static void NO_VCL_CALL HideTrampoline(no_vcl_obj_t sender, void* data);
+
+    static int          GetPageIndexImpl(TObject* owner);
+    static void         SetPageIndexImpl(TObject* owner, const int& value);
+    static bool         GetTabVisibleImpl(TObject* owner);
+    static void         SetTabVisibleImpl(TObject* owner, const bool& value);
+    static TNotifyEvent GetOnShowImpl(TObject* owner);
+    static void         SetOnShowImpl(TObject* owner, const TNotifyEvent& value);
+    static TNotifyEvent GetOnHideImpl(TObject* owner);
+    static void         SetOnHideImpl(TObject* owner, const TNotifyEvent& value);
+};
+
+// TPageControl のページ。タブの文字列は Caption。
+class TTabSheet : public TCustomPage
+{
+public:
+    explicit TTabSheet(TComponent* AOwner);
+
+    // 設定するとそのページコントロールの末尾に追加される(nullptr で外す)。
+    Property<TPageControl*> PageControl;
+    // 表示されているタブの中での位置(TabVisible が false なら -1)。
+    ReadOnlyProperty<int>   TabIndex;
+
+protected:
+    ~TTabSheet() override = default;
+
+private:
+    friend class TComponent;  // WrapExisting から(AddTabSheet 等で LCL が生成したページのラップ)
+    explicit TTabSheet(no_vcl_obj_t handle);
+
+    static TPageControl* GetPageControlImpl(TObject* owner);
+    static void          SetPageControlImpl(TObject* owner, TPageControl* const& value);
+    static int           GetTabIndexImpl(TObject* owner);
 };
 
 // Splitter が寄せる辺(LCL の TAnchorKind と同じ値。VCL には無い)と、ドラッグ中の表示のしかた。
