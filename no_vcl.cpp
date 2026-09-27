@@ -755,7 +755,7 @@ void TApplication::Shutdown()
     if (Application)
         no_vcl_TComponent_DestroyComponents(Application->handle_);
     no_vcl_FreeNotify_SetCallback(nullptr, nullptr);
-    no_vcl_TreeNodeFree_SetCallback(nullptr, nullptr);
+    no_vcl_ItemFree_SetCallback(nullptr, nullptr);
 }
 
 void TApplication::BeginCreateForm()
@@ -1230,50 +1230,40 @@ void TTabSheet::SetPageControlImpl(TObject* owner, TPageControl* const& value)
 
 int TTabSheet::GetTabIndexImpl(TObject* owner) { return no_vcl_TTabSheet_GetTabIndex(owner->Handle()); }
 
-/* ---------------- TreeView ---------------- */
+/* ---------------- ItemRegistry ---------------- */
 
-// TTreeNode は TComponent ではないため、TComponent のレジストリ・破棄通知とは別に持つ。
-// ノードの削除は Pascal 側(TNoVclTreeView.Delete)から、OnDeletion の後に通知される。
+// 項目の削除は Pascal 側(TNoVclTreeView.Delete・TNoVclListView.DoDeletion・列を削除する関数)から通知される。
 // 意図的に破棄しない(new したまま)。関数内 static の値にすると、初回の呼び出し(フォームの生成中)より前に
 // 登録された TApplication::Shutdown(atexit)よりも先に破棄されてしまい、Shutdown でフォームを破棄する際の
-// ノードの削除通知(FreeTrampoline)が、破棄済みのレジストリに触れることになる(未定義動作。実際に終了が数秒遅れた)。
-std::unordered_map<no_vcl_obj_t, TTreeNode*>& TTreeNode::Registry()
+// 項目の削除通知(FreeTrampoline)が、破棄済みのレジストリに触れることになる(未定義動作。実際に終了が数秒遅れた。ADR 0019)。
+std::unordered_map<no_vcl_obj_t, TPersistent*>& ItemRegistry::Registry()
 {
-    static std::unordered_map<no_vcl_obj_t, TTreeNode*>* registry = new std::unordered_map<no_vcl_obj_t, TTreeNode*>();
+    static std::unordered_map<no_vcl_obj_t, TPersistent*>* registry = new std::unordered_map<no_vcl_obj_t, TPersistent*>();
     return *registry;
 }
 
-TTreeNode* TTreeNode::Wrap(no_vcl_obj_t handle)
+void ItemRegistry::InstallCallback()
 {
-    if (!handle)
-        return nullptr;
-
-    static bool callbackInstalled = false;
-    if (!callbackInstalled)
+    static bool installed = false;
+    if (!installed)
     {
-        no_vcl_TreeNodeFree_SetCallback(&TTreeNode::FreeTrampoline, nullptr);
-        callbackInstalled = true;
+        no_vcl_ItemFree_SetCallback(&ItemRegistry::FreeTrampoline, nullptr);
+        installed = true;
     }
-
-    std::unordered_map<no_vcl_obj_t, TTreeNode*>& registry = Registry();
-    auto it = registry.find(handle);
-    if (it != registry.end())
-        return it->second;
-    TTreeNode* node = new TTreeNode(handle);
-    registry[handle] = node;
-    return node;
 }
 
-void NO_VCL_CALL TTreeNode::FreeTrampoline(no_vcl_obj_t handle, void*)
+void NO_VCL_CALL ItemRegistry::FreeTrampoline(no_vcl_obj_t handle, void*)
 {
-    std::unordered_map<no_vcl_obj_t, TTreeNode*>& registry = Registry();
+    std::unordered_map<no_vcl_obj_t, TPersistent*>& registry = Registry();
     auto it = registry.find(handle);
     if (it == registry.end())
         return;
-    TTreeNode* node = it->second;
+    TPersistent* item = it->second;
     registry.erase(it);
-    delete node;
+    delete item;
 }
+
+/* ---------------- TreeView ---------------- */
 
 TTreeNode::TTreeNode(no_vcl_obj_t handle)
     : TPersistent(handle)
@@ -1535,6 +1525,265 @@ void TTreeView::SetOnDeletionImpl(TObject* owner, const TTVExpandedEvent& value)
     TTreeView* self = static_cast<TTreeView*>(owner);
     SetSimpleEvent(self->handle_, self->onDeletion_, self->onDeletionHooked_, value,
                    &no_vcl_TTreeView_SetOnDeletion, &TTreeView::DeletionTrampoline);
+}
+
+/* ---------------- ListView ---------------- */
+
+namespace
+{
+no_vcl_obj_t ItemHandle(const TObject* item) { return item ? item->Handle() : nullptr; }
+}
+
+TListItem::TListItem(no_vcl_obj_t handle)
+    : TPersistent(handle)
+    , Caption(this, &TListItem::GetCaptionImpl, &TListItem::SetCaptionImpl)
+    , Checked(this, &TListItem::GetCheckedImpl, &TListItem::SetCheckedImpl)
+    , Selected(this, &TListItem::GetSelectedImpl, &TListItem::SetSelectedImpl)
+    , Focused(this, &TListItem::GetFocusedImpl, &TListItem::SetFocusedImpl)
+    , Data(this, &TListItem::GetDataImpl, &TListItem::SetDataImpl)
+    , Index(this, &TListItem::GetIndexImpl)
+    , ListView(this, &TListItem::GetListViewImpl)
+{}
+
+void TListItem::SubItemsAdd(const std::string& text)   { no_vcl_TListItem_SubItems_Add(handle_, text.c_str()); }
+void TListItem::SubItemsClear()                        { no_vcl_TListItem_SubItems_Clear(handle_); }
+int  TListItem::SubItemsCount() const                  { return no_vcl_TListItem_SubItems_Count(handle_); }
+std::string TListItem::SubItemsGetText(int index) const { return std::string(no_vcl_TListItem_SubItems_GetText(handle_, index)); }
+void TListItem::SubItemsSetText(int index, const std::string& text) { no_vcl_TListItem_SubItems_SetText(handle_, index, text.c_str()); }
+void TListItem::Delete()                               { no_vcl_TListItem_Delete(handle_); }
+void TListItem::MakeVisible(bool PartialOK)            { no_vcl_TListItem_MakeVisible(handle_, PartialOK ? 1 : 0); }
+
+std::string TListItem::GetCaptionImpl(TObject* owner) { return std::string(no_vcl_TListItem_GetCaption(owner->Handle())); }
+void TListItem::SetCaptionImpl(TObject* owner, const std::string& value) { no_vcl_TListItem_SetCaption(owner->Handle(), value.c_str()); }
+bool TListItem::GetCheckedImpl(TObject* owner)                     { return no_vcl_TListItem_GetChecked(owner->Handle()) != 0; }
+void TListItem::SetCheckedImpl(TObject* owner, const bool& value)   { no_vcl_TListItem_SetChecked(owner->Handle(), value ? 1 : 0); }
+bool TListItem::GetSelectedImpl(TObject* owner)                    { return no_vcl_TListItem_GetSelected(owner->Handle()) != 0; }
+void TListItem::SetSelectedImpl(TObject* owner, const bool& value)  { no_vcl_TListItem_SetSelected(owner->Handle(), value ? 1 : 0); }
+bool TListItem::GetFocusedImpl(TObject* owner)                     { return no_vcl_TListItem_GetFocused(owner->Handle()) != 0; }
+void TListItem::SetFocusedImpl(TObject* owner, const bool& value)   { no_vcl_TListItem_SetFocused(owner->Handle(), value ? 1 : 0); }
+void* TListItem::GetDataImpl(TObject* owner)                       { return no_vcl_TListItem_GetData(owner->Handle()); }
+void TListItem::SetDataImpl(TObject* owner, void* const& value)     { no_vcl_TListItem_SetData(owner->Handle(), value); }
+int  TListItem::GetIndexImpl(TObject* owner)                       { return no_vcl_TListItem_GetIndex(owner->Handle()); }
+
+TCustomListView* TListItem::GetListViewImpl(TObject* owner)
+{
+    return static_cast<TCustomListView*>(TCustomListView::FromHandle(no_vcl_TListItem_GetListView(owner->Handle())));
+}
+
+TListItems::TListItems(no_vcl_obj_t handle)
+    : TPersistent(handle)
+    , Count(this, &TListItems::GetCountImpl)
+{}
+
+TListItem* TListItems::Add()                     { return TListItem::Wrap(no_vcl_TListItems_Add(handle_)); }
+TListItem* TListItems::Insert(int Index)         { return TListItem::Wrap(no_vcl_TListItems_Insert(handle_, Index)); }
+void TListItems::Delete(int Index)               { no_vcl_TListItems_Delete(handle_, Index); }
+void TListItems::Clear()                         { no_vcl_TListItems_Clear(handle_); }
+TListItem* TListItems::GetItem(int Index) const  { return TListItem::Wrap(no_vcl_TListItems_GetItem(handle_, Index)); }
+int  TListItems::IndexOf(TListItem* Item) const  { return no_vcl_TListItems_IndexOf(handle_, ItemHandle(Item)); }
+
+TListItem* TListItems::FindCaption(int StartIndex, const std::string& Value, bool Partial, bool Inclusive, bool Wrap) const
+{
+    return TListItem::Wrap(no_vcl_TListItems_FindCaption(handle_, StartIndex, Value.c_str(),
+                                                        Partial ? 1 : 0, Inclusive ? 1 : 0, Wrap ? 1 : 0));
+}
+
+void TListItems::Exchange(int Index1, int Index2) { no_vcl_TListItems_Exchange(handle_, Index1, Index2); }
+void TListItems::Move(int FromIndex, int ToIndex) { no_vcl_TListItems_Move(handle_, FromIndex, ToIndex); }
+void TListItems::BeginUpdate()                    { no_vcl_TListItems_BeginUpdate(handle_); }
+void TListItems::EndUpdate()                      { no_vcl_TListItems_EndUpdate(handle_); }
+int  TListItems::GetCountImpl(TObject* owner)     { return no_vcl_TListItems_GetCount(owner->Handle()); }
+
+TListColumn::TListColumn(no_vcl_obj_t handle)
+    : TPersistent(handle)
+    , Caption(this, &TListColumn::GetCaptionImpl, &TListColumn::SetCaptionImpl)
+    , Width(this, &TListColumn::GetWidthImpl, &TListColumn::SetWidthImpl)
+    , Alignment(this, &TListColumn::GetAlignmentImpl, &TListColumn::SetAlignmentImpl)
+    , AutoSize(this, &TListColumn::GetAutoSizeImpl, &TListColumn::SetAutoSizeImpl)
+    , Visible(this, &TListColumn::GetVisibleImpl, &TListColumn::SetVisibleImpl)
+    , Index(this, &TListColumn::GetIndexImpl, &TListColumn::SetIndexImpl)
+{}
+
+std::string TListColumn::GetCaptionImpl(TObject* owner) { return std::string(no_vcl_TListColumn_GetCaption(owner->Handle())); }
+void TListColumn::SetCaptionImpl(TObject* owner, const std::string& value) { no_vcl_TListColumn_SetCaption(owner->Handle(), value.c_str()); }
+int  TListColumn::GetWidthImpl(TObject* owner)                    { return no_vcl_TListColumn_GetWidth(owner->Handle()); }
+void TListColumn::SetWidthImpl(TObject* owner, const int& value)   { no_vcl_TListColumn_SetWidth(owner->Handle(), value); }
+TAlignment TListColumn::GetAlignmentImpl(TObject* owner) { return static_cast<TAlignment>(no_vcl_TListColumn_GetAlignment(owner->Handle())); }
+void TListColumn::SetAlignmentImpl(TObject* owner, const TAlignment& value) { no_vcl_TListColumn_SetAlignment(owner->Handle(), value); }
+bool TListColumn::GetAutoSizeImpl(TObject* owner)                 { return no_vcl_TListColumn_GetAutoSize(owner->Handle()) != 0; }
+void TListColumn::SetAutoSizeImpl(TObject* owner, const bool& value) { no_vcl_TListColumn_SetAutoSize(owner->Handle(), value ? 1 : 0); }
+bool TListColumn::GetVisibleImpl(TObject* owner)                  { return no_vcl_TListColumn_GetVisible(owner->Handle()) != 0; }
+void TListColumn::SetVisibleImpl(TObject* owner, const bool& value) { no_vcl_TListColumn_SetVisible(owner->Handle(), value ? 1 : 0); }
+int  TListColumn::GetIndexImpl(TObject* owner)                    { return no_vcl_TListColumn_GetIndex(owner->Handle()); }
+void TListColumn::SetIndexImpl(TObject* owner, const int& value)   { no_vcl_TListColumn_SetIndex(owner->Handle(), value); }
+
+TListColumns::TListColumns(no_vcl_obj_t handle)
+    : TPersistent(handle)
+    , Count(this, &TListColumns::GetCountImpl)
+{}
+
+TListColumn* TListColumns::Add()                    { return TListColumn::Wrap(no_vcl_TListColumns_Add(handle_)); }
+TListColumn* TListColumns::GetItem(int Index) const { return TListColumn::Wrap(no_vcl_TListColumns_GetItem(handle_, Index)); }
+void TListColumns::Delete(int Index)                { no_vcl_TListColumns_Delete(handle_, Index); }
+void TListColumns::Clear()                          { no_vcl_TListColumns_Clear(handle_); }
+int  TListColumns::GetCountImpl(TObject* owner)     { return no_vcl_TListColumns_GetCount(owner->Handle()); }
+
+TCustomListView::TCustomListView(no_vcl_obj_t handle)
+    : TWinControl(handle)
+    , Items(this, &TCustomListView::GetItemsImpl)
+    , Selected(this, &TCustomListView::GetSelectedImpl, &TCustomListView::SetSelectedImpl)
+    , ItemIndex(this, &TCustomListView::GetItemIndexImpl, &TCustomListView::SetItemIndexImpl)
+    , SelCount(this, &TCustomListView::GetSelCountImpl)
+    , Checkboxes(this, &TCustomListView::GetCheckboxesImpl, &TCustomListView::SetCheckboxesImpl)
+    , GridLines(this, &TCustomListView::GetGridLinesImpl, &TCustomListView::SetGridLinesImpl)
+    , MultiSelect(this, &TCustomListView::GetMultiSelectImpl, &TCustomListView::SetMultiSelectImpl)
+    , ReadOnly(this, &TCustomListView::GetReadOnlyImpl, &TCustomListView::SetReadOnlyImpl)
+    , RowSelect(this, &TCustomListView::GetRowSelectImpl, &TCustomListView::SetRowSelectImpl)
+    , items_(no_vcl_TCustomListView_GetItems(handle))
+{}
+
+void TCustomListView::Clear()          { no_vcl_TCustomListView_Clear(handle_); }
+void TCustomListView::BeginUpdate()    { no_vcl_TCustomListView_BeginUpdate(handle_); }
+void TCustomListView::EndUpdate()      { no_vcl_TCustomListView_EndUpdate(handle_); }
+void TCustomListView::ClearSelection() { no_vcl_TCustomListView_ClearSelection(handle_); }
+void TCustomListView::SelectAll()      { no_vcl_TCustomListView_SelectAll(handle_); }
+
+TListItem* TCustomListView::GetItemAt(int X, int Y) const
+{
+    return TListItem::Wrap(no_vcl_TCustomListView_GetItemAt(handle_, X, Y));
+}
+
+TListItems* TCustomListView::GetItemsImpl(TObject* owner)   { return &static_cast<TCustomListView*>(owner)->items_; }
+TListItem*  TCustomListView::GetSelectedImpl(TObject* owner) { return TListItem::Wrap(no_vcl_TCustomListView_GetSelected(owner->Handle())); }
+void TCustomListView::SetSelectedImpl(TObject* owner, TListItem* const& value) { no_vcl_TCustomListView_SetSelected(owner->Handle(), ItemHandle(value)); }
+int  TCustomListView::GetItemIndexImpl(TObject* owner)                   { return no_vcl_TCustomListView_GetItemIndex(owner->Handle()); }
+void TCustomListView::SetItemIndexImpl(TObject* owner, const int& value)  { no_vcl_TCustomListView_SetItemIndex(owner->Handle(), value); }
+int  TCustomListView::GetSelCountImpl(TObject* owner)                    { return no_vcl_TCustomListView_GetSelCount(owner->Handle()); }
+bool TCustomListView::GetCheckboxesImpl(TObject* owner)                  { return no_vcl_TCustomListView_GetCheckboxes(owner->Handle()) != 0; }
+void TCustomListView::SetCheckboxesImpl(TObject* owner, const bool& value) { no_vcl_TCustomListView_SetCheckboxes(owner->Handle(), value ? 1 : 0); }
+bool TCustomListView::GetGridLinesImpl(TObject* owner)                   { return no_vcl_TCustomListView_GetGridLines(owner->Handle()) != 0; }
+void TCustomListView::SetGridLinesImpl(TObject* owner, const bool& value) { no_vcl_TCustomListView_SetGridLines(owner->Handle(), value ? 1 : 0); }
+bool TCustomListView::GetMultiSelectImpl(TObject* owner)                 { return no_vcl_TCustomListView_GetMultiSelect(owner->Handle()) != 0; }
+void TCustomListView::SetMultiSelectImpl(TObject* owner, const bool& value) { no_vcl_TCustomListView_SetMultiSelect(owner->Handle(), value ? 1 : 0); }
+bool TCustomListView::GetReadOnlyImpl(TObject* owner)                    { return no_vcl_TCustomListView_GetReadOnly(owner->Handle()) != 0; }
+void TCustomListView::SetReadOnlyImpl(TObject* owner, const bool& value)  { no_vcl_TCustomListView_SetReadOnly(owner->Handle(), value ? 1 : 0); }
+bool TCustomListView::GetRowSelectImpl(TObject* owner)                   { return no_vcl_TCustomListView_GetRowSelect(owner->Handle()) != 0; }
+void TCustomListView::SetRowSelectImpl(TObject* owner, const bool& value) { no_vcl_TCustomListView_SetRowSelect(owner->Handle(), value ? 1 : 0); }
+
+TListView::TListView(TComponent* AOwner)
+    : TCustomListView(no_vcl_TListView_Create(HandleOf(AOwner)))
+    , Columns(this, &TListView::GetColumnsImpl)
+    , ViewStyle(this, &TListView::GetViewStyleImpl, &TListView::SetViewStyleImpl)
+    , HideSelection(this, &TListView::GetHideSelectionImpl, &TListView::SetHideSelectionImpl)
+    , SortType(this, &TListView::GetSortTypeImpl, &TListView::SetSortTypeImpl)
+    , SortColumn(this, &TListView::GetSortColumnImpl, &TListView::SetSortColumnImpl)
+    , SortDirection(this, &TListView::GetSortDirectionImpl, &TListView::SetSortDirectionImpl)
+    , OnSelectItem(this, &TListView::GetOnSelectItemImpl, &TListView::SetOnSelectItemImpl)
+    , OnChange(this, &TListView::GetOnChangeImpl, &TListView::SetOnChangeImpl)
+    , OnDeletion(this, &TListView::GetOnDeletionImpl, &TListView::SetOnDeletionImpl)
+    , OnItemChecked(this, &TListView::GetOnItemCheckedImpl, &TListView::SetOnItemCheckedImpl)
+    , OnColumnClick(this, &TListView::GetOnColumnClickImpl, &TListView::SetOnColumnClickImpl)
+    , columns_(no_vcl_TListView_GetColumns(handle_))
+{}
+
+TListColumns* TListView::GetColumnsImpl(TObject* owner) { return &static_cast<TListView*>(owner)->columns_; }
+TViewStyle TListView::GetViewStyleImpl(TObject* owner) { return static_cast<TViewStyle>(no_vcl_TListView_GetViewStyle(owner->Handle())); }
+void TListView::SetViewStyleImpl(TObject* owner, const TViewStyle& value) { no_vcl_TListView_SetViewStyle(owner->Handle(), value); }
+bool TListView::GetHideSelectionImpl(TObject* owner)                    { return no_vcl_TListView_GetHideSelection(owner->Handle()) != 0; }
+void TListView::SetHideSelectionImpl(TObject* owner, const bool& value)  { no_vcl_TListView_SetHideSelection(owner->Handle(), value ? 1 : 0); }
+TSortType TListView::GetSortTypeImpl(TObject* owner) { return static_cast<TSortType>(no_vcl_TListView_GetSortType(owner->Handle())); }
+void TListView::SetSortTypeImpl(TObject* owner, const TSortType& value) { no_vcl_TListView_SetSortType(owner->Handle(), value); }
+int  TListView::GetSortColumnImpl(TObject* owner)                       { return no_vcl_TListView_GetSortColumn(owner->Handle()); }
+void TListView::SetSortColumnImpl(TObject* owner, const int& value)      { no_vcl_TListView_SetSortColumn(owner->Handle(), value); }
+TSortDirection TListView::GetSortDirectionImpl(TObject* owner) { return static_cast<TSortDirection>(no_vcl_TListView_GetSortDirection(owner->Handle())); }
+void TListView::SetSortDirectionImpl(TObject* owner, const TSortDirection& value) { no_vcl_TListView_SetSortDirection(owner->Handle(), value); }
+
+// リストビューの破棄では、リストビュー自身のラッパーが delete された後に項目が破棄される(LCL の順序)。
+// そのときの OnDeletion は FromHandle が nullptr を返すため、ハンドラは呼ばれない。
+void NO_VCL_CALL TListView::SelectItemTrampoline(no_vcl_obj_t sender, no_vcl_obj_t item, no_vcl_int_t selected, void*)
+{
+    TListView* self = static_cast<TListView*>(FromHandle(sender));
+    if (!self || !self->onSelectItem_)
+        return;
+    TLVSelectItemEvent handler = self->onSelectItem_;
+    handler(self, TListItem::Wrap(item), selected != 0);
+}
+
+void NO_VCL_CALL TListView::ChangeTrampoline(no_vcl_obj_t sender, no_vcl_obj_t item, no_vcl_int_t change, void*)
+{
+    TListView* self = static_cast<TListView*>(FromHandle(sender));
+    if (!self || !self->onChange_)
+        return;
+    TLVChangeEvent handler = self->onChange_;
+    handler(self, TListItem::Wrap(item), static_cast<TItemChange>(change));
+}
+
+void NO_VCL_CALL TListView::DeletionTrampoline(no_vcl_obj_t sender, no_vcl_obj_t item, void*)
+{
+    TListView* self = static_cast<TListView*>(FromHandle(sender));
+    if (!self || !self->onDeletion_)
+        return;
+    TLVDeletedEvent handler = self->onDeletion_;
+    handler(self, TListItem::Wrap(item));
+}
+
+void NO_VCL_CALL TListView::ItemCheckedTrampoline(no_vcl_obj_t sender, no_vcl_obj_t item, void*)
+{
+    TListView* self = static_cast<TListView*>(FromHandle(sender));
+    if (!self || !self->onItemChecked_)
+        return;
+    TLVCheckedItemEvent handler = self->onItemChecked_;
+    handler(self, TListItem::Wrap(item));
+}
+
+void NO_VCL_CALL TListView::ColumnClickTrampoline(no_vcl_obj_t sender, no_vcl_obj_t column, void*)
+{
+    TListView* self = static_cast<TListView*>(FromHandle(sender));
+    if (!self || !self->onColumnClick_)
+        return;
+    TLVColumnClickEvent handler = self->onColumnClick_;
+    handler(self, TListColumn::Wrap(column));
+}
+
+TLVSelectItemEvent  TListView::GetOnSelectItemImpl(TObject* owner)  { return static_cast<TListView*>(owner)->onSelectItem_; }
+TLVChangeEvent      TListView::GetOnChangeImpl(TObject* owner)      { return static_cast<TListView*>(owner)->onChange_; }
+TLVDeletedEvent     TListView::GetOnDeletionImpl(TObject* owner)    { return static_cast<TListView*>(owner)->onDeletion_; }
+TLVCheckedItemEvent TListView::GetOnItemCheckedImpl(TObject* owner) { return static_cast<TListView*>(owner)->onItemChecked_; }
+TLVColumnClickEvent TListView::GetOnColumnClickImpl(TObject* owner) { return static_cast<TListView*>(owner)->onColumnClick_; }
+
+void TListView::SetOnSelectItemImpl(TObject* owner, const TLVSelectItemEvent& value)
+{
+    TListView* self = static_cast<TListView*>(owner);
+    SetSimpleEvent(self->handle_, self->onSelectItem_, self->onSelectItemHooked_, value,
+                   &no_vcl_TListView_SetOnSelectItem, &TListView::SelectItemTrampoline);
+}
+
+void TListView::SetOnChangeImpl(TObject* owner, const TLVChangeEvent& value)
+{
+    TListView* self = static_cast<TListView*>(owner);
+    SetSimpleEvent(self->handle_, self->onChange_, self->onChangeHooked_, value,
+                   &no_vcl_TListView_SetOnChange, &TListView::ChangeTrampoline);
+}
+
+void TListView::SetOnDeletionImpl(TObject* owner, const TLVDeletedEvent& value)
+{
+    TListView* self = static_cast<TListView*>(owner);
+    SetSimpleEvent(self->handle_, self->onDeletion_, self->onDeletionHooked_, value,
+                   &no_vcl_TListView_SetOnDeletion, &TListView::DeletionTrampoline);
+}
+
+void TListView::SetOnItemCheckedImpl(TObject* owner, const TLVCheckedItemEvent& value)
+{
+    TListView* self = static_cast<TListView*>(owner);
+    SetSimpleEvent(self->handle_, self->onItemChecked_, self->onItemCheckedHooked_, value,
+                   &no_vcl_TListView_SetOnItemChecked, &TListView::ItemCheckedTrampoline);
+}
+
+void TListView::SetOnColumnClickImpl(TObject* owner, const TLVColumnClickEvent& value)
+{
+    TListView* self = static_cast<TListView*>(owner);
+    SetSimpleEvent(self->handle_, self->onColumnClick_, self->onColumnClickHooked_, value,
+                   &no_vcl_TListView_SetOnColumnClick, &TListView::ColumnClickTrampoline);
 }
 
 TCustomSplitter::TCustomSplitter(no_vcl_obj_t handle)

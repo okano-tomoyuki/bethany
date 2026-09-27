@@ -136,9 +136,10 @@ var
   GFreeNotifier: TFreeNotifier;
   GFreeCallback: TNoVclCallback = nil;
   GFreeData: Pointer = nil;
-  { TTreeNode(TComponent ではないため FreeNotification が無い)の破棄通知。TNoVclTreeView.Delete から呼ぶ。 }
-  GNodeFreeCallback: TNoVclCallback = nil;
-  GNodeFreeData: Pointer = nil;
+  { TComponent ではない項目(TTreeNode・TListItem・TListColumn。FreeNotification が無い)の破棄通知。
+    TNoVclTreeView.Delete・TNoVclListView.DoDeletion・列を削除する関数から呼ぶ(NotifyItemFreed)。 }
+  GItemFreeCallback: TNoVclCallback = nil;
+  GItemFreeData: Pointer = nil;
   { DLL の切り離し中は True。LCL の終了処理で起きるイベント(フォームの OnDestroy・OnHide 等)を呼び出し側へ送らない。 }
   GDetaching: Boolean = False;
 
@@ -398,8 +399,8 @@ begin
   GDetaching := True;
   GFreeCallback := nil;
   GFreeData := nil;
-  GNodeFreeCallback := nil;
-  GNodeFreeData := nil;
+  GItemFreeCallback := nil;
+  GItemFreeData := nil;
 end;
 
 { FreeNotify }
@@ -2313,7 +2314,7 @@ end;
   TTreeNode・TTreeNodes は TComponent ではなく TPersistent で、FreeNotification が使えない。
   そこで TTreeView_Create は TTreeView の代わりに、ノードの削除(TCustomTreeView.Delete。protected virtual で、
   TTreeNode.Destroy から必ず呼ばれ、OnDeletion を発生させる)を上書きした TNoVclTreeView を生成し、
-  利用者の OnDeletion(inherited)の後にノードの破棄通知(GNodeFreeCallback)を送る。 }
+  利用者の OnDeletion(inherited)の後にノードの破棄通知(GItemFreeCallback)を送る。 }
 
 type
   TNoVclTreeView = class(TTreeView)
@@ -2321,23 +2322,39 @@ type
     procedure Delete(Node: TTreeNode); override;
   end;
 
-  { OnChange/OnExpanded/OnCollapsed/OnDeletion(Sender, Node)用。 }
-  TNoVclNodeCallback = procedure(Sender: Pointer; Node: Pointer; Data: Pointer); NO_VCL_CALL;
+  { TComponent ではない項目(ツリービューのノード・リストビューの項目や列)を 1 つ受け取るイベント用。
+    ツリービューの OnChange/OnExpanded/OnCollapsed/OnDeletion、リストビューの OnDeletion/OnItemChecked/OnColumnClick。
+    イベントの型ごとに引数の型が異なるため、メソッドを分ける(コールバックの形は同じ)。 }
+  TNoVclItemCallback = procedure(Sender: Pointer; Item: Pointer; Data: Pointer); NO_VCL_CALL;
 
-  TNodeCallbackBridge = class(TComponent)
+  TItemCallbackBridge = class(TComponent)
   private
-    FCallback: TNoVclNodeCallback;
+    FCallback: TNoVclItemCallback;
     FData: Pointer;
   public
     procedure DoNode(Sender: TObject; Node: TTreeNode);
+    procedure DoListItem(Sender: TObject; Item: TListItem);
+    procedure DoColumn(Sender: TObject; Column: TListColumn);
+  end;
+
+  { 項目と整数(または真偽値)を 1 つずつ受け取るイベント用。リストビューの OnSelectItem(Selected)・OnChange(TItemChange の序数)。 }
+  TNoVclItemIntCallback = procedure(Sender: Pointer; Item: Pointer; Value: Integer; Data: Pointer); NO_VCL_CALL;
+
+  TItemIntCallbackBridge = class(TComponent)
+  private
+    FCallback: TNoVclItemIntCallback;
+    FData: Pointer;
+  public
+    procedure DoSelectItem(Sender: TObject; Item: TListItem; Selected: Boolean);
+    procedure DoItemChange(Sender: TObject; Item: TListItem; Change: TItemChange);
   end;
 
   { OnChanging/OnExpanding/OnCollapsing(Sender, Node, var Allow)用。Allow は書き換え可能(0 = False)。 }
-  TNoVclNodeAllowCallback = procedure(Sender: Pointer; Node: Pointer; Allow: PInteger; Data: Pointer); NO_VCL_CALL;
+  TNoVclItemAllowCallback = procedure(Sender: Pointer; Node: Pointer; Allow: PInteger; Data: Pointer); NO_VCL_CALL;
 
-  TNodeAllowCallbackBridge = class(TComponent)
+  TItemAllowCallbackBridge = class(TComponent)
   private
-    FCallback: TNoVclNodeAllowCallback;
+    FCallback: TNoVclItemAllowCallback;
     FData: Pointer;
   public
     procedure DoNodeAllow(Sender: TObject; Node: TTreeNode; var Allow: Boolean);
@@ -2346,18 +2363,49 @@ type
 procedure TNoVclTreeView.Delete(Node: TTreeNode);
 begin
   inherited Delete(Node);
-  if Assigned(GNodeFreeCallback) then
-    GNodeFreeCallback(Pointer(Node), GNodeFreeData);
+  if Assigned(GItemFreeCallback) then
+    GItemFreeCallback(Pointer(Node), GItemFreeData);
 end;
 
-procedure TNodeCallbackBridge.DoNode(Sender: TObject; Node: TTreeNode);
+procedure TItemCallbackBridge.DoNode(Sender: TObject; Node: TTreeNode);
 begin
   if not Assigned(FCallback) or GDetaching then
     Exit;
   FCallback(Pointer(Sender), Pointer(Node), FData);
 end;
 
-procedure TNodeAllowCallbackBridge.DoNodeAllow(Sender: TObject; Node: TTreeNode; var Allow: Boolean);
+procedure TItemCallbackBridge.DoListItem(Sender: TObject; Item: TListItem);
+begin
+  if not Assigned(FCallback) or GDetaching then
+    Exit;
+  FCallback(Pointer(Sender), Pointer(Item), FData);
+end;
+
+procedure TItemCallbackBridge.DoColumn(Sender: TObject; Column: TListColumn);
+begin
+  if not Assigned(FCallback) or GDetaching then
+    Exit;
+  FCallback(Pointer(Sender), Pointer(Column), FData);
+end;
+
+procedure TItemIntCallbackBridge.DoSelectItem(Sender: TObject; Item: TListItem; Selected: Boolean);
+begin
+  if not Assigned(FCallback) or GDetaching then
+    Exit;
+  if Selected then
+    FCallback(Pointer(Sender), Pointer(Item), -1, FData)
+  else
+    FCallback(Pointer(Sender), Pointer(Item), 0, FData);
+end;
+
+procedure TItemIntCallbackBridge.DoItemChange(Sender: TObject; Item: TListItem; Change: TItemChange);
+begin
+  if not Assigned(FCallback) or GDetaching then
+    Exit;
+  FCallback(Pointer(Sender), Pointer(Item), Ord(Change), FData);
+end;
+
+procedure TItemAllowCallbackBridge.DoNodeAllow(Sender: TObject; Node: TTreeNode; var Allow: Boolean);
 var
   A: Integer;
 begin
@@ -2371,30 +2419,46 @@ end;
 { BridgeFor と同じく、同じイベントに何度登録してもブリッジを再利用する。
   イベントの型(TTVChangedEvent・TTVExpandedEvent 等)は構造が同じ別名の型のため、MethodData の多重定義ではなく
   呼び出し側で TMethod(...).Data を渡す。 }
-function NodeBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclNodeCallback; Data: Pointer): TNodeCallbackBridge;
+function ItemBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclItemCallback; Data: Pointer): TItemCallbackBridge;
 begin
-  if (Current <> nil) and (TObject(Current) is TNodeCallbackBridge) and (TNodeCallbackBridge(Current).Owner = Owner) then
-    Result := TNodeCallbackBridge(Current)
+  if (Current <> nil) and (TObject(Current) is TItemCallbackBridge) and (TItemCallbackBridge(Current).Owner = Owner) then
+    Result := TItemCallbackBridge(Current)
   else
-    Result := TNodeCallbackBridge.Create(Owner);
+    Result := TItemCallbackBridge.Create(Owner);
   Result.FCallback := Cb;
   Result.FData := Data;
 end;
 
-function NodeAllowBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclNodeAllowCallback; Data: Pointer): TNodeAllowCallbackBridge;
+function ItemAllowBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclItemAllowCallback; Data: Pointer): TItemAllowCallbackBridge;
 begin
-  if (Current <> nil) and (TObject(Current) is TNodeAllowCallbackBridge) and (TNodeAllowCallbackBridge(Current).Owner = Owner) then
-    Result := TNodeAllowCallbackBridge(Current)
+  if (Current <> nil) and (TObject(Current) is TItemAllowCallbackBridge) and (TItemAllowCallbackBridge(Current).Owner = Owner) then
+    Result := TItemAllowCallbackBridge(Current)
   else
-    Result := TNodeAllowCallbackBridge.Create(Owner);
+    Result := TItemAllowCallbackBridge.Create(Owner);
   Result.FCallback := Cb;
   Result.FData := Data;
 end;
 
-procedure TreeNodeFree_SetCallback(Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+function ItemIntBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclItemIntCallback; Data: Pointer): TItemIntCallbackBridge;
 begin
-  GNodeFreeCallback := Cb;
-  GNodeFreeData := Data;
+  if (Current <> nil) and (TObject(Current) is TItemIntCallbackBridge) and (TItemIntCallbackBridge(Current).Owner = Owner) then
+    Result := TItemIntCallbackBridge(Current)
+  else
+    Result := TItemIntCallbackBridge.Create(Owner);
+  Result.FCallback := Cb;
+  Result.FData := Data;
+end;
+
+procedure NotifyItemFreed(Item: TObject);
+begin
+  if Assigned(GItemFreeCallback) then
+    GItemFreeCallback(Pointer(Item), GItemFreeData);
+end;
+
+procedure ItemFree_SetCallback(Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  GItemFreeCallback := Cb;
+  GItemFreeData := Data;
 end;
 
 { TTreeView / TCustomTreeView }
@@ -2513,39 +2577,39 @@ begin
   TTreeView(Obj).RowSelect := Value;
 end;
 
-procedure TTreeView_SetOnChange(Obj: Pointer; Cb: TNoVclNodeCallback; Data: Pointer); NO_VCL_CALL;
+procedure TTreeView_SetOnChange(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TTreeView(Obj).OnChange := @NodeBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnChange).Data, Cb, Data).DoNode;
+  TTreeView(Obj).OnChange := @ItemBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnChange).Data, Cb, Data).DoNode;
 end;
 
-procedure TTreeView_SetOnExpanded(Obj: Pointer; Cb: TNoVclNodeCallback; Data: Pointer); NO_VCL_CALL;
+procedure TTreeView_SetOnExpanded(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TTreeView(Obj).OnExpanded := @NodeBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnExpanded).Data, Cb, Data).DoNode;
+  TTreeView(Obj).OnExpanded := @ItemBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnExpanded).Data, Cb, Data).DoNode;
 end;
 
-procedure TTreeView_SetOnCollapsed(Obj: Pointer; Cb: TNoVclNodeCallback; Data: Pointer); NO_VCL_CALL;
+procedure TTreeView_SetOnCollapsed(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TTreeView(Obj).OnCollapsed := @NodeBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnCollapsed).Data, Cb, Data).DoNode;
+  TTreeView(Obj).OnCollapsed := @ItemBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnCollapsed).Data, Cb, Data).DoNode;
 end;
 
-procedure TTreeView_SetOnDeletion(Obj: Pointer; Cb: TNoVclNodeCallback; Data: Pointer); NO_VCL_CALL;
+procedure TTreeView_SetOnDeletion(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TTreeView(Obj).OnDeletion := @NodeBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnDeletion).Data, Cb, Data).DoNode;
+  TTreeView(Obj).OnDeletion := @ItemBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnDeletion).Data, Cb, Data).DoNode;
 end;
 
-procedure TTreeView_SetOnChanging(Obj: Pointer; Cb: TNoVclNodeAllowCallback; Data: Pointer); NO_VCL_CALL;
+procedure TTreeView_SetOnChanging(Obj: Pointer; Cb: TNoVclItemAllowCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TTreeView(Obj).OnChanging := @NodeAllowBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnChanging).Data, Cb, Data).DoNodeAllow;
+  TTreeView(Obj).OnChanging := @ItemAllowBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnChanging).Data, Cb, Data).DoNodeAllow;
 end;
 
-procedure TTreeView_SetOnExpanding(Obj: Pointer; Cb: TNoVclNodeAllowCallback; Data: Pointer); NO_VCL_CALL;
+procedure TTreeView_SetOnExpanding(Obj: Pointer; Cb: TNoVclItemAllowCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TTreeView(Obj).OnExpanding := @NodeAllowBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnExpanding).Data, Cb, Data).DoNodeAllow;
+  TTreeView(Obj).OnExpanding := @ItemAllowBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnExpanding).Data, Cb, Data).DoNodeAllow;
 end;
 
-procedure TTreeView_SetOnCollapsing(Obj: Pointer; Cb: TNoVclNodeAllowCallback; Data: Pointer); NO_VCL_CALL;
+procedure TTreeView_SetOnCollapsing(Obj: Pointer; Cb: TNoVclItemAllowCallback; Data: Pointer); NO_VCL_CALL;
 begin
-  TTreeView(Obj).OnCollapsing := @NodeAllowBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnCollapsing).Data, Cb, Data).DoNodeAllow;
+  TTreeView(Obj).OnCollapsing := @ItemAllowBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnCollapsing).Data, Cb, Data).DoNodeAllow;
 end;
 
 { TTreeNodes。Sibling/Parent に nil を渡すと最上位のノードになる(LCL と同じ)。 }
@@ -2770,6 +2834,526 @@ end;
 procedure TTreeNode_MoveTo(Obj: Pointer; Destination: Pointer; Mode: Integer); NO_VCL_CALL;
 begin
   TTreeNode(Obj).MoveTo(TTreeNode(Destination), TNodeAttachMode(Mode));
+end;
+
+{ docs/component-coverage.md の Tier 2、3 バッチ目(TListView)。docs/adr/0020-... を参照。
+  項目(TListItem。TPersistent)は TTreeNode と同じく、削除の通知でラッパーの寿命を管理する。
+  TListItem.Destroy は必ず TListItems.ItemDestroying → TCustomListView.ItemDeleted → DoDeletion(protected virtual)を通るため、
+  DoDeletion を上書きした TNoVclListView を生成し、利用者の OnDeletion(inherited)の後に通知する。
+  TCustomListView.Destroy は inherited Destroy(=破棄通知)の後で項目を破棄するため、リストビュー自身のラッパーが
+  delete された後にも項目の削除通知が届く(項目のレジストリはリストビューのラッパーに依存しないので問題ない)。
+  列(TListColumn。TCollectionItem)の一覧(TListColumns)は LCL がリストビューの中で生成するため差し替えられない。
+  そこで列の破棄は、この DLL の関数(TListColumns_Delete・Clear)で削除する前と、リストビューの破棄の最初に通知する。 }
+
+type
+  TNoVclListView = class(TListView)
+  protected
+    procedure DoDeletion(AItem: TListItem); override;
+  public
+    destructor Destroy; override;
+  end;
+
+procedure TNoVclListView.DoDeletion(AItem: TListItem);
+begin
+  inherited DoDeletion(AItem);
+  NotifyItemFreed(AItem);
+end;
+
+destructor TNoVclListView.Destroy;
+var
+  I: Integer;
+begin
+  for I := 0 to Columns.Count - 1 do
+    NotifyItemFreed(Columns[I]);
+  inherited Destroy;
+end;
+
+{ TListView / TCustomListView }
+
+function TListView_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TNoVclListView.Create(TComponent(Owner)));
+end;
+
+{ Items(TListItems)と Columns(TListColumns)は、リストビューが所有する非所有のハンドル(リストビューと寿命が一致する)。 }
+function TCustomListView_GetItems(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomListView(Obj).Items);
+end;
+
+function TCustomListView_GetSelected(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomListView(Obj).Selected);
+end;
+
+{ LCL の TCustomListView.SetSelection は、ウィンドウハンドルが無いと(フォームの表示前・表示されていないページの上)
+  内部の FSelected を覚えるだけで項目の選択状態を変えず、GetSelection は項目の状態から選択を探し直すため nil を返す
+  (フォームのコンストラクタで Selected を設定しても効かない)。VCL と同じくハンドルの有無によらず選択されるよう、
+  ハンドルが無いときは項目の Selected も設定する(MultiSelect でなければ他の項目の選択を外す)。 }
+procedure SelectListItem(LV: TCustomListView; Item: TListItem);
+var
+  I: Integer;
+begin
+  LV.Selected := Item;
+  if LV.HandleAllocated then
+    Exit;
+  if not LV.MultiSelect then
+    for I := 0 to LV.Items.Count - 1 do
+      if LV.Items[I] <> Item then
+        LV.Items[I].Selected := False;
+  if Item <> nil then
+    Item.Selected := True;
+end;
+
+procedure TCustomListView_SetSelected(Obj: Pointer; Item: Pointer); NO_VCL_CALL;
+begin
+  SelectListItem(TCustomListView(Obj), TListItem(Item));
+end;
+
+function TCustomListView_GetItemIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomListView(Obj).ItemIndex;
+end;
+
+{ -1 で選択を外す。範囲外の値は無視する。 }
+procedure TCustomListView_SetItemIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+var
+  LV: TCustomListView;
+begin
+  LV := TCustomListView(Obj);
+  if Value = -1 then
+    SelectListItem(LV, nil)
+  else if (Value >= 0) and (Value < LV.Items.Count) then
+    SelectListItem(LV, LV.Items[Value]);
+end;
+
+function TCustomListView_GetSelCount(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomListView(Obj).SelCount;
+end;
+
+function TCustomListView_GetCheckboxes(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomListView(Obj).Checkboxes;
+end;
+
+procedure TCustomListView_SetCheckboxes(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomListView(Obj).Checkboxes := Value;
+end;
+
+function TCustomListView_GetGridLines(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomListView(Obj).GridLines;
+end;
+
+procedure TCustomListView_SetGridLines(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomListView(Obj).GridLines := Value;
+end;
+
+function TCustomListView_GetMultiSelect(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomListView(Obj).MultiSelect;
+end;
+
+procedure TCustomListView_SetMultiSelect(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomListView(Obj).MultiSelect := Value;
+end;
+
+function TCustomListView_GetReadOnly(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomListView(Obj).ReadOnly;
+end;
+
+procedure TCustomListView_SetReadOnly(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomListView(Obj).ReadOnly := Value;
+end;
+
+function TCustomListView_GetRowSelect(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomListView(Obj).RowSelect;
+end;
+
+procedure TCustomListView_SetRowSelect(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomListView(Obj).RowSelect := Value;
+end;
+
+procedure TCustomListView_Clear(Obj: Pointer); NO_VCL_CALL;
+begin
+  TCustomListView(Obj).Clear;
+end;
+
+procedure TCustomListView_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
+begin
+  TCustomListView(Obj).BeginUpdate;
+end;
+
+procedure TCustomListView_EndUpdate(Obj: Pointer); NO_VCL_CALL;
+begin
+  TCustomListView(Obj).EndUpdate;
+end;
+
+{ X, Y はクライアント座標。そこに項目が無ければ nil。 }
+function TCustomListView_GetItemAt(Obj: Pointer; X, Y: Integer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomListView(Obj).GetItemAt(X, Y));
+end;
+
+procedure TCustomListView_ClearSelection(Obj: Pointer); NO_VCL_CALL;
+begin
+  TCustomListView(Obj).ClearSelection;
+end;
+
+procedure TCustomListView_SelectAll(Obj: Pointer); NO_VCL_CALL;
+begin
+  TCustomListView(Obj).SelectAll;
+end;
+
+{ TCustomListView の protected を TListView が published にしているメンバ。 }
+
+function TListView_GetColumns(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TListView(Obj).Columns);
+end;
+
+{ TViewStyle の序数(vsIcon=0, vsSmallIcon, vsList, vsReport)。 }
+function TListView_GetViewStyle(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TListView(Obj).ViewStyle);
+end;
+
+procedure TListView_SetViewStyle(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TListView(Obj).ViewStyle := TViewStyle(Value);
+end;
+
+function TListView_GetHideSelection(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TListView(Obj).HideSelection;
+end;
+
+procedure TListView_SetHideSelection(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TListView(Obj).HideSelection := Value;
+end;
+
+{ TSortType の序数(stNone=0, stData, stText, stBoth)。 }
+function TListView_GetSortType(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TListView(Obj).SortType);
+end;
+
+procedure TListView_SetSortType(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TListView(Obj).SortType := TSortType(Value);
+end;
+
+{ 並べ替えに使う列の位置(0 が Caption の列)。既定の -1 のままでは、SortType を設定しても並べ替えない(LCL の Sort)。 }
+function TListView_GetSortColumn(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TListView(Obj).SortColumn;
+end;
+
+procedure TListView_SetSortColumn(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TListView(Obj).SortColumn := Value;
+end;
+
+{ TSortDirection の序数(sdAscending=0, sdDescending)。 }
+function TListView_GetSortDirection(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TListView(Obj).SortDirection);
+end;
+
+procedure TListView_SetSortDirection(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TListView(Obj).SortDirection := TSortDirection(Value);
+end;
+
+procedure TListView_SetOnSelectItem(Obj: Pointer; Cb: TNoVclItemIntCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TListView(Obj).OnSelectItem := @ItemIntBridgeFor(TListView(Obj), TMethod(TListView(Obj).OnSelectItem).Data, Cb, Data).DoSelectItem;
+end;
+
+procedure TListView_SetOnChange(Obj: Pointer; Cb: TNoVclItemIntCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TListView(Obj).OnChange := @ItemIntBridgeFor(TListView(Obj), TMethod(TListView(Obj).OnChange).Data, Cb, Data).DoItemChange;
+end;
+
+procedure TListView_SetOnDeletion(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TListView(Obj).OnDeletion := @ItemBridgeFor(TListView(Obj), TMethod(TListView(Obj).OnDeletion).Data, Cb, Data).DoListItem;
+end;
+
+procedure TListView_SetOnItemChecked(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TListView(Obj).OnItemChecked := @ItemBridgeFor(TListView(Obj), TMethod(TListView(Obj).OnItemChecked).Data, Cb, Data).DoListItem;
+end;
+
+procedure TListView_SetOnColumnClick(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TListView(Obj).OnColumnClick := @ItemBridgeFor(TListView(Obj), TMethod(TListView(Obj).OnColumnClick).Data, Cb, Data).DoColumn;
+end;
+
+{ TListItems }
+
+function TListItems_Add(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TListItems(Obj).Add);
+end;
+
+function TListItems_Insert(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TListItems(Obj).Insert(Index));
+end;
+
+procedure TListItems_Delete(Obj: Pointer; Index: Integer); NO_VCL_CALL;
+begin
+  TListItems(Obj).Delete(Index);
+end;
+
+procedure TListItems_Clear(Obj: Pointer); NO_VCL_CALL;
+begin
+  TListItems(Obj).Clear;
+end;
+
+function TListItems_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TListItems(Obj).Count;
+end;
+
+function TListItems_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TListItems(Obj).Item[Index]);
+end;
+
+function TListItems_IndexOf(Obj: Pointer; Item: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TListItems(Obj).IndexOf(TListItem(Item));
+end;
+
+{ StartIndex の次(Inclusive なら StartIndex から)から Caption を探す。Partial なら前方一致、Wrap なら末尾から先頭へ続けて探す。 }
+function TListItems_FindCaption(Obj: Pointer; StartIndex: Integer; Value: PChar; Partial, Inclusive, Wrap: LongBool): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TListItems(Obj).FindCaption(StartIndex, Value, Partial, Inclusive, Wrap));
+end;
+
+procedure TListItems_Exchange(Obj: Pointer; Index1, Index2: Integer); NO_VCL_CALL;
+begin
+  TListItems(Obj).Exchange(Index1, Index2);
+end;
+
+procedure TListItems_Move(Obj: Pointer; FromIndex, ToIndex: Integer); NO_VCL_CALL;
+begin
+  TListItems(Obj).Move(FromIndex, ToIndex);
+end;
+
+procedure TListItems_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
+begin
+  TListItems(Obj).BeginUpdate;
+end;
+
+procedure TListItems_EndUpdate(Obj: Pointer); NO_VCL_CALL;
+begin
+  TListItems(Obj).EndUpdate;
+end;
+
+{ TListItem }
+
+function TListItem_GetCaption(Obj: Pointer): PChar; NO_VCL_CALL;
+begin
+  Result := ReturnStr(TListItem(Obj).Caption);
+end;
+
+procedure TListItem_SetCaption(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+begin
+  TListItem(Obj).Caption := Value;
+end;
+
+function TListItem_GetChecked(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TListItem(Obj).Checked;
+end;
+
+procedure TListItem_SetChecked(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TListItem(Obj).Checked := Value;
+end;
+
+function TListItem_GetSelected(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TListItem(Obj).Selected;
+end;
+
+procedure TListItem_SetSelected(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TListItem(Obj).Selected := Value;
+end;
+
+function TListItem_GetFocused(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TListItem(Obj).Focused;
+end;
+
+procedure TListItem_SetFocused(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TListItem(Obj).Focused := Value;
+end;
+
+function TListItem_GetData(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := TListItem(Obj).Data;
+end;
+
+procedure TListItem_SetData(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TListItem(Obj).Data := Value;
+end;
+
+function TListItem_GetIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TListItem(Obj).Index;
+end;
+
+function TListItem_GetListView(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TListItem(Obj).ListView);
+end;
+
+{ SubItems(2 列目以降の文字列)。 }
+
+procedure TListItem_SubItems_Add(Obj: Pointer; Text: PChar); NO_VCL_CALL;
+begin
+  TListItem(Obj).SubItems.Add(Text);
+end;
+
+procedure TListItem_SubItems_Clear(Obj: Pointer); NO_VCL_CALL;
+begin
+  TListItem(Obj).SubItems.Clear;
+end;
+
+function TListItem_SubItems_Count(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TListItem(Obj).SubItems.Count;
+end;
+
+function TListItem_SubItems_GetText(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
+begin
+  Result := ReturnStr(TListItem(Obj).SubItems[Index]);
+end;
+
+procedure TListItem_SubItems_SetText(Obj: Pointer; Index: Integer; Text: PChar); NO_VCL_CALL;
+begin
+  TListItem(Obj).SubItems[Index] := Text;
+end;
+
+{ この項目を削除する。OnDeletion と項目の破棄通知が呼ばれる。 }
+procedure TListItem_Delete(Obj: Pointer); NO_VCL_CALL;
+begin
+  TListItem(Obj).Delete;
+end;
+
+procedure TListItem_MakeVisible(Obj: Pointer; PartialOK: LongBool); NO_VCL_CALL;
+begin
+  TListItem(Obj).MakeVisible(PartialOK);
+end;
+
+{ TListColumns / TListColumn }
+
+function TListColumns_Add(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TListColumns(Obj).Add);
+end;
+
+function TListColumns_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TListColumns(Obj).Count;
+end;
+
+function TListColumns_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TListColumns(Obj).Items[Index]);
+end;
+
+procedure TListColumns_Delete(Obj: Pointer; Index: Integer); NO_VCL_CALL;
+begin
+  NotifyItemFreed(TListColumns(Obj).Items[Index]);
+  TListColumns(Obj).Delete(Index);
+end;
+
+procedure TListColumns_Clear(Obj: Pointer); NO_VCL_CALL;
+var
+  I: Integer;
+begin
+  for I := 0 to TListColumns(Obj).Count - 1 do
+    NotifyItemFreed(TListColumns(Obj).Items[I]);
+  TListColumns(Obj).Clear;
+end;
+
+function TListColumn_GetCaption(Obj: Pointer): PChar; NO_VCL_CALL;
+begin
+  Result := ReturnStr(TListColumn(Obj).Caption);
+end;
+
+procedure TListColumn_SetCaption(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+begin
+  TListColumn(Obj).Caption := Value;
+end;
+
+function TListColumn_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TListColumn(Obj).Width;
+end;
+
+procedure TListColumn_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TListColumn(Obj).Width := Value;
+end;
+
+{ TAlignment の序数(taLeftJustify=0, taRightJustify, taCenter)。 }
+function TListColumn_GetAlignment(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TListColumn(Obj).Alignment);
+end;
+
+procedure TListColumn_SetAlignment(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TListColumn(Obj).Alignment := TAlignment(Value);
+end;
+
+function TListColumn_GetAutoSize(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TListColumn(Obj).AutoSize;
+end;
+
+procedure TListColumn_SetAutoSize(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TListColumn(Obj).AutoSize := Value;
+end;
+
+function TListColumn_GetVisible(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TListColumn(Obj).Visible;
+end;
+
+procedure TListColumn_SetVisible(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TListColumn(Obj).Visible := Value;
+end;
+
+{ 列の並び順。書き換えると列が移動する。 }
+function TListColumn_GetIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TListColumn(Obj).Index;
+end;
+
+procedure TListColumn_SetIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TListColumn(Obj).Index := Value;
 end;
 
 exports
@@ -3155,7 +3739,7 @@ exports
   TCustomPage_SetOnShow,
   TCustomPage_SetOnHide,
 
-  TreeNodeFree_SetCallback,
+  ItemFree_SetCallback,
   TTreeView_Create,
   TCustomTreeView_GetItems,
   TCustomTreeView_GetSelected,
@@ -3229,7 +3813,98 @@ exports
   TTreeNode_Delete,
   TTreeNode_DeleteChildren,
   TTreeNode_MakeVisible,
-  TTreeNode_MoveTo;
+  TTreeNode_MoveTo,
+
+  TListView_Create,
+  TCustomListView_GetItems,
+  TCustomListView_GetSelected,
+  TCustomListView_SetSelected,
+  TCustomListView_GetItemIndex,
+  TCustomListView_SetItemIndex,
+  TCustomListView_GetSelCount,
+  TCustomListView_GetCheckboxes,
+  TCustomListView_SetCheckboxes,
+  TCustomListView_GetGridLines,
+  TCustomListView_SetGridLines,
+  TCustomListView_GetMultiSelect,
+  TCustomListView_SetMultiSelect,
+  TCustomListView_GetReadOnly,
+  TCustomListView_SetReadOnly,
+  TCustomListView_GetRowSelect,
+  TCustomListView_SetRowSelect,
+  TCustomListView_Clear,
+  TCustomListView_BeginUpdate,
+  TCustomListView_EndUpdate,
+  TCustomListView_GetItemAt,
+  TCustomListView_ClearSelection,
+  TCustomListView_SelectAll,
+  TListView_GetColumns,
+  TListView_GetViewStyle,
+  TListView_SetViewStyle,
+  TListView_GetHideSelection,
+  TListView_SetHideSelection,
+  TListView_GetSortType,
+  TListView_SetSortType,
+  TListView_GetSortColumn,
+  TListView_SetSortColumn,
+  TListView_GetSortDirection,
+  TListView_SetSortDirection,
+  TListView_SetOnSelectItem,
+  TListView_SetOnChange,
+  TListView_SetOnDeletion,
+  TListView_SetOnItemChecked,
+  TListView_SetOnColumnClick,
+
+  TListItems_Add,
+  TListItems_Insert,
+  TListItems_Delete,
+  TListItems_Clear,
+  TListItems_GetCount,
+  TListItems_GetItem,
+  TListItems_IndexOf,
+  TListItems_FindCaption,
+  TListItems_Exchange,
+  TListItems_Move,
+  TListItems_BeginUpdate,
+  TListItems_EndUpdate,
+
+  TListItem_GetCaption,
+  TListItem_SetCaption,
+  TListItem_GetChecked,
+  TListItem_SetChecked,
+  TListItem_GetSelected,
+  TListItem_SetSelected,
+  TListItem_GetFocused,
+  TListItem_SetFocused,
+  TListItem_GetData,
+  TListItem_SetData,
+  TListItem_GetIndex,
+  TListItem_GetListView,
+  TListItem_SubItems_Add,
+  TListItem_SubItems_Clear,
+  TListItem_SubItems_Count,
+  TListItem_SubItems_GetText,
+  TListItem_SubItems_SetText,
+  TListItem_Delete,
+  TListItem_MakeVisible,
+
+  TListColumns_Add,
+  TListColumns_GetCount,
+  TListColumns_GetItem,
+  TListColumns_Delete,
+  TListColumns_Clear,
+  TListColumn_GetCaption,
+  TListColumn_SetCaption,
+  TListColumn_GetWidth,
+  TListColumn_SetWidth,
+  TListColumn_GetAlignment,
+  TListColumn_SetAlignment,
+  TListColumn_GetAutoSize,
+  TListColumn_SetAutoSize,
+  TListColumn_GetVisible,
+  TListColumn_SetVisible,
+  TListColumn_GetIndex,
+  TListColumn_SetIndex;
 
 begin
   RequireDerivedFormResource := False;

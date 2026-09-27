@@ -196,6 +196,38 @@ class TPersistent : public TObject
 protected:
     explicit TPersistent(no_vcl_obj_t handle) : TObject(handle) {}
     ~TPersistent() override = default;
+
+private:
+    friend class ItemRegistry;  // 項目のラッパーを TPersistent* 経由で delete するため
+};
+
+// TComponent ではない項目(TTreeNode・TListItem・TListColumn)のラッパーの共通の管理(利用者は直接使わない)。
+// 項目は FreeNotification を持たないため、TComponent のレジストリとは別に、DLL の「項目の破棄通知」
+// (no_vcl_ItemFree_SetCallback)でラッパーを delete する。同じ項目には常に同じラッパーが返る。
+// 各項目のクラスは、ハンドルを受け取るコンストラクタを private にし、friend class ItemRegistry とする。
+class ItemRegistry
+{
+public:
+    // ハンドルからラッパーを得る(無ければ作る)。nullptr には nullptr を返す。
+    template<typename T>
+    static T* Wrap(no_vcl_obj_t handle)
+    {
+        if (!handle)
+            return nullptr;
+        InstallCallback();
+        std::unordered_map<no_vcl_obj_t, TPersistent*>& registry = Registry();
+        auto it = registry.find(handle);
+        if (it != registry.end())
+            return static_cast<T*>(it->second);
+        T* item = new T(handle);
+        registry[handle] = item;
+        return item;
+    }
+
+private:
+    static void InstallCallback();
+    static std::unordered_map<no_vcl_obj_t, TPersistent*>& Registry();
+    static void NO_VCL_CALL FreeTrampoline(no_vcl_obj_t handle, void* data);
 };
 
 // LCL のコンポーネント(Create/Destroy を持つオブジェクト)。
@@ -1481,6 +1513,7 @@ public:
     void MoveTo(TTreeNode* Destination, TNodeAttachMode Mode);
 
 private:
+    friend class ItemRegistry;
     friend class TTreeNodes;
     friend class TCustomTreeView;
     friend class TTreeView;
@@ -1489,9 +1522,7 @@ private:
     ~TTreeNode() override = default;
 
     // ハンドルからラッパーを得る(無ければ作る)。nullptr には nullptr を返す。
-    static TTreeNode* Wrap(no_vcl_obj_t handle);
-    static std::unordered_map<no_vcl_obj_t, TTreeNode*>& Registry();
-    static void NO_VCL_CALL FreeTrampoline(no_vcl_obj_t handle, void* data);
+    static TTreeNode* Wrap(no_vcl_obj_t handle) { return ItemRegistry::Wrap<TTreeNode>(handle); }
 
     static std::string      GetTextImpl(TObject* owner);
     static void             SetTextImpl(TObject* owner, const std::string& value);
@@ -1664,6 +1695,286 @@ private:
     static void               SetOnCollapsedImpl(TObject* owner, const TTVExpandedEvent& value);
     static TTVExpandedEvent   GetOnDeletionImpl(TObject* owner);
     static void               SetOnDeletionImpl(TObject* owner, const TTVExpandedEvent& value);
+};
+
+/* ---------------- ListView ---------------- */
+
+// 表示形式・並べ替え・列の文字の寄せ方・OnChange の変更の種類(LCL / VCL と同じ値)。
+enum TViewStyle     { vsIcon, vsSmallIcon, vsList, vsReport };
+enum TSortType      { stNone, stData, stText, stBoth };
+enum TSortDirection { sdAscending, sdDescending };
+enum TAlignment     { taLeftJustify, taRightJustify, taCenter };
+enum TItemChange    { ctText, ctImage, ctState };
+
+class TCustomListView;
+class TListView;
+
+// リストビューの項目。TTreeNode と同じく TComponent ではないため、new/Free() はせず TListItems::Add 等で追加し、
+// Delete() 等で削除する。同じ項目には常に同じポインタが返り、項目が削除されると(リストビューの破棄に伴う削除も含め)
+// OnDeletion の後にラッパーも delete される。
+// Caption は 1 列目、SubItems は 2 列目以降の文字列(ViewStyle が vsReport のときに表示される)。
+// SubItems(TStrings)は、TComboBox の Items と同じく SubItemsAdd 等のメンバ関数で操作する。
+class TListItem : public TPersistent
+{
+public:
+    Property<std::string> Caption;
+    Property<bool>        Checked;
+    Property<bool>        Selected;
+    Property<bool>        Focused;
+    // 利用者データ(LCL は解釈しない)。
+    Property<void*>       Data;
+
+    ReadOnlyProperty<int>              Index;
+    ReadOnlyProperty<TCustomListView*> ListView;
+
+    void        SubItemsAdd(const std::string& text);
+    void        SubItemsClear();
+    int         SubItemsCount() const;
+    std::string SubItemsGetText(int index) const;
+    void        SubItemsSetText(int index, const std::string& text);
+
+    // この項目を削除する。このラッパーも delete されるため、呼び出し後に触れてはならない。
+    void Delete();
+    void MakeVisible(bool PartialOK);
+
+private:
+    friend class ItemRegistry;
+    friend class TListItems;
+    friend class TCustomListView;
+    friend class TListView;
+
+    explicit TListItem(no_vcl_obj_t handle);
+    ~TListItem() override = default;
+    static TListItem* Wrap(no_vcl_obj_t handle) { return ItemRegistry::Wrap<TListItem>(handle); }
+
+    static std::string      GetCaptionImpl(TObject* owner);
+    static void             SetCaptionImpl(TObject* owner, const std::string& value);
+    static bool             GetCheckedImpl(TObject* owner);
+    static void             SetCheckedImpl(TObject* owner, const bool& value);
+    static bool             GetSelectedImpl(TObject* owner);
+    static void             SetSelectedImpl(TObject* owner, const bool& value);
+    static bool             GetFocusedImpl(TObject* owner);
+    static void             SetFocusedImpl(TObject* owner, const bool& value);
+    static void*            GetDataImpl(TObject* owner);
+    static void             SetDataImpl(TObject* owner, void* const& value);
+    static int              GetIndexImpl(TObject* owner);
+    static TCustomListView* GetListViewImpl(TObject* owner);
+};
+
+// リストビューの項目の一覧(LCL の TListItems)。TTreeNodes と同じく、リストビューの値メンバとして持つ非所有のビュー。
+// Items[Index] は GetItem(Index)。
+class TListItems : public TPersistent
+{
+public:
+    explicit TListItems(no_vcl_obj_t handle);
+    ~TListItems() override = default;
+
+    ReadOnlyProperty<int> Count;
+
+    // 末尾に(Insert は Index の位置に)空の項目を追加して返す(Caption 等はその後で設定する。VCL と同じ)。
+    TListItem* Add();
+    TListItem* Insert(int Index);
+    void       Delete(int Index);
+    void       Clear();
+    TListItem* GetItem(int Index) const;
+    int        IndexOf(TListItem* Item) const;
+    // StartIndex の次(Inclusive なら StartIndex から)から Caption を探す。Partial なら前方一致、Wrap なら末尾から先頭へ続けて探す。
+    TListItem* FindCaption(int StartIndex, const std::string& Value, bool Partial, bool Inclusive, bool Wrap) const;
+    void       Exchange(int Index1, int Index2);
+    void       Move(int FromIndex, int ToIndex);
+    void       BeginUpdate();
+    void       EndUpdate();
+
+private:
+    static int GetCountImpl(TObject* owner);
+};
+
+// リストビューの列(LCL の TListColumn。TCollectionItem)。項目と同じく同じ列には常に同じポインタが返る。
+// 列のラッパーは、TListColumns::Delete・Clear で削除したときと、リストビューの破棄のときに delete される。
+class TListColumn : public TPersistent
+{
+public:
+    Property<std::string> Caption;
+    Property<int>         Width;
+    Property<TAlignment>  Alignment;
+    Property<bool>        AutoSize;
+    Property<bool>        Visible;
+    // 列の並び順。書き換えると列が移動する。
+    Property<int>         Index;
+
+private:
+    friend class ItemRegistry;
+    friend class TListColumns;
+    friend class TListView;
+
+    explicit TListColumn(no_vcl_obj_t handle);
+    ~TListColumn() override = default;
+    static TListColumn* Wrap(no_vcl_obj_t handle) { return ItemRegistry::Wrap<TListColumn>(handle); }
+
+    static std::string GetCaptionImpl(TObject* owner);
+    static void        SetCaptionImpl(TObject* owner, const std::string& value);
+    static int         GetWidthImpl(TObject* owner);
+    static void        SetWidthImpl(TObject* owner, const int& value);
+    static TAlignment  GetAlignmentImpl(TObject* owner);
+    static void        SetAlignmentImpl(TObject* owner, const TAlignment& value);
+    static bool        GetAutoSizeImpl(TObject* owner);
+    static void        SetAutoSizeImpl(TObject* owner, const bool& value);
+    static bool        GetVisibleImpl(TObject* owner);
+    static void        SetVisibleImpl(TObject* owner, const bool& value);
+    static int         GetIndexImpl(TObject* owner);
+    static void        SetIndexImpl(TObject* owner, const int& value);
+};
+
+// リストビューの列の一覧(LCL の TListColumns)。リストビューの値メンバとして持つ非所有のビュー。Items[Index] は GetItem(Index)。
+class TListColumns : public TPersistent
+{
+public:
+    explicit TListColumns(no_vcl_obj_t handle);
+    ~TListColumns() override = default;
+
+    ReadOnlyProperty<int> Count;
+
+    TListColumn* Add();
+    TListColumn* GetItem(int Index) const;
+    // 列を削除する(列のラッパーも delete される)。
+    void         Delete(int Index);
+    void         Clear();
+
+private:
+    static int GetCountImpl(TObject* owner);
+};
+
+// 項目・列を対象とするイベント。
+using TLVDeletedEvent     = std::function<void(TObject* Sender, TListItem* Item)>;
+using TLVCheckedItemEvent = TLVDeletedEvent;
+using TLVSelectItemEvent  = std::function<void(TObject* Sender, TListItem* Item, bool Selected)>;
+using TLVChangeEvent      = std::function<void(TObject* Sender, TListItem* Item, TItemChange Change)>;
+using TLVColumnClickEvent = std::function<void(TObject* Sender, TListColumn* Column)>;
+
+// 以下のメンバは LCL の TCustomListView の public。
+class TCustomListView : public TWinControl
+{
+public:
+    ReadOnlyProperty<TListItems*> Items;
+    // 選択されている項目(MultiSelect なら最初の 1 つ。無ければ nullptr)と、その位置(無ければ -1)。
+    // 表示前(フォームのコンストラクタ等)に設定しても選択される(LCL 単体では選択されないため DLL 側で補っている)。
+    Property<TListItem*>          Selected;
+    Property<int>                 ItemIndex;
+    ReadOnlyProperty<int>         SelCount;
+    Property<bool>                Checkboxes;
+    Property<bool>                GridLines;
+    Property<bool>                MultiSelect;
+    Property<bool>                ReadOnly;
+    Property<bool>                RowSelect;
+
+    // すべての項目を削除する(列は残る)。
+    void       Clear();
+    void       BeginUpdate();
+    void       EndUpdate();
+    // X, Y はクライアント座標。そこに項目が無ければ nullptr。
+    TListItem* GetItemAt(int X, int Y) const;
+    void       ClearSelection();
+    void       SelectAll();
+
+protected:
+    explicit TCustomListView(no_vcl_obj_t handle);
+    ~TCustomListView() override = default;
+
+private:
+    friend class TListItem;  // TListItem::ListView の Getter から FromHandle を使うため
+
+    TListItems items_;
+
+    static TListItems* GetItemsImpl(TObject* owner);
+    static TListItem*  GetSelectedImpl(TObject* owner);
+    static void        SetSelectedImpl(TObject* owner, TListItem* const& value);
+    static int         GetItemIndexImpl(TObject* owner);
+    static void        SetItemIndexImpl(TObject* owner, const int& value);
+    static int         GetSelCountImpl(TObject* owner);
+    static bool        GetCheckboxesImpl(TObject* owner);
+    static void        SetCheckboxesImpl(TObject* owner, const bool& value);
+    static bool        GetGridLinesImpl(TObject* owner);
+    static void        SetGridLinesImpl(TObject* owner, const bool& value);
+    static bool        GetMultiSelectImpl(TObject* owner);
+    static void        SetMultiSelectImpl(TObject* owner, const bool& value);
+    static bool        GetReadOnlyImpl(TObject* owner);
+    static void        SetReadOnlyImpl(TObject* owner, const bool& value);
+    static bool        GetRowSelectImpl(TObject* owner);
+    static void        SetRowSelectImpl(TObject* owner, const bool& value);
+};
+
+// 以下のメンバは LCL では TCustomListView の protected で、TListView が published にしている。
+class TListView : public TCustomListView
+{
+public:
+    explicit TListView(TComponent* AOwner);
+
+    ReadOnlyProperty<TListColumns*> Columns;
+    // 列見出しと SubItems が表示されるのは vsReport のとき。
+    Property<TViewStyle>     ViewStyle;
+    Property<bool>           HideSelection;
+    // SortType が stText のとき、SortColumn の列(0 が Caption の列)の文字列の順に並ぶ。
+    // SortColumn が既定の -1 のままでは並べ替えない(LCL の仕様。先に SortColumn を設定する)。
+    Property<TSortType>      SortType;
+    Property<int>            SortColumn;
+    Property<TSortDirection> SortDirection;
+
+    // 項目の選択状態が変わったとき。
+    Property<TLVSelectItemEvent>  OnSelectItem;
+    // 項目が変わったとき(Change は変更の種類)。
+    Property<TLVChangeEvent>      OnChange;
+    // 項目が削除される直前(Item はまだ有効。ハンドラから戻った後にラッパーが delete される)。
+    Property<TLVDeletedEvent>     OnDeletion;
+    // チェックボックス(Checkboxes)が切り替わったとき。
+    Property<TLVCheckedItemEvent> OnItemChecked;
+    // 列見出しがクリックされたとき。
+    Property<TLVColumnClickEvent> OnColumnClick;
+
+protected:
+    ~TListView() override = default;
+
+private:
+    TListColumns columns_;
+
+    TLVSelectItemEvent  onSelectItem_;
+    TLVChangeEvent      onChange_;
+    TLVDeletedEvent     onDeletion_;
+    TLVCheckedItemEvent onItemChecked_;
+    TLVColumnClickEvent onColumnClick_;
+    bool onSelectItemHooked_  = false;
+    bool onChangeHooked_      = false;
+    bool onDeletionHooked_    = false;
+    bool onItemCheckedHooked_ = false;
+    bool onColumnClickHooked_ = false;
+
+    static void NO_VCL_CALL SelectItemTrampoline(no_vcl_obj_t sender, no_vcl_obj_t item, no_vcl_int_t selected, void* data);
+    static void NO_VCL_CALL ChangeTrampoline(no_vcl_obj_t sender, no_vcl_obj_t item, no_vcl_int_t change, void* data);
+    static void NO_VCL_CALL DeletionTrampoline(no_vcl_obj_t sender, no_vcl_obj_t item, void* data);
+    static void NO_VCL_CALL ItemCheckedTrampoline(no_vcl_obj_t sender, no_vcl_obj_t item, void* data);
+    static void NO_VCL_CALL ColumnClickTrampoline(no_vcl_obj_t sender, no_vcl_obj_t column, void* data);
+
+    static TListColumns*  GetColumnsImpl(TObject* owner);
+    static TViewStyle     GetViewStyleImpl(TObject* owner);
+    static void           SetViewStyleImpl(TObject* owner, const TViewStyle& value);
+    static bool           GetHideSelectionImpl(TObject* owner);
+    static void           SetHideSelectionImpl(TObject* owner, const bool& value);
+    static TSortType      GetSortTypeImpl(TObject* owner);
+    static void           SetSortTypeImpl(TObject* owner, const TSortType& value);
+    static int            GetSortColumnImpl(TObject* owner);
+    static void           SetSortColumnImpl(TObject* owner, const int& value);
+    static TSortDirection GetSortDirectionImpl(TObject* owner);
+    static void           SetSortDirectionImpl(TObject* owner, const TSortDirection& value);
+
+    static TLVSelectItemEvent  GetOnSelectItemImpl(TObject* owner);
+    static void                SetOnSelectItemImpl(TObject* owner, const TLVSelectItemEvent& value);
+    static TLVChangeEvent      GetOnChangeImpl(TObject* owner);
+    static void                SetOnChangeImpl(TObject* owner, const TLVChangeEvent& value);
+    static TLVDeletedEvent     GetOnDeletionImpl(TObject* owner);
+    static void                SetOnDeletionImpl(TObject* owner, const TLVDeletedEvent& value);
+    static TLVCheckedItemEvent GetOnItemCheckedImpl(TObject* owner);
+    static void                SetOnItemCheckedImpl(TObject* owner, const TLVCheckedItemEvent& value);
+    static TLVColumnClickEvent GetOnColumnClickImpl(TObject* owner);
+    static void                SetOnColumnClickImpl(TObject* owner, const TLVColumnClickEvent& value);
 };
 
 // Splitter が寄せる辺(LCL の TAnchorKind と同じ値。VCL には無い)と、ドラッグ中の表示のしかた。

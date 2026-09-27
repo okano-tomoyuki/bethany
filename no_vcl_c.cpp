@@ -396,7 +396,7 @@ using no_vcl_module_t = void*;
     X(void,          TCustomPage_SetOnShow,                   (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d)) \
     X(void,          TCustomPage_SetOnHide,                   (no_vcl_obj_t o, no_vcl_callback_t cb, void* d),      (o, cb, d)) \
     \
-    X(void,          TreeNodeFree_SetCallback,                (no_vcl_callback_t cb, void* d),                      (cb, d)) \
+    X(void,          ItemFree_SetCallback,                (no_vcl_callback_t cb, void* d),                      (cb, d)) \
     X(no_vcl_obj_t,  TTreeView_Create,                        (no_vcl_obj_t owner),                                 (owner)) \
     X(no_vcl_obj_t,  TCustomTreeView_GetItems,                (no_vcl_obj_t o),                                     (o)) \
     X(no_vcl_obj_t,  TCustomTreeView_GetSelected,             (no_vcl_obj_t o),                                     (o)) \
@@ -419,13 +419,13 @@ using no_vcl_module_t = void*;
     X(void,          TTreeView_SetHideSelection,              (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
     X(no_vcl_bool_t, TTreeView_GetRowSelect,                  (no_vcl_obj_t o),                                     (o)) \
     X(void,          TTreeView_SetRowSelect,                  (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
-    X(void,          TTreeView_SetOnChange,                   (no_vcl_obj_t o, no_vcl_node_callback_t cb, void* d), (o, cb, d)) \
-    X(void,          TTreeView_SetOnExpanded,                 (no_vcl_obj_t o, no_vcl_node_callback_t cb, void* d), (o, cb, d)) \
-    X(void,          TTreeView_SetOnCollapsed,                (no_vcl_obj_t o, no_vcl_node_callback_t cb, void* d), (o, cb, d)) \
-    X(void,          TTreeView_SetOnDeletion,                 (no_vcl_obj_t o, no_vcl_node_callback_t cb, void* d), (o, cb, d)) \
-    X(void,          TTreeView_SetOnChanging,                 (no_vcl_obj_t o, no_vcl_node_allow_callback_t cb, void* d), (o, cb, d)) \
-    X(void,          TTreeView_SetOnExpanding,                (no_vcl_obj_t o, no_vcl_node_allow_callback_t cb, void* d), (o, cb, d)) \
-    X(void,          TTreeView_SetOnCollapsing,               (no_vcl_obj_t o, no_vcl_node_allow_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TTreeView_SetOnChange,                   (no_vcl_obj_t o, no_vcl_item_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TTreeView_SetOnExpanded,                 (no_vcl_obj_t o, no_vcl_item_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TTreeView_SetOnCollapsed,                (no_vcl_obj_t o, no_vcl_item_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TTreeView_SetOnDeletion,                 (no_vcl_obj_t o, no_vcl_item_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TTreeView_SetOnChanging,                 (no_vcl_obj_t o, no_vcl_item_allow_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TTreeView_SetOnExpanding,                (no_vcl_obj_t o, no_vcl_item_allow_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TTreeView_SetOnCollapsing,               (no_vcl_obj_t o, no_vcl_item_allow_callback_t cb, void* d), (o, cb, d)) \
     \
     X(no_vcl_obj_t,  TTreeNodes_Add,                          (no_vcl_obj_t o, no_vcl_obj_t n, no_vcl_str_t t),     (o, n, t)) \
     X(no_vcl_obj_t,  TTreeNodes_AddFirst,                     (no_vcl_obj_t o, no_vcl_obj_t n, no_vcl_str_t t),     (o, n, t)) \
@@ -470,7 +470,98 @@ using no_vcl_module_t = void*;
     X(void,          TTreeNode_Delete,                        (no_vcl_obj_t o),                                     (o)) \
     X(void,          TTreeNode_DeleteChildren,                (no_vcl_obj_t o),                                     (o)) \
     X(void,          TTreeNode_MakeVisible,                   (no_vcl_obj_t o),                                     (o)) \
-    X(void,          TTreeNode_MoveTo,                        (no_vcl_obj_t o, no_vcl_obj_t d, no_vcl_int_t m),     (o, d, m))
+    X(void,          TTreeNode_MoveTo,                        (no_vcl_obj_t o, no_vcl_obj_t d, no_vcl_int_t m),     (o, d, m)) \
+    \
+    X(no_vcl_obj_t,  TListView_Create,                        (no_vcl_obj_t owner),                                 (owner)) \
+    X(no_vcl_obj_t,  TCustomListView_GetItems,                (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TCustomListView_GetSelected,             (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomListView_SetSelected,             (no_vcl_obj_t o, no_vcl_obj_t i),                     (o, i)) \
+    X(no_vcl_int_t,  TCustomListView_GetItemIndex,            (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomListView_SetItemIndex,            (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TCustomListView_GetSelCount,             (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_bool_t, TCustomListView_GetCheckboxes,           (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomListView_SetCheckboxes,           (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TCustomListView_GetGridLines,            (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomListView_SetGridLines,            (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TCustomListView_GetMultiSelect,          (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomListView_SetMultiSelect,          (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TCustomListView_GetReadOnly,             (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomListView_SetReadOnly,             (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TCustomListView_GetRowSelect,            (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomListView_SetRowSelect,            (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(void,          TCustomListView_Clear,                   (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomListView_BeginUpdate,             (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomListView_EndUpdate,               (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TCustomListView_GetItemAt,               (no_vcl_obj_t o, no_vcl_int_t x, no_vcl_int_t y),     (o, x, y)) \
+    X(void,          TCustomListView_ClearSelection,          (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TCustomListView_SelectAll,               (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TListView_GetColumns,                    (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_int_t,  TListView_GetViewStyle,                  (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TListView_SetViewStyle,                  (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_bool_t, TListView_GetHideSelection,              (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TListView_SetHideSelection,              (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_int_t,  TListView_GetSortType,                   (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TListView_SetSortType,                   (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TListView_GetSortColumn,                 (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TListView_SetSortColumn,                 (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TListView_GetSortDirection,              (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TListView_SetSortDirection,              (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(void,          TListView_SetOnSelectItem,               (no_vcl_obj_t o, no_vcl_item_int_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TListView_SetOnChange,                   (no_vcl_obj_t o, no_vcl_item_int_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TListView_SetOnDeletion,                 (no_vcl_obj_t o, no_vcl_item_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TListView_SetOnItemChecked,              (no_vcl_obj_t o, no_vcl_item_callback_t cb, void* d), (o, cb, d)) \
+    X(void,          TListView_SetOnColumnClick,              (no_vcl_obj_t o, no_vcl_item_callback_t cb, void* d), (o, cb, d)) \
+    \
+    X(no_vcl_obj_t,  TListItems_Add,                          (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TListItems_Insert,                       (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(void,          TListItems_Delete,                       (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(void,          TListItems_Clear,                        (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_int_t,  TListItems_GetCount,                     (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TListItems_GetItem,                      (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(no_vcl_int_t,  TListItems_IndexOf,                      (no_vcl_obj_t o, no_vcl_obj_t i),                     (o, i)) \
+    X(no_vcl_obj_t,  TListItems_FindCaption,                  (no_vcl_obj_t o, no_vcl_int_t s, no_vcl_str_t v, no_vcl_bool_t p, no_vcl_bool_t inc, no_vcl_bool_t w), (o, s, v, p, inc, w)) \
+    X(void,          TListItems_Exchange,                     (no_vcl_obj_t o, no_vcl_int_t a, no_vcl_int_t b),     (o, a, b)) \
+    X(void,          TListItems_Move,                         (no_vcl_obj_t o, no_vcl_int_t a, no_vcl_int_t b),     (o, a, b)) \
+    X(void,          TListItems_BeginUpdate,                  (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TListItems_EndUpdate,                    (no_vcl_obj_t o),                                     (o)) \
+    \
+    X(no_vcl_str_t,  TListItem_GetCaption,                    (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TListItem_SetCaption,                    (no_vcl_obj_t o, no_vcl_str_t v),                     (o, v)) \
+    X(no_vcl_bool_t, TListItem_GetChecked,                    (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TListItem_SetChecked,                    (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TListItem_GetSelected,                   (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TListItem_SetSelected,                   (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TListItem_GetFocused,                    (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TListItem_SetFocused,                    (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(void*,         TListItem_GetData,                       (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TListItem_SetData,                       (no_vcl_obj_t o, void* v),                            (o, v)) \
+    X(no_vcl_int_t,  TListItem_GetIndex,                      (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TListItem_GetListView,                   (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TListItem_SubItems_Add,                  (no_vcl_obj_t o, no_vcl_str_t t),                     (o, t)) \
+    X(void,          TListItem_SubItems_Clear,                (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_int_t,  TListItem_SubItems_Count,                (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_str_t,  TListItem_SubItems_GetText,              (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(void,          TListItem_SubItems_SetText,              (no_vcl_obj_t o, no_vcl_int_t i, no_vcl_str_t t),     (o, i, t)) \
+    X(void,          TListItem_Delete,                        (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TListItem_MakeVisible,                   (no_vcl_obj_t o, no_vcl_bool_t p),                    (o, p)) \
+    \
+    X(no_vcl_obj_t,  TListColumns_Add,                        (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_int_t,  TListColumns_GetCount,                   (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_obj_t,  TListColumns_GetItem,                    (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(void,          TListColumns_Delete,                     (no_vcl_obj_t o, no_vcl_int_t i),                     (o, i)) \
+    X(void,          TListColumns_Clear,                      (no_vcl_obj_t o),                                     (o)) \
+    X(no_vcl_str_t,  TListColumn_GetCaption,                  (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TListColumn_SetCaption,                  (no_vcl_obj_t o, no_vcl_str_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TListColumn_GetWidth,                    (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TListColumn_SetWidth,                    (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_int_t,  TListColumn_GetAlignment,                (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TListColumn_SetAlignment,                (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
+    X(no_vcl_bool_t, TListColumn_GetAutoSize,                 (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TListColumn_SetAutoSize,                 (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_bool_t, TListColumn_GetVisible,                  (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TListColumn_SetVisible,                  (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(no_vcl_int_t,  TListColumn_GetIndex,                    (no_vcl_obj_t o),                                     (o)) \
+    X(void,          TListColumn_SetIndex,                    (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v))
 
 namespace
 {

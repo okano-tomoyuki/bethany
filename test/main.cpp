@@ -151,6 +151,11 @@ public:
     TTreeNode*      GrandchildNode;
     TTreeNode*      Root2Node;
     int             deletedNodes_ = 0;
+    TListView*      ListView1;
+    TListItem*      AlphaItem;
+    TListItem*      BetaItem;
+    TListItem*      GammaItem;
+    int             deletedListItems_ = 0;
 
     // C++Builder と同じく Owner を受け取り、TForm に渡す(Application->CreateForm が Application を渡す)。
     explicit TMainForm(TComponent* AOwner) : TForm(AOwner)
@@ -632,7 +637,13 @@ public:
             std::fflush(stdout);
         };
         PageControl1->OnChange = [this](TObject* Sender) { PageControl1Change(Sender); };
-        TabSheet2->OnShow = [](TObject*) { std::printf("TabSheet2Show\n"); std::fflush(stdout); };
+        // 表示前に設定した ListView1 の選択が、ウィンドウハンドルができた後も保たれていることの確認を兼ねる。
+        TabSheet2->OnShow = [this](TObject*) {
+            TListItem* selected = ListView1->Selected;
+            std::printf("TabSheet2Show: ListView1->Selected=%s (expected Beta)\n",
+                        selected ? std::string(selected->Caption).c_str() : "(none)");
+            std::fflush(stdout);
+        };
 
         // Tier 2、2 バッチ目(TTreeView)。TabSheet1 の上に置く。
         TreeView1 = new TTreeView(this);
@@ -665,6 +676,49 @@ public:
                 AllowCollapse = false;
         };
         TreeView1->OnDeletion = [this](TObject*, TTreeNode*) { ++deletedNodes_; };
+
+        // Tier 2、3 バッチ目(TListView)。TabSheet2 の上に、レポート表示(列見出し付き)で置く。
+        ListView1 = new TListView(this);
+        ListView1->Parent = TabSheet2;
+        ListView1->Left = 10;
+        ListView1->Top = 40;
+        ListView1->Width = 190;
+        ListView1->Height = 85;
+        ListView1->ViewStyle = vsReport;
+        ListView1->RowSelect = true;
+        ListView1->Checkboxes = true;
+        TListColumn* nameColumn = ListView1->Columns->Add();
+        nameColumn->Caption = "Name";
+        nameColumn->Width = 90;
+        TListColumn* sizeColumn = ListView1->Columns->Add();
+        sizeColumn->Caption = "Size";
+        sizeColumn->Width = 60;
+        sizeColumn->Alignment = taRightJustify;
+        AlphaItem = ListView1->Items->Add();
+        AlphaItem->Caption = "Alpha";
+        AlphaItem->SubItemsAdd("10");
+        BetaItem = ListView1->Items->Add();
+        BetaItem->Caption = "Beta";
+        BetaItem->SubItemsAdd("20");
+        GammaItem = ListView1->Items->Add();
+        GammaItem->Caption = "Gamma";
+        GammaItem->SubItemsAdd("30");
+        ListView1->OnSelectItem = [](TObject*, TListItem* Item, bool Selected) {
+            std::printf("ListView1SelectItem: %s Selected=%d\n", std::string(Item->Caption).c_str(), Selected);
+            std::fflush(stdout);
+        };
+        ListView1->OnItemChecked = [](TObject*, TListItem* Item) {
+            std::printf("ListView1ItemChecked: %s Checked=%d\n", std::string(Item->Caption).c_str(), (bool)Item->Checked);
+            std::fflush(stdout);
+        };
+        // 列見出しのクリックで、その列の文字列の順に並べ替える。
+        ListView1->OnColumnClick = [this](TObject*, TListColumn* Column) {
+            std::printf("ListView1ColumnClick: %s\n", std::string(Column->Caption).c_str());
+            std::fflush(stdout);
+            ListView1->SortType = stText;
+            ListView1->SortColumn = (int)Column->Index;
+        };
+        ListView1->OnDeletion = [this](TObject*, TListItem*) { ++deletedListItems_; };
 
         OnCreate = [this](TObject* Sender) { FormCreate(Sender); };
         OnShow = [this](TObject* Sender) { FormShow(Sender); };
@@ -1125,6 +1179,53 @@ int main()
         locked->Delete();
         std::printf("After Delete: deleted=%d (expected 2), Items->Count=%d (expected 5)\n",
                     f->deletedNodes_ - before, (int)items->Count);
+    }
+
+    // Tier 2、3 バッチ目(TListView)。
+    {
+        TMainForm* f = Form1;
+        TListView* lv = f->ListView1;
+        TListItems* items = lv->Items;
+        TListColumns* columns = lv->Columns;
+        std::printf("ListView1 Columns->Count=%d (expected 2), GetItem(1)->Caption=%s Alignment=%d (expected taRightJustify=%d), "
+                    "same wrapper: %s\n",
+                    (int)columns->Count, std::string(columns->GetItem(1)->Caption).c_str(),
+                    (int)columns->GetItem(1)->Alignment, (int)taRightJustify,
+                    columns->GetItem(1) == columns->GetItem(1) ? "yes" : "no");
+        std::printf("Items->Count=%d (expected 3), GetItem(1) is BetaItem: %s, SubItems[0]=%s (expected 20), "
+                    "ListView is ListView1: %s\n",
+                    (int)items->Count, items->GetItem(1) == f->BetaItem ? "yes" : "no",
+                    f->BetaItem->SubItemsGetText(0).c_str(), f->BetaItem->ListView == lv ? "yes" : "no");
+        std::printf("FindCaption(\"Gam\", partial) is GammaItem: %s\n",
+                    items->FindCaption(0, "Gam", true, true, false) == f->GammaItem ? "yes" : "no");
+
+        lv->Selected = f->BetaItem;
+        std::printf("Selected is BetaItem: %s, ItemIndex=%d (expected 1), SelCount=%d (expected 1)\n",
+                    lv->Selected == f->BetaItem ? "yes" : "no", (int)lv->ItemIndex, (int)lv->SelCount);
+        f->GammaItem->Checked = true;
+        std::printf("GammaItem Checked=%d (expected 1)\n", (bool)f->GammaItem->Checked);
+        f->GammaItem->SubItemsSetText(0, "33");
+        std::printf("GammaItem SubItems[0]=%s (expected 33)\n", f->GammaItem->SubItemsGetText(0).c_str());
+
+        // Exchange で入れ替え、SortType = stText で Caption の順に並べ直す。
+        items->Exchange(0, 2);
+        std::printf("After Exchange(0, 2): GetItem(0) is GammaItem: %s\n", items->GetItem(0) == f->GammaItem ? "yes" : "no");
+        lv->SortColumn = 0;  // 既定の -1 のままでは並べ替えない
+        lv->SortType = stText;
+        std::printf("After SortType = stText: GetItem(0) is AlphaItem: %s, GetItem(2) is GammaItem: %s\n",
+                    items->GetItem(0) == f->AlphaItem ? "yes" : "no", items->GetItem(2) == f->GammaItem ? "yes" : "no");
+        lv->SortType = stNone;
+
+        // Delete: OnDeletion の後に項目のラッパーも delete される。列の Delete も同様。
+        int before = f->deletedListItems_;
+        TListItem* temp = items->Add();
+        temp->Caption = "Temp";
+        temp->Delete();
+        std::printf("After Delete: deleted=%d (expected 1), Items->Count=%d (expected 3)\n",
+                    f->deletedListItems_ - before, (int)items->Count);
+        columns->Add()->Caption = "Temp";
+        columns->Delete(2);
+        std::printf("After column Delete: Columns->Count=%d (expected 2)\n", (int)columns->Count);
     }
 
     // 2 つ目以降に生成したフォームは MainForm にならない。

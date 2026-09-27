@@ -649,15 +649,23 @@ void          NO_VCL_CALL no_vcl_TCustomPage_SetOnHide(no_vcl_obj_t Obj, no_vcl_
  * ノード(TTreeNode)とノードの一覧(TTreeNodes)は TComponent ではない。
  * - TTreeNodes(no_vcl_TCustomTreeView_GetItems)はツリービューが所有する非所有のハンドルで、ツリービューと寿命が一致する。
  * - ノードは no_vcl_TTreeNodes_Add 等で追加し、no_vcl_TTreeNode_Delete 等で削除する(破棄は LCL が行う)。
- *   ノードが削除されると(ツリービューの破棄に伴う削除も含め)、OnDeletion の後に
- *   no_vcl_TreeNodeFree_SetCallback で登録したコールバックが呼ばれる(no_vcl_FreeNotify_SetCallback のノード版)。
- *   C++ ラッパー(no_vcl.hpp)を使う場合はラッパーが登録するため、上書きしないこと。 */
-void          NO_VCL_CALL no_vcl_TreeNodeFree_SetCallback(no_vcl_callback_t Cb, void* Data);
+ *   ノードが削除されると(ツリービューの破棄に伴う削除も含め)、OnDeletion の後に項目の破棄通知が呼ばれる。 */
 
-/* OnChange/OnExpanded/OnCollapsed/OnDeletion 用。node はイベントの対象のノード(OnChange では選択されたノードで、NULL もありうる)。 */
-typedef void (NO_VCL_CALL *no_vcl_node_callback_t)(no_vcl_obj_t sender, no_vcl_obj_t node, void* data);
-/* OnChanging/OnExpanding/OnCollapsing 用。*allow は 0 以外が入った状態で呼ばれ、0 を書き込むと取りやめる。 */
-typedef void (NO_VCL_CALL *no_vcl_node_allow_callback_t)(no_vcl_obj_t sender, no_vcl_obj_t node, no_vcl_bool_t* allow, void* data);
+/*
+ * 項目の破棄通知: TComponent ではない項目(ツリービューのノード・リストビューの項目・リストビューの列)が破棄されると、
+ * 登録したコールバックが破棄される項目を引数に呼ばれる(no_vcl_FreeNotify_SetCallback の項目版)。
+ * コールバックは 1 つだけ登録でき、C++ ラッパー(no_vcl.hpp)を使う場合はラッパーが登録するため上書きしないこと。
+ * 通知される経路はクラスごとに異なる(ノード・項目は LCL の削除処理から、列は no_vcl の関数から。各節を参照)。
+ */
+void          NO_VCL_CALL no_vcl_ItemFree_SetCallback(no_vcl_callback_t Cb, void* Data);
+
+/* 項目を 1 つ受け取るイベント用(ツリービューの OnChange/OnExpanded/OnCollapsed/OnDeletion、
+ * リストビューの OnDeletion/OnItemChecked/OnColumnClick)。item はイベントの対象(ツリービューの OnChange では NULL もありうる)。 */
+typedef void (NO_VCL_CALL *no_vcl_item_callback_t)(no_vcl_obj_t sender, no_vcl_obj_t item, void* data);
+/* ツリービューの OnChanging/OnExpanding/OnCollapsing 用。*allow は 0 以外が入った状態で呼ばれ、0 を書き込むと取りやめる。 */
+typedef void (NO_VCL_CALL *no_vcl_item_allow_callback_t)(no_vcl_obj_t sender, no_vcl_obj_t item, no_vcl_bool_t* allow, void* data);
+/* 項目と整数を 1 つずつ受け取るイベント用(リストビューの OnSelectItem では選択されたか、OnChange では変更の種類 no_vcl_ct*)。 */
+typedef void (NO_VCL_CALL *no_vcl_item_int_callback_t)(no_vcl_obj_t sender, no_vcl_obj_t item, no_vcl_int_t value, void* data);
 
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TTreeView_Create(no_vcl_obj_t Owner);
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomTreeView_GetItems(no_vcl_obj_t Obj);
@@ -686,15 +694,15 @@ void          NO_VCL_CALL no_vcl_TTreeView_SetHideSelection(no_vcl_obj_t Obj, no
 no_vcl_bool_t NO_VCL_CALL no_vcl_TTreeView_GetRowSelect(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TTreeView_SetRowSelect(no_vcl_obj_t Obj, no_vcl_bool_t Value);
 /* 選択が変わった後。 */
-void          NO_VCL_CALL no_vcl_TTreeView_SetOnChange(no_vcl_obj_t Obj, no_vcl_node_callback_t Cb, void* Data);
-void          NO_VCL_CALL no_vcl_TTreeView_SetOnExpanded(no_vcl_obj_t Obj, no_vcl_node_callback_t Cb, void* Data);
-void          NO_VCL_CALL no_vcl_TTreeView_SetOnCollapsed(no_vcl_obj_t Obj, no_vcl_node_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TTreeView_SetOnChange(no_vcl_obj_t Obj, no_vcl_item_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TTreeView_SetOnExpanded(no_vcl_obj_t Obj, no_vcl_item_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TTreeView_SetOnCollapsed(no_vcl_obj_t Obj, no_vcl_item_callback_t Cb, void* Data);
 /* ノードが削除される直前(ノードはまだ有効)。 */
-void          NO_VCL_CALL no_vcl_TTreeView_SetOnDeletion(no_vcl_obj_t Obj, no_vcl_node_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TTreeView_SetOnDeletion(no_vcl_obj_t Obj, no_vcl_item_callback_t Cb, void* Data);
 /* 選択が変わる前。node は新しく選択されるノード。 */
-void          NO_VCL_CALL no_vcl_TTreeView_SetOnChanging(no_vcl_obj_t Obj, no_vcl_node_allow_callback_t Cb, void* Data);
-void          NO_VCL_CALL no_vcl_TTreeView_SetOnExpanding(no_vcl_obj_t Obj, no_vcl_node_allow_callback_t Cb, void* Data);
-void          NO_VCL_CALL no_vcl_TTreeView_SetOnCollapsing(no_vcl_obj_t Obj, no_vcl_node_allow_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TTreeView_SetOnChanging(no_vcl_obj_t Obj, no_vcl_item_allow_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TTreeView_SetOnExpanding(no_vcl_obj_t Obj, no_vcl_item_allow_callback_t Cb, void* Data);
+void          NO_VCL_CALL no_vcl_TTreeView_SetOnCollapsing(no_vcl_obj_t Obj, no_vcl_item_allow_callback_t Cb, void* Data);
 
 /* TTreeNodes。Sibling/Parent に NULL を渡すと最上位のノードになる(LCL と同じ)。追加したノードを返す。 */
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TTreeNodes_Add(no_vcl_obj_t Obj, no_vcl_obj_t Sibling, no_vcl_str_t Text);
@@ -753,6 +761,136 @@ void          NO_VCL_CALL no_vcl_TTreeNode_DeleteChildren(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TTreeNode_MakeVisible(no_vcl_obj_t Obj);
 /* Mode は no_vcl_na*。 */
 void          NO_VCL_CALL no_vcl_TTreeNode_MoveTo(no_vcl_obj_t Obj, no_vcl_obj_t Destination, no_vcl_int_t Mode);
+
+/* docs/component-coverage.md の Tier 2、3 バッチ目(TListView)。docs/adr/0020-... を参照。
+ *
+ * 項目(TListItem)・項目の一覧(TListItems)・列(TListColumn)・列の一覧(TListColumns)は TComponent ではない。
+ * - TListItems(no_vcl_TCustomListView_GetItems)・TListColumns(no_vcl_TListView_GetColumns)はリストビューが所有する
+ *   非所有のハンドルで、リストビューと寿命が一致する。
+ * - 項目が削除されると(リストビューの破棄に伴う削除も含め)、OnDeletion の後に項目の破棄通知が呼ばれる。
+ *   リストビューの破棄では、リストビュー自身の破棄通知(no_vcl_FreeNotify_SetCallback)の後に項目が破棄される(LCL の順序)。
+ *   そのときの OnDeletion の sender は、破棄通知を受け取った後のリストビューになる点に注意。
+ * - 列の破棄通知は、no_vcl_TListColumns_Delete・Clear で削除する直前と、リストビューの破棄の最初に呼ばれる。 */
+enum { no_vcl_vsIcon = 0, no_vcl_vsSmallIcon, no_vcl_vsList, no_vcl_vsReport };
+enum { no_vcl_stNone = 0, no_vcl_stData, no_vcl_stText, no_vcl_stBoth };
+enum { no_vcl_sdAscending = 0, no_vcl_sdDescending };
+enum { no_vcl_taLeftJustify = 0, no_vcl_taRightJustify, no_vcl_taCenter };
+/* OnChange の変更の種類(TItemChange)。 */
+enum { no_vcl_ctText = 0, no_vcl_ctImage, no_vcl_ctState };
+
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TListView_Create(no_vcl_obj_t Owner);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomListView_GetItems(no_vcl_obj_t Obj);
+/* 選択されている項目(MultiSelect なら最初の 1 つ。無ければ NULL)と、その位置(無ければ -1)。
+ * 表示前(ウィンドウハンドルが無いとき)に設定しても選択される(LCL 単体では選択されないため DLL 側で補っている)。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomListView_GetSelected(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomListView_SetSelected(no_vcl_obj_t Obj, no_vcl_obj_t Item);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomListView_GetItemIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomListView_SetItemIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomListView_GetSelCount(no_vcl_obj_t Obj);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomListView_GetCheckboxes(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomListView_SetCheckboxes(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomListView_GetGridLines(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomListView_SetGridLines(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomListView_GetMultiSelect(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomListView_SetMultiSelect(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomListView_GetReadOnly(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomListView_SetReadOnly(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomListView_GetRowSelect(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomListView_SetRowSelect(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* すべての項目を削除する(列は残る)。 */
+void          NO_VCL_CALL no_vcl_TCustomListView_Clear(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomListView_BeginUpdate(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomListView_EndUpdate(no_vcl_obj_t Obj);
+/* X, Y はクライアント座標。そこに項目が無ければ NULL。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomListView_GetItemAt(no_vcl_obj_t Obj, no_vcl_int_t X, no_vcl_int_t Y);
+void          NO_VCL_CALL no_vcl_TCustomListView_ClearSelection(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomListView_SelectAll(no_vcl_obj_t Obj);
+/* 以下は LCL では TCustomListView の protected で、TListView が published にしている。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TListView_GetColumns(no_vcl_obj_t Obj);
+/* 列見出しと SubItems が表示されるのは no_vcl_vsReport のとき。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TListView_GetViewStyle(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListView_SetViewStyle(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TListView_GetHideSelection(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListView_SetHideSelection(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* 並べ替え。SortType が no_vcl_stText のとき、SortColumn の列(0 が Caption の列)の文字列の順に並ぶ。
+ * SortColumn が既定の -1 のままでは並べ替えない(LCL の仕様。先に SortColumn を設定する)。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TListView_GetSortType(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListView_SetSortType(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TListView_GetSortColumn(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListView_SetSortColumn(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TListView_GetSortDirection(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListView_SetSortDirection(no_vcl_obj_t Obj, no_vcl_int_t Value);
+/* 項目の選択状態が変わったとき(value は選択されたなら 0 以外)。 */
+void          NO_VCL_CALL no_vcl_TListView_SetOnSelectItem(no_vcl_obj_t Obj, no_vcl_item_int_callback_t Cb, void* Data);
+/* 項目が変わったとき(value は no_vcl_ct*)。 */
+void          NO_VCL_CALL no_vcl_TListView_SetOnChange(no_vcl_obj_t Obj, no_vcl_item_int_callback_t Cb, void* Data);
+/* 項目が削除される直前(項目はまだ有効)。 */
+void          NO_VCL_CALL no_vcl_TListView_SetOnDeletion(no_vcl_obj_t Obj, no_vcl_item_callback_t Cb, void* Data);
+/* チェックボックス(Checkboxes)が切り替わったとき。 */
+void          NO_VCL_CALL no_vcl_TListView_SetOnItemChecked(no_vcl_obj_t Obj, no_vcl_item_callback_t Cb, void* Data);
+/* 列見出しがクリックされたとき(item は列)。 */
+void          NO_VCL_CALL no_vcl_TListView_SetOnColumnClick(no_vcl_obj_t Obj, no_vcl_item_callback_t Cb, void* Data);
+
+/* TListItems。Add は末尾に、Insert は Index の位置に空の項目を追加して返す(Caption 等はその後で設定する)。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TListItems_Add(no_vcl_obj_t Obj);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TListItems_Insert(no_vcl_obj_t Obj, no_vcl_int_t Index);
+void          NO_VCL_CALL no_vcl_TListItems_Delete(no_vcl_obj_t Obj, no_vcl_int_t Index);
+void          NO_VCL_CALL no_vcl_TListItems_Clear(no_vcl_obj_t Obj);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TListItems_GetCount(no_vcl_obj_t Obj);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TListItems_GetItem(no_vcl_obj_t Obj, no_vcl_int_t Index);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TListItems_IndexOf(no_vcl_obj_t Obj, no_vcl_obj_t Item);
+/* StartIndex の次(Inclusive なら StartIndex から)から Caption を探す。Partial なら前方一致、Wrap なら末尾から先頭へ続けて探す。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TListItems_FindCaption(no_vcl_obj_t Obj, no_vcl_int_t StartIndex, no_vcl_str_t Value,
+                                                        no_vcl_bool_t Partial, no_vcl_bool_t Inclusive, no_vcl_bool_t Wrap);
+void          NO_VCL_CALL no_vcl_TListItems_Exchange(no_vcl_obj_t Obj, no_vcl_int_t Index1, no_vcl_int_t Index2);
+void          NO_VCL_CALL no_vcl_TListItems_Move(no_vcl_obj_t Obj, no_vcl_int_t FromIndex, no_vcl_int_t ToIndex);
+void          NO_VCL_CALL no_vcl_TListItems_BeginUpdate(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListItems_EndUpdate(no_vcl_obj_t Obj);
+
+/* TListItem。Caption は 1 列目、SubItems は 2 列目以降の文字列(ViewStyle が no_vcl_vsReport のときに表示される)。 */
+no_vcl_str_t  NO_VCL_CALL no_vcl_TListItem_GetCaption(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListItem_SetCaption(no_vcl_obj_t Obj, no_vcl_str_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TListItem_GetChecked(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListItem_SetChecked(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TListItem_GetSelected(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListItem_SetSelected(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TListItem_GetFocused(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListItem_SetFocused(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* 利用者データ(LCL は解釈しない)。 */
+void*         NO_VCL_CALL no_vcl_TListItem_GetData(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListItem_SetData(no_vcl_obj_t Obj, void* Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TListItem_GetIndex(no_vcl_obj_t Obj);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TListItem_GetListView(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListItem_SubItems_Add(no_vcl_obj_t Obj, no_vcl_str_t Text);
+void          NO_VCL_CALL no_vcl_TListItem_SubItems_Clear(no_vcl_obj_t Obj);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TListItem_SubItems_Count(no_vcl_obj_t Obj);
+no_vcl_str_t  NO_VCL_CALL no_vcl_TListItem_SubItems_GetText(no_vcl_obj_t Obj, no_vcl_int_t Index);
+void          NO_VCL_CALL no_vcl_TListItem_SubItems_SetText(no_vcl_obj_t Obj, no_vcl_int_t Index, no_vcl_str_t Text);
+/* この項目を削除する。OnDeletion と項目の破棄通知が呼ばれる。 */
+void          NO_VCL_CALL no_vcl_TListItem_Delete(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListItem_MakeVisible(no_vcl_obj_t Obj, no_vcl_bool_t PartialOK);
+
+/* TListColumns / TListColumn。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TListColumns_Add(no_vcl_obj_t Obj);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TListColumns_GetCount(no_vcl_obj_t Obj);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TListColumns_GetItem(no_vcl_obj_t Obj, no_vcl_int_t Index);
+/* 列を削除する(削除する直前に項目の破棄通知が呼ばれる)。 */
+void          NO_VCL_CALL no_vcl_TListColumns_Delete(no_vcl_obj_t Obj, no_vcl_int_t Index);
+void          NO_VCL_CALL no_vcl_TListColumns_Clear(no_vcl_obj_t Obj);
+no_vcl_str_t  NO_VCL_CALL no_vcl_TListColumn_GetCaption(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListColumn_SetCaption(no_vcl_obj_t Obj, no_vcl_str_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TListColumn_GetWidth(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListColumn_SetWidth(no_vcl_obj_t Obj, no_vcl_int_t Value);
+/* no_vcl_ta*。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TListColumn_GetAlignment(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListColumn_SetAlignment(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TListColumn_GetAutoSize(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListColumn_SetAutoSize(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TListColumn_GetVisible(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListColumn_SetVisible(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* 列の並び順。書き換えると列が移動する。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TListColumn_GetIndex(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TListColumn_SetIndex(no_vcl_obj_t Obj, no_vcl_int_t Value);
 
 #ifdef __cplusplus
 }

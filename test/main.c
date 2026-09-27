@@ -273,11 +273,25 @@ static void NO_VCL_CALL OnPageControlChanging(no_vcl_obj_t sender, no_vcl_bool_t
     fflush(stdout);
 }
 
-/* ノードの破棄通知。data は破棄されたノードの数。 */
-static void NO_VCL_CALL OnTreeNodeFreed(no_vcl_obj_t node, void* data)
+/* 項目(ツリービューのノード・リストビューの項目と列)の破棄通知。data は破棄された項目の数。 */
+static void NO_VCL_CALL OnItemFreed(no_vcl_obj_t item, void* data)
 {
-    (void)node;
+    (void)item;
     ++*(int*)data;
+}
+
+/* data は削除された項目の数(OnDeletion の回数)。 */
+static void NO_VCL_CALL OnListViewDeletion(no_vcl_obj_t sender, no_vcl_obj_t item, void* data)
+{
+    (void)sender; (void)item;
+    ++*(int*)data;
+}
+
+static void NO_VCL_CALL OnListViewSelectItem(no_vcl_obj_t sender, no_vcl_obj_t item, no_vcl_int_t selected, void* data)
+{
+    (void)sender; (void)data;
+    printf("ListView item %s: %s\n", selected ? "selected" : "unselected", no_vcl_TListItem_GetCaption(item));
+    fflush(stdout);
 }
 
 static void NO_VCL_CALL OnTreeViewChange(no_vcl_obj_t sender, no_vcl_obj_t node, void* data)
@@ -376,7 +390,12 @@ int main(void)
     no_vcl_obj_t childNode;
     no_vcl_obj_t root2Node;
     no_vcl_obj_t lockedNode;
-    int nodesFreed = 0;
+    int itemsFreed = 0;
+    no_vcl_obj_t listView;
+    no_vcl_obj_t listColumns;
+    no_vcl_obj_t listItems;
+    no_vcl_obj_t listItem;
+    int listDeletions = 0;
 
     no_vcl_FreeNotify_SetCallback(OnComponentFreed, &freedCount);
 
@@ -769,8 +788,8 @@ int main(void)
     }
 
     /* Tier 2、2 バッチ目(TTreeView)。tabSheet1 の上に置く。ノードは TComponent ではないため、
-       破棄は no_vcl_FreeNotify_SetCallback ではなく no_vcl_TreeNodeFree_SetCallback で通知される。 */
-    no_vcl_TreeNodeFree_SetCallback(OnTreeNodeFreed, &nodesFreed);
+       破棄は no_vcl_FreeNotify_SetCallback ではなく no_vcl_ItemFree_SetCallback(項目の破棄通知)で通知される。 */
+    no_vcl_ItemFree_SetCallback(OnItemFreed, &itemsFreed);
     treeView = Place(no_vcl_TTreeView_Create(form), tabSheet1, 10, 30);
     no_vcl_TControl_SetWidth(treeView, 190);
     no_vcl_TControl_SetHeight(treeView, 95);
@@ -799,7 +818,48 @@ int main(void)
            no_vcl_TTreeNode_GetExpanded(lockedNode) != 0);
     no_vcl_TTreeNode_Delete(lockedNode);
     printf("After Delete: Count=%d (expected 4), nodes freed=%d (expected 2)\n",
-           no_vcl_TTreeNodes_GetCount(treeItems), nodesFreed);
+           no_vcl_TTreeNodes_GetCount(treeItems), itemsFreed);
+
+    /* Tier 2、3 バッチ目(TListView)。tabSheet2 の上に、レポート表示で置く。項目・列も項目の破棄通知の対象。 */
+    listView = Place(no_vcl_TListView_Create(form), tabSheet2, 10, 40);
+    no_vcl_TControl_SetWidth(listView, 190);
+    no_vcl_TControl_SetHeight(listView, 85);
+    no_vcl_TListView_SetViewStyle(listView, no_vcl_vsReport);
+    listColumns = no_vcl_TListView_GetColumns(listView);
+    no_vcl_TListColumn_SetCaption(no_vcl_TListColumns_Add(listColumns), "Name");
+    no_vcl_TListColumn_SetCaption(no_vcl_TListColumns_Add(listColumns), "Size");
+    no_vcl_TListColumn_SetCaption(no_vcl_TListColumns_Add(listColumns), "Temp");
+    listItems = no_vcl_TCustomListView_GetItems(listView);
+    listItem = no_vcl_TListItems_Add(listItems);
+    no_vcl_TListItem_SetCaption(listItem, "Beta");
+    no_vcl_TListItem_SubItems_Add(listItem, "20");
+    listItem = no_vcl_TListItems_Add(listItems);
+    no_vcl_TListItem_SetCaption(listItem, "Alpha");
+    no_vcl_TListItem_SubItems_Add(listItem, "10");
+    no_vcl_TListItem_SetCaption(no_vcl_TListItems_Add(listItems), "Temp");
+    no_vcl_TListView_SetOnDeletion(listView, OnListViewDeletion, &listDeletions);
+    no_vcl_TListView_SetOnSelectItem(listView, OnListViewSelectItem, NULL);
+    /* 表示前に設定した選択も有効(LCL 単体では効かないため DLL 側で補っている)。 */
+    no_vcl_TCustomListView_SetItemIndex(listView, 1);
+    printf("ListView Columns=%d Items=%d (expected 3/3), ItemIndex=%d (expected 1), Selected is Alpha: %s, Item(0) SubItems[0]=%s\n",
+           no_vcl_TListColumns_GetCount(listColumns), no_vcl_TListItems_GetCount(listItems),
+           no_vcl_TCustomListView_GetItemIndex(listView),
+           no_vcl_TCustomListView_GetSelected(listView) == listItem ? "yes" : "no",
+           no_vcl_TListItem_SubItems_GetText(no_vcl_TListItems_GetItem(listItems, 0), 0));
+    /* SortColumn を先に設定する(既定の -1 のままでは並べ替えない)。 */
+    no_vcl_TListView_SetSortColumn(listView, 0);
+    no_vcl_TListView_SetSortType(listView, no_vcl_stText);
+    printf("After sort: Item(0)=%s (expected Alpha)\n", no_vcl_TListItem_GetCaption(no_vcl_TListItems_GetItem(listItems, 0)));
+    no_vcl_TListView_SetSortType(listView, no_vcl_stNone);
+    {
+        int freedBefore = itemsFreed;
+        no_vcl_TListItem_Delete(no_vcl_TListItems_FindCaption(listItems, 0, "Temp", 0, 1, 0));
+        no_vcl_TListColumns_Delete(listColumns, 2);
+        printf("After deleting an item and a column: Items=%d Columns=%d (expected 2/2), OnDeletion=%d (expected 1), "
+               "items freed=%d (expected 2)\n",
+               no_vcl_TListItems_GetCount(listItems), no_vcl_TListColumns_GetCount(listColumns),
+               listDeletions, itemsFreed - freedBefore);
+    }
 
     printf("Running (click the button, then close the window twice: the first close is blocked)...\n");
     fflush(stdout);
@@ -810,9 +870,10 @@ int main(void)
     /* Application が所有するフォーム(と、フォームが所有するコントロール)をまとめて破棄する。
        呼ばなくても DLL の切り離し時に LCL が破棄するが、そのときは破棄通知が呼ばれない。 */
     no_vcl_TComponent_DestroyComponents(app);
-    printf("Clicks: %d, Freed components: %d (expected 60: form + 53 owned + 6 created inside LCL: 2 menu roots, a separator and 3 AddTabSheet pages)\n", clickCount, freedCount);
-    /* ツリービューの破棄に伴って、残りのノード(4 つ)も破棄通知が届く。 */
-    printf("Tree nodes freed: %d (expected 6: 2 deleted + 4 with the tree view)\n", nodesFreed);
+    printf("Clicks: %d, Freed components: %d (expected 61: form + 54 owned + 6 created inside LCL: 2 menu roots, a separator and 3 AddTabSheet pages)\n", clickCount, freedCount);
+    /* ツリービュー・リストビューの破棄に伴って、残りのノード(4 つ)・リストビューの項目(2 つ)と列(2 つ)も破棄通知が届く。 */
+    printf("Items freed: %d (expected 12: tree 2 deleted + 4 with the tree view, list 1 item + 1 column deleted "
+           "+ 2 items + 2 columns with the list view)\n", itemsFreed);
 
     printf("OK\n");
     return 0;

@@ -141,6 +141,12 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 | ReadOnly / ShowLines / ShowRoot / ShowButtons / AutoExpand / HideSelection / RowSelect / OnChange / OnChanging / OnExpanding / OnExpanded / OnCollapsing / OnCollapsed / OnDeletion | TCustomTreeView(protected) | TTreeView | TTreeView(public) | `TTreeView_*`(ADR 0019) |
 | Add / AddFirst / AddChild / AddChildFirst / Insert / Clear / Delete / Count / Item[i] / GetFirstNode / FindNodeWithText / BeginUpdate / EndUpdate | TTreeNodes(public。TPersistent) | TTreeNodes | TTreeNodes(public。Item[i] は `GetItem(i)`) | `TTreeNodes_*`(ADR 0019) |
 | Text / Expanded / Selected / HasChildren / Data / Count / Index / Level / AbsoluteIndex / Parent / TreeView / Items[i] / GetFirstChild 等 / Expand / Collapse / Delete / DeleteChildren / MakeVisible / MoveTo | TTreeNode(public。TPersistent) | TTreeNode | TTreeNode(public。Items[i] は `GetItem(i)`) | `TTreeNode_*`(ADR 0019) |
+| Items / Selected / ItemIndex / SelCount / Checkboxes / GridLines / MultiSelect / ReadOnly / RowSelect / Clear / BeginUpdate / EndUpdate / GetItemAt / ClearSelection / SelectAll | TCustomListView(public) | TCustomListView | TCustomListView(public) | `TCustomListView_*`([ADR 0020](adr/0020-listview-and-shared-item-registry.md)) |
+| Columns / ViewStyle / HideSelection / SortType / SortColumn / SortDirection / OnSelectItem / OnChange / OnDeletion / OnItemChecked / OnColumnClick | TCustomListView(protected) | TListView | TListView(public) | `TListView_*`(ADR 0020) |
+| Add / Insert / Delete / Clear / Count / Item[i] / IndexOf / FindCaption / Exchange / Move / BeginUpdate / EndUpdate | TListItems(public。TPersistent) | TListItems | TListItems(public。Item[i] は `GetItem(i)`) | `TListItems_*`(ADR 0020) |
+| Caption / Checked / Selected / Focused / Data / Index / ListView / SubItems / Delete / MakeVisible | TListItem(public。TPersistent) | TListItem | TListItem(public。SubItems は `SubItemsAdd` 等) | `TListItem_*`(ADR 0020) |
+| Add / Count / Items[i] / Delete / Clear | TListColumns(public。TCollection) | TListColumns | TListColumns(public。Items[i] は `GetItem(i)`) | `TListColumns_*`(ADR 0020) |
+| Caption / Width / Alignment / AutoSize / Visible / Index | TListColumn(published。TCollectionItem) | TListColumn | TListColumn(public) | `TListColumn_*`(ADR 0020) |
 | Interval / Enabled / OnTimer | TCustomTimer(public) | TCustomTimer | TCustomTimer(public) | `TCustomTimer_*` |
 | Run / Terminate / Terminated / Title | TCustomApplication(public。Run・Terminate・Title は TApplication で再宣言) | TApplication | TApplication(public) | `TApplication_*` |
 | CreateForm / MainForm / ProcessMessages / ShowMainForm | TApplication(public) | TApplication | TApplication(public。CreateForm は型を引数から推論するテンプレート) | `TApplication_*`(CreateForm は素の TForm を返す) |
@@ -176,6 +182,9 @@ C API のコールバックは CanClose へのポインタを受け取る([ADR 0
   (ツリービューの破棄に伴う削除も含む)の通知で delete される。Pascal 側は `TCustomTreeView.Delete` を上書きした
   内部クラス(`TNoVclTreeView`)で、OnDeletion の後に通知する。`TTreeNodes` は TCanvas と同じくツリービューの値メンバ
   ([ADR 0019](adr/0019-treeview-and-non-component-items.md))。
+- TComponent ではない項目(ツリービューのノード・リストビューの項目と列)のラッパーは `ItemRegistry` で共通に管理し、
+  DLL の項目の破棄通知(`no_vcl_ItemFree_SetCallback`)で delete される。リストビューの項目は `TCustomListView.DoDeletion` の上書き、
+  列は no_vcl の Delete・Clear とリストビューの破棄で通知される([ADR 0020](adr/0020-listview-and-shared-item-registry.md))。
 - ラッパーのレジストリは、atexit で登録した終了処理(`TApplication::Shutdown`)の中でも使われるため、関数内 static の値ではなく
   破棄しないオブジェクトにする(初回の構築が atexit 登録より後だと、Shutdown より先に破棄されてしまう。ADR 0019)。
 - Application が所有するフォームは、main から戻った後の C++ の終了処理でまとめて破棄される
