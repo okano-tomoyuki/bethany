@@ -44,8 +44,8 @@ TScrollingWinControl のいずれかで、いずれも実装済み。既存パ�
 | ✅ TCheckGroup | extctrls.pp(TCustomCheckGroup) | TCustomGroupBox(実装済み) | Items + インデックス付き Checked(ADR 0015 の 3 バッチ目) |
 | ✅ TCheckListBox | checklst.pas(TCustomCheckListBox) | TCustomListBox(実装済み) | 基底の Items をそのまま使い、インデックス付き Checked と OnClickCheck を追加(ADR 0015 の 3 バッチ目) |
 | ✅ TLabeledEdit | extctrls.pp(TCustomLabeledEdit) | TCustomEdit(実装済み) | EditLabel(LCL が内部で生成する TBoundLabel)は `WrapExisting` でラップする。LabelPosition/LabelSpacing([ADR 0028](adr/0028-labelededit-and-stringlist.md)) |
-| ✅ TSpeedButton | buttons.pp(TCustomSpeedButton) | TGraphicControl(実装済み) | Down/GroupIndex/Flat/AllowAllUp(ADR 0015 の 4 バッチ目)。Glyph(ビットマップ)は未対応 |
-| ✅ TBitBtn | buttons.pp(TCustomBitBtn) | TCustomButton(実装済み) | Kind(bkOK 等)のみ実装(ADR 0015 の 4 バッチ目)。Kind を設定すると LCL が既定の Caption を自動設定する。Glyph は Tier 3 まで保留 |
+| ✅ TSpeedButton | buttons.pp(TCustomSpeedButton) | TGraphicControl(実装済み) | Down/GroupIndex/Flat/AllowAllUp(ADR 0015 の 4 バッチ目)。Glyph/NumGlyphs/Layout/Margin/Spacing は Tier 3 の 1 バッチ目で追加([ADR 0029](adr/0029-graphics-picture-image-glyph.md)) |
+| ✅ TBitBtn | buttons.pp(TCustomBitBtn) | TCustomButton(実装済み) | Kind(bkOK 等)のみ実装(ADR 0015 の 4 バッチ目)。Kind を設定すると LCL が既定の Caption を自動設定する。Glyph/NumGlyphs/Layout/Margin/Spacing は Tier 3 の 1 バッチ目で追加(ADR 0029。Glyph を設定すると Kind は bkCustom に戻る) |
 | ✅ TSpinEdit / TFloatSpinEdit | spin.pp | TCustomEdit(実装済み) | TCustomSpinEdit が Value 等を Integer で再宣言(TCustomFloatSpinEdit の Double 版を隠す)。C++ でも `Property<int>` で `Property<double>` を隠す形で再現した(ADR 0015 の 5 バッチ目) |
 | ✅ TMaskEdit | maskedit.pp(TCustomMaskEdit) | TCustomEdit(実装済み) | EditMask(ADR 0015 の 5 バッチ目)。EditText 等は未対応 |
 | ✅ TTrackBar | comctrls.pp(TCustomTrackBar) | TWinControl(実装済み) | Min/Max/Position/OnChange。Application->Run() 開始前の生成でも問題が無いことを確認済み(ADR 0015 の 2 バッチ目) |
@@ -68,14 +68,17 @@ TScrollingWinControl のいずれかで、いずれも実装済み。既存パ�
 
 ### Tier 3 — グラフィックス基盤が前提
 
-TBitmap・TPicture(TGraphic の派生を包む可変長データ型)を no_vcl にまだ持っていないため、
-画像を扱うコントロールはそれらの設計を先に固める必要がある。
+画像を扱うコントロールは、グラフィックス基盤(TBitmap・TPicture)を前提にする。
+基盤は 1 バッチ目で入れた([ADR 0029](adr/0029-graphics-picture-image-glyph.md))。
+TGraphic → TRasterImage → TCustomBitmap → TBitmap / TPortableNetworkGraphic / TJPEGImage と TPicture で、
+利用者が new / delete するものと、所有者から中身を都度取得するビュー(TPicture は中身を作り直すため)がある。
 
 | クラス | LCL 宣言ユニット | 必要な基盤 |
 |---|---|---|
-| TImage | extctrls.pp(TCustomImage) | TPicture(TGraphic 派生を保持する可変クラス)。TCanvas 同様、非所有の値メンバとして持たせる想定 |
-| TBitBtn の Glyph / TSpeedButton の Glyph | buttons.pp | TBitmap |
-| TImageList | comctrls.pp や ImgList ユニット | TBitmap 一覧。TreeView・ListView・ToolBar のアイコン表示に使うが、アイコン無しでも各コントロール自体は動く |
+| ✅ TBitmap / TPortableNetworkGraphic / TJPEGImage / TPicture | graphics.pp | Tier 3 の 1 バッチ目(ADR 0029)。Width/Height/Empty/Transparent/LoadFromFile/SaveToFile/Assign/Clear、Canvas/PixelFormat/TransparentColor/TransparentMode/SetSize、TPicture の Graphic/Bitmap/PNG/Jpeg。あわせて TCanvas の Pixels/FillRect/Draw/StretchDraw と TControl.AutoSize を追加。TIcon・ストリーム・ScanLine は未対応 |
+| ✅ TImage | extctrls.pp(TCustomImage) | Tier 3 の 1 バッチ目(ADR 0029)。Picture/Canvas/HasGraphic/Center/Stretch/StretchOutEnabled/StretchInEnabled/Proportional/Transparent/OnPictureChanged。Images/ImageIndex は 2 バッチ目 |
+| ✅ TBitBtn の Glyph / TSpeedButton の Glyph | buttons.pp | Tier 3 の 1 バッチ目(ADR 0029)。Glyph/NumGlyphs/Layout/Margin/Spacing |
+| TImageList | comctrls.pp や ImgList ユニット | 2 バッチ目で着手する。TBitmap 一覧。TreeView・ListView・ToolBar のアイコン表示に使うが、アイコン無しでも各コントロール自体は動く |
 
 ### Tier 4 — ダイアログ(非ビジュアル、Execute 呼び出しパターン)
 
@@ -140,6 +143,10 @@ Tier 1 の 1 バッチ目([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.m
   箇所がある。** TStatusBar ではこれが原因で Run() 開始前の生成が失敗していた(DLL 側で回避済み)。
   新しいコントロールを追加する際は、Run() 開始前にフォームを表示しても問題が無いか確認する
   ([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.md))。
+- **LCL が送出した例外は、呼び出し側(C/C++)で捕捉できない。** 範囲外の添字、ソートされた TStringList への Insert
+  ([ADR 0028](adr/0028-labelededit-and-stringlist.md))、読み込めない画像ファイル([ADR 0029](adr/0029-graphics-picture-image-glyph.md))等。
+  いまはヘッダーに使い方の制約として書いている。VCL の `try ... catch (Exception&)` を移植するには、
+  DLL 側で例外を捕捉して呼び出し側に伝える仕組み(エラーコード・C++ の例外への変換)が要る。
 
 ## 4. 推奨する着手順序
 
@@ -158,7 +165,9 @@ Tier 1 の 1 バッチ目([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.m
    `ItemRegistry` と項目の破棄通知(`ItemFree_SetCallback`)に共通化し、通知は TPersistent の観察者(`WatchItem`)から送る(ADR 0026)。
    あわせて、横断的な課題だったインデックス付きプロパティの添字の書き方([ADR 0022](adr/0022-indexed-property-proxy.md)・[0023](adr/0023-remaining-indexed-properties.md))と、
    TStrings(`Items->Add`・`Lines->Text` 等。[ADR 0027](adr/0027-tstrings.md))も VCL と同じ形にした。
-5. **Tier 3(TBitmap/TPicture)** は、TImage 単体のためというより、Tier 1/2 のいくつか(Glyph・ImageList)の
+5. **Tier 3(TBitmap/TPicture)** は、1 バッチ目でグラフィックス基盤・TImage・Glyph を入れた([ADR 0029](adr/0029-graphics-picture-image-glyph.md))。
+   残りは 2 バッチ目の TImageList と、各コントロールの Images/ImageIndex。以下は当初の記述。
+   TImage 単体のためというより、Tier 1/2 のいくつか(Glyph・ImageList)の
    完成度を上げるために必要になる。着手するタイミングで独立した ADR を書く。
 6. **Tier 4(ダイアログ)** は他とほぼ独立して進められるので、隙間で着手しやすい。
 7. **Tier 6** は必要になった時点で個別に対応する。

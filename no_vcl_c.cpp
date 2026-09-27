@@ -38,6 +38,8 @@ using no_vcl_module_t = void*;
     X(void,          TControl_SetCaption,           (no_vcl_obj_t o, no_vcl_str_t v),                         (o, v)) \
     X(no_vcl_int_t,  TControl_GetAlign,             (no_vcl_obj_t o),                                         (o)) \
     X(void,          TControl_SetAlign,             (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_bool_t, TControl_GetAutoSize,          (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TControl_SetAutoSize,          (no_vcl_obj_t o, no_vcl_bool_t v),                        (o, v)) \
     X(no_vcl_str_t,  TControl_GetText,              (no_vcl_obj_t o),                                         (o)) \
     X(void,          TControl_SetText,              (no_vcl_obj_t o, no_vcl_str_t v),                         (o, v)) \
     X(void,          TControl_Show,                 (no_vcl_obj_t o),                                         (o)) \
@@ -133,6 +135,11 @@ using no_vcl_module_t = void*;
     X(no_vcl_obj_t,  TCanvas_GetPen,                (no_vcl_obj_t o),                                         (o)) \
     X(no_vcl_obj_t,  TCanvas_GetBrush,              (no_vcl_obj_t o),                                         (o)) \
     X(no_vcl_obj_t,  TCanvas_GetFont,               (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCanvas_Draw,                  (no_vcl_obj_t o, no_vcl_int_t x, no_vcl_int_t y, no_vcl_obj_t graphic),(o, x, y, graphic)) \
+    X(void,          TCanvas_StretchDraw,           (no_vcl_obj_t o, no_vcl_int_t x1, no_vcl_int_t y1, no_vcl_int_t x2, no_vcl_int_t y2, no_vcl_obj_t graphic),(o, x1, y1, x2, y2, graphic)) \
+    X(void,          TCanvas_FillRect,              (no_vcl_obj_t o, no_vcl_int_t x1, no_vcl_int_t y1, no_vcl_int_t x2, no_vcl_int_t y2),(o, x1, y1, x2, y2)) \
+    X(no_vcl_int_t,  TCanvas_GetPixels,             (no_vcl_obj_t o, no_vcl_int_t x, no_vcl_int_t y),         (o, x, y)) \
+    X(void,          TCanvas_SetPixels,             (no_vcl_obj_t o, no_vcl_int_t x, no_vcl_int_t y, no_vcl_int_t v),(o, x, y, v)) \
     \
     X(no_vcl_int_t,  TPen_GetColor,                 (no_vcl_obj_t o),                                         (o)) \
     X(void,          TPen_SetColor,                 (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
@@ -804,7 +811,83 @@ using no_vcl_module_t = void*;
     X(no_vcl_int_t, TStringList_GetDuplicates,               (no_vcl_obj_t o),                                     (o)) \
     X(void,         TStringList_SetDuplicates,               (no_vcl_obj_t o, no_vcl_int_t v),                     (o, v)) \
     X(no_vcl_bool_t, TStringList_GetCaseSensitive,            (no_vcl_obj_t o),                                     (o)) \
-    X(void,         TStringList_SetCaseSensitive,            (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v))
+    X(void,         TStringList_SetCaseSensitive,            (no_vcl_obj_t o, no_vcl_bool_t v),                    (o, v)) \
+    X(void,          TGraphic_Destroy,              (no_vcl_obj_t o),                                         (o)) \
+    X(no_vcl_int_t,  TGraphic_GetWidth,             (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TGraphic_SetWidth,             (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TGraphic_GetHeight,            (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TGraphic_SetHeight,            (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_bool_t, TGraphic_GetEmpty,             (no_vcl_obj_t o),                                         (o)) \
+    X(no_vcl_bool_t, TGraphic_GetTransparent,       (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TGraphic_SetTransparent,       (no_vcl_obj_t o, no_vcl_bool_t v),                        (o, v)) \
+    X(void,          TGraphic_LoadFromFile,         (no_vcl_obj_t o, no_vcl_str_t filename),                  (o, filename)) \
+    X(void,          TGraphic_SaveToFile,           (no_vcl_obj_t o, no_vcl_str_t filename),                  (o, filename)) \
+    X(void,          TGraphic_Assign,               (no_vcl_obj_t o, no_vcl_obj_t source),                    (o, source)) \
+    X(void,          TGraphic_Clear,                (no_vcl_obj_t o),                                         (o)) \
+    X(no_vcl_obj_t,  TRasterImage_GetCanvas,        (no_vcl_obj_t o),                                         (o)) \
+    X(no_vcl_int_t,  TRasterImage_GetPixelFormat,   (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TRasterImage_SetPixelFormat,   (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TRasterImage_GetTransparentColor,(no_vcl_obj_t o),                                         (o)) \
+    X(void,          TRasterImage_SetTransparentColor,(no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TRasterImage_GetTransparentMode,(no_vcl_obj_t o),                                         (o)) \
+    X(void,          TRasterImage_SetTransparentMode,(no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(void,          TCustomBitmap_SetSize,         (no_vcl_obj_t o, no_vcl_int_t awidth, no_vcl_int_t aheight),(o, awidth, aheight)) \
+    X(no_vcl_obj_t,  TBitmap_Create,                (void),                                                   ()) \
+    X(no_vcl_obj_t,  TPortableNetworkGraphic_Create,(void),                                                   ()) \
+    X(no_vcl_obj_t,  TJPEGImage_Create,             (void),                                                   ()) \
+    X(no_vcl_int_t,  TJPEGImage_GetCompressionQuality,(no_vcl_obj_t o),                                         (o)) \
+    X(void,          TJPEGImage_SetCompressionQuality,(no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_obj_t,  TPicture_Create,               (void),                                                   ()) \
+    X(void,          TPicture_Destroy,              (no_vcl_obj_t o),                                         (o)) \
+    X(no_vcl_obj_t,  TPicture_GetGraphic,           (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TPicture_SetGraphic,           (no_vcl_obj_t o, no_vcl_obj_t v),                         (o, v)) \
+    X(no_vcl_obj_t,  TPicture_GetBitmap,            (no_vcl_obj_t o),                                         (o)) \
+    X(no_vcl_obj_t,  TPicture_GetPNG,               (no_vcl_obj_t o),                                         (o)) \
+    X(no_vcl_obj_t,  TPicture_GetJpeg,              (no_vcl_obj_t o),                                         (o)) \
+    X(no_vcl_int_t,  TPicture_GetWidth,             (no_vcl_obj_t o),                                         (o)) \
+    X(no_vcl_int_t,  TPicture_GetHeight,            (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TPicture_LoadFromFile,         (no_vcl_obj_t o, no_vcl_str_t filename),                  (o, filename)) \
+    X(void,          TPicture_SaveToFile,           (no_vcl_obj_t o, no_vcl_str_t filename),                  (o, filename)) \
+    X(void,          TPicture_Assign,               (no_vcl_obj_t o, no_vcl_obj_t source),                    (o, source)) \
+    X(void,          TPicture_Clear,                (no_vcl_obj_t o),                                         (o)) \
+    X(no_vcl_obj_t,  TImage_Create,                 (no_vcl_obj_t owner),                                     (owner)) \
+    X(no_vcl_obj_t,  TCustomImage_GetPicture,       (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomImage_SetPicture,       (no_vcl_obj_t o, no_vcl_obj_t v),                         (o, v)) \
+    X(no_vcl_obj_t,  TCustomImage_GetCanvas,        (no_vcl_obj_t o),                                         (o)) \
+    X(no_vcl_bool_t, TCustomImage_GetHasGraphic,    (no_vcl_obj_t o),                                         (o)) \
+    X(no_vcl_bool_t, TCustomImage_GetCenter,        (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomImage_SetCenter,        (no_vcl_obj_t o, no_vcl_bool_t v),                        (o, v)) \
+    X(no_vcl_bool_t, TCustomImage_GetStretch,       (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomImage_SetStretch,       (no_vcl_obj_t o, no_vcl_bool_t v),                        (o, v)) \
+    X(no_vcl_bool_t, TCustomImage_GetStretchOutEnabled,(no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomImage_SetStretchOutEnabled,(no_vcl_obj_t o, no_vcl_bool_t v),                        (o, v)) \
+    X(no_vcl_bool_t, TCustomImage_GetStretchInEnabled,(no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomImage_SetStretchInEnabled,(no_vcl_obj_t o, no_vcl_bool_t v),                        (o, v)) \
+    X(no_vcl_bool_t, TCustomImage_GetProportional,  (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomImage_SetProportional,  (no_vcl_obj_t o, no_vcl_bool_t v),                        (o, v)) \
+    X(no_vcl_bool_t, TCustomImage_GetTransparent,   (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomImage_SetTransparent,   (no_vcl_obj_t o, no_vcl_bool_t v),                        (o, v)) \
+    X(void,          TCustomImage_SetOnPictureChanged,(no_vcl_obj_t o, no_vcl_callback_t cb, void* data),       (o, cb, data)) \
+    X(no_vcl_obj_t,  TCustomBitBtn_GetGlyph,        (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomBitBtn_SetGlyph,        (no_vcl_obj_t o, no_vcl_obj_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TCustomBitBtn_GetNumGlyphs,    (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomBitBtn_SetNumGlyphs,    (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TCustomBitBtn_GetLayout,       (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomBitBtn_SetLayout,       (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TCustomBitBtn_GetMargin,       (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomBitBtn_SetMargin,       (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TCustomBitBtn_GetSpacing,      (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomBitBtn_SetSpacing,      (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_obj_t,  TCustomSpeedButton_GetGlyph,   (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomSpeedButton_SetGlyph,   (no_vcl_obj_t o, no_vcl_obj_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TCustomSpeedButton_GetNumGlyphs,(no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomSpeedButton_SetNumGlyphs,(no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TCustomSpeedButton_GetLayout,  (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomSpeedButton_SetLayout,  (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TCustomSpeedButton_GetMargin,  (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomSpeedButton_SetMargin,  (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v)) \
+    X(no_vcl_int_t,  TCustomSpeedButton_GetSpacing, (no_vcl_obj_t o),                                         (o)) \
+    X(void,          TCustomSpeedButton_SetSpacing, (no_vcl_obj_t o, no_vcl_int_t v),                         (o, v))
 
 namespace
 {

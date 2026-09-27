@@ -140,6 +140,10 @@ enum { no_vcl_alNone = 0, no_vcl_alTop, no_vcl_alBottom, no_vcl_alLeft, no_vcl_a
 no_vcl_int_t  NO_VCL_CALL no_vcl_TControl_GetAlign(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TControl_SetAlign(no_vcl_obj_t Obj, no_vcl_int_t Value);
 
+/* AutoSize は TControl の public(docs/adr/0029)。真にすると、内容(TImage なら画像)に合わせて大きさを LCL が決める。 */
+no_vcl_bool_t NO_VCL_CALL no_vcl_TControl_GetAutoSize(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TControl_SetAutoSize(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+
 /* Text は LCL では TControl の protected。公開しているのは TCustomEdit / TCustomComboBox の系統。 */
 no_vcl_str_t  NO_VCL_CALL no_vcl_TControl_GetText(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TControl_SetText(no_vcl_obj_t Obj, no_vcl_str_t Value);
@@ -268,6 +272,15 @@ void          NO_VCL_CALL no_vcl_TCanvas_TextOut(no_vcl_obj_t Obj, no_vcl_int_t 
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TCanvas_GetPen(no_vcl_obj_t Obj);
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TCanvas_GetBrush(no_vcl_obj_t Obj);
 no_vcl_obj_t  NO_VCL_CALL no_vcl_TCanvas_GetFont(no_vcl_obj_t Obj);
+/* Graphic はグラフィック(no_vcl_TBitmap_Create 等、または no_vcl_TPicture_GetGraphic 等)のハンドル。NULL なら何もしない。
+ * StretchDraw は (X1, Y1)-(X2, Y2) の矩形に合わせて伸縮して描く。 */
+void          NO_VCL_CALL no_vcl_TCanvas_Draw(no_vcl_obj_t Obj, no_vcl_int_t X, no_vcl_int_t Y, no_vcl_obj_t Graphic);
+void          NO_VCL_CALL no_vcl_TCanvas_StretchDraw(no_vcl_obj_t Obj, no_vcl_int_t X1, no_vcl_int_t Y1, no_vcl_int_t X2, no_vcl_int_t Y2, no_vcl_obj_t Graphic);
+/* Brush で塗りつぶす(枠は描かない)。 */
+void          NO_VCL_CALL no_vcl_TCanvas_FillRect(no_vcl_obj_t Obj, no_vcl_int_t X1, no_vcl_int_t Y1, no_vcl_int_t X2, no_vcl_int_t Y2);
+/* 1 画素の色(TColor)。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCanvas_GetPixels(no_vcl_obj_t Obj, no_vcl_int_t X, no_vcl_int_t Y);
+void          NO_VCL_CALL no_vcl_TCanvas_SetPixels(no_vcl_obj_t Obj, no_vcl_int_t X, no_vcl_int_t Y, no_vcl_int_t Value);
 
 /* TPen / TBrush / TFont (非所有: Create/Destroy なし) */
 no_vcl_int_t  NO_VCL_CALL no_vcl_TPen_GetColor(no_vcl_obj_t Obj);
@@ -1372,6 +1385,124 @@ void          NO_VCL_CALL no_vcl_TStringList_SetDuplicates(no_vcl_obj_t Obj, no_
 /* 並べ替え・IndexOf・Find で大文字と小文字を区別するか(既定は偽)。 */
 no_vcl_bool_t NO_VCL_CALL no_vcl_TStringList_GetCaseSensitive(no_vcl_obj_t Obj);
 void          NO_VCL_CALL no_vcl_TStringList_SetCaseSensitive(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+
+/* ---------------- グラフィックス(docs/adr/0029) ----------------
+ * グラフィック(LCL の TGraphic の派生: TBitmap・TPortableNetworkGraphic・TJPEGImage)は TComponent ではない。
+ * - no_vcl_TBitmap_Create 等で生成したものは生成した側の持ち物で、使い終わったら no_vcl_TGraphic_Destroy で破棄する
+ *   (保存してよい)。
+ * - no_vcl_TPicture_GetGraphic・no_vcl_TPicture_GetBitmap・no_vcl_TCustomBitBtn_GetGlyph 等が返すハンドルは所有者の持ち物。
+ *   TPicture は LoadFromFile・Bitmap/PNG/Jpeg の取得・Graphic の設定のたびに中身のオブジェクトを作り直すため、
+ *   保存せず、使うたびに取得すること。
+ * Graphic・Glyph・Picture を設定する関数は、渡したオブジェクトの内容を写す(渡したものは呼び出し側の持ち物のまま)。
+ * ファイル名は UTF-8。読み込めないファイル・形式の違うファイルでは LCL が例外を送出し、呼び出し側では捕捉できない。 */
+void          NO_VCL_CALL no_vcl_TGraphic_Destroy(no_vcl_obj_t Obj);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TGraphic_GetWidth(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TGraphic_SetWidth(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TGraphic_GetHeight(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TGraphic_SetHeight(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TGraphic_GetEmpty(no_vcl_obj_t Obj);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TGraphic_GetTransparent(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TGraphic_SetTransparent(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* 形式はグラフィックのクラスで決まる(TBitmap に PNG のファイルは読めない)。拡張子で形式を選ぶのは no_vcl_TPicture_LoadFromFile。 */
+void          NO_VCL_CALL no_vcl_TGraphic_LoadFromFile(no_vcl_obj_t Obj, no_vcl_str_t FileName);
+void          NO_VCL_CALL no_vcl_TGraphic_SaveToFile(no_vcl_obj_t Obj, no_vcl_str_t FileName);
+/* Source はグラフィックか TPicture のハンドル(別のクラスのグラフィックからは画素を写して変換する)。NULL なら空にする。 */
+void          NO_VCL_CALL no_vcl_TGraphic_Assign(no_vcl_obj_t Obj, no_vcl_obj_t Source);
+void          NO_VCL_CALL no_vcl_TGraphic_Clear(no_vcl_obj_t Obj);
+
+/* TRasterImage(TBitmap・TPortableNetworkGraphic・TJPEGImage の共通の基底)。
+ * Canvas はグラフィックが所有し、no_vcl_TCanvas_* で描画できる(グラフィックの中身が作り直されると別のものになる)。 */
+enum { no_vcl_pfDevice = 0, no_vcl_pf1bit, no_vcl_pf4bit, no_vcl_pf8bit, no_vcl_pf15bit, no_vcl_pf16bit,
+       no_vcl_pf24bit, no_vcl_pf32bit, no_vcl_pfCustom };
+enum { no_vcl_tmAuto = 0, no_vcl_tmFixed };
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TRasterImage_GetCanvas(no_vcl_obj_t Obj);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TRasterImage_GetPixelFormat(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TRasterImage_SetPixelFormat(no_vcl_obj_t Obj, no_vcl_int_t Value);
+/* Transparent が真のとき透過する色。TransparentMode が no_vcl_tmAuto(既定)なら左下の画素の色になる。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TRasterImage_GetTransparentColor(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TRasterImage_SetTransparentColor(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TRasterImage_GetTransparentMode(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TRasterImage_SetTransparentMode(no_vcl_obj_t Obj, no_vcl_int_t Value);
+void          NO_VCL_CALL no_vcl_TCustomBitmap_SetSize(no_vcl_obj_t Obj, no_vcl_int_t AWidth, no_vcl_int_t AHeight);
+
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TBitmap_Create(void);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TPortableNetworkGraphic_Create(void);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TJPEGImage_Create(void);
+/* 保存するときの品質(1〜100。既定は 75)。 */
+no_vcl_int_t  NO_VCL_CALL no_vcl_TJPEGImage_GetCompressionQuality(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TJPEGImage_SetCompressionQuality(no_vcl_obj_t Obj, no_vcl_int_t Value);
+
+/* TPicture。no_vcl_TPicture_Create で生成したものは no_vcl_TPicture_Destroy で破棄する。
+ * no_vcl_TCustomImage_GetPicture が返すものは画像コントロールの持ち物(コントロールと寿命が一致し、差し替わらない)。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TPicture_Create(void);
+void          NO_VCL_CALL no_vcl_TPicture_Destroy(no_vcl_obj_t Obj);
+/* 中身のグラフィック。空なら NULL。設定は Value と同じクラスのグラフィックを作って内容を写す(NULL なら空にする)。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TPicture_GetGraphic(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TPicture_SetGraphic(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+/* 中身をそのクラスとして返す。中身が別のクラスなら変換し(中身のオブジェクトが作り直される)、空なら空のものを作る。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TPicture_GetBitmap(no_vcl_obj_t Obj);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TPicture_GetPNG(no_vcl_obj_t Obj);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TPicture_GetJpeg(no_vcl_obj_t Obj);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TPicture_GetWidth(no_vcl_obj_t Obj);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TPicture_GetHeight(no_vcl_obj_t Obj);
+/* 拡張子から形式(クラス)を選んで読み込む(.bmp・.png・.jpg 等)。 */
+void          NO_VCL_CALL no_vcl_TPicture_LoadFromFile(no_vcl_obj_t Obj, no_vcl_str_t FileName);
+void          NO_VCL_CALL no_vcl_TPicture_SaveToFile(no_vcl_obj_t Obj, no_vcl_str_t FileName);
+/* Source は TPicture かグラフィックのハンドル。NULL なら空にする。 */
+void          NO_VCL_CALL no_vcl_TPicture_Assign(no_vcl_obj_t Obj, no_vcl_obj_t Source);
+void          NO_VCL_CALL no_vcl_TPicture_Clear(no_vcl_obj_t Obj);
+
+/* TImage(TCustomImage)。AutoSize は no_vcl_TControl_SetAutoSize で設定する。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TImage_Create(no_vcl_obj_t Owner);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomImage_GetPicture(no_vcl_obj_t Obj);
+/* Value(TPicture)の内容を写す。 */
+void          NO_VCL_CALL no_vcl_TCustomImage_SetPicture(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+/* Picture が空なら、コントロールの大きさの TBitmap を作ってからその Canvas を返す(描いた内容は Picture に残る)。
+ * 保存せず、使うたびに取得すること。 */
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomImage_GetCanvas(no_vcl_obj_t Obj);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomImage_GetHasGraphic(no_vcl_obj_t Obj);
+/* Center: 中央に置く。Stretch: コントロールの大きさに伸縮する(StretchOutEnabled・StretchInEnabled で拡大・縮小を個別に禁止できる)。
+ * Proportional: 縦横比を保って収める。Transparent: 透過して描く。 */
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomImage_GetCenter(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomImage_SetCenter(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomImage_GetStretch(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomImage_SetStretch(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomImage_GetStretchOutEnabled(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomImage_SetStretchOutEnabled(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomImage_GetStretchInEnabled(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomImage_SetStretchInEnabled(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomImage_GetProportional(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomImage_SetProportional(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+no_vcl_bool_t NO_VCL_CALL no_vcl_TCustomImage_GetTransparent(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomImage_SetTransparent(no_vcl_obj_t Obj, no_vcl_bool_t Value);
+/* Picture(またはその中身)が変わったときに呼ばれる。 */
+void          NO_VCL_CALL no_vcl_TCustomImage_SetOnPictureChanged(no_vcl_obj_t Obj, no_vcl_callback_t Cb, void* Data);
+
+/* TCustomBitBtn・TCustomSpeedButton の Glyph(ボタンが所有する TBitmap。差し替わらない)。
+ * 設定は Value の内容を写す(NULL なら画像を無くす)。NumGlyphs は、横に並べた状態別(通常・無効・押下・下がったまま)の画像の数(1〜4)。
+ * Layout は画像の位置(no_vcl_blGlyph*)。Margin は端から画像までの距離(-1 なら画像と文字列をまとめて中央に置く)、
+ * Spacing は画像と文字列の間隔。 */
+enum { no_vcl_blGlyphLeft = 0, no_vcl_blGlyphRight, no_vcl_blGlyphTop, no_vcl_blGlyphBottom };
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomBitBtn_GetGlyph(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomBitBtn_SetGlyph(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomBitBtn_GetNumGlyphs(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomBitBtn_SetNumGlyphs(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomBitBtn_GetLayout(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomBitBtn_SetLayout(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomBitBtn_GetMargin(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomBitBtn_SetMargin(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomBitBtn_GetSpacing(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomBitBtn_SetSpacing(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_obj_t  NO_VCL_CALL no_vcl_TCustomSpeedButton_GetGlyph(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomSpeedButton_SetGlyph(no_vcl_obj_t Obj, no_vcl_obj_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomSpeedButton_GetNumGlyphs(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomSpeedButton_SetNumGlyphs(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomSpeedButton_GetLayout(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomSpeedButton_SetLayout(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomSpeedButton_GetMargin(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomSpeedButton_SetMargin(no_vcl_obj_t Obj, no_vcl_int_t Value);
+no_vcl_int_t  NO_VCL_CALL no_vcl_TCustomSpeedButton_GetSpacing(no_vcl_obj_t Obj);
+void          NO_VCL_CALL no_vcl_TCustomSpeedButton_SetSpacing(no_vcl_obj_t Obj, no_vcl_int_t Value);
 
 #ifdef __cplusplus
 }

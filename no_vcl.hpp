@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
@@ -543,6 +544,322 @@ private:
     static void        SetCaseSensitiveImpl(TObject* owner, const bool& value);
 };
 
+/* ---------------- Geometry ---------------- */
+
+// 矩形(VCL の TRect と同じく Left/Top/Right/Bottom)。Canvas の描画や、グリッドの選択範囲(TGridRect)にも使う。
+struct TRect
+{
+    int Left;
+    int Top;
+    int Right;
+    int Bottom;
+};
+
+// 点(VCL の TPoint と同じく X/Y)。
+struct TPoint
+{
+    int X;
+    int Y;
+};
+
+/* ---------------- Canvas ---------------- */
+
+// TPen/TBrush/TFont/TCanvas は LCL でも TComponent ではなく TPersistent の派生であり、
+// Canvas を持つコントロールが内部で保持するオブジェクトへの非所有(non-owning)ラッパー。
+// 自前で Create/Destroy は行わない(取得元のコントロールが破棄されれば一緒に破棄される)。
+// TPaintBox::Canvas のように値メンバとして持つため、これらのデストラクタは public にしている。
+
+class TPen : public TPersistent
+{
+public:
+    Property<TColor> Color;
+    Property<int>    Width;
+
+    explicit TPen(no_vcl_obj_t handle);
+    ~TPen() override = default;
+
+private:
+    static TColor GetColorImpl(TObject* owner);
+    static void   SetColorImpl(TObject* owner, const TColor& value);
+    static int    GetWidthImpl(TObject* owner);
+    static void   SetWidthImpl(TObject* owner, const int& value);
+};
+
+class TBrush : public TPersistent
+{
+public:
+    Property<TColor> Color;
+
+    explicit TBrush(no_vcl_obj_t handle);
+    ~TBrush() override = default;
+
+private:
+    static TColor GetColorImpl(TObject* owner);
+    static void   SetColorImpl(TObject* owner, const TColor& value);
+};
+
+class TFont : public TPersistent
+{
+public:
+    Property<std::string> Name;
+    Property<int>         Size;
+    Property<TColor>      Color;
+
+    explicit TFont(no_vcl_obj_t handle);
+    ~TFont() override = default;
+
+private:
+    static std::string GetNameImpl(TObject* owner);
+    static void        SetNameImpl(TObject* owner, const std::string& value);
+    static int         GetSizeImpl(TObject* owner);
+    static void        SetSizeImpl(TObject* owner, const int& value);
+    static TColor      GetColorImpl(TObject* owner);
+    static void        SetColorImpl(TObject* owner, const TColor& value);
+};
+
+class TGraphic;
+
+class TCanvas : public TPersistent
+{
+public:
+    TPen   Pen;
+    TBrush Brush;
+    TFont  Font;
+    // 1 画素の色(Canvas->Pixels[X][Y]。VCL の Pixels[X, Y])。
+    IndexedProperty2<TColor> Pixels;
+
+    explicit TCanvas(no_vcl_obj_t handle);
+    ~TCanvas() override = default;
+
+    void MoveTo(int x, int y);
+    void LineTo(int x, int y);
+    void Rectangle(int x1, int y1, int x2, int y2);
+    void Ellipse(int x1, int y1, int x2, int y2);
+    void TextOut(int x, int y, const std::string& text);
+    // Brush で塗りつぶす(枠は描かない)。
+    void FillRect(const TRect& Rect);
+    // グラフィックを描く(docs/adr/0029)。Graphic が nullptr なら何もしない。StretchDraw は Rect に合わせて伸縮する。
+    void Draw(int X, int Y, const TGraphic* Graphic);
+    void StretchDraw(const TRect& Rect, const TGraphic* Graphic);
+
+private:
+    static TColor GetPixelsImpl(TObject* owner, int X, int Y);
+    static void   SetPixelsImpl(TObject* owner, int X, int Y, const TColor& value);
+};
+
+/* ---------------- Graphics(docs/adr/0029) ---------------- */
+
+// グラフィック・TImage の Canvas を TCanvas のラッパーとして返すための保持者(利用者は直接使わない)。
+// これらの Canvas は、所有者が中身のグラフィックを作り直すと別のオブジェクトになるため、取得のたびに現在のハンドル
+// (と Pen・Brush・Font のハンドル)を確かめ、変わっていればラッパーを作り直す。
+class CanvasHolder
+{
+public:
+    CanvasHolder() = default;
+    CanvasHolder(const CanvasHolder&) = delete;
+    CanvasHolder& operator=(const CanvasHolder&) = delete;
+
+    // canvas が nullptr なら nullptr を返す。
+    TCanvas* Get(no_vcl_obj_t canvas);
+
+private:
+    std::unique_ptr<TCanvas> canvas_;
+};
+
+// グラフィック(LCL の TGraphic。TPersistent で、TComponent ではない)。2 通りの持ち方がある。
+//   - 利用者が生成するもの(new TBitmap 等): VCL と同じく delete で破棄する(LCL のオブジェクトも破棄される)。
+//     スタックや値メンバに置いてもよい。
+//   - 所有者の中身のビュー(Image1->Picture->Bitmap・BitBtn1->Glyph 等): TStrings と同じく中身のハンドルを覚えず、
+//     操作のたびに所有者から取得する(TPicture は LoadFromFile 等のたびに中身を作り直すため)。Handle() は nullptr を返す
+//     (C API に渡すハンドルは Current() で得る。保存しないこと)。
+// Picture->Graphic・Glyph 等への代入は、LCL と同じく内容のコピーになる(代入したものは代入した側の持ち物のまま)。
+// 読み込めないファイル・形式の違うファイルでは LCL が例外を送出し、呼び出し側では捕捉できない。
+class TGraphic : public TPersistent
+{
+public:
+    // 所有者から中身のグラフィックのハンドルを得る C API の関数(no_vcl_TPicture_GetBitmap 等)。
+    using Accessor = no_vcl_obj_t (NO_VCL_CALL *)(no_vcl_obj_t owner);
+
+    // 利用者が生成したものなら、LCL のオブジェクトも破棄する。ビューなら何もしない。
+    ~TGraphic() override;
+
+    Property<int>          Width;
+    Property<int>          Height;
+    ReadOnlyProperty<bool> Empty;
+    Property<bool>         Transparent;
+
+    // 形式はクラスで決まる(TBitmap に PNG のファイルは読めない)。拡張子で形式を選ぶのは TPicture::LoadFromFile。
+    // ファイル名は UTF-8。
+    void LoadFromFile(const std::string& FileName);
+    void SaveToFile(const std::string& FileName) const;
+    // Source の内容で置き換える(別のクラスのグラフィックからは画素を写して変換する)。nullptr なら空にする。
+    void Assign(const TGraphic* Source);
+    void Clear();
+
+    // 現在の中身のハンドル。
+    no_vcl_obj_t Current() const { return accessor_(owner_->Handle()); }
+
+protected:
+    // 利用者が生成したもの(自分のハンドルを持つ)。
+    explicit TGraphic(no_vcl_obj_t handle);
+    // 所有者の中身のビュー。
+    TGraphic(TObject* owner, Accessor accessor);
+
+private:
+    friend class TPicture;  // Graphic のビュー(クラスを問わない)を持つため
+
+    TObject* owner_;
+    Accessor accessor_;
+    bool     owns_;
+
+    static no_vcl_obj_t NO_VCL_CALL SelfAccessor(no_vcl_obj_t handle) { return handle; }
+
+    static int  GetWidthImpl(TObject* owner);
+    static void SetWidthImpl(TObject* owner, const int& value);
+    static int  GetHeightImpl(TObject* owner);
+    static void SetHeightImpl(TObject* owner, const int& value);
+    static bool GetEmptyImpl(TObject* owner);
+    static bool GetTransparentImpl(TObject* owner);
+    static void SetTransparentImpl(TObject* owner, const bool& value);
+};
+
+// 画素の形式(LCL の TPixelFormat と同じ値)。
+enum TPixelFormat { pfDevice, pf1bit, pf4bit, pf8bit, pf15bit, pf16bit, pf24bit, pf32bit, pfCustom };
+// Transparent のときに透過する色の決め方。tmAuto は左下の画素の色、tmFixed は TransparentColor。
+enum TTransparentMode { tmAuto, tmFixed };
+
+// TBitmap・TPortableNetworkGraphic・TJPEGImage の共通の基底(LCL の TRasterImage)。
+class TRasterImage : public TGraphic
+{
+public:
+    // グラフィックに描く先。グラフィックが所有し、中身が作り直されると別のものになる(ポインタを保存しないこと)。
+    ReadOnlyProperty<TCanvas*>  Canvas;
+    Property<TPixelFormat>      PixelFormat;
+    Property<TColor>            TransparentColor;
+    Property<TTransparentMode>  TransparentMode;
+
+protected:
+    explicit TRasterImage(no_vcl_obj_t handle);
+    TRasterImage(TObject* owner, Accessor accessor);
+
+private:
+    CanvasHolder canvas_;
+
+    static TCanvas*         GetCanvasImpl(TObject* owner);
+    static TPixelFormat     GetPixelFormatImpl(TObject* owner);
+    static void             SetPixelFormatImpl(TObject* owner, const TPixelFormat& value);
+    static TColor           GetTransparentColorImpl(TObject* owner);
+    static void             SetTransparentColorImpl(TObject* owner, const TColor& value);
+    static TTransparentMode GetTransparentModeImpl(TObject* owner);
+    static void             SetTransparentModeImpl(TObject* owner, const TTransparentMode& value);
+};
+
+class TCustomBitmap : public TRasterImage
+{
+public:
+    void SetSize(int AWidth, int AHeight);
+
+protected:
+    explicit TCustomBitmap(no_vcl_obj_t handle) : TRasterImage(handle) {}
+    TCustomBitmap(TObject* owner, Accessor accessor) : TRasterImage(owner, accessor) {}
+};
+
+class TCustomBitBtn;
+class TCustomSpeedButton;
+
+// ビットマップ(.bmp)。new TBitmap で生成して delete で破棄する(VCL と同じ)。
+class TBitmap : public TCustomBitmap
+{
+public:
+    TBitmap();
+
+private:
+    friend class TPicture;
+    friend class TCustomBitBtn;
+    friend class TCustomSpeedButton;
+    TBitmap(TObject* owner, Accessor accessor) : TCustomBitmap(owner, accessor) {}
+};
+
+// PNG 画像(.png)。LCL の TPortableNetworkGraphic(VCL の TPngImage に当たる)。
+class TPortableNetworkGraphic : public TCustomBitmap
+{
+public:
+    TPortableNetworkGraphic();
+
+private:
+    friend class TPicture;
+    TPortableNetworkGraphic(TObject* owner, Accessor accessor) : TCustomBitmap(owner, accessor) {}
+};
+
+// JPEG 画像(.jpg)。
+class TJPEGImage : public TCustomBitmap
+{
+public:
+    TJPEGImage();
+
+    // 保存するときの品質(1〜100。既定は 75)。
+    Property<int> CompressionQuality;
+
+private:
+    friend class TPicture;
+    TJPEGImage(TObject* owner, Accessor accessor);
+
+    static int  GetCompressionQualityImpl(TObject* owner);
+    static void SetCompressionQualityImpl(TObject* owner, const int& value);
+};
+
+class TCustomImage;
+
+// 形式を問わない画像の入れ物(LCL の TPicture)。Image1->Picture のように画像コントロールが持つもの(コントロールと寿命が一致する)と、
+// 利用者が new TPicture で生成して delete で破棄するものがある。
+class TPicture : public TPersistent
+{
+public:
+    TPicture();
+    // 利用者が生成したものなら、LCL のオブジェクトも破棄する。
+    ~TPicture() override;
+
+    // 中身のグラフィック(空なら nullptr)。クラスを問わない TGraphic のビューで、TBitmap 等への dynamic_cast はできない
+    // (クラスごとの操作は Bitmap・PNG・Jpeg を使う)。代入は内容のコピー(nullptr なら空にする)。
+    Property<TGraphic*>                Graphic;
+    // 中身をそのクラスとして扱うビュー。操作したとき、中身が別のクラスなら LCL が変換し、空なら空のものを作る。
+    // 代入は Graphic と同じく内容のコピー。
+    Property<TBitmap*>                 Bitmap;
+    Property<TPortableNetworkGraphic*> PNG;
+    Property<TJPEGImage*>              Jpeg;
+    ReadOnlyProperty<int>              Width;
+    ReadOnlyProperty<int>              Height;
+
+    // 拡張子から形式(クラス)を選んで読み込む(.bmp・.png・.jpg 等)。ファイル名は UTF-8。
+    void LoadFromFile(const std::string& FileName);
+    void SaveToFile(const std::string& FileName) const;
+    // Source の内容で置き換える。nullptr なら空にする。
+    void Assign(const TPicture* Source);
+    void Clear();
+
+private:
+    friend class TCustomImage;
+    // owns が false なら画像コントロールが持つもの(破棄しない)。
+    TPicture(no_vcl_obj_t handle, bool owns);
+
+    bool                    owns_;
+    TGraphic                graphic_;
+    TBitmap                 bitmap_;
+    TPortableNetworkGraphic png_;
+    TJPEGImage              jpeg_;
+
+    static TGraphic*                GetGraphicImpl(TObject* owner);
+    static void                     SetGraphicImpl(TObject* owner, TGraphic* const& value);
+    static TBitmap*                 GetBitmapImpl(TObject* owner);
+    static void                     SetBitmapImpl(TObject* owner, TBitmap* const& value);
+    static TPortableNetworkGraphic* GetPNGImpl(TObject* owner);
+    static void                     SetPNGImpl(TObject* owner, TPortableNetworkGraphic* const& value);
+    static TJPEGImage*              GetJpegImpl(TObject* owner);
+    static void                     SetJpegImpl(TObject* owner, TJPEGImage* const& value);
+    static int                      GetWidthImpl(TObject* owner);
+    static int                      GetHeightImpl(TObject* owner);
+};
+
 // LCL のコンポーネント(Create/Destroy を持つオブジェクト)。
 // ハンドルと C++ ラッパーの対応を共通のレジストリで管理し、
 // コールバックのトランポリンや Parent の Getter から C++ ラッパーを引けるようにする。
@@ -768,6 +1085,8 @@ public:
     Property<std::string>  Caption;
     // 既定値はクラスごとに異なる(多くは alNone、TStatusBar は alBottom、TSplitter は alLeft)。
     Property<TAlign>       Align;
+    // true にすると、内容(TImage なら画像)に合わせて大きさを LCL が決める(docs/adr/0029)。
+    Property<bool>         AutoSize;
     // 右クリックで開くメニュー。C++ ラッパーを介さずに作られたメニューの場合は nullptr になる。
     Property<TPopupMenu*>  PopupMenu;
     Property<TNotifyEvent> OnClick;
@@ -861,6 +1180,8 @@ private:
     static void         SetCaptionImpl(TObject* owner, const std::string& value);
     static TAlign       GetAlignImpl(TObject* owner);
     static void         SetAlignImpl(TObject* owner, const TAlign& value);
+    static bool         GetAutoSizeImpl(TObject* owner);
+    static void         SetAutoSizeImpl(TObject* owner, const bool& value);
     static TPopupMenu*  GetPopupMenuImpl(TObject* owner);
     static void         SetPopupMenuImpl(TObject* owner, TPopupMenu* const& value);
     static std::string  GetTextImpl(TObject* owner);
@@ -1428,7 +1749,7 @@ protected:
     ~TButton() override = default;
 };
 
-// bkOK/bkCancel 等の定型ボタン(既定の Caption を LCL が設定する)。Glyph(ビットマップ)は未対応。
+// bkOK/bkCancel 等の定型ボタン(既定の Caption を LCL が設定する)。
 enum TBitBtnKind
 {
     bkCustom, bkOK, bkCancel, bkHelp, bkYes, bkNo,
@@ -1436,18 +1757,43 @@ enum TBitBtnKind
     bkNoToAll, bkYesToAll
 };
 
+// ボタンの画像(Glyph)の位置。
+enum TButtonLayout { blGlyphLeft, blGlyphRight, blGlyphTop, blGlyphBottom };
+
 class TCustomBitBtn : public TCustomButton
 {
 public:
-    Property<TBitBtnKind> Kind;
+    Property<TBitBtnKind>   Kind;
+    // ボタンの画像。ボタンが所有する TBitmap のビューで、ボタンと寿命が一致する(docs/adr/0029)。
+    // 代入は内容のコピー(nullptr なら画像を無くす)。代入すると NumGlyphs は画像の幅と高さの比から LCL が決め直す。
+    Property<TBitmap*>      Glyph;
+    // 横に並べた状態別(通常・無効・押下・下がったまま)の画像の数(1〜4)。
+    Property<int>           NumGlyphs;
+    Property<TButtonLayout> Layout;
+    // 端から画像までの距離(-1(既定)なら画像と文字列をまとめて中央に置く)。
+    Property<int>           Margin;
+    // 画像と文字列の間隔。
+    Property<int>           Spacing;
 
 protected:
     explicit TCustomBitBtn(no_vcl_obj_t handle);
     ~TCustomBitBtn() override = default;
 
 private:
-    static TBitBtnKind GetKindImpl(TObject* owner);
-    static void        SetKindImpl(TObject* owner, const TBitBtnKind& value);
+    TBitmap glyph_;
+
+    static TBitBtnKind   GetKindImpl(TObject* owner);
+    static void          SetKindImpl(TObject* owner, const TBitBtnKind& value);
+    static TBitmap*      GetGlyphImpl(TObject* owner);
+    static void          SetGlyphImpl(TObject* owner, TBitmap* const& value);
+    static int           GetNumGlyphsImpl(TObject* owner);
+    static void          SetNumGlyphsImpl(TObject* owner, const int& value);
+    static TButtonLayout GetLayoutImpl(TObject* owner);
+    static void          SetLayoutImpl(TObject* owner, const TButtonLayout& value);
+    static int           GetMarginImpl(TObject* owner);
+    static void          SetMarginImpl(TObject* owner, const int& value);
+    static int           GetSpacingImpl(TObject* owner);
+    static void          SetSpacingImpl(TObject* owner, const int& value);
 };
 
 class TBitBtn : public TCustomBitBtn
@@ -2590,77 +2936,7 @@ private:
     static void          SetSimplePanelImpl(TObject* owner, const bool& value);
 };
 
-/* ---------------- Canvas ---------------- */
-
-// TPen/TBrush/TFont/TCanvas は LCL でも TComponent ではなく TPersistent の派生であり、
-// Canvas を持つコントロールが内部で保持するオブジェクトへの非所有(non-owning)ラッパー。
-// 自前で Create/Destroy は行わない(取得元のコントロールが破棄されれば一緒に破棄される)。
-// TPaintBox::Canvas のように値メンバとして持つため、これらのデストラクタは public にしている。
-
-class TPen : public TPersistent
-{
-public:
-    Property<TColor> Color;
-    Property<int>    Width;
-
-    explicit TPen(no_vcl_obj_t handle);
-    ~TPen() override = default;
-
-private:
-    static TColor GetColorImpl(TObject* owner);
-    static void   SetColorImpl(TObject* owner, const TColor& value);
-    static int    GetWidthImpl(TObject* owner);
-    static void   SetWidthImpl(TObject* owner, const int& value);
-};
-
-class TBrush : public TPersistent
-{
-public:
-    Property<TColor> Color;
-
-    explicit TBrush(no_vcl_obj_t handle);
-    ~TBrush() override = default;
-
-private:
-    static TColor GetColorImpl(TObject* owner);
-    static void   SetColorImpl(TObject* owner, const TColor& value);
-};
-
-class TFont : public TPersistent
-{
-public:
-    Property<std::string> Name;
-    Property<int>         Size;
-    Property<TColor>      Color;
-
-    explicit TFont(no_vcl_obj_t handle);
-    ~TFont() override = default;
-
-private:
-    static std::string GetNameImpl(TObject* owner);
-    static void        SetNameImpl(TObject* owner, const std::string& value);
-    static int         GetSizeImpl(TObject* owner);
-    static void        SetSizeImpl(TObject* owner, const int& value);
-    static TColor      GetColorImpl(TObject* owner);
-    static void        SetColorImpl(TObject* owner, const TColor& value);
-};
-
-class TCanvas : public TPersistent
-{
-public:
-    TPen   Pen;
-    TBrush Brush;
-    TFont  Font;
-
-    explicit TCanvas(no_vcl_obj_t handle);
-    ~TCanvas() override = default;
-
-    void MoveTo(int x, int y);
-    void LineTo(int x, int y);
-    void Rectangle(int x1, int y1, int x2, int y2);
-    void Ellipse(int x1, int y1, int x2, int y2);
-    void TextOut(int x, int y, const std::string& text);
-};
+/* ---------------- Shape / SpeedButton / PaintBox / Image ---------------- */
 
 // 矩形・楕円等の図形を描画する表示専用コントロール。Pen/Brush は TCanvas と同じく、
 // コントロールが所有する実体への非所有のビュー(コントロールと寿命が一致する)。
@@ -2699,14 +2975,19 @@ protected:
 
 // クリックで押し込まれた状態を保つ(GroupIndex でラジオボタン風のグループも作れる)グラフィックボタン。
 // Down/GroupIndex/Flat/AllowAllUp はいずれも LCL では public。Caption/OnClick は TControl から共有する。
-// Glyph(ビットマップ)は未対応。
+// Glyph 等の意味は TCustomBitBtn と同じ。
 class TCustomSpeedButton : public TGraphicControl
 {
 public:
-    Property<bool> Down;
-    Property<int>  GroupIndex;
-    Property<bool> Flat;
-    Property<bool> AllowAllUp;
+    Property<bool>          Down;
+    Property<int>           GroupIndex;
+    Property<bool>          Flat;
+    Property<bool>          AllowAllUp;
+    Property<TBitmap*>      Glyph;
+    Property<int>           NumGlyphs;
+    Property<TButtonLayout> Layout;
+    Property<int>           Margin;
+    Property<int>           Spacing;
 
 protected:
     explicit TCustomSpeedButton(no_vcl_obj_t handle);
@@ -2721,6 +3002,19 @@ private:
     static void SetFlatImpl(TObject* owner, const bool& value);
     static bool GetAllowAllUpImpl(TObject* owner);
     static void SetAllowAllUpImpl(TObject* owner, const bool& value);
+
+    TBitmap glyph_;
+
+    static TBitmap*      GetGlyphImpl(TObject* owner);
+    static void          SetGlyphImpl(TObject* owner, TBitmap* const& value);
+    static int           GetNumGlyphsImpl(TObject* owner);
+    static void          SetNumGlyphsImpl(TObject* owner, const int& value);
+    static TButtonLayout GetLayoutImpl(TObject* owner);
+    static void          SetLayoutImpl(TObject* owner, const TButtonLayout& value);
+    static int           GetMarginImpl(TObject* owner);
+    static void          SetMarginImpl(TObject* owner, const int& value);
+    static int           GetSpacingImpl(TObject* owner);
+    static void          SetSpacingImpl(TObject* owner, const int& value);
 };
 
 class TSpeedButton : public TCustomSpeedButton
@@ -2751,24 +3045,71 @@ private:
     static void         SetOnPaintImpl(TObject* owner, const TNotifyEvent& value);
 };
 
+// 画像を表示するコントロール(LCL の TCustomImage。docs/adr/0029)。AutoSize は TControl のもの。
+class TCustomImage : public TGraphicControl
+{
+public:
+    // 表示する画像。コントロールが所有し、コントロールと寿命が一致する。代入は内容のコピー。
+    Property<TPicture*>        Picture;
+    // 画像に描く先。Picture が空なら、コントロールの大きさの TBitmap を作ってからその Canvas を返す(描いた内容は Picture に残る)。
+    // Picture の中身が作り直されると別のものになる(ポインタを保存しないこと)。
+    ReadOnlyProperty<TCanvas*> Canvas;
+    ReadOnlyProperty<bool>     HasGraphic;
+    Property<bool>             Center;
+    // コントロールの大きさに伸縮する。StretchOutEnabled・StretchInEnabled を false にすると、拡大・縮小を個別に禁止できる。
+    Property<bool>             Stretch;
+    Property<bool>             StretchOutEnabled;
+    Property<bool>             StretchInEnabled;
+    // 縦横比を保ってコントロールに収める。
+    Property<bool>             Proportional;
+    Property<bool>             Transparent;
+    // Picture(またはその中身)が変わったときに呼ばれる。
+    Property<TNotifyEvent>     OnPictureChanged;
+
+protected:
+    explicit TCustomImage(no_vcl_obj_t handle);
+    ~TCustomImage() override = default;
+
+private:
+    TPicture     picture_;
+    CanvasHolder canvas_;
+    TNotifyEvent onPictureChanged_;
+    bool         onPictureChangedHooked_ = false;
+
+    static TPicture*    GetPictureImpl(TObject* owner);
+    static void         SetPictureImpl(TObject* owner, TPicture* const& value);
+    static TCanvas*     GetCanvasImpl(TObject* owner);
+    static bool         GetHasGraphicImpl(TObject* owner);
+    static bool         GetCenterImpl(TObject* owner);
+    static void         SetCenterImpl(TObject* owner, const bool& value);
+    static bool         GetStretchImpl(TObject* owner);
+    static void         SetStretchImpl(TObject* owner, const bool& value);
+    static bool         GetStretchOutEnabledImpl(TObject* owner);
+    static void         SetStretchOutEnabledImpl(TObject* owner, const bool& value);
+    static bool         GetStretchInEnabledImpl(TObject* owner);
+    static void         SetStretchInEnabledImpl(TObject* owner, const bool& value);
+    static bool         GetProportionalImpl(TObject* owner);
+    static void         SetProportionalImpl(TObject* owner, const bool& value);
+    static bool         GetTransparentImpl(TObject* owner);
+    static void         SetTransparentImpl(TObject* owner, const bool& value);
+    static void NO_VCL_CALL PictureChangedTrampoline(no_vcl_obj_t sender, void* data);
+    static TNotifyEvent GetOnPictureChangedImpl(TObject* owner);
+    static void         SetOnPictureChangedImpl(TObject* owner, const TNotifyEvent& value);
+};
+
+class TImage : public TCustomImage
+{
+public:
+    explicit TImage(TComponent* AOwner);
+
+protected:
+    ~TImage() override = default;
+};
+
 /* ---------------- Grid ---------------- */
 
-// 矩形(VCL の TRect と同じく Left/Top/Right/Bottom)。グリッドの選択範囲(TGridRect)にも使う(Left/Right が列、Top/Bottom が行)。
-struct TRect
-{
-    int Left;
-    int Top;
-    int Right;
-    int Bottom;
-};
+// グリッドの選択範囲(Left/Right が列、Top/Bottom が行)。
 using TGridRect = TRect;
-
-// 点(VCL の TPoint と同じく X/Y)。
-struct TPoint
-{
-    int X;
-    int Y;
-};
 
 // グリッドの Options(LCL の TGridOptions)。TShiftState と同じく、ビットを OR した集合として扱う。
 using TGridOptions = unsigned int;

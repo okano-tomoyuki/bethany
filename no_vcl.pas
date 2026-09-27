@@ -526,6 +526,17 @@ begin
     TControl(Obj).Align := TAlign(Value);
 end;
 
+{ AutoSize は TControl の public(docs/adr/0029)。LCL では Align と同じく、配置はフォームの表示まで行われないことがある。 }
+function TControl_GetAutoSize(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TControl(Obj).AutoSize;
+end;
+
+procedure TControl_SetAutoSize(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TControl(Obj).AutoSize := Value;
+end;
+
 { Text は TControl で protected。TCustomEdit と TCustomComboBox がそれぞれ公開している。 }
 function TControl_GetText(Obj: Pointer): PChar; NO_VCL_CALL;
 begin
@@ -990,6 +1001,43 @@ end;
 function TCanvas_GetFont(Obj: Pointer): Pointer; NO_VCL_CALL;
 begin
   Result := Pointer(TCanvas(Obj).Font);
+end;
+
+{ グラフィック(TGraphic の派生のハンドル)を描く(docs/adr/0029)。Graphic が nil なら何もしない。 }
+procedure TCanvas_Draw(Obj: Pointer; X, Y: Integer; Graphic: Pointer); NO_VCL_CALL;
+begin
+  if Graphic <> nil then
+    TCanvas(Obj).Draw(X, Y, TGraphic(Graphic));
+end;
+
+procedure TCanvas_StretchDraw(Obj: Pointer; X1, Y1, X2, Y2: Integer; Graphic: Pointer); NO_VCL_CALL;
+var
+  R: TRect;
+begin
+  if Graphic = nil then
+    Exit;
+  { Rect(...) は Win32 では Windows ユニットの型名に隠されるため、フィールドで組み立てる。 }
+  R.Left := X1;
+  R.Top := Y1;
+  R.Right := X2;
+  R.Bottom := Y2;
+  TCanvas(Obj).StretchDraw(R, TGraphic(Graphic));
+end;
+
+{ Brush で塗りつぶす(枠は描かない)。 }
+procedure TCanvas_FillRect(Obj: Pointer; X1, Y1, X2, Y2: Integer); NO_VCL_CALL;
+begin
+  TCanvas(Obj).FillRect(X1, Y1, X2, Y2);
+end;
+
+function TCanvas_GetPixels(Obj: Pointer; X, Y: Integer): Integer; NO_VCL_CALL;
+begin
+  Result := Integer(TCanvas(Obj).Pixels[X, Y]);
+end;
+
+procedure TCanvas_SetPixels(Obj: Pointer; X, Y: Integer; Value: Integer); NO_VCL_CALL;
+begin
+  TCanvas(Obj).Pixels[X, Y] := TColor(Value);
 end;
 
 { TPen / TBrush / TFont (いずれも非所有) }
@@ -4917,6 +4965,422 @@ begin
   TStringList(Obj).CaseSensitive := Value;
 end;
 
+{ ---------------- グラフィックス(docs/adr/0029) ----------------
+  TGraphic の派生(TBitmap・TPortableNetworkGraphic・TJPEGImage)は TPersistent で、TComponent ではない。
+  *_Create で生成したものは利用者の持ち物で、TGraphic_Destroy で破棄する(TStringList と同じ)。
+  TPicture.Graphic・TCustomBitBtn.Glyph 等が返すハンドルは所有者の持ち物で、LCL が差し替える
+  (TPicture は LoadFromFile・Bitmap の参照・Graphic への代入のたびに中身のオブジェクトを作り直す)ため、保存してはならない。 }
+
+procedure TGraphic_Destroy(Obj: Pointer); NO_VCL_CALL;
+begin
+  TGraphic(Obj).Free;
+end;
+
+function TGraphic_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TGraphic(Obj).Width;
+end;
+
+procedure TGraphic_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TGraphic(Obj).Width := Value;
+end;
+
+function TGraphic_GetHeight(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TGraphic(Obj).Height;
+end;
+
+procedure TGraphic_SetHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TGraphic(Obj).Height := Value;
+end;
+
+function TGraphic_GetEmpty(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TGraphic(Obj).Empty;
+end;
+
+function TGraphic_GetTransparent(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TGraphic(Obj).Transparent;
+end;
+
+procedure TGraphic_SetTransparent(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TGraphic(Obj).Transparent := Value;
+end;
+
+{ ファイル名は UTF-8。形式はクラスで決まる(TBitmap に PNG のファイルを読むと例外になる)。
+  拡張子から形式を選ぶのは TPicture_LoadFromFile のほう。 }
+procedure TGraphic_LoadFromFile(Obj: Pointer; FileName: PChar); NO_VCL_CALL;
+begin
+  TGraphic(Obj).LoadFromFile(FileName);
+end;
+
+procedure TGraphic_SaveToFile(Obj: Pointer; FileName: PChar); NO_VCL_CALL;
+begin
+  TGraphic(Obj).SaveToFile(FileName);
+end;
+
+{ Source はグラフィックか TPicture のハンドル。nil なら Clear と同じ。 }
+procedure TGraphic_Assign(Obj: Pointer; Source: Pointer); NO_VCL_CALL;
+begin
+  if Source = nil then
+    TGraphic(Obj).Clear
+  else
+    TGraphic(Obj).Assign(TPersistent(Source));
+end;
+
+procedure TGraphic_Clear(Obj: Pointer); NO_VCL_CALL;
+begin
+  TGraphic(Obj).Clear;
+end;
+
+{ TRasterImage の public。Canvas はグラフィックが所有し、初めて参照したときに作られる。 }
+function TRasterImage_GetCanvas(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TRasterImage(Obj).Canvas);
+end;
+
+{ TPixelFormat の序数(pfDevice=0, pf1bit, pf4bit, pf8bit, pf15bit, pf16bit, pf24bit, pf32bit, pfCustom)。 }
+function TRasterImage_GetPixelFormat(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TRasterImage(Obj).PixelFormat);
+end;
+
+procedure TRasterImage_SetPixelFormat(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TRasterImage(Obj).PixelFormat := TPixelFormat(Value);
+end;
+
+function TRasterImage_GetTransparentColor(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Integer(TRasterImage(Obj).TransparentColor);
+end;
+
+procedure TRasterImage_SetTransparentColor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TRasterImage(Obj).TransparentColor := TColor(Value);
+end;
+
+{ TTransparentMode の序数(tmAuto=0, tmFixed)。 }
+function TRasterImage_GetTransparentMode(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TRasterImage(Obj).TransparentMode);
+end;
+
+procedure TRasterImage_SetTransparentMode(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TRasterImage(Obj).TransparentMode := TTransparentMode(Value);
+end;
+
+procedure TCustomBitmap_SetSize(Obj: Pointer; AWidth, AHeight: Integer); NO_VCL_CALL;
+begin
+  TCustomBitmap(Obj).SetSize(AWidth, AHeight);
+end;
+
+{ TBitmap は Win32 では Windows ユニットの構造体(BITMAP)に隠されるため、Graphics.TBitmap と書く。 }
+function TBitmap_Create: Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(Graphics.TBitmap.Create);
+end;
+
+function TPortableNetworkGraphic_Create: Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TPortableNetworkGraphic.Create);
+end;
+
+function TJPEGImage_Create: Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TJPEGImage.Create);
+end;
+
+{ 保存するときの品質(1〜100。既定は 75)。 }
+function TJPEGImage_GetCompressionQuality(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TJPEGImage(Obj).CompressionQuality;
+end;
+
+procedure TJPEGImage_SetCompressionQuality(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TJPEGImage(Obj).CompressionQuality := TJPEGQualityRange(Value);
+end;
+
+{ TPicture。TCustomImage.Picture は画像コントロールが所有する(生成時に作られ、差し替わらない)。
+  TPicture_Create で生成したものは利用者の持ち物で、TPicture_Destroy で破棄する。 }
+
+function TPicture_Create: Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TPicture.Create);
+end;
+
+procedure TPicture_Destroy(Obj: Pointer); NO_VCL_CALL;
+begin
+  TPicture(Obj).Free;
+end;
+
+{ 空なら nil。 }
+function TPicture_GetGraphic(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TPicture(Obj).Graphic);
+end;
+
+{ Value と同じクラスのグラフィックを作って内容を写す(Value はそのまま呼び出し側の持ち物)。nil なら空にする。 }
+procedure TPicture_SetGraphic(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TPicture(Obj).Graphic := TGraphic(Value);
+end;
+
+{ 中身がそのクラスでなければ、そのクラスに変換する(中身のオブジェクトが作り直される。空なら空のものを作る)。 }
+function TPicture_GetBitmap(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TPicture(Obj).Bitmap);
+end;
+
+function TPicture_GetPNG(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TPicture(Obj).PNG);
+end;
+
+function TPicture_GetJpeg(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TPicture(Obj).Jpeg);
+end;
+
+function TPicture_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TPicture(Obj).Width;
+end;
+
+function TPicture_GetHeight(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TPicture(Obj).Height;
+end;
+
+{ 拡張子から形式(クラス)を選んで読み込む。ファイル名は UTF-8。 }
+procedure TPicture_LoadFromFile(Obj: Pointer; FileName: PChar); NO_VCL_CALL;
+begin
+  TPicture(Obj).LoadFromFile(FileName);
+end;
+
+procedure TPicture_SaveToFile(Obj: Pointer; FileName: PChar); NO_VCL_CALL;
+begin
+  TPicture(Obj).SaveToFile(FileName);
+end;
+
+{ Source は TPicture かグラフィックのハンドル。nil なら空にする。 }
+procedure TPicture_Assign(Obj: Pointer; Source: Pointer); NO_VCL_CALL;
+begin
+  TPicture(Obj).Assign(TPersistent(Source));
+end;
+
+procedure TPicture_Clear(Obj: Pointer); NO_VCL_CALL;
+begin
+  TPicture(Obj).Clear;
+end;
+
+{ TImage(TCustomImage)。 }
+
+function TImage_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Watch(TImage.Create(TComponent(Owner)));
+end;
+
+function TCustomImage_GetPicture(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomImage(Obj).Picture);
+end;
+
+{ Value(TPicture)の内容を写す。 }
+procedure TCustomImage_SetPicture(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TCustomImage(Obj).Picture := TPicture(Value);
+end;
+
+{ Picture が空なら、コントロールの大きさの TBitmap を作ってからその Canvas を返す。
+  中身がビットマップの類でない(アイコン等)なら、コントロール自身の Canvas を返す。 }
+function TCustomImage_GetCanvas(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomImage(Obj).Canvas);
+end;
+
+function TCustomImage_GetHasGraphic(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomImage(Obj).HasGraphic;
+end;
+
+function TCustomImage_GetCenter(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomImage(Obj).Center;
+end;
+
+procedure TCustomImage_SetCenter(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomImage(Obj).Center := Value;
+end;
+
+function TCustomImage_GetStretch(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomImage(Obj).Stretch;
+end;
+
+procedure TCustomImage_SetStretch(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomImage(Obj).Stretch := Value;
+end;
+
+function TCustomImage_GetStretchOutEnabled(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomImage(Obj).StretchOutEnabled;
+end;
+
+procedure TCustomImage_SetStretchOutEnabled(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomImage(Obj).StretchOutEnabled := Value;
+end;
+
+function TCustomImage_GetStretchInEnabled(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomImage(Obj).StretchInEnabled;
+end;
+
+procedure TCustomImage_SetStretchInEnabled(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomImage(Obj).StretchInEnabled := Value;
+end;
+
+function TCustomImage_GetProportional(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomImage(Obj).Proportional;
+end;
+
+procedure TCustomImage_SetProportional(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomImage(Obj).Proportional := Value;
+end;
+
+function TCustomImage_GetTransparent(Obj: Pointer): LongBool; NO_VCL_CALL;
+begin
+  Result := TCustomImage(Obj).Transparent;
+end;
+
+procedure TCustomImage_SetTransparent(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+begin
+  TCustomImage(Obj).Transparent := Value;
+end;
+
+{ Picture(またはその中身)が変わったときに呼ばれる。 }
+procedure TCustomImage_SetOnPictureChanged(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+begin
+  TCustomImage(Obj).OnPictureChanged := @BridgeFor(TCustomImage(Obj), MethodData(TCustomImage(Obj).OnPictureChanged), Cb, Data).DoClick;
+end;
+
+{ TCustomBitBtn・TCustomSpeedButton の Glyph。ボタンが所有する TBitmap(差し替わらない)を返す。
+  Set は Value の内容を写す(nil なら空にする)。NumGlyphs は、横に並べた状態別の画像の数(1〜4)。
+  Layout は TButtonLayout の序数(blGlyphLeft=0, blGlyphRight, blGlyphTop, blGlyphBottom)。
+  Margin は端から画像までの距離(-1 なら画像と文字列を中央に置く)、Spacing は画像と文字列の間隔。 }
+
+function TCustomBitBtn_GetGlyph(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomBitBtn(Obj).Glyph);
+end;
+
+procedure TCustomBitBtn_SetGlyph(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TCustomBitBtn(Obj).Glyph := Graphics.TBitmap(Value);
+end;
+
+function TCustomBitBtn_GetNumGlyphs(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomBitBtn(Obj).NumGlyphs;
+end;
+
+procedure TCustomBitBtn_SetNumGlyphs(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomBitBtn(Obj).NumGlyphs := Value;
+end;
+
+function TCustomBitBtn_GetLayout(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TCustomBitBtn(Obj).Layout);
+end;
+
+procedure TCustomBitBtn_SetLayout(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomBitBtn(Obj).Layout := TButtonLayout(Value);
+end;
+
+function TCustomBitBtn_GetMargin(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomBitBtn(Obj).Margin;
+end;
+
+procedure TCustomBitBtn_SetMargin(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomBitBtn(Obj).Margin := Value;
+end;
+
+function TCustomBitBtn_GetSpacing(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomBitBtn(Obj).Spacing;
+end;
+
+procedure TCustomBitBtn_SetSpacing(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomBitBtn(Obj).Spacing := Value;
+end;
+
+function TCustomSpeedButton_GetGlyph(Obj: Pointer): Pointer; NO_VCL_CALL;
+begin
+  Result := Pointer(TCustomSpeedButton(Obj).Glyph);
+end;
+
+procedure TCustomSpeedButton_SetGlyph(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+begin
+  TCustomSpeedButton(Obj).Glyph := Graphics.TBitmap(Value);
+end;
+
+function TCustomSpeedButton_GetNumGlyphs(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomSpeedButton(Obj).NumGlyphs;
+end;
+
+procedure TCustomSpeedButton_SetNumGlyphs(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomSpeedButton(Obj).NumGlyphs := Value;
+end;
+
+function TCustomSpeedButton_GetLayout(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := Ord(TCustomSpeedButton(Obj).Layout);
+end;
+
+procedure TCustomSpeedButton_SetLayout(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomSpeedButton(Obj).Layout := TButtonLayout(Value);
+end;
+
+function TCustomSpeedButton_GetMargin(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomSpeedButton(Obj).Margin;
+end;
+
+procedure TCustomSpeedButton_SetMargin(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomSpeedButton(Obj).Margin := Value;
+end;
+
+function TCustomSpeedButton_GetSpacing(Obj: Pointer): Integer; NO_VCL_CALL;
+begin
+  Result := TCustomSpeedButton(Obj).Spacing;
+end;
+
+procedure TCustomSpeedButton_SetSpacing(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+begin
+  TCustomSpeedButton(Obj).Spacing := Value;
+end;
+
 exports
   FreeNotify_SetCallback,
 
@@ -5708,7 +6172,90 @@ exports
   TStringList_GetDuplicates,
   TStringList_SetDuplicates,
   TStringList_GetCaseSensitive,
-  TStringList_SetCaseSensitive;
+  TStringList_SetCaseSensitive,
+  TControl_GetAutoSize,
+  TControl_SetAutoSize,
+  TCanvas_Draw,
+  TCanvas_StretchDraw,
+  TCanvas_FillRect,
+  TCanvas_GetPixels,
+  TCanvas_SetPixels,
+  TGraphic_Destroy,
+  TGraphic_GetWidth,
+  TGraphic_SetWidth,
+  TGraphic_GetHeight,
+  TGraphic_SetHeight,
+  TGraphic_GetEmpty,
+  TGraphic_GetTransparent,
+  TGraphic_SetTransparent,
+  TGraphic_LoadFromFile,
+  TGraphic_SaveToFile,
+  TGraphic_Assign,
+  TGraphic_Clear,
+  TRasterImage_GetCanvas,
+  TRasterImage_GetPixelFormat,
+  TRasterImage_SetPixelFormat,
+  TRasterImage_GetTransparentColor,
+  TRasterImage_SetTransparentColor,
+  TRasterImage_GetTransparentMode,
+  TRasterImage_SetTransparentMode,
+  TCustomBitmap_SetSize,
+  TBitmap_Create,
+  TPortableNetworkGraphic_Create,
+  TJPEGImage_Create,
+  TJPEGImage_GetCompressionQuality,
+  TJPEGImage_SetCompressionQuality,
+  TPicture_Create,
+  TPicture_Destroy,
+  TPicture_GetGraphic,
+  TPicture_SetGraphic,
+  TPicture_GetBitmap,
+  TPicture_GetPNG,
+  TPicture_GetJpeg,
+  TPicture_GetWidth,
+  TPicture_GetHeight,
+  TPicture_LoadFromFile,
+  TPicture_SaveToFile,
+  TPicture_Assign,
+  TPicture_Clear,
+  TImage_Create,
+  TCustomImage_GetPicture,
+  TCustomImage_SetPicture,
+  TCustomImage_GetCanvas,
+  TCustomImage_GetHasGraphic,
+  TCustomImage_GetCenter,
+  TCustomImage_SetCenter,
+  TCustomImage_GetStretch,
+  TCustomImage_SetStretch,
+  TCustomImage_GetStretchOutEnabled,
+  TCustomImage_SetStretchOutEnabled,
+  TCustomImage_GetStretchInEnabled,
+  TCustomImage_SetStretchInEnabled,
+  TCustomImage_GetProportional,
+  TCustomImage_SetProportional,
+  TCustomImage_GetTransparent,
+  TCustomImage_SetTransparent,
+  TCustomImage_SetOnPictureChanged,
+  TCustomBitBtn_GetGlyph,
+  TCustomBitBtn_SetGlyph,
+  TCustomBitBtn_GetNumGlyphs,
+  TCustomBitBtn_SetNumGlyphs,
+  TCustomBitBtn_GetLayout,
+  TCustomBitBtn_SetLayout,
+  TCustomBitBtn_GetMargin,
+  TCustomBitBtn_SetMargin,
+  TCustomBitBtn_GetSpacing,
+  TCustomBitBtn_SetSpacing,
+  TCustomSpeedButton_GetGlyph,
+  TCustomSpeedButton_SetGlyph,
+  TCustomSpeedButton_GetNumGlyphs,
+  TCustomSpeedButton_SetNumGlyphs,
+  TCustomSpeedButton_GetLayout,
+  TCustomSpeedButton_SetLayout,
+  TCustomSpeedButton_GetMargin,
+  TCustomSpeedButton_SetMargin,
+  TCustomSpeedButton_GetSpacing,
+  TCustomSpeedButton_SetSpacing;
 
 begin
   RequireDerivedFormResource := False;

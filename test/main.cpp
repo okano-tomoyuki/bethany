@@ -177,6 +177,11 @@ public:
     TCoolBar*       CoolBar1;
     TEdit*          CoolEdit;
     TComboBox*      CoolCombo;
+    TTabSheet*      ImageSheet;
+    TImage*         Image1;
+    TImage*         Image2;
+    TBitBtn*        BitBtn2;
+    int             pictureChanges_ = 0;
 
     // C++Builder と同じく Owner を受け取り、TForm に渡す(Application->CreateForm が Application を渡す)。
     explicit TMainForm(TComponent* AOwner) : TForm(AOwner)
@@ -975,6 +980,75 @@ public:
             std::fflush(stdout);
         };
 
+        // Tier 3、1 バッチ目(TImage。docs/adr/0029)。
+        ImageSheet = new TTabSheet(this);
+        ImageSheet->PageControl = PageControl1;
+        ImageSheet->Caption = "Image";
+
+        Image1 = new TImage(this);
+        Image1->Parent = ImageSheet;
+        Image1->Left = 10;
+        Image1->Top = 10;
+        Image1->AutoSize = true;
+        Image1->OnPictureChanged = [this](TObject*) { ++pictureChanges_; };
+        // Picture->Bitmap は、Picture の中身をビットマップとして扱うビュー(空なら LCL が空のビットマップを作る)。
+        Image1->Picture->Bitmap->SetSize(60, 40);
+        Image1->Picture->Bitmap->Canvas->Brush.Color = clYellow;
+        Image1->Picture->Bitmap->Canvas->FillRect(TRect{0, 0, 60, 40});
+        Image1->Picture->Bitmap->Canvas->Pen.Color = clBlue;
+        Image1->Picture->Bitmap->Canvas->Ellipse(0, 0, 60, 40);
+        std::printf("Image1 Picture %dx%d (expected 60x40), OnPictureChanged called: %s, HasGraphic=%d (expected 1)\n",
+                    (int)Image1->Picture->Width, (int)Image1->Picture->Height, pictureChanges_ > 0 ? "yes" : "no",
+                    (bool)Image1->HasGraphic);
+
+        // Picture が空の TImage の Canvas は、コントロールの大きさのビットマップを作ってから返る(描いた内容は Picture に残る)。
+        Image2 = new TImage(this);
+        Image2->Parent = ImageSheet;
+        Image2->Left = 100;
+        Image2->Top = 10;
+        Image2->Width = 50;
+        Image2->Height = 30;
+        Image2->Stretch = true;
+        std::printf("Image2 before Canvas: Graphic is null: %s, HasGraphic=%d (expected 0)\n",
+                    (TGraphic*)Image2->Picture->Graphic == nullptr ? "yes" : "no", (bool)Image2->HasGraphic);
+        Image2->Canvas->Brush.Color = clRed;
+        Image2->Canvas->FillRect(TRect{0, 0, 50, 30});
+        std::printf("Image2 after Canvas: Picture %dx%d (expected 50x30), Pixels[5][5]=%06X (expected 0000FF), Stretch=%d\n",
+                    (int)Image2->Picture->Width, (int)Image2->Picture->Height,
+                    (unsigned)(TColor)Image2->Picture->Bitmap->Canvas->Pixels[5][5], (bool)Image2->Stretch);
+
+        // Glyph。VCL と同じく、一時的な TBitmap に描いて代入する(代入は内容のコピー)。
+        BitBtn2 = new TBitBtn(this);
+        BitBtn2->Parent = ImageSheet;
+        BitBtn2->Left = 10;
+        BitBtn2->Top = 60;
+        BitBtn2->Width = 100;
+        BitBtn2->Kind = bkOK;
+        {
+            TBitmap* glyph = new TBitmap;
+            glyph->SetSize(16, 16);
+            glyph->Canvas->Brush.Color = clGreen;
+            glyph->Canvas->FillRect(TRect{0, 0, 16, 16});
+            // LCL では、Glyph を設定すると Kind が bkCustom に戻る(Caption はそのまま)。
+            BitBtn2->Glyph = glyph;
+            BitBtn2->Layout = blGlyphRight;
+            BitBtn2->Spacing = 8;
+            // 幅が高さの 2 倍の画像は、状態別の画像が 2 つ並んだものとして NumGlyphs が 2 になる。
+            glyph->SetSize(32, 16);
+            SpeedButton1->Glyph = glyph;
+            delete glyph;
+        }
+        std::printf("BitBtn2 Glyph: %dx%d (expected 16x16), NumGlyphs=%d (expected 1), Pixels[8][8]=%06X (expected 008000), "
+                    "Layout=%d (expected 1), Spacing=%d (expected 8), Margin=%d (expected -1), Kind=%d (expected bkCustom=0), Caption=%s\n",
+                    (int)BitBtn2->Glyph->Width, (int)BitBtn2->Glyph->Height, (int)BitBtn2->NumGlyphs,
+                    (unsigned)(TColor)BitBtn2->Glyph->Canvas->Pixels[8][8], (int)(TButtonLayout)BitBtn2->Layout,
+                    (int)BitBtn2->Spacing, (int)BitBtn2->Margin, (int)(TBitBtnKind)BitBtn2->Kind,
+                    std::string(BitBtn2->Caption).c_str());
+        std::printf("SpeedButton1 Glyph Width=%d (expected 32), NumGlyphs=%d (expected 2)\n",
+                    (int)SpeedButton1->Glyph->Width, (int)SpeedButton1->NumGlyphs);
+        BitBtn2->Glyph = nullptr;
+        std::printf("BitBtn2 Glyph = nullptr: Glyph->Empty=%d (expected 1)\n", (bool)BitBtn2->Glyph->Empty);
+
         OnCreate = [this](TObject* Sender) { FormCreate(Sender); };
         OnShow = [this](TObject* Sender) { FormShow(Sender); };
         OnResize = [this](TObject* Sender) { FormResize(Sender); };
@@ -1036,6 +1110,8 @@ private:
         Splitter1->SetSplitterPosition(121);
         std::printf("After SetSplitterPosition(121): SplitterPosition=%d AlignLeftPanel->Width=%d AlignClientPanel->Left=%d\n",
                     Splitter1->GetSplitterPosition(), (int)AlignLeftPanel->Width, (int)AlignClientPanel->Left);
+        // AutoSize の TImage は画像の大きさになる(表示されていないページにあっても)。
+        std::printf("Image1 AutoSize Width/Height=%d/%d (expected 60/40)\n", (int)Image1->Width, (int)Image1->Height);
         std::fflush(stdout);
     }
 
@@ -1813,6 +1889,58 @@ int main()
         std::remove(path);
         std::printf("SaveToFile/LoadFromFile: Count=%d (expected 4), Strings[3]=%s (expected d)\n",
                     (int)loaded.Count, std::string(loaded.Strings[3]).c_str());
+    }
+
+    // Tier 3、1 バッチ目(グラフィックス。docs/adr/0029)。
+    {
+        // 利用者が生成するグラフィックは、VCL と同じく new して delete する。
+        TBitmap* bmp = new TBitmap;
+        std::printf("New TBitmap: Empty=%d (expected 1)\n", (bool)bmp->Empty);
+        bmp->SetSize(32, 16);
+        bmp->Canvas->Brush.Color = clRed;
+        bmp->Canvas->FillRect(TRect{0, 0, 32, 16});
+        bmp->Canvas->Pixels[1][2] = clBlue;
+        TCanvas* canvas1 = bmp->Canvas;
+        TCanvas* canvas2 = bmp->Canvas;
+        std::printf("TBitmap %dx%d (expected 32x16), Empty=%d (expected 0), Pixels[0][0]=%06X (expected 0000FF), "
+                    "Pixels[1][2]=%06X (expected FF0000), same Canvas wrapper: %s\n",
+                    (int)bmp->Width, (int)bmp->Height, (bool)bmp->Empty,
+                    (unsigned)(TColor)bmp->Canvas->Pixels[0][0], (unsigned)(TColor)bmp->Canvas->Pixels[1][2],
+                    canvas1 == canvas2 ? "yes" : "no");
+
+        // 別の形式への変換(Assign)と保存。TPicture::LoadFromFile は拡張子から形式を選ぶ。
+        const char* pngPath = "no_vcl_graphic_test.png";
+        const char* jpgPath = "no_vcl_graphic_test.jpg";
+        TPortableNetworkGraphic png;
+        png.Assign(bmp);
+        png.SaveToFile(pngPath);
+        TJPEGImage jpg;
+        jpg.Assign(bmp);
+        jpg.CompressionQuality = 90;
+        jpg.SaveToFile(jpgPath);
+        std::printf("PNG %dx%d (expected 32x16), JPEG CompressionQuality=%d (expected 90)\n",
+                    (int)png.Width, (int)png.Height, (int)jpg.CompressionQuality);
+
+        TPicture* pic = new TPicture;
+        std::printf("New TPicture: Graphic is null: %s\n", (TGraphic*)pic->Graphic == nullptr ? "yes" : "no");
+        pic->LoadFromFile(pngPath);
+        std::printf("TPicture LoadFromFile(png): %dx%d (expected 32x16), Graphic is null: %s, PNG->Width=%d (expected 32)\n",
+                    (int)pic->Width, (int)pic->Height, (TGraphic*)pic->Graphic == nullptr ? "yes" : "no", (int)pic->PNG->Width);
+        // Bitmap を操作すると、LCL が中身(PNG)をビットマップに変換する。画素は引き継がれる。
+        std::printf("After converting to Bitmap: Pixels[1][2]=%06X (expected FF0000)\n",
+                    (unsigned)(TColor)pic->Bitmap->Canvas->Pixels[1][2]);
+        pic->LoadFromFile(jpgPath);
+        std::printf("TPicture LoadFromFile(jpg): %dx%d (expected 32x16)\n", (int)pic->Width, (int)pic->Height);
+        // Graphic への代入は内容のコピー(bmp はそのまま利用者の持ち物)。
+        pic->Graphic = bmp;
+        bmp->SetSize(8, 8);
+        std::printf("After Graphic = bmp and resizing bmp: Picture %dx%d (expected 32x16)\n", (int)pic->Width, (int)pic->Height);
+        pic->Clear();
+        std::printf("After Clear: Graphic is null: %s\n", (TGraphic*)pic->Graphic == nullptr ? "yes" : "no");
+        delete pic;
+        delete bmp;
+        std::remove(pngPath);
+        std::remove(jpgPath);
     }
 
     // 2 つ目以降に生成したフォームは MainForm にならない。

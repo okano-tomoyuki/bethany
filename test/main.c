@@ -702,6 +702,47 @@ int main(void)
         no_vcl_TStringList_Destroy(list);
     }
 
+    /* グラフィックス(docs/adr/0029)。生成したグラフィック・TPicture は no_vcl_TGraphic_Destroy・no_vcl_TPicture_Destroy で破棄する。
+       TPicture の中身(no_vcl_TPicture_GetGraphic 等)のハンドルは保存せず、使うたびに取得する。 */
+    {
+        const char* path = "no_vcl_graphic_test_c.png";
+        no_vcl_obj_t bmp = no_vcl_TBitmap_Create();
+        no_vcl_obj_t png = no_vcl_TPortableNetworkGraphic_Create();
+        no_vcl_obj_t pic = no_vcl_TPicture_Create();
+        no_vcl_obj_t canvas;
+        no_vcl_obj_t image;
+        no_vcl_TCustomBitmap_SetSize(bmp, 20, 10);
+        canvas = no_vcl_TRasterImage_GetCanvas(bmp);
+        no_vcl_TBrush_SetColor(no_vcl_TCanvas_GetBrush(canvas), 0x00FF00);
+        no_vcl_TCanvas_FillRect(canvas, 0, 0, 20, 10);
+        no_vcl_TCanvas_SetPixels(canvas, 3, 4, 0xFF0000);
+        printf("C TBitmap %dx%d (expected 20x10), Pixels[0][0]=%06X (expected 00FF00), Pixels[3][4]=%06X (expected FF0000)\n",
+               no_vcl_TGraphic_GetWidth(bmp), no_vcl_TGraphic_GetHeight(bmp),
+               (unsigned)no_vcl_TCanvas_GetPixels(canvas, 0, 0), (unsigned)no_vcl_TCanvas_GetPixels(canvas, 3, 4));
+        no_vcl_TGraphic_Assign(png, bmp);
+        no_vcl_TGraphic_SaveToFile(png, path);
+        no_vcl_TPicture_LoadFromFile(pic, path);
+        printf("C TPicture LoadFromFile(png): %dx%d (expected 20x10), Bitmap Pixels[3][4]=%06X (expected FF0000)\n",
+               no_vcl_TPicture_GetWidth(pic), no_vcl_TPicture_GetHeight(pic),
+               (unsigned)no_vcl_TCanvas_GetPixels(no_vcl_TRasterImage_GetCanvas(no_vcl_TPicture_GetBitmap(pic)), 3, 4));
+
+        /* TImage。Picture を設定すると内容が写される(pic はそのまま呼び出し側の持ち物)。 */
+        image = Place(no_vcl_TImage_Create(form), form, 560, 20);
+        no_vcl_TControl_SetAutoSize(image, 1);
+        no_vcl_TCustomImage_SetPicture(image, pic);
+        no_vcl_TPicture_Clear(pic);
+        printf("C TImage Picture %dx%d (expected 20x10), HasGraphic=%d (expected 1), AutoSize=%d, source Picture cleared: %s\n",
+               no_vcl_TPicture_GetWidth(no_vcl_TCustomImage_GetPicture(image)),
+               no_vcl_TPicture_GetHeight(no_vcl_TCustomImage_GetPicture(image)),
+               no_vcl_TCustomImage_GetHasGraphic(image) != 0, no_vcl_TControl_GetAutoSize(image) != 0,
+               no_vcl_TPicture_GetGraphic(pic) == NULL ? "yes" : "no");
+
+        no_vcl_TPicture_Destroy(pic);
+        no_vcl_TGraphic_Destroy(png);
+        no_vcl_TGraphic_Destroy(bmp);
+        remove(path);
+    }
+
     /* Tier 1、7 バッチ目(最後のバッチ)。ページ付きの TPageControl/TTabSheet は今回見送る。 */
     tabControl = Place(no_vcl_TTabControl_Create(form), form, 20, 730);
     no_vcl_TControl_SetWidth(tabControl, 300);
@@ -1046,7 +1087,7 @@ int main(void)
     /* Application が所有するフォーム(と、フォームが所有するコントロール)をまとめて破棄する。
        呼ばなくても DLL の切り離し時に LCL が破棄するが、そのときは破棄通知が呼ばれない。 */
     no_vcl_TComponent_DestroyComponents(app);
-    printf("Clicks: %d, Freed components: %d (expected 73: form + 65 owned + 7 created inside LCL: 2 menu roots, a separator, 3 AddTabSheet pages and an EditLabel)\n", clickCount, freedCount);
+    printf("Clicks: %d, Freed components: %d (expected 74: form + 66 owned + 7 created inside LCL: 2 menu roots, a separator, 3 AddTabSheet pages and an EditLabel)\n", clickCount, freedCount);
     /* ツリービュー・リストビュー・ヘッダーコントロールの破棄に伴って、残りのノード(4 つ)・リストビューの項目(2 つ)と列(2 つ)・
        セクション(2 つ)・バンド(1 つ)も破棄通知が届く。 */
     printf("Items freed: %d (expected 17: tree 2 deleted + 4 with the tree view, list 1 item + 1 column deleted "

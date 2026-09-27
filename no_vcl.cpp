@@ -225,6 +225,7 @@ TControl::TControl(no_vcl_obj_t handle)
     , Enabled(this, &TControl::GetEnabledImpl, &TControl::SetEnabledImpl)
     , Caption(this, &TControl::GetCaptionImpl, &TControl::SetCaptionImpl)
     , Align(this, &TControl::GetAlignImpl, &TControl::SetAlignImpl)
+    , AutoSize(this, &TControl::GetAutoSizeImpl, &TControl::SetAutoSizeImpl)
     , PopupMenu(this, &TControl::GetPopupMenuImpl, &TControl::SetPopupMenuImpl)
     , OnClick(this, &TControl::GetOnClickImpl, &TControl::SetOnClickImpl)
     , OnDblClick(this, &TControl::GetOnDblClickImpl, &TControl::SetOnDblClickImpl)
@@ -309,6 +310,8 @@ void TControl::SetCaptionImpl(TObject* owner, const std::string& value)
 
 TAlign TControl::GetAlignImpl(TObject* owner)                  { return static_cast<TAlign>(no_vcl_TControl_GetAlign(owner->Handle())); }
 void   TControl::SetAlignImpl(TObject* owner, const TAlign& value) { no_vcl_TControl_SetAlign(owner->Handle(), value); }
+bool   TControl::GetAutoSizeImpl(TObject* owner)                  { return no_vcl_TControl_GetAutoSize(owner->Handle()) != 0; }
+void   TControl::SetAutoSizeImpl(TObject* owner, const bool& value) { no_vcl_TControl_SetAutoSize(owner->Handle(), value ? 1 : 0); }
 
 TPopupMenu* TControl::GetPopupMenuImpl(TObject* owner)
 {
@@ -1025,7 +1028,30 @@ TCustomSpeedButton::TCustomSpeedButton(no_vcl_obj_t handle)
     , GroupIndex(this, &TCustomSpeedButton::GetGroupIndexImpl, &TCustomSpeedButton::SetGroupIndexImpl)
     , Flat(this, &TCustomSpeedButton::GetFlatImpl, &TCustomSpeedButton::SetFlatImpl)
     , AllowAllUp(this, &TCustomSpeedButton::GetAllowAllUpImpl, &TCustomSpeedButton::SetAllowAllUpImpl)
+    , Glyph(this, &TCustomSpeedButton::GetGlyphImpl, &TCustomSpeedButton::SetGlyphImpl)
+    , NumGlyphs(this, &TCustomSpeedButton::GetNumGlyphsImpl, &TCustomSpeedButton::SetNumGlyphsImpl)
+    , Layout(this, &TCustomSpeedButton::GetLayoutImpl, &TCustomSpeedButton::SetLayoutImpl)
+    , Margin(this, &TCustomSpeedButton::GetMarginImpl, &TCustomSpeedButton::SetMarginImpl)
+    , Spacing(this, &TCustomSpeedButton::GetSpacingImpl, &TCustomSpeedButton::SetSpacingImpl)
+    , glyph_(this, &no_vcl_TCustomSpeedButton_GetGlyph)
 {}
+
+TBitmap* TCustomSpeedButton::GetGlyphImpl(TObject* owner) { return &static_cast<TCustomSpeedButton*>(owner)->glyph_; }
+void TCustomSpeedButton::SetGlyphImpl(TObject* owner, TBitmap* const& value)
+{
+    no_vcl_TCustomSpeedButton_SetGlyph(owner->Handle(), value ? value->Current() : nullptr);
+}
+int  TCustomSpeedButton::GetNumGlyphsImpl(TObject* owner) { return no_vcl_TCustomSpeedButton_GetNumGlyphs(owner->Handle()); }
+void TCustomSpeedButton::SetNumGlyphsImpl(TObject* owner, const int& value) { no_vcl_TCustomSpeedButton_SetNumGlyphs(owner->Handle(), value); }
+TButtonLayout TCustomSpeedButton::GetLayoutImpl(TObject* owner)
+{
+    return static_cast<TButtonLayout>(no_vcl_TCustomSpeedButton_GetLayout(owner->Handle()));
+}
+void TCustomSpeedButton::SetLayoutImpl(TObject* owner, const TButtonLayout& value) { no_vcl_TCustomSpeedButton_SetLayout(owner->Handle(), value); }
+int  TCustomSpeedButton::GetMarginImpl(TObject* owner)    { return no_vcl_TCustomSpeedButton_GetMargin(owner->Handle()); }
+void TCustomSpeedButton::SetMarginImpl(TObject* owner, const int& value) { no_vcl_TCustomSpeedButton_SetMargin(owner->Handle(), value); }
+int  TCustomSpeedButton::GetSpacingImpl(TObject* owner)   { return no_vcl_TCustomSpeedButton_GetSpacing(owner->Handle()); }
+void TCustomSpeedButton::SetSpacingImpl(TObject* owner, const int& value) { no_vcl_TCustomSpeedButton_SetSpacing(owner->Handle(), value); }
 
 bool TCustomSpeedButton::GetDownImpl(TObject* owner)       { return no_vcl_TCustomSpeedButton_GetDown(owner->Handle()) != 0; }
 void TCustomSpeedButton::SetDownImpl(TObject* owner, const bool& value)       { no_vcl_TCustomSpeedButton_SetDown(owner->Handle(), value ? 1 : 0); }
@@ -1064,10 +1090,29 @@ TButton::TButton(TComponent* AOwner)
 TCustomBitBtn::TCustomBitBtn(no_vcl_obj_t handle)
     : TCustomButton(handle)
     , Kind(this, &TCustomBitBtn::GetKindImpl, &TCustomBitBtn::SetKindImpl)
+    , Glyph(this, &TCustomBitBtn::GetGlyphImpl, &TCustomBitBtn::SetGlyphImpl)
+    , NumGlyphs(this, &TCustomBitBtn::GetNumGlyphsImpl, &TCustomBitBtn::SetNumGlyphsImpl)
+    , Layout(this, &TCustomBitBtn::GetLayoutImpl, &TCustomBitBtn::SetLayoutImpl)
+    , Margin(this, &TCustomBitBtn::GetMarginImpl, &TCustomBitBtn::SetMarginImpl)
+    , Spacing(this, &TCustomBitBtn::GetSpacingImpl, &TCustomBitBtn::SetSpacingImpl)
+    , glyph_(this, &no_vcl_TCustomBitBtn_GetGlyph)
 {}
 
 TBitBtnKind TCustomBitBtn::GetKindImpl(TObject* owner) { return static_cast<TBitBtnKind>(no_vcl_TCustomBitBtn_GetKind(owner->Handle())); }
 void TCustomBitBtn::SetKindImpl(TObject* owner, const TBitBtnKind& value) { no_vcl_TCustomBitBtn_SetKind(owner->Handle(), value); }
+TBitmap* TCustomBitBtn::GetGlyphImpl(TObject* owner) { return &static_cast<TCustomBitBtn*>(owner)->glyph_; }
+void TCustomBitBtn::SetGlyphImpl(TObject* owner, TBitmap* const& value)
+{
+    no_vcl_TCustomBitBtn_SetGlyph(owner->Handle(), value ? value->Current() : nullptr);
+}
+int  TCustomBitBtn::GetNumGlyphsImpl(TObject* owner) { return no_vcl_TCustomBitBtn_GetNumGlyphs(owner->Handle()); }
+void TCustomBitBtn::SetNumGlyphsImpl(TObject* owner, const int& value) { no_vcl_TCustomBitBtn_SetNumGlyphs(owner->Handle(), value); }
+TButtonLayout TCustomBitBtn::GetLayoutImpl(TObject* owner) { return static_cast<TButtonLayout>(no_vcl_TCustomBitBtn_GetLayout(owner->Handle())); }
+void TCustomBitBtn::SetLayoutImpl(TObject* owner, const TButtonLayout& value) { no_vcl_TCustomBitBtn_SetLayout(owner->Handle(), value); }
+int  TCustomBitBtn::GetMarginImpl(TObject* owner)    { return no_vcl_TCustomBitBtn_GetMargin(owner->Handle()); }
+void TCustomBitBtn::SetMarginImpl(TObject* owner, const int& value) { no_vcl_TCustomBitBtn_SetMargin(owner->Handle(), value); }
+int  TCustomBitBtn::GetSpacingImpl(TObject* owner)   { return no_vcl_TCustomBitBtn_GetSpacing(owner->Handle()); }
+void TCustomBitBtn::SetSpacingImpl(TObject* owner, const int& value) { no_vcl_TCustomBitBtn_SetSpacing(owner->Handle(), value); }
 
 TBitBtn::TBitBtn(TComponent* AOwner)
     : TCustomBitBtn(no_vcl_TBitBtn_Create(HandleOf(AOwner)))
@@ -2163,6 +2208,7 @@ TCanvas::TCanvas(no_vcl_obj_t handle)
     , Pen(no_vcl_TCanvas_GetPen(handle))
     , Brush(no_vcl_TCanvas_GetBrush(handle))
     , Font(no_vcl_TCanvas_GetFont(handle))
+    , Pixels(this, &TCanvas::GetPixelsImpl, &TCanvas::SetPixelsImpl)
 {}
 
 void TCanvas::MoveTo(int x, int y)                        { no_vcl_TCanvas_MoveTo(handle_, x, y); }
@@ -2170,6 +2216,206 @@ void TCanvas::LineTo(int x, int y)                        { no_vcl_TCanvas_LineT
 void TCanvas::Rectangle(int x1, int y1, int x2, int y2)   { no_vcl_TCanvas_Rectangle(handle_, x1, y1, x2, y2); }
 void TCanvas::Ellipse(int x1, int y1, int x2, int y2)     { no_vcl_TCanvas_Ellipse(handle_, x1, y1, x2, y2); }
 void TCanvas::TextOut(int x, int y, const std::string& t) { no_vcl_TCanvas_TextOut(handle_, x, y, t.c_str()); }
+void TCanvas::FillRect(const TRect& Rect)                 { no_vcl_TCanvas_FillRect(handle_, Rect.Left, Rect.Top, Rect.Right, Rect.Bottom); }
+
+void TCanvas::Draw(int X, int Y, const TGraphic* Graphic)
+{
+    if (Graphic)
+        no_vcl_TCanvas_Draw(handle_, X, Y, Graphic->Current());
+}
+
+void TCanvas::StretchDraw(const TRect& Rect, const TGraphic* Graphic)
+{
+    if (Graphic)
+        no_vcl_TCanvas_StretchDraw(handle_, Rect.Left, Rect.Top, Rect.Right, Rect.Bottom, Graphic->Current());
+}
+
+TColor TCanvas::GetPixelsImpl(TObject* owner, int X, int Y) { return static_cast<TColor>(no_vcl_TCanvas_GetPixels(owner->Handle(), X, Y)); }
+void   TCanvas::SetPixelsImpl(TObject* owner, int X, int Y, const TColor& value) { no_vcl_TCanvas_SetPixels(owner->Handle(), X, Y, value); }
+
+/* ---------------- Graphics ---------------- */
+
+TCanvas* CanvasHolder::Get(no_vcl_obj_t canvas)
+{
+    if (!canvas)
+        return nullptr;
+    // 同じアドレスに別の Canvas が作られることもあるため、Pen・Brush・Font のハンドルも確かめる。
+    if (!canvas_ || canvas_->Handle() != canvas
+        || canvas_->Pen.Handle() != no_vcl_TCanvas_GetPen(canvas)
+        || canvas_->Brush.Handle() != no_vcl_TCanvas_GetBrush(canvas)
+        || canvas_->Font.Handle() != no_vcl_TCanvas_GetFont(canvas))
+        canvas_.reset(new TCanvas(canvas));
+    return canvas_.get();
+}
+
+TGraphic::TGraphic(no_vcl_obj_t handle)
+    : TGraphic(this, &TGraphic::SelfAccessor)
+{
+    handle_ = handle;
+    owns_ = true;
+}
+
+TGraphic::TGraphic(TObject* owner, Accessor accessor)
+    : TPersistent(nullptr)
+    , Width(this, &TGraphic::GetWidthImpl, &TGraphic::SetWidthImpl)
+    , Height(this, &TGraphic::GetHeightImpl, &TGraphic::SetHeightImpl)
+    , Empty(this, &TGraphic::GetEmptyImpl)
+    , Transparent(this, &TGraphic::GetTransparentImpl, &TGraphic::SetTransparentImpl)
+    , owner_(owner)
+    , accessor_(accessor)
+    , owns_(false)
+{}
+
+TGraphic::~TGraphic()
+{
+    if (owns_)
+        no_vcl_TGraphic_Destroy(handle_);
+}
+
+void TGraphic::LoadFromFile(const std::string& FileName)     { no_vcl_TGraphic_LoadFromFile(Current(), FileName.c_str()); }
+void TGraphic::SaveToFile(const std::string& FileName) const { no_vcl_TGraphic_SaveToFile(Current(), FileName.c_str()); }
+void TGraphic::Assign(const TGraphic* Source)                { no_vcl_TGraphic_Assign(Current(), Source ? Source->Current() : nullptr); }
+void TGraphic::Clear()                                       { no_vcl_TGraphic_Clear(Current()); }
+
+int  TGraphic::GetWidthImpl(TObject* owner)                   { return no_vcl_TGraphic_GetWidth(static_cast<TGraphic*>(owner)->Current()); }
+void TGraphic::SetWidthImpl(TObject* owner, const int& value) { no_vcl_TGraphic_SetWidth(static_cast<TGraphic*>(owner)->Current(), value); }
+int  TGraphic::GetHeightImpl(TObject* owner)                  { return no_vcl_TGraphic_GetHeight(static_cast<TGraphic*>(owner)->Current()); }
+void TGraphic::SetHeightImpl(TObject* owner, const int& value) { no_vcl_TGraphic_SetHeight(static_cast<TGraphic*>(owner)->Current(), value); }
+bool TGraphic::GetEmptyImpl(TObject* owner)                   { return no_vcl_TGraphic_GetEmpty(static_cast<TGraphic*>(owner)->Current()) != 0; }
+bool TGraphic::GetTransparentImpl(TObject* owner)             { return no_vcl_TGraphic_GetTransparent(static_cast<TGraphic*>(owner)->Current()) != 0; }
+void TGraphic::SetTransparentImpl(TObject* owner, const bool& value)
+{
+    no_vcl_TGraphic_SetTransparent(static_cast<TGraphic*>(owner)->Current(), value ? 1 : 0);
+}
+
+TRasterImage::TRasterImage(no_vcl_obj_t handle)
+    : TGraphic(handle)
+    , Canvas(this, &TRasterImage::GetCanvasImpl)
+    , PixelFormat(this, &TRasterImage::GetPixelFormatImpl, &TRasterImage::SetPixelFormatImpl)
+    , TransparentColor(this, &TRasterImage::GetTransparentColorImpl, &TRasterImage::SetTransparentColorImpl)
+    , TransparentMode(this, &TRasterImage::GetTransparentModeImpl, &TRasterImage::SetTransparentModeImpl)
+{}
+
+TRasterImage::TRasterImage(TObject* owner, Accessor accessor)
+    : TGraphic(owner, accessor)
+    , Canvas(this, &TRasterImage::GetCanvasImpl)
+    , PixelFormat(this, &TRasterImage::GetPixelFormatImpl, &TRasterImage::SetPixelFormatImpl)
+    , TransparentColor(this, &TRasterImage::GetTransparentColorImpl, &TRasterImage::SetTransparentColorImpl)
+    , TransparentMode(this, &TRasterImage::GetTransparentModeImpl, &TRasterImage::SetTransparentModeImpl)
+{}
+
+TCanvas* TRasterImage::GetCanvasImpl(TObject* owner)
+{
+    TRasterImage* self = static_cast<TRasterImage*>(owner);
+    return self->canvas_.Get(no_vcl_TRasterImage_GetCanvas(self->Current()));
+}
+
+TPixelFormat TRasterImage::GetPixelFormatImpl(TObject* owner)
+{
+    return static_cast<TPixelFormat>(no_vcl_TRasterImage_GetPixelFormat(static_cast<TRasterImage*>(owner)->Current()));
+}
+void TRasterImage::SetPixelFormatImpl(TObject* owner, const TPixelFormat& value)
+{
+    no_vcl_TRasterImage_SetPixelFormat(static_cast<TRasterImage*>(owner)->Current(), value);
+}
+TColor TRasterImage::GetTransparentColorImpl(TObject* owner)
+{
+    return static_cast<TColor>(no_vcl_TRasterImage_GetTransparentColor(static_cast<TRasterImage*>(owner)->Current()));
+}
+void TRasterImage::SetTransparentColorImpl(TObject* owner, const TColor& value)
+{
+    no_vcl_TRasterImage_SetTransparentColor(static_cast<TRasterImage*>(owner)->Current(), value);
+}
+TTransparentMode TRasterImage::GetTransparentModeImpl(TObject* owner)
+{
+    return static_cast<TTransparentMode>(no_vcl_TRasterImage_GetTransparentMode(static_cast<TRasterImage*>(owner)->Current()));
+}
+void TRasterImage::SetTransparentModeImpl(TObject* owner, const TTransparentMode& value)
+{
+    no_vcl_TRasterImage_SetTransparentMode(static_cast<TRasterImage*>(owner)->Current(), value);
+}
+
+void TCustomBitmap::SetSize(int AWidth, int AHeight) { no_vcl_TCustomBitmap_SetSize(Current(), AWidth, AHeight); }
+
+TBitmap::TBitmap() : TCustomBitmap(no_vcl_TBitmap_Create()) {}
+
+TPortableNetworkGraphic::TPortableNetworkGraphic() : TCustomBitmap(no_vcl_TPortableNetworkGraphic_Create()) {}
+
+TJPEGImage::TJPEGImage()
+    : TCustomBitmap(no_vcl_TJPEGImage_Create())
+    , CompressionQuality(this, &TJPEGImage::GetCompressionQualityImpl, &TJPEGImage::SetCompressionQualityImpl)
+{}
+
+TJPEGImage::TJPEGImage(TObject* owner, Accessor accessor)
+    : TCustomBitmap(owner, accessor)
+    , CompressionQuality(this, &TJPEGImage::GetCompressionQualityImpl, &TJPEGImage::SetCompressionQualityImpl)
+{}
+
+int TJPEGImage::GetCompressionQualityImpl(TObject* owner)
+{
+    return no_vcl_TJPEGImage_GetCompressionQuality(static_cast<TJPEGImage*>(owner)->Current());
+}
+void TJPEGImage::SetCompressionQualityImpl(TObject* owner, const int& value)
+{
+    no_vcl_TJPEGImage_SetCompressionQuality(static_cast<TJPEGImage*>(owner)->Current(), value);
+}
+
+TPicture::TPicture() : TPicture(no_vcl_TPicture_Create(), true) {}
+
+TPicture::TPicture(no_vcl_obj_t handle, bool owns)
+    : TPersistent(handle)
+    , Graphic(this, &TPicture::GetGraphicImpl, &TPicture::SetGraphicImpl)
+    , Bitmap(this, &TPicture::GetBitmapImpl, &TPicture::SetBitmapImpl)
+    , PNG(this, &TPicture::GetPNGImpl, &TPicture::SetPNGImpl)
+    , Jpeg(this, &TPicture::GetJpegImpl, &TPicture::SetJpegImpl)
+    , Width(this, &TPicture::GetWidthImpl)
+    , Height(this, &TPicture::GetHeightImpl)
+    , owns_(owns)
+    , graphic_(this, &no_vcl_TPicture_GetGraphic)
+    , bitmap_(this, &no_vcl_TPicture_GetBitmap)
+    , png_(this, &no_vcl_TPicture_GetPNG)
+    , jpeg_(this, &no_vcl_TPicture_GetJpeg)
+{}
+
+TPicture::~TPicture()
+{
+    if (owns_)
+        no_vcl_TPicture_Destroy(handle_);
+}
+
+void TPicture::LoadFromFile(const std::string& FileName)     { no_vcl_TPicture_LoadFromFile(handle_, FileName.c_str()); }
+void TPicture::SaveToFile(const std::string& FileName) const { no_vcl_TPicture_SaveToFile(handle_, FileName.c_str()); }
+void TPicture::Assign(const TPicture* Source)                { no_vcl_TPicture_Assign(handle_, Source ? Source->Handle() : nullptr); }
+void TPicture::Clear()                                       { no_vcl_TPicture_Clear(handle_); }
+
+// 空の TPicture の Graphic は nullptr(VCL と同じ)。それ以外は、クラスを問わないビューを返す。
+TGraphic* TPicture::GetGraphicImpl(TObject* owner)
+{
+    TPicture* self = static_cast<TPicture*>(owner);
+    return no_vcl_TPicture_GetGraphic(self->handle_) ? &self->graphic_ : nullptr;
+}
+void TPicture::SetGraphicImpl(TObject* owner, TGraphic* const& value)
+{
+    no_vcl_TPicture_SetGraphic(owner->Handle(), value ? value->Current() : nullptr);
+}
+// Bitmap・PNG・Jpeg は、ビューを返すだけで中身には触れない(変換はビューを操作したときに LCL が行う)。
+TBitmap* TPicture::GetBitmapImpl(TObject* owner) { return &static_cast<TPicture*>(owner)->bitmap_; }
+void TPicture::SetBitmapImpl(TObject* owner, TBitmap* const& value)
+{
+    no_vcl_TPicture_SetGraphic(owner->Handle(), value ? value->Current() : nullptr);
+}
+TPortableNetworkGraphic* TPicture::GetPNGImpl(TObject* owner) { return &static_cast<TPicture*>(owner)->png_; }
+void TPicture::SetPNGImpl(TObject* owner, TPortableNetworkGraphic* const& value)
+{
+    no_vcl_TPicture_SetGraphic(owner->Handle(), value ? value->Current() : nullptr);
+}
+TJPEGImage* TPicture::GetJpegImpl(TObject* owner) { return &static_cast<TPicture*>(owner)->jpeg_; }
+void TPicture::SetJpegImpl(TObject* owner, TJPEGImage* const& value)
+{
+    no_vcl_TPicture_SetGraphic(owner->Handle(), value ? value->Current() : nullptr);
+}
+int TPicture::GetWidthImpl(TObject* owner)  { return no_vcl_TPicture_GetWidth(owner->Handle()); }
+int TPicture::GetHeightImpl(TObject* owner) { return no_vcl_TPicture_GetHeight(owner->Handle()); }
 
 TPaintBox::TPaintBox(TComponent* AOwner)
     : TGraphicControl(no_vcl_TPaintBox_Create(HandleOf(AOwner)))
@@ -2201,6 +2447,72 @@ void NO_VCL_CALL TPaintBox::PaintTrampoline(no_vcl_obj_t sender, void*)
     TNotifyEvent handler = self->onPaint_;
     handler(self);
 }
+
+/* ---------------- Image ---------------- */
+
+TCustomImage::TCustomImage(no_vcl_obj_t handle)
+    : TGraphicControl(handle)
+    , Picture(this, &TCustomImage::GetPictureImpl, &TCustomImage::SetPictureImpl)
+    , Canvas(this, &TCustomImage::GetCanvasImpl)
+    , HasGraphic(this, &TCustomImage::GetHasGraphicImpl)
+    , Center(this, &TCustomImage::GetCenterImpl, &TCustomImage::SetCenterImpl)
+    , Stretch(this, &TCustomImage::GetStretchImpl, &TCustomImage::SetStretchImpl)
+    , StretchOutEnabled(this, &TCustomImage::GetStretchOutEnabledImpl, &TCustomImage::SetStretchOutEnabledImpl)
+    , StretchInEnabled(this, &TCustomImage::GetStretchInEnabledImpl, &TCustomImage::SetStretchInEnabledImpl)
+    , Proportional(this, &TCustomImage::GetProportionalImpl, &TCustomImage::SetProportionalImpl)
+    , Transparent(this, &TCustomImage::GetTransparentImpl, &TCustomImage::SetTransparentImpl)
+    , OnPictureChanged(this, &TCustomImage::GetOnPictureChangedImpl, &TCustomImage::SetOnPictureChangedImpl)
+    , picture_(no_vcl_TCustomImage_GetPicture(handle), false)
+{}
+
+TPicture* TCustomImage::GetPictureImpl(TObject* owner) { return &static_cast<TCustomImage*>(owner)->picture_; }
+void TCustomImage::SetPictureImpl(TObject* owner, TPicture* const& value)
+{
+    no_vcl_TCustomImage_SetPicture(owner->Handle(), value ? value->Handle() : nullptr);
+}
+TCanvas* TCustomImage::GetCanvasImpl(TObject* owner)
+{
+    TCustomImage* self = static_cast<TCustomImage*>(owner);
+    return self->canvas_.Get(no_vcl_TCustomImage_GetCanvas(self->handle_));
+}
+bool TCustomImage::GetHasGraphicImpl(TObject* owner) { return no_vcl_TCustomImage_GetHasGraphic(owner->Handle()) != 0; }
+bool TCustomImage::GetCenterImpl(TObject* owner)     { return no_vcl_TCustomImage_GetCenter(owner->Handle()) != 0; }
+void TCustomImage::SetCenterImpl(TObject* owner, const bool& value) { no_vcl_TCustomImage_SetCenter(owner->Handle(), value ? 1 : 0); }
+bool TCustomImage::GetStretchImpl(TObject* owner)    { return no_vcl_TCustomImage_GetStretch(owner->Handle()) != 0; }
+void TCustomImage::SetStretchImpl(TObject* owner, const bool& value) { no_vcl_TCustomImage_SetStretch(owner->Handle(), value ? 1 : 0); }
+bool TCustomImage::GetStretchOutEnabledImpl(TObject* owner) { return no_vcl_TCustomImage_GetStretchOutEnabled(owner->Handle()) != 0; }
+void TCustomImage::SetStretchOutEnabledImpl(TObject* owner, const bool& value)
+{
+    no_vcl_TCustomImage_SetStretchOutEnabled(owner->Handle(), value ? 1 : 0);
+}
+bool TCustomImage::GetStretchInEnabledImpl(TObject* owner) { return no_vcl_TCustomImage_GetStretchInEnabled(owner->Handle()) != 0; }
+void TCustomImage::SetStretchInEnabledImpl(TObject* owner, const bool& value)
+{
+    no_vcl_TCustomImage_SetStretchInEnabled(owner->Handle(), value ? 1 : 0);
+}
+bool TCustomImage::GetProportionalImpl(TObject* owner) { return no_vcl_TCustomImage_GetProportional(owner->Handle()) != 0; }
+void TCustomImage::SetProportionalImpl(TObject* owner, const bool& value) { no_vcl_TCustomImage_SetProportional(owner->Handle(), value ? 1 : 0); }
+bool TCustomImage::GetTransparentImpl(TObject* owner)  { return no_vcl_TCustomImage_GetTransparent(owner->Handle()) != 0; }
+void TCustomImage::SetTransparentImpl(TObject* owner, const bool& value) { no_vcl_TCustomImage_SetTransparent(owner->Handle(), value ? 1 : 0); }
+
+void NO_VCL_CALL TCustomImage::PictureChangedTrampoline(no_vcl_obj_t sender, void*)
+{
+    if (TCustomImage* self = static_cast<TCustomImage*>(FromHandle(sender)))
+        CallNotify(self->onPictureChanged_, self);
+}
+
+TNotifyEvent TCustomImage::GetOnPictureChangedImpl(TObject* owner) { return static_cast<TCustomImage*>(owner)->onPictureChanged_; }
+
+void TCustomImage::SetOnPictureChangedImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCustomImage* self = static_cast<TCustomImage*>(owner);
+    SetSimpleEvent(self->handle_, self->onPictureChanged_, self->onPictureChangedHooked_, value,
+                   &no_vcl_TCustomImage_SetOnPictureChanged, &TCustomImage::PictureChangedTrampoline);
+}
+
+TImage::TImage(TComponent* AOwner)
+    : TCustomImage(no_vcl_TImage_Create(HandleOf(AOwner)))
+{}
 
 /* ---------------- Timer ---------------- */
 

@@ -41,7 +41,11 @@ TObject
     ├── TFPCanvasHelper                                    ※FPC 固有
     │   └── TFPCustomPen / TFPCustomBrush / TFPCustomFont
     │       └── TPen / TBrush / TFont
-    └── TFPCustomCanvas ── TCanvas                         ※FPC 固有
+    ├── TFPCustomCanvas ── TCanvas                         ※FPC 固有
+    ├── TGraphic ── TRasterImage ── TCustomBitmap
+    │   └── TFPImageBitmap                                 ※LCL 固有
+    │       └── TBitmap / TPortableNetworkGraphic / TJPEGImage
+    └── TPicture
 ```
 
 注意点:
@@ -51,6 +55,7 @@ TObject
 - TTimer は TLCLComponent を経由せず **TComponent 直下**。
 - TMemo は **TCustomEdit の派生**で、Text・ReadOnly・MaxLength・OnChange を TEdit と共有する。
 - TPen・TBrush・TFont・TCanvas は TComponent ではなく **TPersistent** の派生。
+- TGraphic の派生(TBitmap 等)と TPicture も **TPersistent** の派生(2026-09-27 に `graphics.pp` で確認。[ADR 0029](adr/0029-graphics-picture-image-glyph.md))。
 
 ## 2. no_vcl の階層(実装済みのクラス)
 
@@ -68,6 +73,7 @@ TObject
     │   └── TControl
     │       ├── TGraphicControl
     │       │   ├── TCustomLabel ── TLabel
+    │       │   ├── TCustomImage ── TImage
     │       │   └── TPaintBox
     │       └── TWinControl
     │           ├── TCustomControl
@@ -82,8 +88,12 @@ TObject
     │               ├── TCustomButton ── TButton
     │               └── TCustomCheckBox ── TCheckBox / TRadioButton
     ├── TPen / TBrush / TFont
-    └── TCanvas
+    ├── TCanvas
+    ├── TGraphic ── TRasterImage ── TCustomBitmap ── TBitmap / TPortableNetworkGraphic / TJPEGImage
+    └── TPicture
 ```
+
+TFPImageBitmap(LCL 固有で、公開するメンバを持たない)は省いた。
 
 文字列を返す C API(`no_vcl_TControl_GetCaption` 等)の戻り値は、DLL 内のスレッドごとのバッファを指し、
 同じスレッドで次に文字列を返す関数を呼ぶまで有効([ADR 0013](adr/0013-string-return-bridge-reuse-ctor-exception.md))。
@@ -107,6 +117,7 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 |---|---|---|---|---|
 | Parent / Left / Top / Width / Height / Visible / Enabled / Caption | TControl(public/published) | TControl | TControl(public) | `TControl_*` |
 | Align | TControl(public。既定値は TStatusBar が alBottom、TCustomSplitter が alLeft に上書き) | TControl | TControl(public) | `TControl_GetAlign` / `SetAlign`([ADR 0016](adr/0016-control-align-and-splitter.md)) |
+| AutoSize | TControl(public) | TControl | TControl(public) | `TControl_GetAutoSize` / `SetAutoSize`([ADR 0029](adr/0029-graphics-picture-image-glyph.md)) |
 | Show / Hide | TControl(public) | TControl | TControl(public) | `TControl_Show` / `Hide` |
 | OnClick | TControl(public) | TControl | `TControl::OnClick` | `TControl_SetOnClick` |
 | Text | TControl(protected) | TCustomEdit / TCustomComboBox | TControl(protected)、TCustomEdit / TCustomComboBox で `using` | `TControl_GetText` / `SetText`(protected hack) |
@@ -129,6 +140,14 @@ Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同�
 | Names[i] / Values[name] / ValueFromIndex[i] / IndexOfName / Delimiter / StrictDelimiter / DelimitedText / LoadFromFile / SaveToFile | TStrings(public) | TStrings | TStrings(public。Values は `IndexedProperty<std::string, std::string>`) | `TStrings_*`(ADR 0028) |
 | Sorted / Duplicates / CaseSensitive / Sort / Find | TStringList(public。TStrings の派生) | TStringList | TStringList(public。new / delete で生成・破棄) | `TStringList_*`(ADR 0028) |
 | Canvas / OnPaint | TPaintBox(public/published) | TPaintBox | TPaintBox(public) | `TPaintBox_*` |
+| Pixels / FillRect / Draw / StretchDraw | TCanvas(public) | TCanvas | TCanvas(public。Pixels は `IndexedProperty2<TColor>`) | `TCanvas_*`(ADR 0029) |
+| Width / Height / Empty / Transparent / LoadFromFile / SaveToFile / Assign / Clear | TGraphic(public。TPersistent) | TGraphic | TGraphic(public。利用者が new / delete するものと、所有者から中身を都度取得するビューがある) | `TGraphic_*`(ADR 0029) |
+| Canvas / PixelFormat / TransparentColor / TransparentMode | TRasterImage(public) | TRasterImage | TRasterImage(public。Canvas は `ReadOnlyProperty<TCanvas*>`) | `TRasterImage_*`(ADR 0029) |
+| SetSize | TCustomBitmap(public) | TCustomBitmap | TCustomBitmap(public) | `TCustomBitmap_SetSize`(ADR 0029) |
+| CompressionQuality | TJPEGImage(public) | TJPEGImage | TJPEGImage(public) | `TJPEGImage_*`(ADR 0029) |
+| Graphic / Bitmap / PNG / Jpeg / Width / Height / LoadFromFile / SaveToFile / Assign / Clear | TPicture(public。TPersistent) | TPicture | TPicture(public。Graphic・Bitmap 等は代入で内容を写す `Property<T*>`) | `TPicture_*`(ADR 0029) |
+| Picture / Canvas / HasGraphic / Center / Stretch / StretchOutEnabled / StretchInEnabled / Proportional / Transparent / OnPictureChanged | TCustomImage(public) | TCustomImage | TCustomImage(public) | `TCustomImage_*`(ADR 0029) |
+| Glyph / NumGlyphs / Layout / Margin / Spacing | TCustomBitBtn・TCustomSpeedButton(public) | TCustomBitBtn・TCustomSpeedButton | 同左(public。Glyph は代入で内容を写す `Property<TBitmap*>`) | `TCustomBitBtn_*` / `TCustomSpeedButton_*`(ADR 0029) |
 | AutoSnap / Beveled / MinSize / ResizeAnchor / ResizeStyle / OnMoved / Get・SetSplitterPosition | TCustomSplitter(public) | TCustomSplitter | TCustomSplitter(public) | `TCustomSplitter_*`([ADR 0016](adr/0016-control-align-and-splitter.md)) |
 | PopupMenu | TControl(public) | TControl | TControl(public) | `TControl_GetPopupMenu` / `SetPopupMenu`([ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md)) |
 | Menu | TCustomForm(public。TForm が published) | TCustomForm | TCustomForm(public) | `TCustomForm_GetMenu` / `SetMenu`(ADR 0017) |
@@ -192,6 +211,10 @@ C API のコールバックは CanClose へのポインタを受け取る([ADR 0
 - `TObject` から具象クラスまで、コンポーネント系の全クラスのデストラクタは protected
   (スタック生成・`delete`・`unique_ptr` はコンパイルエラー)。派生クラスを作る場合もデストラクタを protected で宣言する。
 - 非所有の `TCanvas`/`TPen`/`TBrush`/`TFont` は値メンバとして持つため、デストラクタは public。
+- グラフィック(`TBitmap` 等)と `TPicture` は TComponent ではなく、`TStringList` と同じく利用者が `new` / `delete` する
+  (スタックや値メンバにも置ける)。`Image1->Picture->Bitmap`・`BitBtn1->Glyph` 等は所有者の値メンバのビューで、
+  中身を操作のたびに所有者から取得する。グラフィック・TImage の `Canvas` のラッパーは、中身が作り直されたときに作り直す
+  (ポインタを保存しない。[ADR 0029](adr/0029-graphics-picture-image-glyph.md))。
 - LCL が内部で生成したコンポーネント(`TMenu::Items` のルート項目、`AddSeparator` の区切り線)は、
   C++ で初めて取得した時点でラッパーが作られ(`TComponent::WrapExisting`)、以降は他のコンポーネントと同じく
   破棄通知で delete される。Pascal 側はそれを返す関数の中で破棄通知の対象に登録する
