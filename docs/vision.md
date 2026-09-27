@@ -41,6 +41,7 @@ RAD Studio 本体が持つビジュアルデザイナー(フォームデザイ�
    内部層(`no_vcl::internal`)とした([ADR 0032](adr/0032-internalize-c-api.md))。別の言語から使う場合は、DLL の関数を直接呼ぶ層を作る
    (決まりは [dll-abi.md](dll-abi.md))。
 3. **専用デザイナーアプリケーションによるビジュアル編集**(tk-designer と同様の戦略。ADR 0001)。
+   本リポジトリの `designer/` に no_vcl 専用として作る([ADR 0035](adr/0035-designer-in-this-repository.md))。
    DSL からのコード生成を前提に、C++ 側のオブジェクトモデルを見直す(ADR 0003)。
 
 ## スコープ
@@ -50,10 +51,10 @@ RAD Studio 本体が持つビジュアルデザイナー(フォームデザイ�
 - LCL 主要コントロールの C++Builder 風ラッパー(Phase 1〜5 で実施済み。[todo.md](../todo.md) 参照)
 - DSL からのコード生成を見据えた初期化モデルの整理([ADR 0003](adr/0003-two-phase-initialization.md))
 - 専用デザイナーアプリケーションとの連携を見据えた API 設計
+- 専用デザイナーアプリケーション本体の設計・実装(本リポジトリの `designer/`。ADR 0035。設計は [designer/](designer/README.md))
 
 ### 検討中(後で判断)
 
-- 専用デザイナーアプリケーション本体の設計・実装(現時点では未着手。tk-designer の知見を踏襲予定)
 - Windows 以外のプラットフォーム対応(現状は LCL の win32 ウィジェットセットに限定)
 
 ### やらないこと

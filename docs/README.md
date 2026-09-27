@@ -9,6 +9,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [vision.md](vision.md) | 目的・市場調査・想定ユーザー・スコープ | 初版 |
 | [class-hierarchy.md](class-hierarchy.md) | LCL の継承関係(ソースで確認済み)・no_vcl の階層・メンバの配置 | 初版 |
 | [component-coverage.md](component-coverage.md) | VCL 移行を見据えたコントロールの棚卸し(未実装クラスの一覧と優先度) | 初版 |
+| [designer/](designer/README.md) | デザイナーアプリ(VS Code 拡張)の設計: DSL・コード生成・カタログ([ADR 0035](adr/0035-designer-in-this-repository.md)) | 草案 |
 | [adr/](adr/) | 設計判断の記録（1判断1ファイル） | 随時追加 |
 | [../todo.md](../todo.md) | 実装タスクの進捗・実装パターン・既知の課題(Phase 単位) | 継続更新 |
 
@@ -19,7 +20,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 
 | No. | タイトル | 状態 |
 |---|---|---|
-| [0001](adr/0001-designer-app-bundling.md) | デザイナーアプリケーションを別途セットで配布する | 承認 |
+| [0001](adr/0001-designer-app-bundling.md) | デザイナーアプリケーションを別途セットで配布する | 承認(一部置換→0035) |
 | [0002](adr/0002-object-model-fidelity.md) | オブジェクトモデルは C++Builder に極力揃える | 承認 |
 | [0003](adr/0003-two-phase-initialization.md) | コントロールの初期化を二段階(デフォルト構築 + 遅延 Create)に変更する | 置換(→0004) |
 | [0004](adr/0004-pointer-members-for-deferred-declaration.md) | コントロールはポインタ(スマートポインタ)メンバとして持ち、既存の単一コンストラクタのまま生成する | 承認(一部置換→0008) |
@@ -53,6 +54,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0032](adr/0032-internalize-c-api.md) | C API の提供を終了し、DLL の呼び出し層を内部層(no_vcl::internal)にする | 承認 |
 | [0033](adr/0033-dialogs.md) | Tier 4 としてダイアログを追加し、結果を適用する先の TControl.Color・Font を追加する | 承認 |
 | [0034](adr/0034-designer-common-properties.md) | デザイナーで設定する共通のプロパティ(Anchors・BorderSpacing・Constraints・TabOrder 等)を追加し、集合型を Set<E> で表す | 承認 |
+| [0035](adr/0035-designer-in-this-repository.md) | デザイナーアプリは本リポジトリ内に no_vcl 専用として作り、tk-designer からは GUI に依存しない仕組みだけを流用する | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。
