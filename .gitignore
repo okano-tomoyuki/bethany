@@ -70,3 +70,6 @@ Testing/
 
 # Python
 __pycache__/
+
+# Release packages (package-windows.sh)
+dist/

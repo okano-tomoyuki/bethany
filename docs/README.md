@@ -57,6 +57,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0035](adr/0035-designer-in-this-repository.md) | デザイナーアプリは本リポジトリ内に Bethany 専用として作り、tk-designer からは GUI に依存しない仕組みだけを流用する | 承認 |
 | [0036](adr/0036-designer-canvas.md) | デザイナーのキャンバスは Windows の LCL の見た目を HTML で再現し、Align・Anchors の配置は core で計算して LCL の実測と照合する | 承認 |
 | [0037](adr/0037-rename-to-bethany.md) | ライブラリの名前を no_vcl から Bethany(略称 beth)に変える | 承認 |
+| [0038](adr/0038-cpp-distribution.md) | C++ はソースとビルド済みの beth.dll を zip で配り、C++ の部分は利用者のコンパイラでビルドする | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。

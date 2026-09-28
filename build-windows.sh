@@ -3,12 +3,13 @@ set -eu
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-FPC_HOME="C:\tool\lazarus\fpc\3.2.2"
-LAZARUS_HOME="C:\tool\lazarus"
+# Lazarus・FPC の場所は環境変数で変えられる(Windows の形式のパス)。
+LAZARUS_HOME="${LAZARUS_HOME:-C:\tool\lazarus}"
+FPC_HOME="${FPC_HOME:-$LAZARUS_HOME\fpc\3.2.2}"
 
 # FPCのbinディレクトリには古いgcc(2.95)が同梱されており、PATHの先頭に置くと
 # MinGW64本来のgccを覆い隠してしまう。fpc呼び出しにだけ限定してPATHへ追加する。
-PATH="/c/tool/lazarus/fpc/3.2.2/bin/x86_64-win64:$PATH" \
+PATH="$(cygpath -u "$FPC_HOME")/bin/x86_64-win64:$PATH" \
   fpc beth.pas -Px86_64 -Twin64 -Mobjfpc -dLCL -dLCLwin32 \
   -Fu"$LAZARUS_HOME\lcl\units\x86_64-win64" \
   -Fu"$LAZARUS_HOME\lcl\units\x86_64-win64\win32" \
@@ -20,7 +21,6 @@ PATH="/c/tool/lazarus/fpc/3.2.2/bin/x86_64-win64:$PATH" \
 cmake -S . -B build -G Ninja
 cmake --build build
 
-# 実行時にDLL探索されるよう、テストexeの隣にbeth.dllを置く。
-cp beth.dll build/test/beth.dll
+# テストの exe の隣には、CMake の beth_deploy が beth.dll を写す。
 
 echo "Build OK: beth.dll, build/test/test_internal.exe, build/test/test_cpp.exe"

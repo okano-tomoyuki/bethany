@@ -15,8 +15,7 @@ fpc beth.pas -Px86_64 -Tlinux -Mobjfpc -dLCL -dLCLgtk2 \
 cmake -S . -B build-linux -G Ninja
 cmake --build build-linux
 
-# 実行時に共有ライブラリが見つかるよう、テスト実行ファイルの隣にlibbeth.soを置く。
-cp libbeth.so build-linux/test/libbeth.so
+# テスト実行ファイルの隣には、CMake の beth_deploy が libbeth.so を写す。
 
 echo "Build OK: libbeth.so, build-linux/test/test_internal, build-linux/test/test_cpp"
 echo "実行時は LD_LIBRARY_PATH=. を指定するか、テスト実行ファイルと同じディレクトリから起動すること。"

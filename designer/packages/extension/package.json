@@ -2,15 +2,33 @@
   "name": "bethany-designer",
   "displayName": "%displayName%",
   "description": "%description%",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
   "publisher": "okano-tomoyuki",
   "license": "MIT",
+  "preview": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/okano-tomoyuki/bethany.git",
+    "directory": "designer/packages/extension"
+  },
+  "homepage": "https://github.com/okano-tomoyuki/bethany/tree/master/designer",
+  "bugs": {
+    "url": "https://github.com/okano-tomoyuki/bethany/issues"
+  },
   "engines": {
     "vscode": "^1.100.0"
   },
   "categories": [
     "Visual Designers"
+  ],
+  "keywords": [
+    "bethany",
+    "lcl",
+    "lazarus",
+    "form designer",
+    "gui",
+    "c++builder"
   ],
   "main": "./dist/extension.cjs",
   "activationEvents": [
@@ -105,6 +123,7 @@
   },
   "scripts": {
     "build": "esbuild src/extension.ts --bundle --platform=node --format=cjs --target=node20 --external:vscode --main-fields=module,main --sourcemap --outfile=dist/extension.cjs",
+    "vscode:prepublish": "pnpm --filter @bethany-designer/webview run build && pnpm run build",
     "typecheck": "tsc -p tsconfig.json",
     "package": "vsce package --no-dependencies",
     "generate:schema": "node scripts/generate-json-schema.mts",

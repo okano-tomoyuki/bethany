@@ -1,9 +1,10 @@
 **
-!dist/**
+!dist/extension.cjs
+!dist/webview/**
 !package.json
 !package.nls*.json
 !l10n/**
 !schema/**
 !README.md
+!CHANGELOG.md
 !LICENSE
-dist/**/*.map

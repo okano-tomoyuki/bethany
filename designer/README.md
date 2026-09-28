@@ -25,6 +25,7 @@ pnpm check                 # 型チェック・lint・書式・カタログの�
 pnpm build                 # Webview・拡張・CLI をビルドする(拡張は packages/extension/dist)
 pnpm codegen:verify-cpp    # 見本から生成した C++ をビルド・実行して確かめる(C++ コンパイラ・CMake・Ninja と、ビルド済みの beth.dll が要る)
 pnpm codegen:verify-python # 見本から生成した Python を実行して確かめる(Python 3 と、ビルド済みの beth.dll が要る)
+pnpm --filter bethany-designer package  # 配布用の .vsix を packages/extension に作る(Webview と拡張のビルドを含む)
 pnpm l10n:merge <訳.json>  # 訳({"英語": "日本語"})を packages/extension/l10n/bundle.l10n.ja.json に加える
 node packages/cli/src/main.ts generate samples/MainForm.bfm.json   # ビルドせずに CLI を動かす
 ```
