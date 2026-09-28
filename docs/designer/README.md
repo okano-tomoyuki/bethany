@@ -14,6 +14,7 @@ no_vcl の C++(no_vcl.hpp)と Python(py/no_vcl.py)のコードを生成する。
 | [codegen-design.md](codegen-design.md) | コード生成(マーカー区間の更新)の設計と生成例 | C++・Python とも実装済み(no_vcl でのビルド・実行で確認) |
 | [catalog.md](catalog.md) | コンポーネントカタログ(no_vcl.hpp からの抽出・既定値・補足情報) | 初版(抽出を実装済み) |
 | [editor-design.md](editor-design.md) | VS Code 拡張とデザイナーの画面(編集モデル・配置の計算・キャンバス・プロパティ)。キャンバスの方式は [ADR 0036](../adr/0036-designer-canvas.md) | 草案 |
+| [development.md](development.md) | 開発の手順(拡張の起動・デバッグ。Windows で F5 が不安定なときの対処) | |
 
 ## 進める順序(ADR 0035)
 

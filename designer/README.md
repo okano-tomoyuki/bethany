@@ -28,5 +28,6 @@ node packages/cli/src/main.ts generate samples/MainForm.nvform.json   # ビル�
 ```
 
 拡張を試すには、designer/ を VS Code で開き、実行とデバッグの「Run Extension」(F5)で開発用のホストを起動する(samples/ が開く)。
+F5 の起動が不安定なとき(Windows の js-debug の不具合)の対処は [development.md](../docs/designer/development.md)。
 
 C++・FPC・Python のビルド(リポジトリ直下の build-windows.sh・build-linux.sh)は、このフォルダに依存しない。
