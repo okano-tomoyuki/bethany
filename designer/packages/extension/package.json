@@ -6,6 +6,11 @@
   "private": true,
   "publisher": "okano-tomoyuki",
   "license": "MIT",
+  "icon": "images/icon.png",
+  "galleryBanner": {
+    "color": "#55692E",
+    "theme": "dark"
+  },
   "preview": true,
   "repository": {
     "type": "git",

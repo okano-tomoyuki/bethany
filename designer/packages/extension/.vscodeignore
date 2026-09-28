@@ -5,6 +5,7 @@
 !package.nls*.json
 !l10n/**
 !schema/**
+!images/icon.png
 !README.md
 !CHANGELOG.md
 !LICENSE
