@@ -1,0 +1,6 @@
+{
+  // F5(Run Extension)で開発用ウィンドウの拡張機能ホストが起動直後に落ちる(code 134)のを避ける。
+  // js-debug はネットワーク表示のために接続直後に CDP の Network.enable を送り、拡張機能ホストがその処理中に
+  // abort することがある(../docs/designer/development.md)
+  "debug.javascript.enableNetworkView": false
+}

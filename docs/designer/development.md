@@ -55,3 +55,17 @@ tk-designer の開発で調べたものと同じ(tk-designer の docs/developmen
 デバッグポートを 9339 に固定して開発用ウィンドウを起動し、Node の attach 構成で `127.0.0.1:9339` に直接接続する(不具合の経路を通らない)。
 デバッグを停止しても開発用ウィンドウは閉じないので手で閉じる、拡張の変更は開発用ウィンドウで「開発者: ウィンドウの再読み込み」を
 実行して反映する、という点が Run Extension と異なる。
+
+## 3. F5 のたびに拡張機能ホストが起動直後に落ちる問題と対処
+
+**症状**: F5 で開発用ウィンドウは開くが、拡張機能ホストが起動から 1 秒足らずで終了する(VS Code の main.log に
+`Extension host ... exited with code: 134` / `crashed`)。デバッグコンソールには何も出ない。親ウィンドウを開き直した直後の
+1 回目は成功しやすく、続けて F5 すると落ちやすい。
+
+**原因**(2026-09 時点、VS Code 1.139 / js-debug 1.117.0 で確認): js-debug はデバッグの「ネットワーク」ビューのため、
+拡張機能ホストに接続した直後に CDP の `Network.enable` を送る。拡張機能ホストがこれを処理する途中(Node のネットワーク追跡の
+読み込み中)に abort することがある。launch.json に `"trace": true` を加えると、js-debug のログ
+(`%APPDATA%\Code\logs\<日時>\window<N>\exthost\ms-vscode.js-debug\`)で、落ちた回だけ `Network.enable` に応答がないことを確認できる。
+
+**対処**: [designer/.vscode/settings.json](../../designer/.vscode/settings.json) で `"debug.javascript.enableNetworkView": false` にして、
+`Network.enable` を送らせない。デバッグ中にネットワークビューが使えなくなる以外の影響はない。
