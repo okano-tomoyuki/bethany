@@ -29,3 +29,30 @@ export type {
   PropertyInfo,
   PropertyType,
 } from './catalog/types.ts';
+export { childProblem, type ChildProblem } from './dsl/constraints.ts';
+export { documentJsonSchema } from './dsl/jsonSchema.ts';
+export { locate, type TextRange } from './dsl/locate.ts';
+export { serializeDocument } from './dsl/serialize.ts';
+
+export {
+  applyCommand,
+  type Bounds,
+  type CommandResult,
+  type EditCommand,
+  type PropertyChange,
+} from './edit/commands.ts';
+export {
+  DEFAULT_POSITION,
+  defaultSizeOf,
+  hasOwnBounds,
+  initialProperties,
+} from './edit/defaults.ts';
+export {
+  collectHandlerNames,
+  collectMemberNames,
+  defaultHandlerName,
+  nameBaseOfClass,
+  nameBaseOfMenuCaption,
+  nextName,
+} from './edit/naming.ts';
+export { minimalTextEdit, type TextEdit } from './edit/textEdit.ts';

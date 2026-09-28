@@ -5,6 +5,7 @@ import { findClass, getCatalog, isSubclassOf } from '../catalog/catalog.ts';
 import type { ClassInfo, PropertyInfo, PropertyType } from '../catalog/types.ts';
 import { isValidIdentifier, memberNameProblem } from '../identifier.ts';
 import { l10n } from '../l10n.ts';
+import { childProblem } from './constraints.ts';
 import type { Diagnostic, DiagnosticCode, JsonPath } from './diagnostics.ts';
 import type { NvformDocument, Properties } from './schema.ts';
 import { classOf, walkNodes, type NodeLocation } from './tree.ts';
@@ -249,34 +250,8 @@ function checkClass(
         );
         return undefined;
       }
-      const parentClass = location.parent.class;
-      const parentInfo = findClass(parentClass);
-      if (!parentInfo) return info;
-      if (!parentInfo.acceptsControls) {
-        error('controls-not-allowed', l10n.t('{0} cannot have controls', parentClass), classPath);
-      } else if (
-        parentInfo.childClasses &&
-        !parentInfo.childClasses.some((c) => isSubclassOf(className, c))
-      ) {
-        error(
-          'invalid-child-class',
-          l10n.t(
-            '{0} can only have {1} as controls',
-            parentClass,
-            parentInfo.childClasses.join(', '),
-          ),
-          classPath,
-        );
-      } else if (
-        info.parentClasses &&
-        !info.parentClasses.some((c) => isSubclassOf(parentClass, c))
-      ) {
-        error(
-          'invalid-parent-class',
-          l10n.t('{0} can only be placed in {1}', className, info.parentClasses.join(', ')),
-          classPath,
-        );
-      }
+      const problem = childProblem(location.parent.class, className);
+      if (problem) error(problem.code, problem.message, classPath);
       return info;
     }
   }

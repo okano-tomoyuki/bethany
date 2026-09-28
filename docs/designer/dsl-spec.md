@@ -213,7 +213,11 @@
 
 - キーの順: ドキュメントは `formatVersion`・`codegen`・`form`・`components`。ノードは `name`・`class`・`design`・`properties`・`events`・`controls`/`items`。
   `properties` はカタログの順(Left・Top・Width・Height を先頭に)。
+  `events` と入れ子のオブジェクト(Font 等)の中もカタログの順。カタログに無いキーは元の順のまま後ろに置く。
+- `properties` とノードは 1 行に 1 つのキー(1 つのプロパティの変更が 1 行の差分になる)。それ以外で、値が単純なもの
+  (文字列・数値・真偽とその配列)だけのオブジェクト・配列は、1 行(100 文字)に収まれば 1 行で書く(`events`・`Anchors`・`Font` 等)。
 - インデントは 2 文字、改行は LF、末尾に改行。
+- 実装は [serialize.ts](../../designer/packages/core/src/dsl/serialize.ts)。`*.nvform.json` は Prettier の対象から外している。
 
 ## 9. コード生成の設定(`codegen`)
 

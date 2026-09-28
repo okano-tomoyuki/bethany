@@ -103,8 +103,8 @@ describe('意味の検証', () => {
       }),
     ).toEqual([
       ['invalid-property-value', 'form.controls.0.properties.Left'],
-      ['invalid-property-value', 'form.controls.0.properties.Hint'],
       ['invalid-property-value', 'form.controls.0.properties.Anchors'],
+      ['invalid-property-value', 'form.controls.0.properties.Hint'],
       ['unknown-property', 'form.controls.0.properties'],
       ['invalid-property-value', 'form.controls.1.properties.Font.Style'],
       ['unknown-property', 'form.controls.1.properties.Font'],

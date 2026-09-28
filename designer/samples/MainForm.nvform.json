@@ -1,9 +1,6 @@
 {
   "formatVersion": 1,
-  "codegen": {
-    "cpp": {},
-    "python": {}
-  },
+  "codegen": { "cpp": {}, "python": {} },
   "form": {
     "name": "MainForm",
     "class": "TForm",
@@ -23,9 +20,9 @@
           "Top": 16,
           "Width": 280,
           "Height": 23,
+          "Anchors": ["akTop", "akLeft", "akRight"],
           "Hint": "Your name",
-          "ShowHint": true,
-          "Anchors": ["akTop", "akLeft", "akRight"]
+          "ShowHint": true
         },
         "events": { "OnChange": "NameEditChange" }
       },
@@ -51,14 +48,16 @@
           "Top": 48,
           "Width": 363,
           "Height": 120,
-          "ActivePage": "MemoSheet",
-          "Anchors": ["akTop", "akLeft", "akRight"]
+          "Anchors": ["akTop", "akLeft", "akRight"],
+          "ActivePage": "MemoSheet"
         },
         "controls": [
           {
             "name": "OptionSheet",
             "class": "TTabSheet",
-            "properties": { "Caption": "Options" },
+            "properties": {
+              "Caption": "Options"
+            },
             "controls": [
               {
                 "name": "WrapCheck",
@@ -90,7 +89,9 @@
           {
             "name": "MemoSheet",
             "class": "TTabSheet",
-            "properties": { "Caption": "Memo" },
+            "properties": {
+              "Caption": "Memo"
+            },
             "controls": [
               {
                 "name": "Memo1",
@@ -101,9 +102,9 @@
                   "Width": 355,
                   "Height": 92,
                   "Align": "alClient",
-                  "Lines": ["line 1", "line \"2\""],
+                  "PopupMenu": "PopupMenu1",
                   "ScrollBars": 3,
-                  "PopupMenu": "PopupMenu1"
+                  "Lines": ["line 1", "line \"2\""]
                 }
               }
             ]
@@ -132,7 +133,7 @@
               "Width": 36,
               "Height": 17,
               "Caption": "Ready",
-              "Font": { "Color": "clBlue", "Size": 10 }
+              "Font": { "Size": 10, "Color": "clBlue" }
             }
           }
         ]
@@ -147,17 +148,29 @@
       "items": [
         {
           "name": "FileMenu",
-          "properties": { "Caption": "&File" },
+          "properties": {
+            "Caption": "&File"
+          },
           "items": [
             {
               "name": "FileOpenItem",
-              "properties": { "Caption": "&Open...", "ShortCut": "Ctrl+O" },
+              "properties": {
+                "Caption": "&Open...",
+                "ShortCut": "Ctrl+O"
+              },
               "events": { "OnClick": "FileOpenItemClick" }
             },
-            { "name": "N1", "properties": { "Caption": "-" } },
+            {
+              "name": "N1",
+              "properties": {
+                "Caption": "-"
+              }
+            },
             {
               "name": "FileExitItem",
-              "properties": { "Caption": "E&xit" },
+              "properties": {
+                "Caption": "E&xit"
+              },
               "events": { "OnClick": "FileExitItemClick" }
             }
           ]
@@ -171,7 +184,9 @@
       "items": [
         {
           "name": "ClearItem",
-          "properties": { "Caption": "Clear" },
+          "properties": {
+            "Caption": "Clear"
+          },
           "events": { "OnClick": "ClearItemClick" }
         }
       ]
@@ -189,7 +204,10 @@
       "name": "Timer1",
       "class": "TTimer",
       "design": { "left": 136, "top": 200 },
-      "properties": { "Enabled": false, "Interval": 500 },
+      "properties": {
+        "Interval": 500,
+        "Enabled": false
+      },
       "events": { "OnTimer": "Timer1Timer" }
     }
   ]
