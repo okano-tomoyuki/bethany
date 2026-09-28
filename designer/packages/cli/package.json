@@ -1,0 +1,20 @@
+{
+  "name": "@no-vcl-designer/cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "nvd": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@no-vcl-designer/codegen": "workspace:*",
+    "@no-vcl-designer/core": "workspace:*"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}

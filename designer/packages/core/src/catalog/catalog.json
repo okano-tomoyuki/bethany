@@ -1,7 +1,72 @@
 {
+  "formMembers": [
+    "Align",
+    "Anchors",
+    "AutoSize",
+    "BorderSpacing",
+    "Caption",
+    "Close",
+    "Color",
+    "Constraints",
+    "Cursor",
+    "Enabled",
+    "Font",
+    "Free",
+    "FromHandle",
+    "Handle",
+    "HandleOf",
+    "Height",
+    "Hide",
+    "Hint",
+    "Left",
+    "Menu",
+    "OnActivate",
+    "OnClick",
+    "OnClose",
+    "OnCloseQuery",
+    "OnCreate",
+    "OnDblClick",
+    "OnDeactivate",
+    "OnDestroy",
+    "OnHide",
+    "OnKeyDown",
+    "OnKeyPress",
+    "OnKeyUp",
+    "OnMouseDown",
+    "OnMouseEnter",
+    "OnMouseLeave",
+    "OnMouseMove",
+    "OnMouseUp",
+    "OnMouseWheel",
+    "OnResize",
+    "OnShow",
+    "Parent",
+    "ParentColor",
+    "ParentFont",
+    "ParentShowHint",
+    "PopupMenu",
+    "Release",
+    "Show",
+    "ShowHint",
+    "ShowModal",
+    "TabOrder",
+    "TabStop",
+    "Tag",
+    "Text",
+    "Top",
+    "Visible",
+    "Width",
+    "WrapExisting",
+    "handle_"
+  ],
   "classes": {
     "TImageList": {
-      "base": "TCustomImageList",
+      "ancestors": [
+        "TCustomImageList",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "component",
       "palette": "Common Controls",
       "acceptsControls": false,
@@ -62,7 +127,11 @@
       }
     },
     "TMenuItem": {
-      "base": "TComponent",
+      "ancestors": [
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "menuItem",
       "acceptsControls": false,
       "properties": {
@@ -174,7 +243,12 @@
       }
     },
     "TMainMenu": {
-      "base": "TMenu",
+      "ancestors": [
+        "TMenu",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "component",
       "palette": "Standard",
       "acceptsControls": false,
@@ -200,7 +274,12 @@
       "events": {}
     },
     "TPopupMenu": {
-      "base": "TMenu",
+      "ancestors": [
+        "TMenu",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "component",
       "palette": "Standard",
       "acceptsControls": false,
@@ -244,7 +323,14 @@
       }
     },
     "TScrollBar": {
-      "base": "TCustomScrollBar",
+      "ancestors": [
+        "TCustomScrollBar",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Standard",
       "acceptsControls": false,
@@ -547,7 +633,14 @@
       }
     },
     "TTrackBar": {
-      "base": "TCustomTrackBar",
+      "ancestors": [
+        "TCustomTrackBar",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Common Controls",
       "acceptsControls": false,
@@ -835,7 +928,14 @@
       }
     },
     "TProgressBar": {
-      "base": "TCustomProgressBar",
+      "ancestors": [
+        "TCustomProgressBar",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Common Controls",
       "acceptsControls": false,
@@ -1119,7 +1219,14 @@
       }
     },
     "TUpDown": {
-      "base": "TCustomControl",
+      "ancestors": [
+        "TCustomControl",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Common Controls",
       "acceptsControls": false,
@@ -1419,7 +1526,15 @@
       }
     },
     "TScrollBox": {
-      "base": "TScrollingWinControl",
+      "ancestors": [
+        "TScrollingWinControl",
+        "TCustomControl",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Additional",
       "acceptsControls": true,
@@ -1682,7 +1797,16 @@
       }
     },
     "TForm": {
-      "base": "TCustomForm",
+      "ancestors": [
+        "TCustomForm",
+        "TScrollingWinControl",
+        "TCustomControl",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "form",
       "acceptsControls": true,
       "defaultSize": {
@@ -1935,7 +2059,15 @@
       }
     },
     "TPanel": {
-      "base": "TCustomPanel",
+      "ancestors": [
+        "TCustomPanel",
+        "TCustomControl",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Standard",
       "acceptsControls": true,
@@ -2205,7 +2337,14 @@
       }
     },
     "TGroupBox": {
-      "base": "TCustomGroupBox",
+      "ancestors": [
+        "TCustomGroupBox",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Standard",
       "acceptsControls": true,
@@ -2475,7 +2614,15 @@
       }
     },
     "TRadioGroup": {
-      "base": "TCustomRadioGroup",
+      "ancestors": [
+        "TCustomRadioGroup",
+        "TCustomGroupBox",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Standard",
       "acceptsControls": false,
@@ -2760,7 +2907,15 @@
       }
     },
     "TCheckGroup": {
-      "base": "TCustomCheckGroup",
+      "ancestors": [
+        "TCustomCheckGroup",
+        "TCustomGroupBox",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Standard",
       "acceptsControls": false,
@@ -3038,7 +3193,14 @@
       }
     },
     "TLabel": {
-      "base": "TCustomLabel",
+      "ancestors": [
+        "TCustomLabel",
+        "TGraphicControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Standard",
       "acceptsControls": false,
@@ -3281,7 +3443,13 @@
       }
     },
     "TBevel": {
-      "base": "TGraphicControl",
+      "ancestors": [
+        "TGraphicControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Additional",
       "acceptsControls": false,
@@ -3533,7 +3701,15 @@
       }
     },
     "TButton": {
-      "base": "TCustomButton",
+      "ancestors": [
+        "TCustomButton",
+        "TButtonControl",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Standard",
       "acceptsControls": false,
@@ -3803,7 +3979,16 @@
       }
     },
     "TBitBtn": {
-      "base": "TCustomBitBtn",
+      "ancestors": [
+        "TCustomBitBtn",
+        "TCustomButton",
+        "TButtonControl",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Additional",
       "acceptsControls": false,
@@ -4129,7 +4314,15 @@
       }
     },
     "TCheckBox": {
-      "base": "TCustomCheckBox",
+      "ancestors": [
+        "TCustomCheckBox",
+        "TButtonControl",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Standard",
       "acceptsControls": false,
@@ -4407,7 +4600,15 @@
       }
     },
     "TRadioButton": {
-      "base": "TCustomCheckBox",
+      "ancestors": [
+        "TCustomCheckBox",
+        "TButtonControl",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Standard",
       "acceptsControls": false,
@@ -4685,7 +4886,15 @@
       }
     },
     "TToggleBox": {
-      "base": "TCustomCheckBox",
+      "ancestors": [
+        "TCustomCheckBox",
+        "TButtonControl",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Standard",
       "acceptsControls": false,
@@ -4963,7 +5172,14 @@
       }
     },
     "TEdit": {
-      "base": "TCustomEdit",
+      "ancestors": [
+        "TCustomEdit",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Standard",
       "acceptsControls": false,
@@ -5252,7 +5468,15 @@
       }
     },
     "TFloatSpinEdit": {
-      "base": "TCustomFloatSpinEdit",
+      "ancestors": [
+        "TCustomFloatSpinEdit",
+        "TCustomEdit",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Misc",
       "acceptsControls": false,
@@ -5468,13 +5692,6 @@
           "declaredIn": "TCustomEdit",
           "default": false
         },
-        "Value": {
-          "type": {
-            "kind": "float"
-          },
-          "declaredIn": "TCustomFloatSpinEdit",
-          "default": 0.0
-        },
         "MinValue": {
           "type": {
             "kind": "float"
@@ -5483,6 +5700,13 @@
           "default": 0.0
         },
         "MaxValue": {
+          "type": {
+            "kind": "float"
+          },
+          "declaredIn": "TCustomFloatSpinEdit",
+          "default": 0.0
+        },
+        "Value": {
           "type": {
             "kind": "float"
           },
@@ -5561,7 +5785,16 @@
       }
     },
     "TSpinEdit": {
-      "base": "TCustomSpinEdit",
+      "ancestors": [
+        "TCustomSpinEdit",
+        "TCustomFloatSpinEdit",
+        "TCustomEdit",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Misc",
       "acceptsControls": false,
@@ -5777,13 +6010,6 @@
           "declaredIn": "TCustomEdit",
           "default": false
         },
-        "Value": {
-          "type": {
-            "kind": "int"
-          },
-          "declaredIn": "TCustomSpinEdit",
-          "default": 0
-        },
         "MinValue": {
           "type": {
             "kind": "int"
@@ -5792,6 +6018,13 @@
           "default": 0
         },
         "MaxValue": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TCustomSpinEdit",
+          "default": 0
+        },
+        "Value": {
           "type": {
             "kind": "int"
           },
@@ -5863,7 +6096,14 @@
       }
     },
     "TMaskEdit": {
-      "base": "TCustomEdit",
+      "ancestors": [
+        "TCustomEdit",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Additional",
       "acceptsControls": false,
@@ -6159,7 +6399,15 @@
       }
     },
     "TLabeledEdit": {
-      "base": "TCustomLabeledEdit",
+      "ancestors": [
+        "TCustomLabeledEdit",
+        "TCustomEdit",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Additional",
       "acceptsControls": false,
@@ -6464,7 +6712,14 @@
       }
     },
     "TTabControl": {
-      "base": "TCustomTabControl",
+      "ancestors": [
+        "TCustomTabControl",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Common Controls",
       "acceptsControls": true,
@@ -6782,7 +7037,14 @@
       }
     },
     "TPageControl": {
-      "base": "TCustomTabControl",
+      "ancestors": [
+        "TCustomTabControl",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Common Controls",
       "acceptsControls": true,
@@ -7098,9 +7360,19 @@
       }
     },
     "TTabSheet": {
-      "base": "TCustomPage",
+      "ancestors": [
+        "TCustomPage",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "acceptsControls": true,
+      "parentClasses": [
+        "TPageControl"
+      ],
       "defaultSize": {
         "width": 0,
         "height": 0
@@ -7393,7 +7665,15 @@
       }
     },
     "TTreeView": {
-      "base": "TCustomTreeView",
+      "ancestors": [
+        "TCustomTreeView",
+        "TCustomControl",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Common Controls",
       "acceptsControls": false,
@@ -7754,7 +8034,14 @@
       }
     },
     "TListView": {
-      "base": "TCustomListView",
+      "ancestors": [
+        "TCustomListView",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Common Controls",
       "acceptsControls": false,
@@ -8142,7 +8429,15 @@
       }
     },
     "TSplitter": {
-      "base": "TCustomSplitter",
+      "ancestors": [
+        "TCustomSplitter",
+        "TCustomControl",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Additional",
       "acceptsControls": false,
@@ -8448,7 +8743,15 @@
       }
     },
     "TMemo": {
-      "base": "TCustomMemo",
+      "ancestors": [
+        "TCustomMemo",
+        "TCustomEdit",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Standard",
       "acceptsControls": false,
@@ -8744,7 +9047,14 @@
       }
     },
     "TComboBox": {
-      "base": "TCustomComboBox",
+      "ancestors": [
+        "TCustomComboBox",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Standard",
       "acceptsControls": false,
@@ -9035,7 +9345,14 @@
       }
     },
     "TListBox": {
-      "base": "TCustomListBox",
+      "ancestors": [
+        "TCustomListBox",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Standard",
       "acceptsControls": false,
@@ -9313,7 +9630,15 @@
       }
     },
     "TCheckListBox": {
-      "base": "TCustomCheckListBox",
+      "ancestors": [
+        "TCustomCheckListBox",
+        "TCustomListBox",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Additional",
       "acceptsControls": false,
@@ -9595,7 +9920,14 @@
       }
     },
     "TStaticText": {
-      "base": "TCustomStaticText",
+      "ancestors": [
+        "TCustomStaticText",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Additional",
       "acceptsControls": false,
@@ -9873,7 +10205,13 @@
       }
     },
     "TStatusBar": {
-      "base": "TWinControl",
+      "ancestors": [
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Common Controls",
       "acceptsControls": false,
@@ -10151,7 +10489,14 @@
       }
     },
     "TShape": {
-      "base": "TCustomShape",
+      "ancestors": [
+        "TCustomShape",
+        "TGraphicControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Additional",
       "acceptsControls": false,
@@ -10395,7 +10740,14 @@
       }
     },
     "TSpeedButton": {
-      "base": "TCustomSpeedButton",
+      "ancestors": [
+        "TCustomSpeedButton",
+        "TGraphicControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Additional",
       "acceptsControls": false,
@@ -10711,7 +11063,13 @@
       }
     },
     "TPaintBox": {
-      "base": "TGraphicControl",
+      "ancestors": [
+        "TGraphicControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Additional",
       "acceptsControls": false,
@@ -10951,7 +11309,14 @@
       }
     },
     "TImage": {
-      "base": "TCustomImage",
+      "ancestors": [
+        "TCustomImage",
+        "TGraphicControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Additional",
       "acceptsControls": false,
@@ -11252,7 +11617,16 @@
       }
     },
     "TDrawGrid": {
-      "base": "TCustomDrawGrid",
+      "ancestors": [
+        "TCustomDrawGrid",
+        "TCustomGrid",
+        "TCustomControl",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Additional",
       "acceptsControls": false,
@@ -11605,7 +11979,17 @@
       }
     },
     "TStringGrid": {
-      "base": "TCustomStringGrid",
+      "ancestors": [
+        "TCustomStringGrid",
+        "TCustomDrawGrid",
+        "TCustomGrid",
+        "TCustomControl",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Additional",
       "acceptsControls": false,
@@ -11958,7 +12342,15 @@
       }
     },
     "THeaderControl": {
-      "base": "TCustomHeaderControl",
+      "ancestors": [
+        "TCustomHeaderControl",
+        "TCustomControl",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Common Controls",
       "acceptsControls": false,
@@ -12267,7 +12659,15 @@
       }
     },
     "TToolBar": {
-      "base": "TToolWindow",
+      "ancestors": [
+        "TToolWindow",
+        "TCustomControl",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Common Controls",
       "acceptsControls": true,
@@ -12654,9 +13054,18 @@
       }
     },
     "TToolButton": {
-      "base": "TGraphicControl",
+      "ancestors": [
+        "TGraphicControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "acceptsControls": false,
+      "parentClasses": [
+        "TToolBar"
+      ],
       "defaultSize": {
         "width": 23,
         "height": 22
@@ -12987,7 +13396,16 @@
       }
     },
     "TCoolBar": {
-      "base": "TCustomCoolBar",
+      "ancestors": [
+        "TCustomCoolBar",
+        "TToolWindow",
+        "TCustomControl",
+        "TWinControl",
+        "TControl",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "control",
       "palette": "Common Controls",
       "acceptsControls": true,
@@ -13364,7 +13782,12 @@
       }
     },
     "TTimer": {
-      "base": "TCustomTimer",
+      "ancestors": [
+        "TCustomTimer",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "component",
       "palette": "System",
       "acceptsControls": false,
@@ -13400,7 +13823,13 @@
       }
     },
     "TOpenDialog": {
-      "base": "TFileDialog",
+      "ancestors": [
+        "TFileDialog",
+        "TCommonDialog",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "component",
       "palette": "Dialogs",
       "acceptsControls": false,
@@ -13490,7 +13919,14 @@
       }
     },
     "TSaveDialog": {
-      "base": "TOpenDialog",
+      "ancestors": [
+        "TOpenDialog",
+        "TFileDialog",
+        "TCommonDialog",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "component",
       "palette": "Dialogs",
       "acceptsControls": false,
@@ -13580,7 +14016,14 @@
       }
     },
     "TSelectDirectoryDialog": {
-      "base": "TOpenDialog",
+      "ancestors": [
+        "TOpenDialog",
+        "TFileDialog",
+        "TCommonDialog",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "component",
       "palette": "Dialogs",
       "acceptsControls": false,
@@ -13670,7 +14113,12 @@
       }
     },
     "TColorDialog": {
-      "base": "TCommonDialog",
+      "ancestors": [
+        "TCommonDialog",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "component",
       "palette": "Dialogs",
       "acceptsControls": false,
@@ -13758,7 +14206,12 @@
       }
     },
     "TFontDialog": {
-      "base": "TCommonDialog",
+      "ancestors": [
+        "TCommonDialog",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "component",
       "palette": "Dialogs",
       "acceptsControls": false,
@@ -13837,7 +14290,12 @@
       }
     },
     "TFindDialog": {
-      "base": "TCommonDialog",
+      "ancestors": [
+        "TCommonDialog",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "component",
       "palette": "Dialogs",
       "acceptsControls": false,
@@ -13913,7 +14371,13 @@
       }
     },
     "TReplaceDialog": {
-      "base": "TFindDialog",
+      "ancestors": [
+        "TFindDialog",
+        "TCommonDialog",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
       "kind": "component",
       "palette": "Dialogs",
       "acceptsControls": false,

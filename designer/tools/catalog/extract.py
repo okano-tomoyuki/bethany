@@ -148,6 +148,38 @@ class Extractor:
                 return True
         return False
 
+    def public_names(self, name):
+        """クラス name(継承したものを含む)の public なメンバの名前。生成するフォームのクラスで、
+        コンポーネント・ハンドラの名前と衝突してはならないもの。"""
+        names = set()
+        for cls in self.chain(name):
+            if cls not in self.m.classes:
+                continue
+            _, body, _ = self.m.classes[cls]
+            section = "private"
+            for st in gen_api.split_statements(body):
+                t = st.text
+                sm = re.fullmatch(r"(public|protected|private)\s*:", t)
+                if sm:
+                    section = sm.group(1)
+                    continue
+                if section == "private":
+                    continue
+                um = USING_RE.fullmatch(t)
+                pm = PROPERTY_RE.fullmatch(t)
+                fm = re.search(r"(~?\w+)\s*\(", t)
+                vm = re.fullmatch(r"[\w:<>*&, ]+?[\s*&](\w+)(?:\s*=.*)?", t)
+                if um:
+                    names.add(um.group(2))
+                elif pm:
+                    names.add(pm.group(5))
+                elif fm and not fm.group(1).startswith("~") and fm.group(1) not in ("operator", "explicit"):
+                    names.add(fm.group(1))
+                elif vm and not t.startswith(("using", "friend", "struct", "class", "enum")):
+                    names.add(vm.group(1))
+        # 基底クラスのコンストラクタ(protected の TComponent(ObjectHandle) 等)と演算子は名前ではない
+        return sorted(names - set(self.chain(name)) - {"operator"})
+
     def class_kind(self, name):
         if name == "TForm" or self.derives(name, "TCustomForm"):
             return "form"
@@ -164,7 +196,7 @@ class Extractor:
                 continue
             props, events = self.members(name)
             classes[name] = {
-                "base": self.base[name],
+                "ancestors": list(reversed(self.chain(name)[:-1])),
                 "kind": self.class_kind(name),
                 "properties": props,
                 "events": events,
@@ -182,7 +214,7 @@ class Extractor:
         for ev, params in self.m.events.items():
             events[ev] = [{"name": "Sender", "type": "TObject*"}] + [
                 {"name": n, "type": t} for t, n, _ in (gen_api.param_parts(p) for p in params)]
-        return {"classes": classes, "objects": objects, "enums": enums, "flags": flags,
+        return {"formMembers": self.public_names("TForm"), "classes": classes, "objects": objects, "enums": enums, "flags": flags,
                 "sets": dict(self.m.sets), "constants": constants, "eventTypes": events}
 
 
@@ -215,8 +247,9 @@ def apply_overlay(cat, overlay, chain):
         spec = overlay["classes"].get(name, {})
         cls["palette"] = spec.get("palette")
         cls["acceptsControls"] = spec.get("acceptsControls", False)
-        if "childClasses" in spec:
-            cls["childClasses"] = spec["childClasses"]
+        for key in ("childClasses", "parentClasses"):
+            if key in spec:
+                cls[key] = spec[key]
     for name, obj in cat["objects"].items():
         for pname, info in obj["properties"].items():
             info["designable"] = designable(info)
@@ -311,7 +344,7 @@ def keep_defaults(cat, old):
 def order(cat):
     """決まった順に並べ直す(クラスは no_vcl.hpp の順、クラスの中のキーは固定の順)。
     デザイン時に設定できないプロパティは書き出さない(デザイナーは使わないため)。"""
-    key_order = ["base", "kind", "palette", "acceptsControls", "childClasses", "defaultSize", "properties", "events"]
+    key_order = ["ancestors", "kind", "palette", "acceptsControls", "childClasses", "parentClasses", "defaultSize", "properties", "events"]
     prop_order = ["type", "declaredIn", "default", "doc"]
     first = ["Left", "Top", "Width", "Height"]
     out = dict(cat)
@@ -320,6 +353,11 @@ def order(cat):
         c = {k: cls[k] for k in key_order if k in cls and cls[k] is not None}
         props = {n: i for n, i in cls["properties"].items() if i["designable"]}
         names = [n for n in first if n in props] + [n for n in props if n not in first]
+        # 値は範囲の後に設定する(コード生成はカタログの順)。2026-09-28 の実測(Win32)では順で結果は変わらなかったが、
+        # LCL の範囲に収める処理(GetLimitedValue)がいつ働くかに依存しないよう、範囲を先に決める
+        if "Value" in names and "MaxValue" in names:
+            names.remove("Value")
+            names.insert(names.index("MaxValue") + 1, "Value")
         c["properties"] = {n: {k: props[n][k] for k in prop_order if k in props[n]} for n in names}
         classes[name] = c
     out["classes"] = classes

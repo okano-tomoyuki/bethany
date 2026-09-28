@@ -10,11 +10,12 @@ tk-designer は Tk を実際に動かしてオプションを抽出した(tk-des
 
 | 情報 | 出どころ |
 |---|---|
-| クラスの一覧と継承関係、利用者が生成できるか(`(TComponent* AOwner)` の public のコンストラクタがあるか) | no_vcl.hpp の解析(py/gen_api.py の `parse_hpp`) |
+| クラスの一覧と継承関係(`ancestors`。参照の型・親子の制約の照合に使う)、利用者が生成できるか(`(TComponent* AOwner)` の public のコンストラクタがあるか) | no_vcl.hpp の解析(py/gen_api.py の `parse_hpp`) |
 | プロパティの名前・型・読み取り専用か・宣言したクラス(protected を `using` で公開したものを含む) | 同上 |
 | イベントの名前・型と、その型の引数(ハンドラの引数) | 同上(`using TXxxEvent = std::function<...>`) |
 | 列挙型・集合型(`Set<E>` とビット集合)の要素、TColor・TCursor 等の定数 | 同上 |
 | 各プロパティの既定値、パレットから置いたときの大きさ | Python のバインディングで各クラスを生成して読む(実測) |
+| TForm の public なメンバの名前(`formMembers`。コンポーネント・ハンドラの名前と衝突してはならないもの) | no_vcl.hpp の解析 |
 | デザイン時に設定できるか、パレットの分類と順、子を置けるか、親子の制約、プロパティエディタの種類 | 手書きの補足(オーバーレイ) |
 
 2026-09-28 時点で、gen_api.py の解析から、利用者が生成できるクラス 56 個(TButton 等のコントロール、TTimer・ダイアログ・TImageList・
@@ -53,9 +54,10 @@ python designer/tools/catalog/extract.py --check      # カタログが no_vcl.h
 | `designable` | デザイン時に設定できるプロパティ。書かないものは実行時だけのもの(DSL に書くとエラー) | TButton: Caption・Left 等は可、Canvas・Handle は不可。TPageControl の ActivePage は可(参照) |
 | `category` / `order` | パレットの分類と順(Delphi の Standard・Additional・Common Controls・Dialogs・System に倣う) | TButton は Standard |
 | `acceptsControls` | 子のコントロールを置けるか(LCL の ControlStyle の csAcceptsControls に当たる) | TPanel・TGroupBox・TScrollBox・TTabSheet・TForm は可、TButton・TEdit は不可 |
-| `childRules` | 子に置けるクラスの制約 | TPageControl は TTabSheet のみ。TToolBar は TToolButton とウィンドウを持つコントロール |
+| `childClasses` | 子に置けるクラス(そのクラスか派生) | TPageControl は TTabSheet のみ。TToolBar は TToolButton とウィンドウを持つコントロール |
+| `parentClasses` | 置ける親のクラス(そのクラスか派生) | TTabSheet は TPageControl、TToolButton は TToolBar |
 | `editor` | プロパティエディタの種類(型から決まらないもの) | Lines・Items は複数行、Filter はフィルターの編集、Caption は `&` を含む文字列 |
-| `displayOrder` | プロパティエディタでの並び | Left・Top・Width・Height を先頭に |
+| `displayOrder` | プロパティエディタでの並び(コード生成で設定する順でもある) | Left・Top・Width・Height を先頭に。Value は MinValue・MaxValue の後 |
 
 ## 4. カタログの形(案)
 
@@ -63,7 +65,7 @@ python designer/tools/catalog/extract.py --check      # カタログが no_vcl.h
 {
   "classes": {
     "TButton": {
-      "base": "TCustomButton",
+      "ancestors": ["TCustomButton", "TButtonControl", "TWinControl", "TControl", "TComponent", "TObject"],
       "kind": "control",
       "creatable": true,
       "category": "Standard",

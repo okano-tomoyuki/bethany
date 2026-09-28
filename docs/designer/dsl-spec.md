@@ -1,7 +1,9 @@
-# DSL 仕様(formatVersion 1)— 草案
+# DSL 仕様(formatVersion 1)
 
-フォームの定義ファイル `*.nvform.json` の仕様。§10 の Q1〜Q4 は決定済み。残りの論点は MVP の後か、実装しながら決める。
-実装後は、Zod のスキーマ(`designer/packages/core`)を正とし、本書と食い違う場合は本書を直す(tk-designer ADR 0009 と同じ)。
+フォームの定義ファイル `*.nvform.json` の仕様。§10 の Q1〜Q4・Q9 は決定済み。残りの論点は MVP の後か、実装しながら決める。
+構造は Zod のスキーマ([designer/packages/core/src/dsl/schema.ts](../../designer/packages/core/src/dsl/schema.ts))、意味の検証は
+[validate.ts](../../designer/packages/core/src/dsl/validate.ts) を正とし、本書と食い違う場合は本書を直す(tk-designer ADR 0009 と同じ)。
+見本は [designer/samples/MainForm.nvform.json](../../designer/samples/MainForm.nvform.json)。
 
 ## 1. 基本方針
 
@@ -104,13 +106,14 @@
 ## 4. ノード
 
 どのノードも `name` を持ち、生成するクラスのメンバ名(C++ はポインタのメンバ、Python は属性)になる。
-`name` はフォームの中で重複できず、C++ と Python の識別子として正しく、生成するクラス・TForm のメンバ名・予約語と衝突してはならない。
+`name` はフォームの中で重複できず、C++ と Python の識別子として正しく(ASCII のみ)、予約語・接頭辞 `nvd_`・TForm のメンバ名(カタログの
+`formMembers`)・生成したコードが使う no_vcl の名前(クラス・列挙型の要素・定数。C++ ではメンバ名がこれらを隠すため)と衝突してはならない。
 
 ### 4.1 フォームノード
 
 | キー | 必須 | 型 | 説明 |
 |---|---|---|---|
-| `name` | ○ | 識別子 | フォームの名前(C++Builder の `Form1`)。生成するクラス名の既定値(`T` + name)と、グローバル変数の名前(§10 Q3)になる |
+| `name` | ○ | 識別子 | フォームの名前(C++Builder の `Form1`)。生成するクラス名の既定値(`T` + name)と、グローバル変数の名前(§10 Q3)になる。`T` + name が no_vcl の名前(`Form` → `TForm`)と衝突してはならない |
 | `class` | ○ | `"TForm"` | 生成するクラスの基底クラス。今は TForm だけ(TFrame は no_vcl に無い) |
 | `properties` | | 名前 → 値 | §5。フォーム自身のプロパティ(生成したクラスのコンストラクタの中で設定する) |
 | `events` | | 名前 → ハンドラ名 | §6 |
@@ -182,6 +185,8 @@
 - **位置と大きさ(Left・Top・Width・Height)は、Align で寄せたコントロールにも書く。** デザイナーが配置を計算した結果を書き込む
   (.dfm と同じ)。Anchors の距離は、生成したコードで Parent・大きさを設定した時点の親の大きさで決まるため(ADR 0034)、
   親の大きさが実際の配置と合っている必要がある。
+- AutoSize のコントロール(TLabel・TCheckBox・TEdit 等。カタログの AutoSize の既定値が true のもの)の大きさは、実行時に LCL が
+  内容(文字列・フォント)から決める。デザイナーが書く Width・Height は見積もりになる。
 - 画像(Glyph・Picture・TImageList の画像)は §10 Q7。
 
 ## 6. イベント
@@ -213,6 +218,8 @@
 ## 9. コード生成の設定(`codegen`)
 
 パスは DSL ファイルのあるフォルダからの相対パス。省略した項目は既定値。
+クラス名の既定値はフォームの `name` から、ファイル名の既定値は DSL のファイル名から決める
+(C++Builder の Unit1.cpp・Unit1.h と Form1 のように、ファイル名とフォームの名前は別のもの)。
 
 | キー | 内容 | 既定値(`form.name` が `MainForm`、ファイルが `MainForm.nvform.json` の場合) |
 |---|---|---|
@@ -232,4 +239,4 @@
 | Q6 | コレクション(TListView の Columns、THeaderControl の Sections、TCoolBar の Bands、TTreeView の Items、TStatusBar は SimpleText のみ) | MVP の後。`items` と同じく配列のプロパティとして足す(形は個別に決める) |
 | Q7 | 画像(Glyph・Picture・TImageList の画像) | MVP の後。.dfm のように埋め込むか、ファイルのパスを書いて生成コードで読み込むか(実行時のパスの扱い)を決める |
 | Q8 | TColor の書き方 | 定数名(`clRed`・`clDefault` 等)と `"#RRGGBB"`。no_vcl の TColor は `$00BBGGRR` なので、生成時に変換する。システム色(clBtnFace 等)は no_vcl に定数が無いので、足すかどうかも決める |
-| Q9 | フォームの大きさ | Width・Height(外形)で書く。ClientWidth・ClientHeight は no_vcl に無い。キャンバスでは枠・タイトルバーの分を差し引いて表示する |
+| Q9 | フォームの大きさ | **決定(2026-09-28、実測)**: Width・Height で書く。LCL の TForm の Width・Height は**クライアント領域の大きさ**(枠・タイトルバー・メニューを含まない。Delphi と違う。codegen-design.md §7.1)なので、キャンバスではこの大きさをそのままクライアント領域として描き、枠・タイトルバー・メニューはその外に描く |

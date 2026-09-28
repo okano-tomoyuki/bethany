@@ -1,0 +1,33 @@
+{
+  "name": "no-vcl-designer-monorepo",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.6.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "pnpm -r --filter=@no-vcl-designer/cli run build",
+    "typecheck": "pnpm -r run typecheck && tsc -p tools",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm catalog:check && pnpm test",
+    "catalog:extract": "python tools/catalog/extract.py",
+    "catalog:check": "python tools/catalog/extract.py --check",
+    "codegen:verify-cpp": "node tools/codegen/verify-cpp.mts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.13.6",
+    "eslint": "^10.11.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.9",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.70.1",
+    "vitest": "^5.0.1"
+  }
+}

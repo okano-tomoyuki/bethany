@@ -39,7 +39,9 @@ Python では `#` を使う。`id` で区間を識別し、`hash` は区間の�
 
 ## 3. 生成例
 
-[dsl-spec.md §2](dsl-spec.md#2-例) の例(抜粋)から生成するコード。
+[dsl-spec.md §2](dsl-spec.md#2-例) の例(抜粋)から生成するコード。実際の生成結果は
+[designer/packages/codegen/src/\_\_golden\_\_/](../../designer/packages/codegen/src/__golden__/)(見本 designer/samples/MainForm.nvform.json から生成したもの)を参照。
+コメントは `codegen.commentLocale`(既定は英語)で決まる。
 
 ### C++
 
@@ -50,19 +52,20 @@ Python では `#` を使う。`id` で区間を識別し、`hash` は区間の�
 
 #include "no_vcl.hpp"
 
+/** Form created with the no_vcl designer (MainForm.nvform.json). Regions enclosed in markers are overwritten when regenerated. */
 class TMainForm : public no_vcl::TForm
 {
 public:
     // <no_vcl-designer:begin id="declarations">
-    no_vcl::TEdit*       NameEdit;
-    no_vcl::TButton*     OkButton;
-    no_vcl::TMemo*       Memo1;
-    no_vcl::TMainMenu*   MainMenu1;
-    no_vcl::TMenuItem*   FileMenu;
-    no_vcl::TMenuItem*   FileOpenItem;
-    no_vcl::TMenuItem*   N1;
-    no_vcl::TMenuItem*   FileExitItem;
-    no_vcl::TPopupMenu*  PopupMenu1;
+    no_vcl::TEdit* NameEdit;
+    no_vcl::TButton* OkButton;
+    no_vcl::TMemo* Memo1;
+    no_vcl::TMainMenu* MainMenu1;
+    no_vcl::TMenuItem* FileMenu;
+    no_vcl::TMenuItem* FileOpenItem;
+    no_vcl::TMenuItem* N1;
+    no_vcl::TMenuItem* FileExitItem;
+    no_vcl::TPopupMenu* PopupMenu1;
     no_vcl::TOpenDialog* OpenDialog1;
 
     void FormCreate(no_vcl::TObject* Sender);
@@ -76,11 +79,9 @@ public:
     explicit TMainForm(no_vcl::TComponent* AOwner);
 
 protected:
-    // コンポーネントの派生はデストラクタを protected にする(docs/adr/0008)。
     ~TMainForm() override = default;
 
 private:
-    // 予約メソッド(宣言は変わらないので、区間の外の雛形に置く)。
     void nvd_CreateComponents();
 };
 
@@ -103,6 +104,7 @@ TMainForm::TMainForm(TComponent* AOwner)
 }
 
 // <no_vcl-designer:begin id="nvd_CreateComponents">
+// Creates the components and sets their properties (generated).
 void TMainForm::nvd_CreateComponents()
 {
     NameEdit = new TEdit(this);
@@ -160,10 +162,12 @@ void TMainForm::nvd_CreateComponents()
 // <no_vcl-designer:handler-stubs>
 void TMainForm::FormCreate(TObject* Sender)
 {
+    // TODO: implement
 }
 
 void TMainForm::FormCloseQuery(TObject* Sender, bool& CanClose)
 {
+    // TODO: implement
 }
 // ...
 ```
@@ -229,10 +233,13 @@ LCL ではプロパティを設定する順で結果が変わるものがある�
 3. **コントロールを木の順(親が先)に**、それぞれ次の順で設定する。
    1. Parent(TTabSheet は PageControl)。TabOrder の既定値は Parent を設定した順になる。
    2. Left・Top・Width・Height。
-   3. その他のプロパティ(カタログの順。入れ子のオブジェクト・TStrings・参照を含む)。
+   3. その他のプロパティ(カタログの順。入れ子のオブジェクト・TStrings・参照を含む)。カタログでは、範囲を持つもの
+      (TSpinEdit 等)の Value を MinValue・MaxValue の後に並べている。
    4. Anchors(Parent と大きさが決まった後に設定する。ADR 0034 で確かめた、距離が設定の時点の親の大きさで決まる動作のため)。
    5. イベント。
-4. **非ビジュアルコンポーネント**のプロパティとイベント。メニューは項目のプロパティを設定してから、親の項目(ルートは `Items`)に Add する。
+4. **コントロールへの参照**(TPageControl の ActivePage・TUpDown の Associate)。相手の親(TTabSheet なら PageControl)が
+   決まった後でなければ働かないため、すべてのコントロールの後にまとめて設定する。
+5. **非ビジュアルコンポーネント**のプロパティとイベント。メニューは項目のプロパティを設定してから、親の項目(ルートは `Items`)に Add する。
 
 この順で生成したフォームを表示したときの配置が、デザイナーの配置と一致することを、生成したコードの実行で確かめる(§7)。
 
@@ -250,16 +257,16 @@ tk-designer の codegen-design.md の決定を、名前だけ変えて引き継�
 | M7 | 名前の変更 | 警告のみ。区間の外の参照は書き換えない(なくなった名前が区間の外で使われていれば警告する) |
 | M8 | VS Code 上での書き込み | WorkspaceEdit で書き込む。書き込む前に未保存の変更が無かったファイルは、書き込んだ後に保存する |
 
-## 6. no_vcl 固有の決定(案)
+## 6. no_vcl 固有の決定
 
 | # | 論点 | 案 |
 |---|---|---|
 | N1 | イベントの接続 | C++ は `[this](引数...) { ハンドラ(引数...); }` のラムダ(test/main.cpp と同じ書き方)。引数はカタログのイベントの型から作る。Python はバインドしたメソッドをそのまま代入する |
 | N2 | 名前空間 | ヘッダは `no_vcl::` で修飾し(ヘッダで `using namespace` しない)、ソースは `using namespace no_vcl;` とする。利用者が書くハンドラの実装は修飾しなくてよい |
 | N3 | フォームのグローバル変数 | C++ は `extern TMainForm* MainForm;` と定義を生成する(dsl-spec.md §10 Q3) |
-| N4 | 値の書き出し | 列挙型は要素名、TAnchors は `TAnchors() << ...`、ビット集合は `|` でつなぐ(空なら `0`)、TColor は定数名か `0x00BBGGRR`、TShortCut は `TextToShortCut("...")`、TStrings は `Add` の並び(Python も同じ形) |
+| N4 | 値の書き出し | 列挙型は要素名、TAnchors は `TAnchors() << ...`、ビット集合は `\|` でつなぐ(空なら `0`)、TColor は定数名か `0x00BBGGRR /* #RRGGBB */`、TShortCut は `TextToShortCut("...")`(空なら `0`)、TStrings は `Add` の並び(既定の中身があるものは先に `Clear()`。Python も同じ形) |
 | N5 | 既定値の扱い | DSL に書いたプロパティだけを書き出す(既定値と同じ値が書かれていても、そのまま書き出す) |
-| N6 | 雛形の基底クラスの照合 | 既存のファイルのクラスが TForm を継承していなければ、何も書き込まずにエラーにする(tk-designer と同じ) |
+| N6 | 雛形の基底クラスの照合 | **照合しない**(実装で決定)。tk-designer はルートのクラス(Tk・Toplevel・Frame)を DSL で変えられたため照合していたが、ここでは基底は常に TForm で、利用者が自前の中間クラスに書き換えるのは正当な使い方のため |
 
 ## 7. 検証
 
@@ -269,4 +276,17 @@ tk-designer の codegen-design.md の決定を、名前だけ変えて引き継�
   1. 表示後の各コントロールの位置と大きさが、DSL に書いた値(デザイナーが計算した配置)と一致すること(Align・Anchors・BorderSpacing を含む)。
   2. イベントが接続されていること(ボタンの Click・メニューの Click でハンドラが呼ばれる)。
   3. 参照(Menu・PopupMenu・Images)・入れ子のオブジェクト(Font 等)・TStrings が設定されていること。
-- 検証のプログラムは、生成したフォームのコンストラクタの後にテスト用の処理を加える形で、`designer/tools/codegen/` に置く。
+- 検証のプログラムは [designer/tools/codegen/verify-cpp.mts](../../designer/tools/codegen/verify-cpp.mts)(`pnpm codegen:verify-cpp`)。
+  生成したコードのハンドラの雛形を「呼ばれたことを記録する処理」に置き換え、フォームを `Application->CreateForm` で生成・表示した後に、
+  配置・プロパティを読み、LCL を通してイベントを発生させる(Text の変更・Checked の変更・メニュー項目の Click・Close)。
+  生成したコードは `-Wall -Wextra -Werror`(未使用の引数を除く)でコンパイルする。
+
+### 7.1 検証で分かったこと(2026-09-28、Win32)
+
+- **LCL の TForm の Width・Height はクライアント領域の大きさ。** Width 400・Height 300 のフォームで、alBottom の高さ 41 のパネルは
+  Top 259・Width 400 になる(メニューがあっても同じ)。Delphi・C++Builder と違い、枠・タイトルバー・メニューの分を含まない
+  (dsl-spec.md §10 Q9 を改めた)。
+- **AutoSize のコントロール(TLabel・TCheckBox・TEdit 等)の大きさは LCL が決める。** Width 120 と書いた TCheckBox("Word wrap")は 80 になる。
+  デザイナーが書く大きさは見積もりになるため、検証では位置だけを比べる。
+- ActivePage をタブシートの PageControl の設定より前に設定しても働かない(§4 の 4 を加えた)。
+- Anchors は Parent・大きさの後に設定すれば、フォームを広げたときに期待どおり動く(右寄せの OkButton が 304 → 404、左右寄せの NameEdit が 280 → 380)。

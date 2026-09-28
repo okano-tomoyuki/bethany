@@ -1,0 +1,2 @@
+# 改行コードは LF に統一する(Prettier の既定と合わせる。core.autocrlf の設定によらず作業ツリーも LF になる)
+* text=auto eol=lf

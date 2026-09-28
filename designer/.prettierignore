@@ -1,0 +1,8 @@
+dist/
+coverage/
+pnpm-lock.yaml
+packages/core/src/catalog/catalog.json
+packages/codegen/src/__golden__/
+samples/*.hpp
+samples/*.cpp
+tools/catalog/
