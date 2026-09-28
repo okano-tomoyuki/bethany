@@ -1,0 +1,48 @@
+{
+  "formatVersion": 1,
+  "codegen": { "python": {} },
+  "form": {
+    "name": "InvisibleForm",
+    "class": "TForm",
+    "properties": {
+      "Width": 300,
+      "Height": 200
+    },
+    "controls": [
+      {
+        "name": "Top1",
+        "class": "TPanel",
+        "properties": {
+          "Left": 0,
+          "Top": 0,
+          "Width": 10,
+          "Height": 30,
+          "Visible": false,
+          "Align": "alTop"
+        }
+      },
+      {
+        "name": "Top2",
+        "class": "TPanel",
+        "properties": {
+          "Left": 0,
+          "Top": 0,
+          "Width": 10,
+          "Height": 20,
+          "Align": "alTop"
+        }
+      },
+      {
+        "name": "Client1",
+        "class": "TPanel",
+        "properties": {
+          "Left": 0,
+          "Top": 0,
+          "Width": 10,
+          "Height": 10,
+          "Align": "alClient"
+        }
+      }
+    ]
+  }
+}

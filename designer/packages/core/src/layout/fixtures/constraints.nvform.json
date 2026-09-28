@@ -1,0 +1,50 @@
+{
+  "formatVersion": 1,
+  "codegen": { "python": {} },
+  "form": {
+    "name": "ConstraintsForm",
+    "class": "TForm",
+    "properties": {
+      "Width": 300,
+      "Height": 200
+    },
+    "controls": [
+      {
+        "name": "Top1",
+        "class": "TPanel",
+        "properties": {
+          "Left": 0,
+          "Top": 0,
+          "Width": 10,
+          "Height": 10,
+          "Align": "alTop",
+          "Constraints": { "MinHeight": 40 }
+        }
+      },
+      {
+        "name": "Left1",
+        "class": "TPanel",
+        "properties": {
+          "Left": 0,
+          "Top": 0,
+          "Width": 10,
+          "Height": 10,
+          "Align": "alLeft",
+          "Constraints": { "MinWidth": 50, "MaxWidth": 30 }
+        }
+      },
+      {
+        "name": "Client1",
+        "class": "TPanel",
+        "properties": {
+          "Left": 0,
+          "Top": 0,
+          "Width": 10,
+          "Height": 10,
+          "Align": "alClient",
+          "Constraints": { "MaxWidth": 150, "MaxHeight": 100 }
+        }
+      }
+    ]
+  }
+}

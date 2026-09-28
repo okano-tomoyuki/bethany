@@ -1,0 +1,59 @@
+{
+  "insets": {
+    "TPanel": {
+      "origin": [
+        0,
+        0
+      ],
+      "left": 1,
+      "top": 1,
+      "right": 1,
+      "bottom": 1
+    },
+    "TGroupBox": {
+      "origin": [
+        2,
+        18
+      ],
+      "left": 2,
+      "top": 18,
+      "right": 2,
+      "bottom": 2
+    },
+    "TScrollBox": {
+      "origin": [
+        2,
+        2
+      ],
+      "left": 2,
+      "top": 2,
+      "right": 2,
+      "bottom": 2
+    },
+    "TTabControl": {
+      "origin": [
+        0,
+        0
+      ],
+      "left": 2,
+      "top": 23,
+      "right": 2,
+      "bottom": 2
+    },
+    "TPageControl": {
+      "origin": [
+        4,
+        24
+      ],
+      "left": 4,
+      "top": 24,
+      "right": 4,
+      "bottom": 4
+    }
+  },
+  "sizes": {
+    "TStatusBar": {
+      "height": 24
+    }
+  }
+}

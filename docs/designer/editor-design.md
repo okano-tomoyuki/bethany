@@ -99,53 +99,74 @@ C++Builder・Lazarus と同じにする。
 
 ## 4. 配置の計算(core/src/layout)
 
-ADR 0036 の決定 2〜4。
+ADR 0036 の決定 2〜4。実装は [engine.ts](../../designer/packages/core/src/layout/engine.ts)。規則は実物の LCL で記録した見本(§4.4)と照合して決めた。
 
 ### 4.1 入力と出力
 
-- 入力: コンテナ(フォーム・コントロール)の**クライアント領域の大きさ**と、子の Left・Top・Width・Height・Align・Anchors・
-  BorderSpacing・Constraints・Visible。
-- 出力: 子の Left・Top・Width・Height。Align が alNone で Anchors が既定(akLeft・akTop)のコントロールは、
-  Constraints による制限の他は変えない。
+- 入力: 変更前と変更後のドキュメント。コンテナ(フォーム・コントロール)の**クライアント領域の大きさ**(§4.3)と、
+  子の Left・Top・Width・Height・Align・Anchors・BorderSpacing・Constraints・Visible。Align・Anchors を書いていなければクラスの既定値
+  (TStatusBar は alBottom)。
+- 出力: 位置と大きさが変わったコントロールの Left・Top・Width・Height。
+- 編集コマンドの適用の後に毎回計算し直す(§3.1)。Anchors の追従には、変更前のドキュメントでのコンテナの大きさを使う
+  (新しく作ったコンテナの子は追従しない)。
 
-### 4.2 規則(LCL の `TWinControl.AlignControls` の移植)
+### 4.2 規則
 
-- Align の順: alTop → alBottom → alLeft → alRight → alClient。残りの領域から順に切り出す。
-- 同じ Align の兄弟の並び: DSL の配列の順とする。デザイナーは、並びと位置の順(alTop なら Top の昇順)が一致するように
-  書き出す(LCL は位置で並べ直すので、一致させておけば生成したコードでも同じ並びになる)。
-- BorderSpacing: `Around` と `Left`・`Top`・`Right`・`Bottom` の和を、Align で寄せるときの余白にする。
-- Constraints: `MinWidth`・`MaxWidth`・`MinHeight`・`MaxHeight` で大きさを制限する。
-- Anchors: 親のクライアント領域の大きさが変わったとき(フォームの大きさの変更・親の Align による変化)に、
-  akRight だけなら右との距離を保って移動し、akLeft と akRight なら幅を広げる(akTop・akBottom も同じ)。
-  どちらも無ければ中央の位置の比率を保つ。
-- 非表示(`Visible: false`)のコントロールは、Align の計算では場所を取らない(LCL と同じ)。キャンバスには薄く描く。
+- Align の順: alTop → alBottom → alLeft → alRight → alClient。残りの範囲から順に切り出す。
+- 同じ Align の兄弟の並び: **今の位置の順**(alTop は Top の昇順、alBottom は下端の降順、alLeft は Left の昇順、alRight は右端の降順。
+  同じ位置なら配列の順)。LCL も位置で並べ直す。このため、キャンバスで alTop のコントロールを上下にドラッグすると並びが変わる。
+- BorderSpacing: 各辺は `Around` + その辺(`Left` 等)。隣り合う 2 つのコントロールの間は、両者の値の**大きいほう**(和ではない)。
+  親の端との間は自分の値。
+- Constraints: Min で広げてから Max で狭める(両方あれば Max が優先)。alClient が Max で狭まったときは左上に寄せる。
+- Visible が false のコントロールは寄せない(場所を取らず、位置も変えない)。キャンバスには薄く描く。
+- Anchors(Align が alNone のもの): 親のクライアント領域の大きさが変わったとき、akRight だけなら右との距離を保って移動し、
+  akLeft と akRight なら幅を広げる(akTop・akBottom も同じ)。どちらも無ければ中央の位置の比率を保つ(四捨五入)。
+- TToolBar・TCoolBar の子は、バーが自分で並べるので計算しない(書いた位置のまま)。
+- TTabSheet は親の TPageControl のクライアント領域いっぱい(位置と大きさは DSL に書かない)。
+- 既定で下・右に寄せるクラス(TStatusBar)は、位置を指定せずに追加すると端に置く(既存の alBottom より外側になる。C++Builder と同じ)。
 
-実物と違う規則が見つかったら、記録(§4.4)で確かめてから直す。
+**LCL と違う点**: LCL は生成の途中で(Parent・Align を設定するたびに)寄せ直すので、書いた位置の順と寄せた結果の順が食い違う
+ドキュメント(同じ Top の alTop が 2 つある等)では、並びが違うことがある。また、Anchors の距離は Parent を設定した時点の親の大きさで
+決まる(dsl-spec.md §5)。デザイナーは計算した位置を書くので、デザイナーで作ったドキュメントでは食い違わない。
 
-### 4.3 クライアント領域の余白
+### 4.3 クライアント領域
 
-| クラス | 余白の決まり方 |
-|---|---|
-| TForm | 余白なし(Width・Height がクライアント領域。dsl-spec.md §10 Q9) |
-| TPanel | `BevelOuter`・`BevelInner`・`BevelWidth`・`BorderWidth` から計算する |
-| TGroupBox・TRadioGroup・TCheckGroup | 見出しの高さ(フォントに依存)と枠。記録した値 |
-| TTabSheet | TPageControl のタブの高さと枠を除いた大きさ(TTabSheet の Left・Top・Width・Height は DSL に書かず、親から計算する) |
-| TScrollBox | 枠(`BorderStyle`) |
-| その他(TToolBar・TCoolBar・TTabControl) | 記録した値 |
+子の座標の原点と、Align で寄せる範囲(外側からの余白)を、クラスごとに記録した値で決める([metrics.json](../../designer/packages/core/src/layout/metrics.json))。
 
-記録は `designer/tools/layout/record-insets.mts`(Python のバインディングで各クラスのコントロールに alClient の子を置き、
-子の配置から余白を求める)で行い、`core/src/layout/insets.json` にコミットする。
+| クラス | 子の座標の原点 | 寄せる範囲の余白(左・上・右・下) |
+|---|---|---|
+| TForm | クライアント領域の左上(Width・Height がクライアント領域。dsl-spec.md §10 Q9) | なし |
+| TPanel | 外側の左上 | 1・1・1・1 |
+| TGroupBox | クライアント領域の左上(2, 18) | 2・18・2・2(上は見出しの高さでフォントに依存) |
+| TScrollBox | クライアント領域の左上(2, 2) | 2・2・2・2 |
+| TTabControl | 外側の左上 | 2・23・2・2(タブが 1 行あるとき) |
+| TPageControl(→ TTabSheet) | クライアント領域の左上(4, 24) | 4・24・4・4 |
 
-### 4.4 照合
+- TPanel の余白は枠(BevelOuter)から決まるが、BevelOuter 等はまだカタログに無い(既定の bvRaised の値)。
+- TGroupBox の見出しの高さは、記録したフォント(Yu Gothic UI 9pt)以外ではずれる(Font.Size を 14 にすると上の余白は 28)。
+- TStatusBar は、生成しただけでは高さが 0 なので、フォームに置いて測った高さ(24)を追加したときの大きさにする。
 
-`designer/tools/layout/record.mts` で、配置の見本(`core/src/layout/fixtures/*.nvform.json`: Align の組み合わせ・
-BorderSpacing・Constraints・入れ子・Anchors の追従)を Python のバインディングで実物の LCL に表示し、表示した後の配置と、
-フォームの大きさを変えた後の配置を `*.lcl.json` に記録する。テストで core の計算結果と一致することを確かめる。
-記録は Windows で行う(codegen-design.md §7 と同じ環境)。
+### 4.4 記録と照合
 
-### 4.5 AutoSize の見積もり
+`pnpm layout:record`([tools/layout/record.mts](../../designer/tools/layout/record.mts))で、Windows で次を記録する。
+`pnpm layout:check` は、今の LCL の結果が記録と食い違っていないかを調べる。
 
-AutoSize のコントロール(dsl-spec.md §5)の大きさは、キャンバスで次のように見積もり、DSL にもその値を書く。
+- 配置の見本(`core/src/layout/fixtures/*.nvform.json`: Align の組み合わせと並び・BorderSpacing・Constraints・非表示・入れ子・
+  Anchors・各コンテナの余白)から Python のコードを生成し(verify-python と同じ)、py/no_vcl.py で表示した後の配置と、
+  フォームを 100×50 広げた後の配置を `*.lcl.json` に書く。
+- クライアント領域(§4.3)は、no_vcl にウィンドウのハンドルや座標の変換が無いため、Windows の API(ctypes の EnumChildWindows・
+  GetWindowRect)で、Caption で見分けた子のウィンドウの画面上の位置を測る。
+
+テスト([engine.lcl.test.ts](../../designer/packages/core/src/layout/engine.lcl.test.ts))では、見本ごとに次を確かめる。
+
+1. LCL が表示した配置を入力にして計算し直しても、何も変わらない。
+2. LCL が表示した配置から、フォームを広げた後の配置が LCL と一致する(Anchors・Align の追従)。
+3. 書いた位置から計算した配置が LCL と一致する(書いた位置の順が LCL と食い違う 2 つの見本を除く。§4.2 の「LCL と違う点」)。
+
+### 4.5 AutoSize の見積もり(未実装)
+
+AutoSize のコントロール(dsl-spec.md §5)の大きさは、キャンバスで次のように見積もり、DSL にもその値を書く予定。
+今は書いた大きさのまま描く。
 
 - TLabel・TStaticText: 文字列の幅と行の高さ(Webview で測る)。
 - TCheckBox・TRadioButton: 文字列の幅 + チェックの枠と間隔(記録した値)。
@@ -186,7 +207,8 @@ AutoSize のコントロール(dsl-spec.md §5)の大きさは、キャンバス
 | 右クリック | メニュー(削除・前面へ/背面へ・タブを追加・親を選択) |
 
 - 移動と大きさの変更は、8px の格子に合わせる(Alt を押している間は合わせない。格子の大きさは設定で変えられる)。
-- Align で寄せたコントロールは、寄せた方向と直交する向きには動かせない。ドラッグで同じ Align の兄弟の並びを変える。
+- Align で寄せたコントロールもドラッグできる。離した位置で同じ Align の兄弟を並べ直す(§4.2)。
+- フォームを選択すると、クライアント領域の右と下の端につまみが出て、ドラッグでフォームの大きさを変えられる(Anchors で追従する)。
 - ドラッグ中は、移動後の枠と、配置を計算し直した結果を一時的に表示する。離したときに `batch`(移動・親の変更・
   配置の計算し直し)を 1 回送る。
 

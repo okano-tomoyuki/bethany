@@ -363,3 +363,62 @@ describe('その他', () => {
     expect(JSON.stringify(doc)).toBe(before);
   });
 });
+
+describe('配置の計算し直し', () => {
+  const bounds = (doc: NvformDocument, name: string) => {
+    const p = node(doc, name).node.properties ?? {};
+    return [p.Left, p.Top, p.Width, p.Height];
+  };
+
+  it('フォームを広げると Anchors で追従する(verify-cpp の anchors と同じ値)', () => {
+    const doc = apply({
+      type: 'setProperties',
+      changes: [{ node: 'MainForm', path: ['Width'], value: 500 }],
+    });
+    expect(bounds(doc, 'OkButton')[0]).toBe(404);
+    expect(bounds(doc, 'NameEdit')[2]).toBe(380);
+    expect(bounds(doc, 'BottomPanel')[2]).toBe(500);
+    // TTabSheet の中の alClient も、TPageControl の広がりに合わせる
+    expect(bounds(doc, 'Memo1')).toEqual([0, 0, 455, 92]);
+  });
+
+  it('Align を設定すると寄せる', () => {
+    const doc = apply({
+      type: 'setProperties',
+      changes: [{ node: 'NameEdit', path: ['Align'], value: 'alTop' }],
+    });
+    expect(bounds(doc, 'NameEdit')).toEqual([0, 0, 400, 23]);
+  });
+
+  it('TStatusBar は追加しただけで下に寄せる(高さは親に置いて測った値)', () => {
+    const doc = apply({
+      type: 'addControl',
+      parent: 'MainForm',
+      className: 'TStatusBar',
+      name: 'StatusBar1',
+    });
+    expect(bounds(doc, 'StatusBar1')).toEqual([0, 276, 400, 24]);
+    // 既存の alBottom の BottomPanel は、その上に移る
+    expect(bounds(doc, 'BottomPanel')[1]).toBe(235);
+  });
+
+  it('alTop のコントロールの Top を変えると、並びが変わる', () => {
+    let doc = apply({
+      type: 'batch',
+      commands: [
+        { type: 'addControl', parent: 'MainForm', className: 'TPanel', name: 'Top1' },
+        { type: 'addControl', parent: 'MainForm', className: 'TPanel', name: 'Top2' },
+        { type: 'setProperties', changes: [{ node: 'Top1', path: ['Align'], value: 'alTop' }] },
+        { type: 'setProperties', changes: [{ node: 'Top2', path: ['Align'], value: 'alTop' }] },
+      ],
+    });
+    expect(bounds(doc, 'Top1')[1]).toBe(0);
+    expect(bounds(doc, 'Top2')[1]).toBe(50);
+    doc = apply(
+      { type: 'setProperties', changes: [{ node: 'Top1', path: ['Top'], value: 60 }] },
+      doc,
+    );
+    expect(bounds(doc, 'Top2')[1]).toBe(0);
+    expect(bounds(doc, 'Top1')[1]).toBe(50);
+  });
+});

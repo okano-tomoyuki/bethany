@@ -178,6 +178,20 @@ export function setBounds(
   dispatch(commands.length === 1 && commands[0] ? commands[0] : { type: 'batch', commands });
 }
 
+/** フォームの大きさ(クライアント領域)を変える。Anchors で追従するものは、コマンドの中で配置を計算し直す */
+export function setFormSize(width: number, height: number): void {
+  const document = currentDocument();
+  if (!document) return;
+  const name = document.form.name;
+  dispatch({
+    type: 'setProperties',
+    changes: [
+      { node: name, path: ['Width'], value: Math.max(1, Math.round(width)) },
+      { node: name, path: ['Height'], value: Math.max(1, Math.round(height)) },
+    ],
+  });
+}
+
 /** キーボードでの移動・大きさの変更(選択中のコントロール) */
 export function nudgeSelection(dx: number, dy: number, resize: boolean): void {
   const changes = selectedLocations().flatMap((location): BoundsChange[] => {

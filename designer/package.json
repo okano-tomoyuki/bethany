@@ -18,6 +18,8 @@
     "generate:schema": "pnpm --filter no-vcl-designer generate:schema",
     "catalog:extract": "python tools/catalog/extract.py",
     "catalog:check": "python tools/catalog/extract.py --check",
+    "layout:record": "node tools/layout/record.mts",
+    "layout:check": "node tools/layout/record.mts --check",
     "codegen:verify-cpp": "node tools/codegen/verify-cpp.mts",
     "codegen:verify-python": "node tools/codegen/verify-python.mts"
   },

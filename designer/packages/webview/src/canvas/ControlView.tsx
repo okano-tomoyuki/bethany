@@ -3,7 +3,7 @@
  * 位置は親のクライアント領域からの絶対配置。子を置けるコントロールは、クライアント領域(data-client)の中に子を描く。
  */
 import {
-  clientInsets,
+  clientMetrics,
   findClass,
   hasOwnBounds,
   type ControlNode,
@@ -78,7 +78,8 @@ function ControlView({
   const own = hasOwnBounds(node.class);
   const bounds = canvas.preview.get(node.name) ?? boundsOf(location);
   const accepts = findClass(node.class)?.acceptsControls ?? false;
-  const insets = clientInsets(node.class);
+  // 子の座標の原点(TPanel は外側の左上、TGroupBox 等はクライアント領域の左上。記録した値)
+  const { origin, insets } = clientMetrics(node.class);
 
   // TTabSheet は親の TPageControl で表示しているものだけを描く
   if (node.class === 'TTabSheet' && location.parent.class === 'TPageControl') {
@@ -104,8 +105,8 @@ function ControlView({
           className="ctl-client"
           data-client={node.name}
           style={{
-            left: insets.left,
-            top: insets.top,
+            left: origin.x,
+            top: origin.y,
             right: insets.right,
             bottom: insets.bottom,
           }}

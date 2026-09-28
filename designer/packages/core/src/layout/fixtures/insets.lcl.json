@@ -1,0 +1,32 @@
+{
+  "shown": {
+    "Panel1": [0, 0, 190, 150],
+    "PanelChild": [1, 1, 188, 148],
+    "GroupBox1": [200, 0, 190, 150],
+    "GroupBoxChild": [0, 0, 186, 130],
+    "ScrollBox1": [200, 160, 190, 150],
+    "ScrollBoxChild": [0, 0, 186, 146],
+    "TabControl1": [400, 160, 190, 150],
+    "TabControlChild": [2, 23, 186, 125],
+    "PageControl1": [0, 320, 190, 150],
+    "TabSheet1": [0, 0, 182, 122],
+    "TabSheetChild": [0, 0, 182, 122]
+  },
+  "resize": {
+    "width": 100,
+    "height": 50
+  },
+  "resized": {
+    "Panel1": [0, 0, 190, 150],
+    "PanelChild": [1, 1, 188, 148],
+    "GroupBox1": [200, 0, 190, 150],
+    "GroupBoxChild": [0, 0, 186, 130],
+    "ScrollBox1": [200, 160, 190, 150],
+    "ScrollBoxChild": [0, 0, 186, 146],
+    "TabControl1": [400, 160, 190, 150],
+    "TabControlChild": [2, 23, 186, 125],
+    "PageControl1": [0, 320, 190, 150],
+    "TabSheet1": [0, 0, 182, 122],
+    "TabSheetChild": [0, 0, 182, 122]
+  }
+}

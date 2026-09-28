@@ -39,6 +39,7 @@ import {
   setBounds,
   setDefaultHandler,
   setDesignPosition,
+  setFormSize,
   type BoundsChange,
 } from '../editing.ts';
 import { uiStore, useDocumentStore, useUiStore } from '../store/stores.ts';
@@ -57,6 +58,8 @@ const CLICK_SLOP = 3;
 
 type Handle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 const HANDLES: readonly Handle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+/** フォームは右と下の端だけで大きさを変える(左上はクライアント領域の原点) */
+const FORM_HANDLES: readonly Handle[] = ['e', 'se', 's'];
 
 type Drag =
   | {
@@ -66,8 +69,6 @@ type Drag =
       readonly start: Point;
       /** 移すコントロールの元の位置(親のクライアント領域)と、画面上の左上 */
       readonly origin: ReadonlyMap<string, { bounds: Bounds; screen: Point }>;
-      /** Align で寄せたものは動かさない */
-      readonly locked: boolean;
     }
   | {
       readonly kind: 'resize';
@@ -150,8 +151,10 @@ export function DesignCanvas() {
   const form = document.form;
   const formLocation: NodeLocation = { kind: 'form', node: form, path: ['form'] };
   const formLook = resolveLook(formLocation, rootInherited(settings));
-  const width = numberOr(propertyValue(formLocation, ['Width']), 320);
-  const height = numberOr(propertyValue(formLocation, ['Height']), 240);
+  // フォームの大きさの変更中は、仮の大きさで描く
+  const formPreview = preview.bounds.get(form.name);
+  const width = formPreview?.width ?? numberOr(propertyValue(formLocation, ['Width']), 320);
+  const height = formPreview?.height ?? numberOr(propertyValue(formLocation, ['Height']), 240);
   const menu = mainMenuOf(document);
   const outerWidth = width + FRAME * 2;
   const outerHeight = height + FRAME * 2 + TITLE_HEIGHT + (menu ? MENU_HEIGHT : 0);
@@ -229,7 +232,16 @@ export function DesignCanvas() {
     const handleOwner = handle?.closest<HTMLElement>('[data-frame]')?.dataset.frame;
     if (handle && handleOwner !== undefined) {
       const location = findNode(document, handleOwner);
-      if (location) {
+      if (location?.kind === 'form') {
+        drag.current = {
+          kind: 'resize',
+          name: handleOwner,
+          handle: handle.dataset.handle as Handle,
+          start,
+          origin: { left: 0, top: 0, width, height },
+        };
+        capture();
+      } else if (location) {
         drag.current = {
           kind: 'resize',
           name: handleOwner,
@@ -288,9 +300,6 @@ export function DesignCanvas() {
       parent: location.parent.name,
       start,
       origin,
-      locked: moving.some(
-        (l) => (l.node.properties?.Align ?? 'alNone') !== 'alNone' || isDefaultAligned(l),
-      ),
     };
     capture();
   };
@@ -318,7 +327,7 @@ export function DesignCanvas() {
     const moved = Math.hypot(e.clientX - d.start.x, e.clientY - d.start.y) >= CLICK_SLOP;
     switch (d.kind) {
       case 'move': {
-        if (!moved || d.locked) return;
+        if (!moved) return;
         const next = moveResult(d, e);
         setPreview({
           ...EMPTY_PREVIEW,
@@ -361,7 +370,7 @@ export function DesignCanvas() {
     const moved = Math.hypot(e.clientX - d.start.x, e.clientY - d.start.y) >= CLICK_SLOP;
     switch (d.kind) {
       case 'move': {
-        if (!moved || d.locked) return;
+        if (!moved) return;
         const next = moveResult(d, e);
         const changes: BoundsChange[] = [...next.bounds].map(([name, bounds]) => ({
           name,
@@ -371,6 +380,11 @@ export function DesignCanvas() {
         return;
       }
       case 'resize':
+        if (d.name === form.name) {
+          const r = resized(d, (e.clientX - d.start.x) / zoom, (e.clientY - d.start.y) / zoom, e);
+          setFormSize(r.width, r.height);
+          return;
+        }
         setBounds([
           {
             name: d.name,
@@ -590,6 +604,7 @@ export function DesignCanvas() {
                 document={document}
                 selection={selection}
                 preview={preview.bounds}
+                form={{ width, height }}
               />
               {(document.components ?? []).map((component, i) => {
                 const at = preview.icons.get(component.name) ?? {
@@ -632,10 +647,13 @@ function SelectionOverlay({
   document,
   selection,
   preview,
+  form,
 }: {
   readonly document: NvformDocument;
   readonly selection: readonly string[];
   readonly preview: ReadonlyMap<string, Bounds>;
+  /** フォームを選択しているときに、右と下の端につまみを出す */
+  readonly form: { readonly width: number; readonly height: number };
 }) {
   const [frames, setFrames] = useState<
     readonly { name: string; bounds: Bounds; handles: boolean }[]
@@ -672,8 +690,20 @@ function SelectionOverlay({
     );
   }, [document, selection, preview, zoom, shownPages]);
 
+  const formSelected = selection.includes(document.form.name);
   return (
     <div ref={ref} className="selection-layer">
+      {formSelected && (
+        <div
+          className="selection-frame form"
+          style={{ left: 0, top: 0, width: form.width, height: form.height }}
+          data-frame={document.form.name}
+        >
+          {FORM_HANDLES.map((h) => (
+            <span key={h} className={`handle handle-${h}`} data-handle={h} />
+          ))}
+        </div>
+      )}
       {frames.map(({ name, bounds, handles }) => (
         <div
           key={name}
@@ -721,13 +751,6 @@ function RectOverlay({
 /** つまみで大きさを変えられるか(位置と大きさを書くコントロール) */
 function canResize(location: NodeLocation): boolean {
   return location.kind === 'control' && hasOwnBounds(location.node.class);
-}
-
-/** Align の既定値が alNone でないクラス(TStatusBar・TToolBar 等)を、Align を書かずに使っている */
-function isDefaultAligned(location: NodeLocation): boolean {
-  return (
-    location.node.properties?.Align === undefined && propertyValue(location, ['Align']) !== 'alNone'
-  );
 }
 
 function sameParent(document: NvformDocument, a: string, b: string): boolean {

@@ -945,3 +945,8 @@ input[aria-invalid='true'] {
   font-size: 11px;
   border: 1px dashed #999;
 }
+
+/* フォームのつまみは、クライアント領域の端で切れないよう内側に描く */
+.selection-frame.form .handle {
+  margin: -6px 0 0 -6px;
+}

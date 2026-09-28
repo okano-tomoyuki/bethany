@@ -1,0 +1,139 @@
+{
+  "formatVersion": 1,
+  "codegen": { "python": {} },
+  "form": {
+    "name": "InsetsForm",
+    "class": "TForm",
+    "properties": {
+      "Width": 600,
+      "Height": 480
+    },
+    "controls": [
+      {
+        "name": "Panel1",
+        "class": "TPanel",
+        "properties": {
+          "Left": 0,
+          "Top": 0,
+          "Width": 190,
+          "Height": 150
+        },
+        "controls": [
+          {
+            "name": "PanelChild",
+            "class": "TPanel",
+            "properties": {
+              "Left": 0,
+              "Top": 0,
+              "Width": 10,
+              "Height": 10,
+              "Align": "alClient"
+            }
+          }
+        ]
+      },
+      {
+        "name": "GroupBox1",
+        "class": "TGroupBox",
+        "properties": {
+          "Left": 200,
+          "Top": 0,
+          "Width": 190,
+          "Height": 150
+        },
+        "controls": [
+          {
+            "name": "GroupBoxChild",
+            "class": "TPanel",
+            "properties": {
+              "Left": 0,
+              "Top": 0,
+              "Width": 10,
+              "Height": 10,
+              "Align": "alClient"
+            }
+          }
+        ]
+      },
+      {
+        "name": "ScrollBox1",
+        "class": "TScrollBox",
+        "properties": {
+          "Left": 200,
+          "Top": 160,
+          "Width": 190,
+          "Height": 150
+        },
+        "controls": [
+          {
+            "name": "ScrollBoxChild",
+            "class": "TPanel",
+            "properties": {
+              "Left": 0,
+              "Top": 0,
+              "Width": 10,
+              "Height": 10,
+              "Align": "alClient"
+            }
+          }
+        ]
+      },
+      {
+        "name": "TabControl1",
+        "class": "TTabControl",
+        "properties": {
+          "Left": 400,
+          "Top": 160,
+          "Width": 190,
+          "Height": 150,
+          "Tabs": ["Tab"]
+        },
+        "controls": [
+          {
+            "name": "TabControlChild",
+            "class": "TPanel",
+            "properties": {
+              "Left": 0,
+              "Top": 0,
+              "Width": 10,
+              "Height": 10,
+              "Align": "alClient"
+            }
+          }
+        ]
+      },
+      {
+        "name": "PageControl1",
+        "class": "TPageControl",
+        "properties": {
+          "Left": 0,
+          "Top": 320,
+          "Width": 190,
+          "Height": 150
+        },
+        "controls": [
+          {
+            "name": "TabSheet1",
+            "class": "TTabSheet",
+            "properties": {
+              "Caption": "Tab"
+            },
+            "controls": [
+              {
+                "name": "TabSheetChild",
+                "class": "TPanel",
+                "properties": {
+                  "Left": 0,
+                  "Top": 0,
+                  "Width": 10,
+                  "Height": 10,
+                  "Align": "alClient"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

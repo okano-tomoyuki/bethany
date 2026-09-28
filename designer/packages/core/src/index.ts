@@ -66,4 +66,11 @@ export type {
 } from './protocol.ts';
 export { formatValue, normalizeShortCut, parseInput, type InputResult } from './edit/inputs.ts';
 
-export { clientInsets, type Insets } from './layout/insets.ts';
+export {
+  clientInsets,
+  clientMetrics,
+  measuredSize,
+  type ClientMetrics,
+  type Insets,
+} from './layout/insets.ts';
+export { computeLayout, type Rect } from './layout/engine.ts';

@@ -1,0 +1,85 @@
+{
+  "formatVersion": 1,
+  "codegen": { "python": {} },
+  "form": {
+    "name": "NestedForm",
+    "class": "TForm",
+    "properties": {
+      "Width": 320,
+      "Height": 240
+    },
+    "controls": [
+      {
+        "name": "Side",
+        "class": "TPanel",
+        "properties": {
+          "Left": 0,
+          "Top": 0,
+          "Width": 100,
+          "Height": 10,
+          "Align": "alLeft"
+        },
+        "controls": [
+          {
+            "name": "SideTop",
+            "class": "TPanel",
+            "properties": {
+              "Left": 0,
+              "Top": 0,
+              "Width": 10,
+              "Height": 40,
+              "Align": "alTop"
+            }
+          },
+          {
+            "name": "SideClient",
+            "class": "TPanel",
+            "properties": {
+              "Left": 0,
+              "Top": 0,
+              "Width": 10,
+              "Height": 10,
+              "Align": "alClient"
+            }
+          }
+        ]
+      },
+      {
+        "name": "Box",
+        "class": "TGroupBox",
+        "properties": {
+          "Left": 0,
+          "Top": 0,
+          "Width": 10,
+          "Height": 10,
+          "Caption": "Box",
+          "Align": "alClient"
+        },
+        "controls": [
+          {
+            "name": "BoxBottom",
+            "class": "TPanel",
+            "properties": {
+              "Left": 0,
+              "Top": 0,
+              "Width": 10,
+              "Height": 30,
+              "Align": "alBottom"
+            }
+          },
+          {
+            "name": "BoxClient",
+            "class": "TPanel",
+            "properties": {
+              "Left": 0,
+              "Top": 0,
+              "Width": 10,
+              "Height": 10,
+              "Align": "alClient"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

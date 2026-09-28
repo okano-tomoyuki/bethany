@@ -2,6 +2,7 @@
  * 追加したときの初期値(docs/designer/editor-design.md §3.2。C++Builder・Lazarus と同じ)。
  */
 import { findClass } from '../catalog/catalog.ts';
+import { measuredSize } from '../layout/insets.ts';
 import type { Properties } from '../dsl/schema.ts';
 import type { Bounds } from './commands.ts';
 
@@ -22,6 +23,9 @@ const CAPTION_CLASSES: ReadonlySet<string> = new Set([
   'TToolButton',
 ]);
 
+/** 端に置くときの位置(配置の計算で親の端に寄せ直す) */
+const FAR_EDGE = 10000;
+
 /** 追加したときの既定の位置 */
 export const DEFAULT_POSITION = { left: 8, top: 8 } as const;
 
@@ -32,8 +36,13 @@ export function hasOwnBounds(className: string): boolean {
 
 /** 既定の大きさ(カタログの defaultSize。無ければ 50×50) */
 export function defaultSizeOf(className: string): { width: number; height: number } {
-  const size = findClass(className)?.defaultSize;
-  return size ? { width: size.width, height: size.height } : { width: 50, height: 50 };
+  const size = findClass(className)?.defaultSize ?? { width: 50, height: 50 };
+  // 生成しただけでは 0 のもの(TStatusBar の高さ)は、親に置いて測った大きさ
+  const measured = measuredSize(className);
+  return {
+    width: size.width > 0 ? size.width : (measured?.width ?? size.width),
+    height: size.height > 0 ? size.height : (measured?.height ?? size.height),
+  };
 }
 
 /** 追加したコントロールの初期のプロパティ */
@@ -45,8 +54,10 @@ export function initialProperties(
   const properties: Record<string, Properties[string]> = {};
   if (hasOwnBounds(className)) {
     const size = defaultSizeOf(className);
-    properties.Left = bounds?.left ?? DEFAULT_POSITION.left;
-    properties.Top = bounds?.top ?? DEFAULT_POSITION.top;
+    // 既定で下・右に寄せるクラス(TStatusBar)は、位置の指定が無ければ端に置く(寄せるときに既存のものより外側になる)
+    const align = findClass(className)?.properties.Align?.default;
+    properties.Left = bounds?.left ?? (align === 'alRight' ? FAR_EDGE : DEFAULT_POSITION.left);
+    properties.Top = bounds?.top ?? (align === 'alBottom' ? FAR_EDGE : DEFAULT_POSITION.top);
     properties.Width = bounds?.width ?? size.width;
     properties.Height = bounds?.height ?? size.height;
   }

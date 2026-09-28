@@ -10,6 +10,7 @@ import { childProblem } from '../dsl/constraints.ts';
 import type { CodegenSettings, NvformDocument, PropertyValue } from '../dsl/schema.ts';
 import { memberNameProblem } from '../identifier.ts';
 import { l10n } from '../l10n.ts';
+import { computeLayout } from '../layout/engine.ts';
 import { initialProperties } from './defaults.ts';
 import { collectHandlerNames, collectMemberNames } from './naming.ts';
 
@@ -141,14 +142,34 @@ const produceDocument = produce as (
 
 export function applyCommand(doc: NvformDocument, command: EditCommand): CommandResult {
   try {
-    const document = produceDocument(doc, (draft) => {
+    const edited = produceDocument(doc, (draft) => {
       apply(draft, command);
     });
-    return { ok: true, document };
+    return { ok: true, document: relayout(doc, edited) };
   } catch (e) {
     if (e instanceof CommandError) return { ok: false, error: e.message };
     throw e;
   }
+}
+
+/**
+ * 配置を計算し直し、Align で寄せたコントロールと Anchors で追従するコントロールの位置と大きさを書き換える
+ * (docs/designer/editor-design.md §3.1・§4)。Webview と拡張で同じ結果になるよう、コマンドの適用の中で行う。
+ */
+function relayout(before: NvformDocument, after: NvformDocument): NvformDocument {
+  const changes = computeLayout(before, after);
+  if (changes.size === 0) return after;
+  return produceDocument(after, (draft) => {
+    for (const found of walk(draft)) {
+      const r = found.kind === 'control' ? changes.get(found.node.name) : undefined;
+      if (!r) continue;
+      const properties = (found.node.properties ??= {});
+      properties.Left = r.left;
+      properties.Top = r.top;
+      properties.Width = r.width;
+      properties.Height = r.height;
+    }
+  });
 }
 
 function apply(doc: Doc, command: EditCommand): void {
