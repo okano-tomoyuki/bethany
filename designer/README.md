@@ -9,7 +9,7 @@ no_vcl 専用の GUI デザイナー(VS Code 拡張)。設計は [docs/designer/
 | `packages/codegen`   | コード生成(マーカー区間の更新、C++・Python のエミッタ)                                                           | 実装済み                                                                      |
 | `packages/cli`       | コード生成の CLI(`nvd generate <file.nvform.json> [--force] [--check]`)                                          | 実装済み                                                                      |
 | `packages/extension` | VS Code 拡張(カスタムエディタ・診断・新しいフォーム・コード生成のコマンド・JSON Schema)                          | 実装済み                                                                      |
-| `packages/webview`   | デザイナーの画面(パレット・キャンバス・構造の木・オブジェクトインスペクタ・コード生成の設定)                     | 最初の版([editor-design.md](../docs/designer/editor-design.md) §10 の 4 まで) |
+| `packages/webview`   | デザイナーの画面(パレット・キャンバス・構造の木・オブジェクトインスペクタ・コード生成の設定)                     | 最初の版([editor-design.md](../docs/designer/editor-design.md) §10 の 6 まで) |
 | `samples/`           | 見本の DSL(テストと、ビルドでの検証に使う)                                                                       |                                                                               |
 | `tools/codegen/`     | 生成した C++・Python を no_vcl でビルド・実行して確かめる                                                        | 実装済み                                                                      |
 | `tools/layout/`      | 配置の見本とクライアント領域を実物の LCL で記録する(`pnpm layout:record` / `layout:check`)                       | 実装済み                                                                      |
@@ -21,10 +21,11 @@ Node.js 24 と pnpm が要る。カタログの抽出と検証には Python が�
 ```sh
 cd designer
 pnpm install
-pnpm check                 # 型チェック・lint・書式・カタログの食い違い・テスト
+pnpm check                 # 型チェック・lint・書式・カタログの食い違い・訳の漏れ・テスト
 pnpm build                 # Webview・拡張・CLI をビルドする(拡張は packages/extension/dist)
 pnpm codegen:verify-cpp    # 見本から生成した C++ をビルド・実行して確かめる(C++ コンパイラ・CMake・Ninja と、ビルド済みの no_vcl.dll が要る)
 pnpm codegen:verify-python # 見本から生成した Python を実行して確かめる(Python 3 と、ビルド済みの no_vcl.dll が要る)
+pnpm l10n:merge <訳.json>  # 訳({"英語": "日本語"})を packages/extension/l10n/bundle.l10n.ja.json に加える
 node packages/cli/src/main.ts generate samples/MainForm.nvform.json   # ビルドせずに CLI を動かす
 ```
 

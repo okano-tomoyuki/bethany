@@ -20,10 +20,14 @@ const COMMENTS: Readonly<Record<CommentLocale, GeneratedComments>> = {
     createComponents: 'Creates the components and sets their properties (generated).',
     todo: 'TODO: implement',
   },
+  // l10n-ignore(生成するコードのコメントの定型文)
   ja: {
     classDoc: (sourceName) =>
+      // l10n-ignore
       `no_vcl のデザイナーで作成したフォーム(${sourceName})。マーカーで囲まれた区間は再生成で上書きされる。`,
+    // l10n-ignore
     createComponents: 'コンポーネントを生成し、プロパティを設定する(生成したコード)。',
+    // l10n-ignore
     todo: 'TODO: 実装',
   },
 };

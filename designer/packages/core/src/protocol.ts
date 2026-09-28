@@ -12,6 +12,8 @@ export interface CanvasSettings {
   readonly fontSize: number;
   /** 移動・大きさの変更で合わせる格子の間隔(ピクセル。0 なら合わせない) */
   readonly gridSize: number;
+  /** フォームに格子の点を描くか */
+  readonly showGrid: boolean;
 }
 
 export type ExtensionToWebviewMessage =

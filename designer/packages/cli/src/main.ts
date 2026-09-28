@@ -12,7 +12,8 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { generateAll } from '@no-vcl-designer/codegen';
-import { configureL10n, l10n, parseDocument } from '@no-vcl-designer/core';
+import { configureL10n, isJapanese, l10n, parseDocument } from '@no-vcl-designer/core';
+import ja from '../../extension/l10n/bundle.l10n.ja.json' with { type: 'json' };
 
 const USAGE = 'Usage: nvd generate <file.nvform.json> [--force] [--check] [--locale <ja|en>]';
 
@@ -37,8 +38,7 @@ function main(argv: readonly string[]): number {
     },
   });
   const language = detectLanguage(values.locale);
-  // 訳(bundle.l10n.ja.json)は拡張機能を作るときに用意する。それまではメッセージは英語
-  configureL10n(language, undefined);
+  configureL10n(language, isJapanese(language) ? ja : undefined);
   const [command, file] = positionals;
   if (command !== 'generate' || !file) {
     console.error(USAGE);

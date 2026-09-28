@@ -99,6 +99,7 @@ function canvasSettings(): CanvasSettings {
           : 'Segoe UI',
     fontSize: fontSize > 0 ? fontSize : 9,
     gridSize: Math.max(0, Math.floor(config.get<number>('gridSize', 8))),
+    showGrid: config.get<boolean>('showGrid', true),
   };
 }
 

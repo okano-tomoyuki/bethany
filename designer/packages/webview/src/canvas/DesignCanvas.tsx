@@ -45,7 +45,7 @@ import {
   type BoundsChange,
 } from '../editing.ts';
 import { uiStore, useDocumentStore, useUiStore } from '../store/stores.ts';
-import { ZOOM_LEVELS } from '../store/uiStore.ts';
+import { stepZoom, ZOOM_LEVELS } from '../store/uiStore.ts';
 import { Caption, CanvasContext, Children, type CanvasState } from './ControlView.tsx';
 import { fontStyle, resolveLook, rootInherited, text } from './look.ts';
 
@@ -55,6 +55,8 @@ const TITLE_HEIGHT = 31;
 const MENU_HEIGHT = 20;
 /** 非ビジュアルコンポーネントのアイコンの大きさ */
 const ICON_SIZE = 28;
+/** キャンバスの周りの余白(.canvas-scroll の padding) */
+const CANVAS_PADDING = 16;
 /** これより小さいポインタの移動はクリックとみなす */
 const CLICK_SLOP = 3;
 
@@ -119,6 +121,36 @@ export function DesignCanvas() {
   const [preview, setPreview] = useState<Preview>(EMPTY_PREVIEW);
   const drag = useRef<Drag | undefined>(undefined);
   const stage = useRef<HTMLDivElement>(null);
+  const scroller = useRef<HTMLDivElement>(null);
+  const hasDocument = document !== undefined;
+
+  // Ctrl+ホイールで倍率を変える。ポインタの下の点が動かないように、スクロールの位置を合わせる
+  // (React の onWheel は passive で既定の動作(VS Code の拡大)を止められないため、直接登録する)
+  useEffect(() => {
+    const element = scroller.current;
+    if (!element) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      const current = uiStore.getState().zoom;
+      const next = stepZoom(current, e.deltaY < 0 ? 1 : -1);
+      if (next === current) return;
+      const rect = element.getBoundingClientRect();
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+      const x = (element.scrollLeft + px - CANVAS_PADDING) / current;
+      const y = (element.scrollTop + py - CANVAS_PADDING) / current;
+      uiStore.getState().setZoom(next);
+      requestAnimationFrame(() => {
+        element.scrollLeft = x * next + CANVAS_PADDING - px;
+        element.scrollTop = y * next + CANVAS_PADDING - py;
+      });
+    };
+    element.addEventListener('wheel', onWheel, { passive: false });
+    return () => {
+      element.removeEventListener('wheel', onWheel);
+    };
+  }, [hasDocument]);
 
   // 選択したノードが隠れたタブの中にあれば、そのタブを表示する
   useEffect(() => {
@@ -579,7 +611,7 @@ export function DesignCanvas() {
           </select>
         </label>
       </div>
-      <div className="canvas-scroll">
+      <div ref={scroller} className="canvas-scroll">
         <div
           className="canvas-stage"
           style={{ width: outerWidth * zoom, height: outerHeight * zoom }}
@@ -629,6 +661,13 @@ export function DesignCanvas() {
               data-client={form.name}
               style={{ width, height, background: formLook.color, ...fontStyle(formLook.font) }}
             >
+              {settings.showGrid && settings.gridSize > 1 && (
+                // 格子の点(C++Builder と同じくフォームのクライアント領域だけに描く)
+                <div
+                  className="grid-dots"
+                  style={{ ['--grid' as string]: `${String(settings.gridSize)}px` }}
+                />
+              )}
               <CanvasContext.Provider value={canvasState}>
                 <Children parent={form} path={['form']} inherited={formLook} />
               </CanvasContext.Provider>

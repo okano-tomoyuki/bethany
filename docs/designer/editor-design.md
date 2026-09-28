@@ -189,7 +189,8 @@ AutoSize のコントロール(dsl-spec.md §5)の大きさは、キャンバス
   `design` が無いものは、左下から順に並べて表示する(書き込むのは移動したとき)。
 - TPageControl は `ActivePage` のタブの中身だけを描く。キャンバスでタブをクリックすると、そのタブを表示する
   (表示するタブは UI の状態で、DSL の `ActivePage` は変えない。変えるのはプロパティの欄から)。
-- 倍率(ズーム)は 50%〜200%。キャンバスの座標は 96dpi の論理ピクセル。
+- 倍率(ズーム)は 50%〜200%。キャンバスの上の欄か Ctrl+ホイール(ポインタの下の点を動かさない)で変え、Webview の状態に保存する
+  (隠して戻したとき・開き直したときに戻る)。キャンバスの座標は 96dpi の論理ピクセル。
 
 ### 5.2 操作
 
@@ -206,7 +207,8 @@ AutoSize のコントロール(dsl-spec.md §5)の大きさは、キャンバス
 | ダブルクリック | 既定のイベント(TForm は OnCreate、値を入力するもの(TEdit 等)は OnChange、TTimer は OnTimer、それ以外は OnClick。C++Builder と同じ。core の `defaultEventOf`)のハンドラ名を設定し、イベントのタブを開く(未設定なら名前 + イベント名から `On` を除いたもの) |
 | 右クリック | メニュー(削除・前面へ/背面へ・タブを追加・親を選択) |
 
-- 移動と大きさの変更は、8px の格子に合わせる(Alt を押している間は合わせない。格子の大きさは設定で変えられる)。
+- 移動と大きさの変更は、8px の格子に合わせる(Alt を押している間は合わせない。格子の大きさは設定 `noVclDesigner.canvas.gridSize`
+  で変えられる)。格子の点はフォームのクライアント領域に描く(設定 `noVclDesigner.canvas.showGrid` で消せる)。
 - Align で寄せたコントロールもドラッグできる。離した位置で同じ Align の兄弟を並べ直す(§4.2)。
 - フォームを選択すると、クライアント領域の右と下の端につまみが出て、ドラッグでフォームの大きさを変えられる(Anchors で追従する)。
 - ドラッグ中は、移動後の枠と、配置を計算し直した結果を一時的に表示する。離したときに `batch`(移動・親の変更・
@@ -283,7 +285,8 @@ tk-designer ADR 0010 と同じく、利用者の明示的な操作で生成す�
 - **JSON Schema**: Zod のスキーマから `schema/nvform.schema.json` を生成してコミットし(`--check` で食い違いを検査)、
   `jsonValidation` に登録する。
 - **l10n**: 拡張は `vscode.l10n`、Webview・core・codegen・CLI は `@vscode/l10n`。元の言語は英語、訳は日本語(`l10n/bundle.l10n.ja.json`)。
-  tk-designer の `tools/l10n`(訳の漏れの検査・統合)を複製する。
+  tk-designer の `tools/l10n`(訳の漏れの検査・統合)を複製した(`pnpm l10n:check` は `pnpm check` に含む)。CLI も同じ訳を使う。
+  パレットのカテゴリ名(Standard など)は C++Builder・Lazarus のタブ名と同じく訳さない。
 - **梱包**: vsce(`--no-dependencies`、バンドルした成果物だけ)。拡張の ID は `no-vcl-designer`、表示名は「no_vcl Designer」。
 
 ## 9. 未決の論点

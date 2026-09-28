@@ -7,6 +7,19 @@ export function postMessage(message: WebviewToExtensionMessage): void {
   vscode.postMessage(message);
 }
 
+/** Webview を隠して戻したとき・VS Code を再起動したときに復元する UI の状態 */
+export interface PersistedState {
+  readonly zoom?: number;
+}
+
+export function loadState(): PersistedState {
+  return (vscode.getState() as PersistedState | undefined) ?? {};
+}
+
+export function saveState(state: PersistedState): void {
+  vscode.setState(state);
+}
+
 export function onMessage(listener: (message: ExtensionToWebviewMessage) => void): () => void {
   const handler = (event: MessageEvent<ExtensionToWebviewMessage>) => {
     listener(event.data);

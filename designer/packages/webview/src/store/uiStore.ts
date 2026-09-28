@@ -12,6 +12,13 @@ export type InspectorTab = 'properties' | 'events';
 
 export const ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 
+/** 倍率を 1 段階上げる(step = 1)・下げる(step = -1)。端ではそのまま */
+export function stepZoom(zoom: number, step: 1 | -1): number {
+  const next =
+    step > 0 ? ZOOM_LEVELS.find((z) => z > zoom) : [...ZOOM_LEVELS].reverse().find((z) => z < zoom);
+  return next ?? zoom;
+}
+
 export interface UiState {
   readonly view: View;
   /**
@@ -50,7 +57,7 @@ export function createUiStore() {
     inspectorTab: 'properties',
     tool: undefined,
     zoom: 1,
-    settings: { fontFamily: 'Segoe UI', fontSize: 9, gridSize: 8 },
+    settings: { fontFamily: 'Segoe UI', fontSize: 9, gridSize: 8, showGrid: true },
     shownPages: {},
     contextMenu: undefined,
     setView(view) {

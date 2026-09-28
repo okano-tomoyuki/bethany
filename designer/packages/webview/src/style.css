@@ -505,6 +505,16 @@ input[aria-invalid='true'] {
   overflow: hidden;
 }
 
+/* 格子の点: 横線を縦線で切り抜いて、交点だけを残す(CSP で data: の画像を使えないため、グラデーションで描く) */
+.grid-dots {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.45) 1px, transparent 1px) 0 0 / var(--grid)
+    var(--grid);
+  mask: linear-gradient(to right, #000 1px, transparent 1px) 0 0 / var(--grid) var(--grid);
+}
+
 .ctl {
   position: absolute;
   box-sizing: border-box;

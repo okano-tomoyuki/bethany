@@ -7,5 +7,6 @@
   "customEditor.displayName": "no_vcl Designer",
   "config.canvas.fontFamily": "キャンバスで LCL の既定のフォントとして使う書体。空欄なら、VS Code の表示言語が日本語のときは Yu Gothic UI、それ以外は Segoe UI(Windows のメッセージのフォント)。",
   "config.canvas.fontSize": "`#noVclDesigner.canvas.fontFamily#` の大きさ(ポイント)。0 なら自動(9)。",
-  "config.canvas.gridSize": "キャンバスで移動・大きさの変更をするときに合わせる格子の間隔(ピクセル)。0 なら合わせない。"
+  "config.canvas.gridSize": "キャンバスで移動・大きさの変更をするときに合わせる格子の間隔(ピクセル)。0 なら合わせない。",
+  "config.canvas.showGrid": "フォームに `#noVclDesigner.canvas.gridSize#` の格子の点を描く。"
 }
