@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.0] - 2026-09-28
 
 - Forms are created at startup as in C++Builder: the startup code creates the main form first and then the other forms of the project
   (`autoCreate` of the project file; all forms by default). _Create at Startup_ / _Don't Create at Startup_ switch it per form
@@ -20,7 +20,7 @@
 - _Create New Form_ creates the form in the first workspace folder by default, and the folder can be changed from the name box.
   The default name is MainForm, or Form2, Form3, ... when MainForm already exists
 
-## [0.1.0] - Unreleased
+## [0.1.0] - 2026-09-28
 
 First preview release.
 
