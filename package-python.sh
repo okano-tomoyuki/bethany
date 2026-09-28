@@ -43,3 +43,6 @@ rm -f "$WHEEL"
 rm -rf "$STAGE"
 
 echo "Package OK: $WHEEL"
+# twine の進捗表示は、日本語の Windows のコンソール(cp932)で表示できない文字を出して止まるため、切って UTF-8 で出力する。
+echo "アップロード(~/.pypirc のトークンを使う。先に testpypi で確かめる):"
+echo "  PYTHONIOENCODING=utf-8 $VENV/Scripts/python.exe -m twine upload --disable-progress-bar -r testpypi $WHEEL"
