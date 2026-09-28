@@ -19,7 +19,7 @@
     Form1 = Application.CreateForm(TForm1)
     Application.Run()
 
-C++ との違い(詳しくは beth_core.py):
+C++ との違い(詳しくは beth/_core.py):
 - 参照渡しの引数(int& Key・bool& CanClose・TCloseAction& Action 等)・メソッドの出力引数は Ref(.value を読み書きする)。
 - Application->CreateForm(&Form1) は Form1 = Application.CreateForm(TForm1)。
 - 利用者が生成するもの(TStringList・TBitmap・TPicture 等)の delete は Free()(参照が無くなったときにも破棄される)。
@@ -29,12 +29,12 @@ C++ との違い(詳しくは beth_core.py):
 import ctypes
 import enum
 
-from beth_core import (BethError, Ref, TRect, TPoint, TObject, TPersistent, TComponent,
-                         ShortCut, TextToShortCut, ShortCutToText)
-from beth_core import (lib, _mixins, _register, _event_types, _ItemMixin, _Prop, _Indexed, _Event,
-                         _int, _float, _bool, _str, _char, _ptr, _rect_conv, _enum, _set, _comp, _existing, _item, _obj, _view,
-                         _str_key, _enc, _dec, _h, _b, _rect, _point, _to_enum, _to_comp, _to_existing, _to_item, _to_obj,
-                         _a_int, _a_bool, _a_rect, _a_enum, _a_comp, _a_item, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_enum)
+from ._core import (BethError, Ref, TRect, TPoint, TObject, TPersistent, TComponent,
+                   ShortCut, TextToShortCut, ShortCutToText)
+from ._core import (lib, _mixins, _register, _event_types, _ItemMixin, _Prop, _Indexed, _Event,
+                   _int, _float, _bool, _str, _char, _ptr, _rect_conv, _enum, _set, _comp, _existing, _item, _obj, _view,
+                   _str_key, _enc, _dec, _h, _b, _rect, _point, _to_enum, _to_comp, _to_existing, _to_item, _to_obj,
+                   _a_int, _a_bool, _a_rect, _a_enum, _a_comp, _a_item, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_enum)
 
 
 # ---------------- 列挙型 ----------------

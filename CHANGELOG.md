@@ -1,12 +1,24 @@
 # Changelog
 
-Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)の変更の記録。形式は [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に、
+Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケージ(`bethany-lcl`)の変更の記録。形式は [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/) に、
 バージョンは [Semantic Versioning](https://semver.org/lang/ja/) に従う(0.x の間は、マイナーバージョンが上がると互換が無い変更を含みうる)。
 デザイナー(VS Code 拡張)の変更は [designer/packages/extension/CHANGELOG.md](designer/packages/extension/CHANGELOG.md) に書く。
 
 ## [Unreleased]
 
-## [0.1.0] - 未公開
+## [0.1.1] - 2026-09-28
+
+C++ の部分に変更は無い。
+
+### 追加
+
+- Python のパッケージ `bethany-lcl`(PyPI。import の名前は `beth`)。`beth.dll` を同梱した Windows x64 の wheel([ADR 0039](docs/adr/0039-python-distribution.md))
+
+### 変更
+
+- Python のバインディングを `beth` パッケージにまとめた。内部のモジュールは `beth_core`・`beth_internal` から `beth._core`・`beth._internal` になった
+
+## [0.1.0] - 2026-09-28
 
 最初の公開版。Windows x64(MinGW-w64 の g++)を対象とする。
 
@@ -17,5 +29,6 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)の変更の記録。形
   `beth.dll` を exe の隣へ写す `beth_deploy()` を提供する
 - MinGW のランタイム(libgcc・libstdc++・winpthread)を exe に静的にリンクする(`BETH_STATIC_RUNTIME`、既定で ON)
 
-[Unreleased]: https://github.com/okano-tomoyuki/bethany/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/okano-tomoyuki/bethany/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/okano-tomoyuki/bethany/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/okano-tomoyuki/bethany/releases/tag/v0.1.0

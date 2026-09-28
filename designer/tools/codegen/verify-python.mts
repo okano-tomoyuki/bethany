@@ -1,5 +1,5 @@
 /**
- * 生成した Python のコードを、本リポジトリの Bethany の Python のバインディング(py/beth.py)で実行して確かめる
+ * 生成した Python のコードを、本リポジトリの Bethany の Python のバインディング(py/beth)で実行して確かめる
  * (docs/designer/codegen-design.md §7)。
  *
  *   node tools/codegen/verify-python.mts
@@ -10,7 +10,7 @@
  * ビルド済みの Bethany の DLL(リポジトリ直下の beth.dll / libbeth.so)。
  * バインディング(py/*.py)と DLL を作業フォルダ .cache/verify-python に写して実行する(py/ には何も書き込まない)。
  */
-import { copyFileSync, mkdirSync } from 'node:fs';
+import { copyFileSync, cpSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { walkNodes, type BfmDocument } from '../../packages/core/src/index.ts';
@@ -38,9 +38,12 @@ const result = generatePython(doc, SAMPLE_FILE, undefined);
 if (!result.ok) throw new Error(result.error);
 writeIfChanged(join(workDir, 'MainForm.py'), recordHandlerCalls(result.text));
 writeIfChanged(join(workDir, 'verify.py'), harness(doc));
-for (const file of ['beth.py', 'beth_core.py', 'beth_internal.py'])
-  copyFileSync(join(repoRoot, 'py', file), join(workDir, file));
-copyFileSync(join(repoRoot, dllName), join(workDir, dllName));
+// Python のパッケージ(py/beth)を写し、その中にリポジトリ直下の DLL を置く(パッケージは自身と同じフォルダの DLL を読み込む)
+cpSync(join(repoRoot, 'py', 'beth'), join(workDir, 'beth'), {
+  recursive: true,
+  filter: (src) => !src.endsWith('__pycache__'),
+});
+copyFileSync(join(repoRoot, dllName), join(workDir, 'beth', dllName));
 
 // ---- 実行 ---------------------------------------------------------------------
 

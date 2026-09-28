@@ -5,12 +5,12 @@
  *   node tools/layout/record.mts           見本ごとに <見本>.lcl.json を書く
  *   node tools/layout/record.mts --check   記録と今の LCL の結果が食い違っていないか調べる(書かない)
  *
- * 見本から Python のコードを生成し(verify-python と同じ)、py/beth.py で表示して、各コントロールの Left・Top・Width・Height を
+ * 見本から Python のコードを生成し(verify-python と同じ)、py/beth で表示して、各コントロールの Left・Top・Width・Height を
  * 読む。続けてフォームの Width・Height を広げ、Anchors で追従した後の配置も読む。
  *
  * 必要なもの: Python 3(環境変数 PYTHON で指定できる)と、ビルド済みの Bethany の DLL。記録は Windows で行う(ADR 0036)。
  */
-import { copyFileSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
+import { copyFileSync, cpSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { parseDocument, walkNodes, type BfmDocument } from '../../packages/core/src/index.ts';
@@ -28,9 +28,12 @@ const python = process.env.PYTHON ?? (isWindows ? 'python' : 'python3');
 const check = process.argv.includes('--check');
 
 mkdirSync(workDir, { recursive: true });
-for (const file of ['beth.py', 'beth_core.py', 'beth_internal.py'])
-  copyFileSync(join(repoRoot, 'py', file), join(workDir, file));
-copyFileSync(join(repoRoot, dllName), join(workDir, dllName));
+// Python のパッケージ(py/beth)を写し、その中にリポジトリ直下の DLL を置く(パッケージは自身と同じフォルダの DLL を読み込む)
+cpSync(join(repoRoot, 'py', 'beth'), join(workDir, 'beth'), {
+  recursive: true,
+  filter: (src) => !src.endsWith('__pycache__'),
+});
+copyFileSync(join(repoRoot, dllName), join(workDir, 'beth', dllName));
 
 let mismatches = 0;
 for (const file of readdirSync(fixturesDir)

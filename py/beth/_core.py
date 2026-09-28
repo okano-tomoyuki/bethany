@@ -1,4 +1,4 @@
-"""Bethany の公開 API(beth.py)の土台。beth.py は gen_api.py が beth.hpp から生成し、このモジュールの
+"""Bethany の公開 API(beth/__init__.py)の土台。__init__.py は gen_api.py が beth.hpp から生成し、このモジュールの
 クラス・デスクリプタを使う。利用者は beth を import し、このモジュールを直接使わない。
 
 C++ ラッパー(beth.hpp)との対応:
@@ -14,8 +14,8 @@ import atexit
 import ctypes
 import enum
 
-import beth_internal as _internal
-from beth_internal import BethError, lib
+from . import _internal
+from ._internal import BethError, lib
 
 __all__ = ["BethError", "Ref", "TRect", "TPoint", "TObject", "TPersistent", "TComponent"]
 
@@ -72,7 +72,7 @@ class TPoint:
 
 # ---------------- 変換 ----------------
 
-# beth.py が定義したクラス・列挙型(名前 → 型)。変換は型を名前で受け取り、使うときに引く
+# beth/__init__.py が定義したクラス・列挙型(名前 → 型)。変換は型を名前で受け取り、使うときに引く
 # (クラスの定義順に関係なく、後で定義されるクラスを型として使えるように)。
 _types = {}
 
@@ -358,7 +358,7 @@ def _a_ref_enum(name):
     return _a_ref(lambda raw: _to_enum(name, raw), int)
 
 
-# イベントの型(TKeyEvent 等)→ Sender 以外の引数の変換。beth.py が設定する。
+# イベントの型(TKeyEvent 等)→ Sender 以外の引数の変換。beth/__init__.py が設定する。
 _event_types = {}
 
 
@@ -388,7 +388,7 @@ class _Event:
             obj.__dict__[self.hooked] = True
 
     def _trampoline(self, sender, *raws):
-        # 例外は beth_internal が SetCallbackError で DLL へ知らせる(docs/adr/0031)。
+        # 例外は _internal が SetCallbackError で DLL へ知らせる(docs/adr/0031)。
         self_ = _components.get(sender)
         if self_ is None:
             return
@@ -573,7 +573,7 @@ class _ItemMixin:
         return obj
 
 
-# ---------------- 手書きのメンバ(beth.py の生成したクラスに混ぜる) ----------------
+# ---------------- 手書きのメンバ(beth/__init__.py の生成したクラスに混ぜる) ----------------
 # gen_api.py は、ここで定義したメンバを生成しない。
 
 

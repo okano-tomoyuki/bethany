@@ -152,7 +152,7 @@ ADR 0036 の決定 2〜4。実装は [engine.ts](../../designer/packages/core/sr
 `pnpm layout:check` は、今の LCL の結果が記録と食い違っていないかを調べる。
 
 - 配置の見本(`core/src/layout/fixtures/*.bfm.json`: Align の組み合わせと並び・BorderSpacing・Constraints・非表示・入れ子・
-  Anchors・各コンテナの余白)から Python のコードを生成し(verify-python と同じ)、py/beth.py で表示した後の配置と、
+  Anchors・各コンテナの余白)から Python のコードを生成し(verify-python と同じ)、py/beth で表示した後の配置と、
   フォームを 100×50 広げた後の配置を `*.lcl.json` に書く。
 - クライアント領域(§4.3)は、Bethany にウィンドウのハンドルや座標の変換が無いため、Windows の API(ctypes の EnumChildWindows・
   GetWindowRect)で、Caption で見分けた子のウィンドウの画面上の位置を測る。

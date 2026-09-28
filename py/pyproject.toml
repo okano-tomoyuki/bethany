@@ -1,0 +1,41 @@
+# PyPI の配布物(bethany-lcl)の設定(docs/adr/0039)。
+# このフォルダでは直接ビルドしない。package-python.sh が、このファイル・beth/・beth.dll・ライセンスを
+# dist/python/ に集めてから wheel を作る(ライセンスのファイルはリポジトリ直下にあるため)。
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bethany-lcl"
+# CMakeLists.txt の project(beth VERSION ...) と同じにする(package-python.sh が確かめる)。
+version = "0.1.1"
+description = "Python bindings for the Lazarus LCL with an API similar to C++Builder"
+readme = "README.md"
+requires-python = ">=3.8"
+# beth.dll は Free Pascal の RTL と LCL(静的リンクの例外付きの LGPL)を含む。THIRD-PARTY-NOTICES.md を参照。
+license = "MIT AND LicenseRef-LGPL-2.0-with-static-linking-exception"
+license-files = ["LICENSE", "THIRD-PARTY-NOTICES.md", "licenses/*"]
+authors = [{ name = "岡野智之" }]
+keywords = ["bethany", "lcl", "lazarus", "gui", "c++builder", "form"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Win32 (MS Windows)",
+    "Intended Audience :: Developers",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: User Interfaces",
+]
+
+[project.urls]
+Homepage = "https://github.com/okano-tomoyuki/bethany"
+Repository = "https://github.com/okano-tomoyuki/bethany"
+Issues = "https://github.com/okano-tomoyuki/bethany/issues"
+Changelog = "https://github.com/okano-tomoyuki/bethany/blob/master/CHANGELOG.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["beth"]
+# *.dll は .gitignore で除外されているため、明示して含める。
+artifacts = ["beth/beth.dll"]
+
+# wheel のタグを py3-none-win_amd64 にする(hatch_build.py)。
+[tool.hatch.build.targets.wheel.hooks.custom]

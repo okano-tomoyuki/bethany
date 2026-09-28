@@ -1,4 +1,4 @@
-"""internal/api.h と internal/funcs.h から Python の ctypes バインディング(beth_internal.py)を生成する。
+"""internal/api.h と internal/funcs.h から Python の ctypes バインディング(beth/_internal.py)を生成する。
 
 - 型の対応(obj_t → c_void_p 等)とコールバック型は internal/api.h の using から作る。
 - 関数の一覧は internal/funcs.h の BETH_FUNCS から作る。引数は「型 名前」なので型の部分だけを使う。
@@ -9,7 +9,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 API_HEADER = HERE.parent / "internal" / "api.h"
 FUNCS_HEADER = HERE.parent / "internal" / "funcs.h"
-OUTPUT_FILE = HERE / "beth_internal.py"
+OUTPUT_FILE = HERE / "beth" / "_internal.py"
 
 # internal/api.h の基本型 → ctypes の型
 BASE_TYPES = {
@@ -236,7 +236,7 @@ def main():
     OUTPUT_FILE.write_text(generate(callbacks, funcs), encoding="utf-8", newline="\n")
     print(f"生成完了: {OUTPUT_FILE}(コールバック型 {len(callbacks)}・関数 {len(funcs)})")
 
-    # 公開 API(beth.py)も続けて生成する
+    # 公開 API(beth/__init__.py)も続けて生成する
     import gen_api
     gen_api.main()
 

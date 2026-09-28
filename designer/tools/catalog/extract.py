@@ -6,7 +6,7 @@
     python extract.py --check    --no-runtime と同じ内容を作り、catalog.json と食い違っていればエラー(書き込まない)
 
 - 静的な抽出: py/gen_api.py の beth.hpp の解析を使い、クラス・プロパティ・イベント・列挙型・定数を取り出す。
-- 実測: py/beth.py(Python のバインディング)で、利用者が生成できる各クラスを生成して、プロパティの既定値を読む。
+- 実測: py/beth(Python のバインディング)で、利用者が生成できる各クラスを生成して、プロパティの既定値を読む。
   値は DSL の書き方(docs/designer/dsl-spec.md §5)で記録する。Windows(Win32)で実行したものを基準にする。
 - 補足: overlay.json(手書き)。デザイン時に設定できないプロパティ・パレットの分類・子を置けるか・親子の制約など。
 """

@@ -27,7 +27,7 @@ tk-designer は Tk を実際に動かしてオプションを抽出した(tk-des
 生成したカタログは [designer/packages/core/src/catalog/catalog.json](../../designer/packages/core/src/catalog/catalog.json) にコミットする。
 
 ```sh
-python designer/tools/catalog/extract.py              # 静的な抽出 + 実測 + 補足(py/beth.dll が要る)
+python designer/tools/catalog/extract.py              # 静的な抽出 + 実測 + 補足(py/beth/beth.dll が要る。build-windows.sh が写す)
 python designer/tools/catalog/extract.py --no-runtime # 実測せず、既定値は今のカタログから引き継ぐ
 python designer/tools/catalog/extract.py --check      # カタログが beth.hpp・overlay.json と食い違っていればエラー
 ```

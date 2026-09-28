@@ -16,6 +16,8 @@ cmake -S . -B build-linux -G Ninja
 cmake --build build-linux
 
 # テスト実行ファイルの隣には、CMake の beth_deploy が libbeth.so を写す。
+# Python のパッケージ(py/beth)は、自身と同じフォルダの libbeth.so を読み込む。
+cp libbeth.so py/beth/libbeth.so
 
 echo "Build OK: libbeth.so, build-linux/test/test_internal, build-linux/test/test_cpp"
 echo "実行時は LD_LIBRARY_PATH=. を指定するか、テスト実行ファイルと同じディレクトリから起動すること。"

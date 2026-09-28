@@ -85,7 +85,7 @@
   "Overwrite": "上書きする",
   "Palette": "パレット",
   "Properties": "プロパティ",
-  "Python (py/beth.py)": "Python(py/beth.py)",
+  "Python (beth)": "Python(beth)",
   "Python keywords cannot be used": "Python のキーワードは使えません",
   "Region \"{0}\" has no end marker": "区間 \"{0}\" に終わりのマーカーがありません",
   "Region \"{0}\" is duplicated": "区間 \"{0}\" が重複しています",

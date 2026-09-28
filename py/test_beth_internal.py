@@ -1,5 +1,5 @@
 import ctypes
-import beth_internal
+import beth._internal as beth_internal
 
 lib = beth_internal.lib
 

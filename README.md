@@ -22,7 +22,7 @@ project(app CXX)
 
 include(FetchContent)
 FetchContent_Declare(beth
-    URL https://github.com/okano-tomoyuki/bethany/releases/download/v0.1.0/bethany-0.1.0-win64.zip
+    URL https://github.com/okano-tomoyuki/bethany/releases/download/v0.1.1/bethany-0.1.1-win64.zip
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
 FetchContent_MakeAvailable(beth)
 
@@ -42,6 +42,19 @@ beth_deploy(app)   # beth.dll を app.exe の隣に写す
 | `BETH_STATIC_RUNTIME` | ON | MinGW のランタイム(libgcc・libstdc++・winpthread)を exe に静的にリンクする |
 | `BETH_EMBED_MANIFEST` | ON | exe に Common-Controls 6.0 の manifest を埋め込む(自前の manifest を持つ exe では OFF) |
 | `BETH_DLL` | ソースのフォルダの `beth.dll` | `beth_deploy()` が写す DLL |
+
+## Python で使う
+
+対象は Windows x64 と Python 3.8 以降。PyPI の [bethany-lcl](https://pypi.org/project/bethany-lcl/) を入れ、`beth` を import する
+(`beth.dll` は wheel に入っている)。書き方は [py/README.md](py/README.md) を参照。
+
+```sh
+pip install bethany-lcl
+```
+
+```python
+from beth import *
+```
 
 ## 名前
 

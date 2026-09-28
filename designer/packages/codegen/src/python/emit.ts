@@ -1,5 +1,5 @@
 /**
- * Python(py/beth.py)のエミッタ(docs/designer/codegen-design.md §3 の Python)。
+ * Python(py/beth)のエミッタ(docs/designer/codegen-design.md §3 の Python)。
  *
  * - 生成するクラス(TForm の派生)の __init__ の中に、区間 declarations(コンポーネントの型の注釈)。
  * - 区間 beth_CreateComponents(メソッド)。文の並びは C++ と同じ中間表現から作る。

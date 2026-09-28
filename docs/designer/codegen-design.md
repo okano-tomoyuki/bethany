@@ -231,7 +231,7 @@ class TMainForm(TForm):
         pass
 ```
 
-- 参照渡しの引数(`bool& CanClose`・`TCloseAction& Action` 等)は、py/beth.py の規則どおり `Ref` で渡される(`CanClose.value = False`)。
+- 参照渡しの引数(`bool& CanClose`・`TCloseAction& Action` 等)は、py/beth の規則どおり `Ref` で渡される(`CanClose.value = False`)。
 - フォームのグローバル変数は生成しない(`MainForm = Application.CreateForm(TMainForm)` と書く。dsl-spec.md §10 Q3)。
 - Python の値の書き方: 集合型は `{akTop, akLeft}`(空なら `set()`)、ビット集合は `|` でつなぐ(空なら `TFontStyles(0)` のように型の 0)、
   TColor の `"#RRGGBB"` は `0x00BBGGRR  # #RRGGBB`、参照は `self.名前`。
@@ -287,7 +287,7 @@ tk-designer の codegen-design.md の決定を、名前だけ変えて引き継�
 
 - **ゴールデンファイル**: DSL → 生成コードの入出力を、codegen のテストで比較する(tk-designer と同じ)。
 - **ビルドと実行**: 見本の DSL(`designer/samples/`)から生成した C++ を、本リポジトリの Bethany と一緒に CMake でビルドして実行し、次を確かめる。
-  Python も同じ内容を py/beth.py で実行して確かめる。
+  Python も同じ内容を py/beth で実行して確かめる。
   1. 表示後の各コントロールの位置と大きさが、DSL に書いた値(デザイナーが計算した配置)と一致すること(Align・Anchors・BorderSpacing を含む)。
   2. イベントが接続されていること(ボタンの Click・メニューの Click でハンドラが呼ばれる)。
   3. 参照(Menu・PopupMenu・Images)・入れ子のオブジェクト(Font 等)・TStrings が設定されていること。

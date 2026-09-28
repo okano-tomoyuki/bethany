@@ -22,5 +22,7 @@ cmake -S . -B build -G Ninja
 cmake --build build
 
 # テストの exe の隣には、CMake の beth_deploy が beth.dll を写す。
+# Python のパッケージ(py/beth)は、自身と同じフォルダの beth.dll を読み込む。
+cp beth.dll py/beth/beth.dll
 
 echo "Build OK: beth.dll, build/test/test_internal.exe, build/test/test_cpp.exe"

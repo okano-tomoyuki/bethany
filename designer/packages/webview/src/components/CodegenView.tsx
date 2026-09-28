@@ -130,7 +130,7 @@ export function CodegenView() {
               toggle('python', e.target.checked);
             }}
           />
-          {l10n.t('Python (py/beth.py)')}
+          {l10n.t('Python (beth)')}
         </label>
         {codegen.python && (
           <div className="codegen-fields">

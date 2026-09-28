@@ -1,7 +1,7 @@
 # デザイナー
 
 Bethany 専用の GUI デザイナー(VS Code 拡張)の設計ドキュメント。フォームの定義ファイル(`*.bfm.json`)から、
-Bethany の C++(beth.hpp)と Python(py/beth.py)のコードを生成する。
+Bethany の C++(beth.hpp)と Python(py/beth)のコードを生成する。
 
 本リポジトリ内に作る理由と、tk-designer から流用するもの・しないものは [ADR 0035](../adr/0035-designer-in-this-repository.md) を参照。
 実装は [designer/](../../designer/README.md) に置く。
