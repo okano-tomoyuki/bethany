@@ -17,7 +17,9 @@ import {
   propertyValue,
   walkNodes,
   type Bounds,
+  type ComponentNode,
   type ControlNode,
+  type MenuItemNode,
   type NodeLocation,
   type NvformDocument,
 } from '@no-vcl-designer/core';
@@ -159,6 +161,17 @@ export function DesignCanvas() {
   const outerWidth = width + FRAME * 2;
   const outerHeight = height + FRAME * 2 + TITLE_HEIGHT + (menu ? MENU_HEIGHT : 0);
   const selected = new Set(selection);
+  // メニュー項目(とメニュー)を選んでいれば、その項目までのドロップダウンを開く
+  const opened = openedMenu(document, selection[0]);
+  const iconAt = (index: number): Point => {
+    const component = document.components?.[index];
+    return (
+      (component && preview.icons.get(component.name)) ?? {
+        x: component?.design?.left ?? 8 + index * (ICON_SIZE + 8),
+        y: component?.design?.top ?? height - ICON_SIZE - 20,
+      }
+    );
+  };
 
   // ---- 座標 ----
 
@@ -525,6 +538,21 @@ export function DesignCanvas() {
     uiStore.getState().setInspectorTab('events');
   };
 
+  // 右クリック: 指したものが選択に無ければ選び直してから、メニューを開く
+  const onContextMenu = (e: ReactMouseEvent) => {
+    e.preventDefault();
+    const target = e.target as HTMLElement;
+    const name =
+      target.closest<HTMLElement>('[data-icon]')?.dataset.icon ??
+      target.closest<HTMLElement>('[data-menu-item]')?.dataset.menuItem ??
+      target.closest<HTMLElement>('[data-tab]')?.dataset.tab ??
+      target.closest<HTMLElement>('[data-frame]')?.dataset.frame ??
+      target.closest<HTMLElement>('[data-node]')?.dataset.node ??
+      form.name;
+    if (!uiStore.getState().selection.includes(name)) select([name]);
+    uiStore.getState().openContextMenu({ x: e.clientX, y: e.clientY });
+  };
+
   const rect = preview.rect;
 
   return (
@@ -568,6 +596,7 @@ export function DesignCanvas() {
               setPreview(EMPTY_PREVIEW);
             }}
             onDoubleClick={onDoubleClick}
+            onContextMenu={onContextMenu}
           >
             <div className={selected.has(form.name) ? 'form-title selected' : 'form-title'}>
               <span className="form-title-text">{text(formLocation, 'Caption')}</span>
@@ -588,6 +617,9 @@ export function DesignCanvas() {
                         typeof item.properties?.Caption === 'string' ? item.properties.Caption : ''
                       }
                     />
+                    {opened?.menu === menu && opened.open.has(item.name) && (
+                      <MenuList items={item.items ?? []} opened={opened.open} selected={selected} />
+                    )}
                   </span>
                 ))}
               </div>
@@ -607,10 +639,7 @@ export function DesignCanvas() {
                 form={{ width, height }}
               />
               {(document.components ?? []).map((component, i) => {
-                const at = preview.icons.get(component.name) ?? {
-                  x: component.design?.left ?? 8 + i * (ICON_SIZE + 8),
-                  y: component.design?.top ?? height - ICON_SIZE - 20,
-                };
+                const at = iconAt(i);
                 return (
                   <div
                     key={component.name}
@@ -627,6 +656,28 @@ export function DesignCanvas() {
                 );
               })}
             </div>
+            {opened && opened.menu !== menu && (
+              // TPopupMenu はアイコンの下に開く(クライアント領域で切れないよう、枠の上に描く)
+              <div
+                className="popup-anchor"
+                style={{
+                  left: iconAt(document.components?.indexOf(opened.menu) ?? 0).x,
+                  top:
+                    TITLE_HEIGHT +
+                    (menu ? MENU_HEIGHT : 0) +
+                    iconAt(document.components?.indexOf(opened.menu) ?? 0).y +
+                    ICON_SIZE +
+                    14,
+                  ...fontStyle(formLook.font),
+                }}
+              >
+                <MenuList
+                  items={opened.menu.items ?? []}
+                  opened={opened.open}
+                  selected={selected}
+                />
+              </div>
+            )}
             {rect && (
               <RectOverlay
                 stage={stage.current}
@@ -766,6 +817,85 @@ function parentMap(document: NvformDocument): Map<string, { name: string; class:
   for (const location of walkNodes(document))
     if (location.kind === 'control') map.set(location.node.name, location.parent);
   return map;
+}
+
+/** 開いて表示するメニュー: 選んだメニュー項目の祖先と、その項目自身(サブメニューを持つもの) */
+function openedMenu(
+  document: NvformDocument,
+  name: string | undefined,
+): { menu: ComponentNode; open: ReadonlySet<string> } | undefined {
+  const location = name === undefined ? undefined : findNode(document, name);
+  if (location?.kind === 'component' && location.node.class === 'TPopupMenu')
+    return { menu: location.node, open: new Set() };
+  if (location?.kind !== 'menuItem') return undefined;
+  const target = location.node.name;
+  const open = new Set<string>();
+  const walk = (items: readonly MenuItemNode[] | undefined): boolean => {
+    for (const item of items ?? []) {
+      if (item.name === target || walk(item.items)) {
+        if ((item.items ?? []).length > 0) open.add(item.name);
+        return true;
+      }
+    }
+    return false;
+  };
+  walk(location.menu.items);
+  return { menu: location.menu, open };
+}
+
+/** メニューのドロップダウン(開いた項目のサブメニューは右に出す) */
+function MenuList({
+  items,
+  opened,
+  selected,
+}: {
+  readonly items: readonly MenuItemNode[];
+  readonly opened: ReadonlySet<string>;
+  readonly selected: ReadonlySet<string>;
+}) {
+  return (
+    <div className="menu-dropdown">
+      {items.length === 0 && <div className="menu-row empty">{l10n.t('(no items)')}</div>}
+      {items.map((item) => {
+        const p = item.properties ?? {};
+        const caption = typeof p.Caption === 'string' ? p.Caption : '';
+        if (caption === '-')
+          return (
+            <div
+              key={item.name}
+              data-menu-item={item.name}
+              className={selected.has(item.name) ? 'menu-separator selected' : 'menu-separator'}
+            />
+          );
+        const children = item.items ?? [];
+        return (
+          <div
+            key={item.name}
+            data-menu-item={item.name}
+            className={[
+              'menu-row',
+              selected.has(item.name) ? 'selected' : '',
+              p.Enabled === false ? 'disabled' : '',
+            ].join(' ')}
+          >
+            <span className="menu-check">{p.Checked === true ? '✓' : ''}</span>
+            <span className="menu-caption">
+              <Caption value={caption} />
+            </span>
+            <span className="menu-shortcut">
+              {typeof p.ShortCut === 'string' ? p.ShortCut : ''}
+            </span>
+            <span className="menu-arrow">{children.length > 0 ? '›' : ''}</span>
+            {opened.has(item.name) && (
+              <div className="menu-cascade">
+                <MenuList items={children} opened={opened} selected={selected} />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function mainMenuOf(document: NvformDocument) {

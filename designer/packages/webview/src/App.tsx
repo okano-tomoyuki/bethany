@@ -1,6 +1,7 @@
 import { hasErrors, l10n } from '@no-vcl-designer/core';
 import { DesignCanvas } from './canvas/DesignCanvas.tsx';
 import { CodegenView } from './components/CodegenView.tsx';
+import { ContextMenu } from './components/ContextMenu.tsx';
 import { Inspector } from './components/inspector/Inspector.tsx';
 import { Palette } from './components/Palette.tsx';
 import { StatusPanel } from './components/StatusPanel.tsx';
@@ -59,6 +60,7 @@ export function App() {
       <DesignCanvas />
       <Inspector />
       <StatusPanel />
+      <ContextMenu />
     </main>
   );
 }

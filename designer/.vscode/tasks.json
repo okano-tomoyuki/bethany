@@ -4,7 +4,7 @@
     {
       // 拡張と Webview の変更を監視して自動でビルドする(F5 のデバッグ実行前に起動する)
       "label": "watch",
-      "dependsOn": ["watch:extension", "watch:webview"],
+      "dependsOn": ["playground", "watch:extension", "watch:webview"],
       "presentation": { "reveal": "never" },
       "group": { "kind": "build", "isDefault": true },
       "problemMatcher": []
@@ -56,6 +56,14 @@
       "presentation": { "group": "watch", "reveal": "never" }
     },
     {
+      // 開発用ウィンドウで開く見本の写し(.cache/playground)を、無ければ作る
+      "label": "playground",
+      "type": "shell",
+      "command": "node tools/dev/playground.mjs",
+      "problemMatcher": [],
+      "presentation": { "reveal": "silent" }
+    },
+    {
       "label": "build",
       "type": "shell",
       "command": "pnpm build",
@@ -71,7 +79,7 @@
         "--disable-extensions",
         "--extensionDevelopmentPath=${workspaceFolder}/packages/extension",
         "--inspect-brk-extensions=9339",
-        "${workspaceFolder}/samples"
+        "${workspaceFolder}/.cache/playground"
       ],
       "dependsOn": "watch",
       "problemMatcher": [],

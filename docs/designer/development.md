@@ -6,7 +6,9 @@
 
 `designer/` を VS Code のフォルダとして開き、実行とデバッグの **Run Extension**(F5)を使う。
 
-- 監視ビルド(タスク `watch`: 拡張は esbuild、Webview は Vite)が起動し、開発用ウィンドウで `designer/samples/` が開く。
+- 監視ビルド(タスク `watch`: 拡張は esbuild、Webview は Vite)が起動し、開発用ウィンドウで `designer/.cache/playground/` が開く。
+  これは見本(`samples/`)の写しで、無ければ作る(tools/dev/playground.mjs)。見本はテストと検証が読むので、開発用ウィンドウでの
+  編集が混ざらないようにしている。写しを見本に戻したいときは `.cache/playground` を消す。
 - ファイルを保存すると自動でビルドされる。
   - Webview の変更: デザイナーを開き直すと反映される。
   - 拡張の変更: デバッグツールバーの再起動(Ctrl+Shift+F5)で反映される。

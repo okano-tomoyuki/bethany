@@ -110,6 +110,15 @@ describe('追加', () => {
     );
   });
 
+  it('addComponent: 最初の TMainMenu はフォームのメニューにする', () => {
+    let doc = apply({ type: 'removeNodes', names: ['MainMenu1'] });
+    expect(doc.form.properties).not.toHaveProperty('Menu');
+    doc = apply({ type: 'addComponent', className: 'TMainMenu', name: 'MainMenu2' }, doc);
+    expect(doc.form.properties?.Menu).toBe('MainMenu2');
+    doc = apply({ type: 'addComponent', className: 'TMainMenu', name: 'MainMenu3' }, doc);
+    expect(doc.form.properties?.Menu).toBe('MainMenu2');
+  });
+
   it('addMenuItem: メニューと項目の下に追加する', () => {
     let doc = apply({
       type: 'addMenuItem',

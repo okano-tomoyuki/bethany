@@ -10,7 +10,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}/packages/extension",
         // 開発用ウィンドウでは他の拡張機能を読み込まない
         "--disable-extensions",
-        "${workspaceFolder}/samples"
+        "${workspaceFolder}/.cache/playground"
       ],
       // 拡張機能ホストのデバッグポートを固定する。js-debug の不具合を避けるため、この環境では
       // [::1]:9339 → 127.0.0.1:9339 のポート転送を設定している(../docs/designer/development.md)

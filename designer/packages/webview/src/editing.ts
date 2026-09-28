@@ -5,6 +5,7 @@
 import {
   collectMemberNames,
   defaultHandlerName,
+  defaultSizeOf,
   findClass,
   findNode,
   hasOwnBounds,
@@ -99,6 +100,29 @@ export function addFromPalette(className: string): void {
         ? first.parent.name
         : document.form.name;
   addControlAt(className, parent);
+}
+
+/** TPageControl にタブ(TTabSheet)を追加して選択する(TTabSheet はパレットに無い) */
+export function addTab(pageControl: string): void {
+  addControlAt('TTabSheet', pageControl);
+}
+
+/** TToolBar にボタン(TToolButton)を右端に追加して選択する(バーが並べるので、位置は既存のボタンの右) */
+export function addToolButton(toolBar: string): void {
+  const document = currentDocument();
+  const bar = document && findNode(document, toolBar);
+  if (bar?.kind !== 'control') return;
+  const size = defaultSizeOf('TToolButton');
+  const right = Math.max(
+    0,
+    ...(bar.node.controls ?? []).map((c) => {
+      const p = c.properties ?? {};
+      return (
+        (typeof p.Left === 'number' ? p.Left : 0) + (typeof p.Width === 'number' ? p.Width : 0)
+      );
+    }),
+  );
+  addControlAt('TToolButton', toolBar, { left: right, top: 0, ...size });
 }
 
 /** メニュー項目を追加して選択する。parent はメニューかメニュー項目 */

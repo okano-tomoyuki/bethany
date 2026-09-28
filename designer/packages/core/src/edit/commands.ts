@@ -43,6 +43,7 @@ export type EditCommand =
       /** 親の controls の中の位置。省略時は末尾 */
       readonly index?: number;
     }
+  /** TMainMenu は、フォームの Menu が未設定ならそこにも設定する */
   | {
       readonly type: 'addComponent';
       readonly className: string;
@@ -206,6 +207,9 @@ function apply(doc: Doc, command: EditCommand): void {
       if (command.design) node.design = { left: command.design.left, top: command.design.top };
       if (isSubclassOf(command.className, 'TMenu')) node.items = [];
       (doc.components ??= []).push(node);
+      // C++Builder と同じく、最初の TMainMenu はフォームのメニューにする
+      if (isSubclassOf(command.className, 'TMainMenu') && doc.form.properties?.Menu === undefined)
+        (doc.form.properties ??= {}).Menu = command.name;
       return;
     }
 

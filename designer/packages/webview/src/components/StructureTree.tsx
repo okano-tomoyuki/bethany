@@ -1,25 +1,19 @@
 /**
  * 構造の木(docs/designer/editor-design.md §5.3)。フォーム・コントロールの入れ子・非ビジュアルコンポーネント
- * (メニューなら項目の入れ子)を表示し、キャンバスと選択を共有する。メニュー項目の追加・並べ替えもここで行う。
+ * (メニューなら項目の入れ子)を表示し、キャンバスと選択を共有する。上のボタンと右クリックのメニューで、
+ * メニュー項目・タブ・ツールボタンの追加、並べ替え、削除を行う(actions.ts)。
  */
 import {
-  isSubclassOf,
   l10n,
   type ComponentNode,
   type ControlNode,
   type MenuItemNode,
-  type NodeLocation,
 } from '@no-vcl-designer/core';
 import type { MouseEvent } from 'react';
 import { useShallow } from 'zustand/shallow';
-import { addMenuItem, removeSelection, select } from '../editing.ts';
-import {
-  documentStore,
-  uiStore,
-  useDocumentStore,
-  useSelectedNodes,
-  useUiStore,
-} from '../store/stores.ts';
+import { select } from '../editing.ts';
+import { uiStore, useDocumentStore, useSelectedNodes, useUiStore } from '../store/stores.ts';
+import { actionsFor } from './actions.ts';
 
 export function StructureTree() {
   const document = useDocumentStore((s) => s.document);
@@ -34,12 +28,20 @@ export function StructureTree() {
     else select([name]);
   };
 
+  // 右クリック: 選択に無ければ選び直してから、メニューを開く
+  const onContextMenu = (name: string) => (e: MouseEvent) => {
+    e.preventDefault();
+    if (!uiStore.getState().selection.includes(name)) select([name]);
+    uiStore.getState().openContextMenu({ x: e.clientX, y: e.clientY });
+  };
+
   const label = (name: string, detail: string) => (
     <button
       type="button"
       className={selected.has(name) ? 'tree-label selected' : 'tree-label'}
       aria-selected={selected.has(name)}
       onClick={onClick(name)}
+      onContextMenu={onContextMenu(name)}
     >
       <span>{name}</span>
       <span className="tree-class">{detail}</span>
@@ -90,111 +92,25 @@ export function StructureTree() {
   );
 }
 
-/** 選択に応じた操作(メニュー項目の追加・並べ替え・削除) */
+/** 選択に応じた操作のうち、木の上にボタンで出すもの */
 function TreeToolbar() {
-  const [first, ...rest] = useSelectedNodes();
-  if (!first) return null;
-  const single = rest.length === 0;
-  const isMenu = first.kind === 'component' && isSubclassOf(first.node.class, 'TMenu');
-  const siblings = siblingsOf(first);
-  const index = siblings?.findIndex((n) => n.name === first.node.name) ?? -1;
-
+  const actions = actionsFor(useSelectedNodes()).filter((a) => a.toolbar);
+  if (actions.length === 0) return null;
   return (
     <div className="toolbar">
-      {single && (isMenu || first.kind === 'menuItem') && (
-        <>
-          <button
-            type="button"
-            onClick={() => {
-              if (isMenu) addMenuItem(first.node.name, l10n.t('New Item'));
-              else if (first.kind === 'menuItem')
-                addMenuItem(
-                  first.parentItem?.name ?? first.menu.name,
-                  l10n.t('New Item'),
-                  index + 1,
-                );
-            }}
-          >
-            {l10n.t('Add Item')}
-          </button>
-          {first.kind === 'menuItem' && (
-            <button
-              type="button"
-              onClick={() => {
-                addMenuItem(first.node.name, l10n.t('New Item'));
-              }}
-            >
-              {l10n.t('Add Submenu Item')}
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              if (isMenu) addMenuItem(first.node.name, '-');
-              else if (first.kind === 'menuItem')
-                addMenuItem(first.parentItem?.name ?? first.menu.name, '-', index + 1);
-            }}
-          >
-            {l10n.t('Add Separator')}
-          </button>
-        </>
-      )}
-      {single && siblings && (
-        <>
-          <button
-            type="button"
-            disabled={index <= 0}
-            title={l10n.t('Move Up')}
-            onClick={() => {
-              reorder(first, index - 1);
-            }}
-          >
-            ↑
-          </button>
-          <button
-            type="button"
-            disabled={index < 0 || index >= siblings.length - 1}
-            title={l10n.t('Move Down')}
-            onClick={() => {
-              reorder(first, index + 1);
-            }}
-          >
-            ↓
-          </button>
-        </>
-      )}
-      {first.kind !== 'form' && (
-        <button type="button" onClick={removeSelection}>
-          {l10n.t('Delete')}
+      {actions.map((action) => (
+        <button
+          key={action.id}
+          type="button"
+          disabled={action.disabled}
+          title={action.short !== undefined ? action.label : undefined}
+          onClick={action.run}
+        >
+          {action.short ?? action.label}
         </button>
-      )}
+      ))}
     </div>
   );
-}
-
-/** 同じ親の中での並び(フォーム・非ビジュアルコンポーネントは並べ替えない) */
-function siblingsOf(location: NodeLocation): readonly { name: string }[] | undefined {
-  if (location.kind === 'control') return location.parent.controls;
-  if (location.kind === 'menuItem') return (location.parentItem ?? location.menu).items;
-  return undefined;
-}
-
-function reorder(location: NodeLocation, index: number): void {
-  const store = documentStore.getState();
-  if (location.kind === 'control')
-    store.dispatch({
-      type: 'moveControls',
-      names: [location.node.name],
-      parent: location.parent.name,
-      index,
-    });
-  else if (location.kind === 'menuItem')
-    store.dispatch({
-      type: 'moveMenuItem',
-      name: location.node.name,
-      parent: (location.parentItem ?? location.menu).name,
-      index,
-    });
 }
 
 function captionOf(item: MenuItemNode): string {

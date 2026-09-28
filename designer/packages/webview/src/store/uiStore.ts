@@ -26,6 +26,8 @@ export interface UiState {
   readonly settings: CanvasSettings;
   /** キャンバスで表示している TPageControl のタブ(TPageControl の name → TTabSheet の name) */
   readonly shownPages: Readonly<Record<string, string>>;
+  /** 右クリックのメニューを開いている位置(画面の座標) */
+  readonly contextMenu: { readonly x: number; readonly y: number } | undefined;
 }
 
 export interface UiActions {
@@ -36,6 +38,7 @@ export interface UiActions {
   readonly setZoom: (zoom: number) => void;
   readonly receiveSettings: (settings: CanvasSettings) => void;
   readonly showPage: (pageControl: string, sheet: string) => void;
+  readonly openContextMenu: (at: { x: number; y: number } | undefined) => void;
 }
 
 export type UiStore = ReturnType<typeof createUiStore>;
@@ -49,6 +52,7 @@ export function createUiStore() {
     zoom: 1,
     settings: { fontFamily: 'Segoe UI', fontSize: 9, gridSize: 8 },
     shownPages: {},
+    contextMenu: undefined,
     setView(view) {
       set({ view });
     },
@@ -69,6 +73,9 @@ export function createUiStore() {
     },
     showPage(pageControl, sheet) {
       set({ shownPages: { ...get().shownPages, [pageControl]: sheet } });
+    },
+    openContextMenu(at) {
+      set({ contextMenu: at });
     },
   }));
 }
