@@ -16,54 +16,115 @@ const EXTENSION = '.bfm.json';
  * @param target エクスプローラーのコンテキストメニューから呼ばれた場合の、選ばれたフォルダまたはファイル
  */
 export async function newForm(target: vscode.Uri | undefined): Promise<void> {
-  const folder = await targetFolder(target);
+  const folder = await initialFolder(target);
   if (!folder) return;
 
-  const name = await vscode.window.showInputBox({
-    title: vscode.l10n.t('New Form: Name'),
-    prompt: vscode.l10n.t(
-      'Creates <name>{0} in {1}. The generated class is T<name> (e.g. MainForm → TMainForm)',
-      EXTENSION,
-      vscode.workspace.asRelativePath(folder),
-    ),
-    value: 'MainForm',
-    validateInput: async (value) => {
-      const trimmed = value.trim();
-      const problem = formNameProblem(trimmed);
-      if (problem) return problem;
-      return (await exists(fileUri(folder, trimmed)))
-        ? vscode.l10n.t('A file with the same name already exists')
-        : undefined;
-    },
-  });
-  if (name === undefined) return;
-  const formName = name.trim();
-  const uri = fileUri(folder, formName);
+  const answer = await askName(folder, await defaultName(folder));
+  if (!answer) return;
+  const uri = fileUri(answer.folder, answer.name);
 
   // 生成するコードのコメントの言語は、作成した人の表示言語を初期値にする(tk-designer ADR 0014)
   const commentLocale = isJapanese(vscode.env.language) ? 'ja' : 'en';
-  const text = serializeDocument(createDocument(formName, commentLocale));
+  const text = serializeDocument(createDocument(answer.name, commentLocale));
   await vscode.workspace.fs.writeFile(uri, new TextEncoder().encode(text));
   await vscode.commands.executeCommand('vscode.openWith', uri, DesignerEditorProvider.viewType);
 }
 
-/** 作成先のフォルダ。エクスプローラーで選ばれたものを優先し、なければワークスペースのフォルダを使う */
-async function targetFolder(target: vscode.Uri | undefined): Promise<vscode.Uri | undefined> {
+/**
+ * 作成先のフォルダの初期値。エクスプローラーで選ばれたものを優先し、なければワークスペースの先頭のフォルダ
+ * (名前の入力欄のボタンで変えられる)。フォルダを開いていなければ、ダイアログで選んでもらう。
+ */
+async function initialFolder(target: vscode.Uri | undefined): Promise<vscode.Uri | undefined> {
   if (target) {
     const stat = await vscode.workspace.fs.stat(target);
     return stat.type & vscode.FileType.Directory ? target : vscode.Uri.joinPath(target, '..');
   }
-  const folders = vscode.workspace.workspaceFolders ?? [];
-  if (folders.length === 1) return folders[0]?.uri;
-  if (folders.length > 1) return (await vscode.window.showWorkspaceFolderPick())?.uri;
+  return vscode.workspace.workspaceFolders?.[0]?.uri ?? (await pickFolder(undefined));
+}
 
-  // フォルダを開いていなければ、保存先を選んでもらう
+async function pickFolder(defaultUri: vscode.Uri | undefined): Promise<vscode.Uri | undefined> {
   const picked = await vscode.window.showOpenDialog({
     title: vscode.l10n.t('Folder for the New Form'),
+    defaultUri,
     canSelectFiles: false,
     canSelectFolders: true,
   });
   return picked?.[0];
+}
+
+/** 名前の初期値。MainForm が既にあれば、C++Builder と同じく Form2・Form3…から空いているもの */
+async function defaultName(folder: vscode.Uri): Promise<string> {
+  if (!(await exists(fileUri(folder, 'MainForm')))) return 'MainForm';
+  for (let n = 2; ; n++) {
+    const name = `Form${String(n)}`;
+    if (!(await exists(fileUri(folder, name)))) return name;
+  }
+}
+
+/** フォームの名前を入力してもらう。入力欄のボタンで作成先のフォルダを変えられる */
+function askName(
+  initial: vscode.Uri,
+  value: string,
+): Promise<{ folder: vscode.Uri; name: string } | undefined> {
+  let folder = initial;
+  const input = vscode.window.createInputBox();
+  input.title = vscode.l10n.t('New Form: Name');
+  input.value = value;
+  // フォルダを選ぶダイアログを開いている間も、入力欄を閉じない
+  input.ignoreFocusOut = true;
+  const chooseFolder: vscode.QuickInputButton = {
+    iconPath: new vscode.ThemeIcon('folder-opened'),
+    tooltip: vscode.l10n.t('Choose Another Folder'),
+  };
+  input.buttons = [chooseFolder];
+
+  const updatePrompt = (): void => {
+    input.prompt = vscode.l10n.t(
+      'Creates <name>{0} in {1}. The generated class is T<name> (e.g. MainForm → TMainForm)',
+      EXTENSION,
+      vscode.workspace.asRelativePath(folder),
+    );
+  };
+  const problem = async (name: string): Promise<string | undefined> =>
+    formNameProblem(name) ??
+    ((await exists(fileUri(folder, name)))
+      ? vscode.l10n.t('A file with the same name already exists')
+      : undefined);
+  const validate = async (): Promise<void> => {
+    const name = input.value.trim();
+    const message = await problem(name);
+    // 確かめている間に入力が変わっていれば、古い結果は捨てる
+    if (input.value.trim() === name) input.validationMessage = message;
+  };
+  updatePrompt();
+  void validate();
+
+  return new Promise((resolve) => {
+    input.onDidChangeValue(() => void validate());
+    input.onDidTriggerButton(async (button) => {
+      if (button !== chooseFolder) return;
+      const picked = await pickFolder(folder);
+      if (!picked) return;
+      folder = picked;
+      updatePrompt();
+      await validate();
+    });
+    input.onDidAccept(async () => {
+      const name = input.value.trim();
+      const message = await problem(name);
+      if (message) {
+        input.validationMessage = message;
+        return;
+      }
+      resolve({ folder, name });
+      input.hide();
+    });
+    input.onDidHide(() => {
+      resolve(undefined);
+      input.dispose();
+    });
+    input.show();
+  });
 }
 
 function fileUri(folder: vscode.Uri, baseName: string): vscode.Uri {

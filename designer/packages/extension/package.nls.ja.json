@@ -8,5 +8,9 @@
   "config.canvas.fontFamily": "キャンバスで LCL の既定のフォントとして使う書体。空欄なら、VS Code の表示言語が日本語のときは Yu Gothic UI、それ以外は Segoe UI(Windows のメッセージのフォント)。",
   "config.canvas.fontSize": "`#bethanyDesigner.canvas.fontFamily#` の大きさ(ポイント)。0 なら自動(9)。",
   "config.canvas.gridSize": "キャンバスで移動・大きさの変更をするときに合わせる格子の間隔(ピクセル)。0 なら合わせない。",
-  "config.canvas.showGrid": "フォームに `#bethanyDesigner.canvas.gridSize#` の格子の点を描く。"
+  "config.canvas.showGrid": "フォームに `#bethanyDesigner.canvas.gridSize#` の格子の点を描く。",
+  "viewContainer.title": "Bethany Designer",
+  "view.forms.name": "フォーム",
+  "command.refreshForms.title": "フォームの一覧を更新",
+  "view.forms.welcome": "このワークスペースには、まだフォーム(*.bfm.json)がありません。\n[新しいフォームを作成](command:bethanyDesigner.newForm)\nフォームはキャンバスで設計し、「コードを生成」で C++ か Python のコードを作ります。"
 }

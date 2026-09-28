@@ -16,12 +16,14 @@ The form is stored in a JSON file (`*.bfm.json`) that you can also edit as text.
   menu items and event handler names.
 - **Code generation**: the _Generate Code_ command writes a form class (`class TMainForm : public TForm`) to your source files.
   Only the regions between the designer's markers are replaced, so your own code, including event handlers, is kept.
+- **Forms view**: the Bethany Designer icon in the Activity Bar lists the forms in your workspace. Open a form with a click, create one with the **+** button, or generate code from the list.
 - **Validation**: problems in `*.bfm.json` are shown in the Problems panel, and a JSON Schema is provided for text editing.
 - English and Japanese.
 
 ## Getting started
 
-1. Right-click a folder in the Explorer and choose **Create New Form** (or use _File > New File..._).
+1. Open the Bethany Designer view from the Activity Bar and choose **Create New Form**
+   (or right-click a folder in the Explorer, or use _File > New File..._).
 2. Design the form, then run **Generate Code** from the editor title bar.
 3. Build the generated code with Bethany. For C++, see the C++ section of the
    [Bethany README](https://github.com/okano-tomoyuki/bethany#readme).

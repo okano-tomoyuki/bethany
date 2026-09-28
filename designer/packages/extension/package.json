@@ -52,18 +52,50 @@
         "priority": "default"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "bethanyDesigner",
+          "title": "%viewContainer.title%",
+          "icon": "images/activitybar.svg"
+        }
+      ]
+    },
+    "views": {
+      "bethanyDesigner": [
+        {
+          "id": "bethanyDesigner.forms",
+          "name": "%view.forms.name%",
+          "icon": "images/activitybar.svg",
+          "contextualTitle": "%viewContainer.title%"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "bethanyDesigner.forms",
+        "contents": "%view.forms.welcome%"
+      }
+    ],
     "commands": [
       {
         "command": "bethanyDesigner.newForm",
         "title": "%command.newForm.title%",
         "shortTitle": "%command.newForm.shortTitle%",
-        "category": "Bethany Designer"
+        "category": "Bethany Designer",
+        "icon": "$(add)"
       },
       {
         "command": "bethanyDesigner.generateCode",
         "title": "%command.generateCode.title%",
         "category": "Bethany Designer",
         "icon": "$(code)"
+      },
+      {
+        "command": "bethanyDesigner.refreshForms",
+        "title": "%command.refreshForms.title%",
+        "category": "Bethany Designer",
+        "icon": "$(refresh)"
       }
     ],
     "menus": {
@@ -85,10 +117,38 @@
           "group": "navigation"
         }
       ],
+      "view/title": [
+        {
+          "command": "bethanyDesigner.newForm",
+          "when": "view == bethanyDesigner.forms",
+          "group": "navigation@1"
+        },
+        {
+          "command": "bethanyDesigner.refreshForms",
+          "when": "view == bethanyDesigner.forms",
+          "group": "navigation@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "bethanyDesigner.generateCode",
+          "when": "view == bethanyDesigner.forms && viewItem == bethanyForm",
+          "group": "inline"
+        },
+        {
+          "command": "bethanyDesigner.generateCode",
+          "when": "view == bethanyDesigner.forms && viewItem == bethanyForm",
+          "group": "navigation@1"
+        }
+      ],
       "commandPalette": [
         {
           "command": "bethanyDesigner.generateCode",
           "when": "resourceFilename =~ /\\.bfm\\.json$/"
+        },
+        {
+          "command": "bethanyDesigner.refreshForms",
+          "when": "view.bethanyDesigner.forms.visible"
         }
       ]
     },

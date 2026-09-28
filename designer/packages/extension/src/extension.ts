@@ -2,6 +2,7 @@ import { configureL10n } from '@bethany-designer/core';
 import * as vscode from 'vscode';
 import { DesignerEditorProvider } from './designerEditorProvider.ts';
 import { registerDiagnostics } from './diagnostics.ts';
+import { registerFormsView } from './formsView.ts';
 import { generateCode } from './generateCode.ts';
 import { newForm } from './newForm.ts';
 
@@ -11,6 +12,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     DesignerEditorProvider.register(context),
     registerDiagnostics(),
+    registerFormsView(),
     vscode.commands.registerCommand('bethanyDesigner.newForm', (target?: vscode.Uri) =>
       newForm(target),
     ),

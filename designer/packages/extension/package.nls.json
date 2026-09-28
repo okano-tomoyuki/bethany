@@ -8,5 +8,9 @@
   "config.canvas.fontFamily": "Typeface used on the canvas as the LCL default font. If empty, Yu Gothic UI is used when the display language of VS Code is Japanese, and Segoe UI otherwise (the message font of Windows).",
   "config.canvas.fontSize": "Size (in points) of `#bethanyDesigner.canvas.fontFamily#`. 0 means automatic (9).",
   "config.canvas.gridSize": "Spacing (in pixels) of the grid that controls snap to when moved or resized on the canvas. 0 disables snapping.",
-  "config.canvas.showGrid": "Draw the dots of `#bethanyDesigner.canvas.gridSize#` on the form."
+  "config.canvas.showGrid": "Draw the dots of `#bethanyDesigner.canvas.gridSize#` on the form.",
+  "viewContainer.title": "Bethany Designer",
+  "view.forms.name": "Forms",
+  "command.refreshForms.title": "Refresh Forms",
+  "view.forms.welcome": "There are no forms (*.bfm.json) in this workspace yet.\n[Create New Form](command:bethanyDesigner.newForm)\nA form is designed on a canvas, and its C++ or Python code is generated with Generate Code."
 }
