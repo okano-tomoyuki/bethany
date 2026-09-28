@@ -1,0 +1,11 @@
+{
+  "displayName": "no_vcl Designer",
+  "description": "GUI form designer for no_vcl (C++ / Python)",
+  "command.newForm.title": "Create New Form",
+  "command.newForm.shortTitle": "no_vcl Form",
+  "command.generateCode.title": "Generate Code",
+  "customEditor.displayName": "no_vcl Designer",
+  "config.canvas.fontFamily": "Typeface used on the canvas as the LCL default font. If empty, Yu Gothic UI is used when the display language of VS Code is Japanese, and Segoe UI otherwise (the message font of Windows).",
+  "config.canvas.fontSize": "Size (in points) of `#noVclDesigner.canvas.fontFamily#`. 0 means automatic (9).",
+  "config.canvas.gridSize": "Spacing (in pixels) of the grid that controls snap to when moved or resized on the canvas. 0 disables snapping."
+}

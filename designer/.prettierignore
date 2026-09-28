@@ -8,3 +8,4 @@ samples/*.cpp
 tools/catalog/
 # *.nvform.json は core の serializeDocument が決まった形で書き出す
 *.nvform.json
+packages/extension/schema/

@@ -1,0 +1,119 @@
+{
+  "name": "no-vcl-designer",
+  "displayName": "%displayName%",
+  "description": "%description%",
+  "version": "0.0.1",
+  "private": true,
+  "publisher": "okano-tomoyuki",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Visual Designers"
+  ],
+  "main": "./dist/extension.cjs",
+  "activationEvents": [
+    "onLanguage:json"
+  ],
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "noVclDesigner.designer",
+        "displayName": "%customEditor.displayName%",
+        "selector": [
+          {
+            "filenamePattern": "*.nvform.json"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "commands": [
+      {
+        "command": "noVclDesigner.newForm",
+        "title": "%command.newForm.title%",
+        "shortTitle": "%command.newForm.shortTitle%",
+        "category": "no_vcl Designer"
+      },
+      {
+        "command": "noVclDesigner.generateCode",
+        "title": "%command.generateCode.title%",
+        "category": "no_vcl Designer",
+        "icon": "$(code)"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "noVclDesigner.newForm",
+          "group": "navigation@10"
+        }
+      ],
+      "file/newFile": [
+        {
+          "command": "noVclDesigner.newForm"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "noVclDesigner.generateCode",
+          "when": "resourceFilename =~ /\\.nvform\\.json$/",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "noVclDesigner.generateCode",
+          "when": "resourceFilename =~ /\\.nvform\\.json$/"
+        }
+      ]
+    },
+    "jsonValidation": [
+      {
+        "fileMatch": "*.nvform.json",
+        "url": "./schema/nvform.schema.json"
+      }
+    ],
+    "configuration": {
+      "title": "no_vcl Designer",
+      "properties": {
+        "noVclDesigner.canvas.fontFamily": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "%config.canvas.fontFamily%"
+        },
+        "noVclDesigner.canvas.fontSize": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "markdownDescription": "%config.canvas.fontSize%"
+        },
+        "noVclDesigner.canvas.gridSize": {
+          "type": "number",
+          "default": 8,
+          "minimum": 0,
+          "markdownDescription": "%config.canvas.gridSize%"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "esbuild src/extension.ts --bundle --platform=node --format=cjs --target=node20 --external:vscode --sourcemap --outfile=dist/extension.cjs",
+    "typecheck": "tsc -p tsconfig.json",
+    "package": "vsce package --no-dependencies",
+    "generate:schema": "node scripts/generate-json-schema.mts",
+    "check:schema": "node scripts/generate-json-schema.mts --check",
+    "watch": "esbuild src/extension.ts --bundle --platform=node --format=cjs --target=node20 --external:vscode --sourcemap --outfile=dist/extension.cjs --watch=forever"
+  },
+  "dependencies": {
+    "@no-vcl-designer/codegen": "workspace:*",
+    "@no-vcl-designer/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/vscode": "~1.100.0",
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.2"
+  },
+  "l10n": "./l10n"
+}

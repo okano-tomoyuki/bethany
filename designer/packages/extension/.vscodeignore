@@ -1,0 +1,9 @@
+**
+!dist/**
+!package.json
+!package.nls*.json
+!l10n/**
+!schema/**
+!README.md
+!LICENSE
+dist/**/*.map

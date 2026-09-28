@@ -56,3 +56,10 @@ export {
   nextName,
 } from './edit/naming.ts';
 export { minimalTextEdit, type TextEdit } from './edit/textEdit.ts';
+export { createDocument, formNameProblem, NEW_FORM_SIZE } from './edit/newDocument.ts';
+
+export type {
+  CanvasSettings,
+  ExtensionToWebviewMessage,
+  WebviewToExtensionMessage,
+} from './protocol.ts';

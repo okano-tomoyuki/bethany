@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // 拡張の開発用のホストで、見本(samples/)を開く。designer/ をフォルダとして開いて使う
+      "name": "Run Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/extension",
+        "--disable-extensions",
+        "${workspaceFolder}/samples"
+      ],
+      "outFiles": ["${workspaceFolder}/packages/extension/dist/**/*.cjs"],
+      "preLaunchTask": "build"
+    }
+  ]
+}
