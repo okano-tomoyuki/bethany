@@ -38,7 +38,7 @@ protected デストラクタでスタック生成と `delete` をコンパイル
    通知を受けた `TComponent` が共通レジストリからラッパーを引き、delete する。
    ラッパーが delete される経路はこの通知の 1 か所だけで、ラッパーのデストラクタは LCL オブジェクトを破棄しない。
    これにより二重解放は構造的に起きない。
-2. **破棄は `Free()`。** `TComponent::Free()` は `no_vcl_TComponent_Destroy` を呼ぶだけで、
+2. **破棄は `Free()`。** `TComponent::Free()` は `beth_TComponent_Destroy` を呼ぶだけで、
    ラッパーはその破棄通知で delete される(C++Builder の TObject にも `Free()` がある)。
 3. **コンポーネント系の全クラスでデストラクタを protected にする。** C++ では基底クラスのデストラクタを
    protected にしても派生クラスの暗黙のデストラクタは public になるため、`TObject` から具象クラスまで
@@ -46,7 +46,7 @@ protected デストラクタでスタック生成と `delete` をコンパイル
    基底ポインタ経由の `delete` がすべてコンパイルエラーになる。
    非所有のラッパー(`TCanvas`/`TPen`/`TBrush`/`TFont`)は `TPaintBox::Canvas` のように値メンバとして持つため、
    デストラクタを public にしている(`TObject` のデストラクタが protected なので、基底ポインタ経由の delete はできない)。
-4. C API にも破棄通知の登録関数 `no_vcl_FreeNotify_SetCallback` を公開する。
+4. C API にも破棄通知の登録関数 `beth_FreeNotify_SetCallback` を公開する。
    C から使う場合も、保持しているハンドルが無効になったことをこれで知ることができる。
 
 ## 影響

@@ -1,12 +1,6 @@
 import { findClass } from '../catalog/catalog.ts';
 import type { JsonPath } from './diagnostics.ts';
-import type {
-  ComponentNode,
-  ControlNode,
-  FormNode,
-  MenuItemNode,
-  NvformDocument,
-} from './schema.ts';
+import type { ComponentNode, ControlNode, FormNode, MenuItemNode, BfmDocument } from './schema.ts';
 
 /** ドキュメントの中のノードと、その位置 */
 export type NodeLocation =
@@ -33,7 +27,7 @@ export type NodeLocation =
  * すべてのノードを、コンポーネントを生成する順(docs/designer/codegen-design.md §4)でたどる:
  * フォーム、コントロール(深さ優先。親が先)、非ビジュアルコンポーネント(メニューなら続けてその項目を深さ優先)。
  */
-export function* walkNodes(doc: NvformDocument): Generator<NodeLocation> {
+export function* walkNodes(doc: BfmDocument): Generator<NodeLocation> {
   yield { kind: 'form', node: doc.form, path: ['form'] };
   yield* walkControls(doc.form, ['form']);
   for (const [i, component] of (doc.components ?? []).entries()) {
@@ -73,7 +67,7 @@ export function classOf(location: NodeLocation): string {
 }
 
 /** name のノード(name が重複していれば最初のもの) */
-export function findNode(doc: NvformDocument, name: string): NodeLocation | undefined {
+export function findNode(doc: BfmDocument, name: string): NodeLocation | undefined {
   for (const location of walkNodes(doc)) if (location.node.name === name) return location;
   return undefined;
 }

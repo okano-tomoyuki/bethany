@@ -1,4 +1,4 @@
-import type { Diagnostic, JsonPath } from '@no-vcl-designer/core';
+import type { Diagnostic, JsonPath } from '@bethany-designer/core';
 
 /**
  * 診断のうち、path が prefix で始まるもののメッセージをまとめる(該当する欄にエラーを表示するため)。

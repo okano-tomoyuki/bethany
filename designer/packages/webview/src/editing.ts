@@ -15,10 +15,10 @@ import {
   type Bounds,
   type EditCommand,
   type NodeLocation,
-  type NvformDocument,
+  type BfmDocument,
   type PropertyChange,
   type PropertyValue,
-} from '@no-vcl-designer/core';
+} from '@bethany-designer/core';
 import { documentStore, uiStore } from './store/stores.ts';
 import { postMessage } from './vscode.ts';
 
@@ -26,7 +26,7 @@ function dispatch(command: EditCommand): boolean {
   return documentStore.getState().dispatch(command);
 }
 
-function currentDocument(): NvformDocument | undefined {
+function currentDocument(): BfmDocument | undefined {
   return documentStore.getState().document;
 }
 

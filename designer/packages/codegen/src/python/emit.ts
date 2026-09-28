@@ -1,12 +1,12 @@
 /**
- * Python(py/no_vcl.py)のエミッタ(docs/designer/codegen-design.md §3 の Python)。
+ * Python(py/beth.py)のエミッタ(docs/designer/codegen-design.md §3 の Python)。
  *
  * - 生成するクラス(TForm の派生)の __init__ の中に、区間 declarations(コンポーネントの型の注釈)。
- * - 区間 nvd_CreateComponents(メソッド)。文の並びは C++ と同じ中間表現から作る。
+ * - 区間 beth_CreateComponents(メソッド)。文の並びは C++ と同じ中間表現から作る。
  * - ハンドラの雛形(pass)。参照渡しの引数(bool& CanClose 等)は Ref で渡される(.value を読み書きする)。
  * - フォームのグローバル変数は生成しない(Form1 = Application.CreateForm(TForm1) と書く。dsl-spec.md §10 Q3)。
  */
-import type { CommentLocale } from '@no-vcl-designer/core';
+import type { CommentLocale } from '@bethany-designer/core';
 import { generatedComments } from '../comments.ts';
 import type { FormModel, Statement, Target, Value } from '../model.ts';
 import type { GeneratedCode, HandlerStub, Region } from '../region.ts';
@@ -36,10 +36,10 @@ export function emitPython(
           .join('\n'),
   );
   const create: Region = {
-    id: 'nvd_CreateComponents',
+    id: 'beth_CreateComponents',
     indent: 1,
     content: [
-      `${INDENT}def nvd_CreateComponents(self):`,
+      `${INDENT}def beth_CreateComponents(self):`,
       `${INDENT.repeat(2)}"""${comments.createComponents}"""`,
       ...body,
     ].join('\n'),
@@ -58,7 +58,7 @@ export function emitPython(
     stubs,
     scaffold: (rendered) =>
       [
-        'from no_vcl import *',
+        'from beth import *',
         '',
         '',
         `class ${className}(TForm):`,
@@ -67,11 +67,11 @@ export function emitPython(
         `${INDENT}def __init__(self, AOwner):`,
         `${INDENT.repeat(2)}super().__init__(AOwner)`,
         rendered('declarations'),
-        `${INDENT.repeat(2)}self.nvd_CreateComponents()`,
+        `${INDENT.repeat(2)}self.beth_CreateComponents()`,
         '',
-        rendered('nvd_CreateComponents'),
+        rendered('beth_CreateComponents'),
         '',
-        `${INDENT}# <no_vcl-designer:handler-stubs>`,
+        `${INDENT}# <bethany-designer:handler-stubs>`,
         ...stubs.flatMap((s) => ['', s.code]),
         '',
       ].join('\n'),

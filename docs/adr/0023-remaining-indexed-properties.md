@@ -13,10 +13,10 @@
 | TCustomCheckGroup・TCustomCheckListBox | `Checked[Index]` | `GetChecked(i)` / `SetChecked(i, v)` | 読み書き |
 | TMenuItem | `Items[Index]`(default) | `GetItem(i)` | 読み取り専用 |
 | TPageControl | `Pages[Index]` | `GetPage(i)` | 読み取り専用 |
-| TTreeNode | `Items[ItemIndex]`(default) | `GetItem(i)` | LCL は書き込みもできるが、no_vcl では読み取り専用 |
+| TTreeNode | `Items[ItemIndex]`(default) | `GetItem(i)` | LCL は書き込みもできるが、Bethany では読み取り専用 |
 | TTreeNodes | `Item[Index]`(default) | `GetItem(i)` | 読み取り専用 |
-| TListItems | `Item[AIndex]`(default) | `GetItem(i)` | LCL は書き込みもできるが、no_vcl では読み取り専用 |
-| TListColumns | `Items[AIndex]`(default) | `GetItem(i)` | LCL は書き込みもできるが、no_vcl では読み取り専用 |
+| TListItems | `Item[AIndex]`(default) | `GetItem(i)` | LCL は書き込みもできるが、Bethany では読み取り専用 |
+| TListColumns | `Items[AIndex]`(default) | `GetItem(i)` | LCL は書き込みもできるが、Bethany では読み取り専用 |
 
 TTreeNode・TListItems・TListColumns の書き込みは `Assign`(内容のコピー)で、使う場面が少ないため対象にしない。
 

@@ -13,7 +13,7 @@ LCL のソース(`menus.pp`・`include/menu.inc`・`include/menuitem.inc`)で確
 
 - 継承関係は `TLCLComponent → TMenuItem`、`TLCLComponent → TMenu → TMainMenu / TPopupMenu`。どれも TControl ではない。
 - **`TMenu.Items`(メニューのルート項目)は、TMenu のコンストラクタの中で LCL が `TMenuItem.Create(Self)` で生成する。**
-  no_vcl の `*_Create` を経由しないため、C++ のラッパーも破棄通知の登録も無い。`TMenuItem.AddSeparator` が追加する
+  Bethany の `*_Create` を経由しないため、C++ のラッパーも破棄通知の登録も無い。`TMenuItem.AddSeparator` が追加する
   区切り線も同じく LCL の内部で生成される。
 - `TMenuItem.Delete` / `Remove` は子から外すだけで破棄しない(VCL と同じ)。`Clear` はすべての子を破棄する。
 - `TMenuItem.Destroy` は、Owner が誰であっても子の項目をすべて破棄する。
@@ -59,7 +59,7 @@ LCL が内部で生成したコンポーネントの扱い:
   - TPopupMenu: AutoPopup・PopupComponent・OnPopup・OnClose・Popup(X, Y)。
   - `TCustomForm::Menu`(`Property<TMainMenu*>`)と `TControl::PopupMenu`(`Property<TPopupMenu*>`)。
 - **ショートカットキー**: VCL と同じく `TShortCut`(仮想キーコード + scShift/scCtrl/scAlt)とし、Menus ユニットの
-  `ShortCut(Key, Shift)`・`TextToShortCut`・`ShortCutToText` を C++ の自由関数(C API は `no_vcl_ShortCut_*`)として用意する。
+  `ShortCut(Key, Shift)`・`TextToShortCut`・`ShortCutToText` を C++ の自由関数(C API は `beth_ShortCut_*`)として用意する。
 - 見送ったもの: Bitmap・ImageIndex(Tier 3 の TBitmap/TImageList 待ち)、Action、OnDrawItem/OnMeasureItem(オーナードロー)、
   TMainMenu.Merge、TPopupMenu.Alignment/TrackButton。
 

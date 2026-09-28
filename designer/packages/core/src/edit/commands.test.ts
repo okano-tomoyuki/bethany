@@ -1,34 +1,34 @@
 import { describe, expect, it } from 'vitest';
-import sampleText from '../../../../samples/MainForm.nvform.json?raw';
+import sampleText from '../../../../samples/MainForm.bfm.json?raw';
 import { parseDocument } from '../dsl/parse.ts';
-import type { ControlNode, NvformDocument } from '../dsl/schema.ts';
+import type { ControlNode, BfmDocument } from '../dsl/schema.ts';
 import { walkNodes } from '../dsl/tree.ts';
 import { validateDocument } from '../dsl/validate.ts';
 import { applyCommand, type EditCommand } from './commands.ts';
 
 const SAMPLE_TEXT = sampleText;
 
-function sample(): NvformDocument {
+function sample(): BfmDocument {
   const { document } = parseDocument(SAMPLE_TEXT);
   if (!document) throw new Error('sample does not parse');
   return document;
 }
 
 /** 適用して、検証のエラーが無いことも確かめる */
-function apply(command: EditCommand, doc: NvformDocument = sample()): NvformDocument {
+function apply(command: EditCommand, doc: BfmDocument = sample()): BfmDocument {
   const result = applyCommand(doc, command);
   if (!result.ok) throw new Error(result.error);
   expect(validateDocument(result.document)).toEqual([]);
   return result.document;
 }
 
-function reject(command: EditCommand, doc: NvformDocument = sample()): string {
+function reject(command: EditCommand, doc: BfmDocument = sample()): string {
   const result = applyCommand(doc, command);
   if (result.ok) throw new Error('expected the command to be rejected');
   return result.error;
 }
 
-function node(doc: NvformDocument, name: string) {
+function node(doc: BfmDocument, name: string) {
   const found = [...walkNodes(doc)].find((l) => l.node.name === name);
   if (!found) throw new Error(`${name} not found`);
   return found;
@@ -374,7 +374,7 @@ describe('その他', () => {
 });
 
 describe('配置の計算し直し', () => {
-  const bounds = (doc: NvformDocument, name: string) => {
+  const bounds = (doc: BfmDocument, name: string) => {
     const p = node(doc, name).node.properties ?? {};
     return [p.Left, p.Top, p.Width, p.Height];
   };

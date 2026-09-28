@@ -10,14 +10,14 @@
 ## 背景
 
 現在、`TButton` 等の各コントロールクラスは、`TObject& parent` を受け取る唯一のコンストラクタの中で、
-`Property<T>` メンバの構築と `no_vcl_c.h` の `Create`/`SetParent` 呼び出しを同時に行っている。
+`Property<T>` メンバの構築と `beth_c.h` の `Create`/`SetParent` 呼び出しを同時に行っている。
 
 ```cpp
 // 現状
-explicit TButton(TObject& parent);   // このコンストラクタの中で no_vcl_TButton_Create まで行う
+explicit TButton(TObject& parent);   // このコンストラクタの中で beth_TButton_Create まで行う
 ```
 
-この方式は手書きコード(`no_vcl::TButton button(form);`)では問題ないが、
+この方式は手書きコード(`beth::TButton button(form);`)では問題ないが、
 DSL からのコード生成([ADR 0001](0001-designer-app-bundling.md))には次の理由で不向きである。
 
 1. C++ の「メンバ初期化子リストは宣言順と一致していなければならない」という制約により、
@@ -48,10 +48,10 @@ DSL からのコード生成([ADR 0001](0001-designer-app-bundling.md))には次
 
 ```cpp
 // 提案する形
-no_vcl::TButton button1;             // デフォルト構築(ハンドルはまだ無い)
+beth::TButton button1;             // デフォルト構築(ハンドルはまだ無い)
 // ... 他のメンバもここで宣言(順不同で良い)
 
-button1.Create(*this);               // 実際の no_vcl_TButton_Create/SetParent はここで走る
+button1.Create(*this);               // 実際の beth_TButton_Create/SetParent はここで走る
 button1.Caption = "OK";
 ```
 
@@ -63,14 +63,14 @@ button1.Caption = "OK";
 - `TObject` および各コントロールクラス(`TForm`/`TButton`/`TLabel`/…/`TTimer`/`TPaintBox`)に
   デフォルトコンストラクタを整備し、実際のハンドル生成・コールバック登録処理を `Create()` メソッドへ分離する。
 - デストラクタは「`Create()` が一度も呼ばれないまま破棄される」場合に対応する必要がある
-  (`handle_ == nullptr` なら `no_vcl_TXxx_Destroy` を呼ばない)。
+  (`handle_ == nullptr` なら `beth_TXxx_Destroy` を呼ばない)。
 - `Property<T>` 自体は `owner_`(`this` ポインタ)のみを保持し、`handle_` の参照は
   Getter/Setter 呼び出し時に遅延評価される設計のため、**変更は不要**と見込む。
 - `TPaintBox` が持つ `TCanvas Canvas` メンバ(および `TCanvas` が持つ `Pen`/`Brush`/`Font`)は、
   現状「所有者のハンドルが確定した時点で即座に構築する」設計
-  (`TObject(no_vcl_obj_t handle)` という第二コンストラクタを使った基底クラス委譲。[todo.md](../../todo.md) Phase 5 参照)
+  (`TObject(beth_obj_t handle)` という第二コンストラクタを使った基底クラス委譲。[todo.md](../../todo.md) Phase 5 参照)
   になっており、二段階初期化に単純には乗らない。`TCanvas`/`Pen`/`Brush`/`Font` にも
-  デフォルトコンストラクタと、ハンドル確定後に再束縛する仕組み(`Bind(no_vcl_obj_t handle)` 等)が別途必要になる
+  デフォルトコンストラクタと、ハンドル確定後に再束縛する仕組み(`Bind(beth_obj_t handle)` 等)が別途必要になる
   (波及範囲が本件の中で最も大きい)。
 - 既存の `test/main.cpp`・`test/main.c` のような 1 行コンストラクタ利用コードへの影響はない(後方互換を保つ前提のため)。
 

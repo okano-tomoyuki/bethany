@@ -1,5 +1,5 @@
 /**
- * 生成した Python のコードを、本リポジトリの no_vcl の Python のバインディング(py/no_vcl.py)で実行して確かめる
+ * 生成した Python のコードを、本リポジトリの Bethany の Python のバインディング(py/beth.py)で実行して確かめる
  * (docs/designer/codegen-design.md §7)。
  *
  *   node tools/codegen/verify-python.mts
@@ -7,13 +7,13 @@
  * 確かめる内容と期待は verify-cpp.mts と同じ(report.mts)。C++ と Python で同じ結果になることも確かめている。
  *
  * 必要なもの: Python 3(環境変数 PYTHON で指定できる。既定は Windows では python、それ以外は python3)と、
- * ビルド済みの no_vcl の DLL(リポジトリ直下の no_vcl.dll / libno_vcl.so)。
+ * ビルド済みの Bethany の DLL(リポジトリ直下の beth.dll / libbeth.so)。
  * バインディング(py/*.py)と DLL を作業フォルダ .cache/verify-python に写して実行する(py/ には何も書き込まない)。
  */
 import { copyFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { walkNodes, type NvformDocument } from '../../packages/core/src/index.ts';
+import { walkNodes, type BfmDocument } from '../../packages/core/src/index.ts';
 import { generatePython } from '../../packages/codegen/src/index.ts';
 import {
   checkReport,
@@ -27,7 +27,7 @@ import {
 
 const workDir = join(designerRoot, '.cache/verify-python');
 const isWindows = process.platform === 'win32';
-const dllName = isWindows ? 'no_vcl.dll' : 'libno_vcl.so';
+const dllName = isWindows ? 'beth.dll' : 'libbeth.so';
 const python = process.env.PYTHON ?? (isWindows ? 'python' : 'python3');
 
 // ---- コードの生成 --------------------------------------------------------------
@@ -38,7 +38,7 @@ const result = generatePython(doc, SAMPLE_FILE, undefined);
 if (!result.ok) throw new Error(result.error);
 writeIfChanged(join(workDir, 'MainForm.py'), recordHandlerCalls(result.text));
 writeIfChanged(join(workDir, 'verify.py'), harness(doc));
-for (const file of ['no_vcl.py', 'no_vcl_core.py', 'no_vcl_internal.py'])
+for (const file of ['beth.py', 'beth_core.py', 'beth_internal.py'])
   copyFileSync(join(repoRoot, 'py', file), join(workDir, file));
 copyFileSync(join(repoRoot, dllName), join(workDir, dllName));
 
@@ -58,21 +58,21 @@ checkReport(doc, parseReport(output));
 /** ハンドラの雛形の中身(pass)を、呼ばれたことを記録する処理に置き換える */
 function recordHandlerCalls(source: string): string {
   return source
-    .replace('from no_vcl import *\n', 'from no_vcl import *\n\nnvd_calls = []\n')
+    .replace('from beth import *\n', 'from beth import *\n\nbeth_calls = []\n')
     .replace(
       /^( {4}def (\w+)\(self[^)]*\):\n) {8}pass$/gm,
-      (_, head: string, name: string) => `${head}        nvd_calls.append("${name}")`,
+      (_, head: string, name: string) => `${head}        beth_calls.append("${name}")`,
     );
 }
 
-function harness(document: NvformDocument): string {
+function harness(document: BfmDocument): string {
   const controls = [...walkNodes(document)].flatMap((n) =>
     n.kind === 'control' ? [n.node.name] : [],
   );
   return `import json
 
 import MainForm
-from no_vcl import *
+from beth import *
 
 Application.Initialize()
 f = Application.CreateForm(MainForm.TMainForm)
@@ -118,6 +118,6 @@ f.Close()
 for _ in range(5):
     Application.ProcessMessages()
 
-print(json.dumps({"bounds": bounds, "checks": checks, "calls": MainForm.nvd_calls}, ensure_ascii=False))
+print(json.dumps({"bounds": bounds, "checks": checks, "calls": MainForm.beth_calls}, ensure_ascii=False))
 `;
 }

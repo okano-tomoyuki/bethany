@@ -1,12 +1,12 @@
 {
-  "displayName": "no_vcl Designer",
-  "description": "no_vcl(C++ / Python)向けの GUI のフォームデザイナー",
+  "displayName": "Bethany Designer",
+  "description": "Bethany(C++ / Python)向けの GUI のフォームデザイナー",
   "command.newForm.title": "新しいフォームを作成",
-  "command.newForm.shortTitle": "no_vcl のフォーム",
+  "command.newForm.shortTitle": "Bethany のフォーム",
   "command.generateCode.title": "コードを生成",
-  "customEditor.displayName": "no_vcl Designer",
+  "customEditor.displayName": "Bethany Designer",
   "config.canvas.fontFamily": "キャンバスで LCL の既定のフォントとして使う書体。空欄なら、VS Code の表示言語が日本語のときは Yu Gothic UI、それ以外は Segoe UI(Windows のメッセージのフォント)。",
-  "config.canvas.fontSize": "`#noVclDesigner.canvas.fontFamily#` の大きさ(ポイント)。0 なら自動(9)。",
+  "config.canvas.fontSize": "`#bethanyDesigner.canvas.fontFamily#` の大きさ(ポイント)。0 なら自動(9)。",
   "config.canvas.gridSize": "キャンバスで移動・大きさの変更をするときに合わせる格子の間隔(ピクセル)。0 なら合わせない。",
-  "config.canvas.showGrid": "フォームに `#noVclDesigner.canvas.gridSize#` の格子の点を描く。"
+  "config.canvas.showGrid": "フォームに `#bethanyDesigner.canvas.gridSize#` の格子の点を描く。"
 }

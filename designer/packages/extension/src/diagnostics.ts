@@ -1,14 +1,14 @@
 /**
- * 開いている *.nvform.json の診断を問題パネルに出す(docs/designer/editor-design.md §8)。
+ * 開いている *.bfm.json の診断を問題パネルに出す(docs/designer/editor-design.md §8)。
  * デザイナーで開いているか、テキストエディタで開いているかによらない。
  */
-import { locate, parseDocument, type Diagnostic } from '@no-vcl-designer/core';
+import { locate, parseDocument, type Diagnostic } from '@bethany-designer/core';
 import * as vscode from 'vscode';
 
-const SOURCE = 'no_vcl Designer';
+const SOURCE = 'Bethany Designer';
 
 export function registerDiagnostics(): vscode.Disposable {
-  const collection = vscode.languages.createDiagnosticCollection('noVclDesigner');
+  const collection = vscode.languages.createDiagnosticCollection('bethanyDesigner');
   const update = (document: vscode.TextDocument) => {
     if (!isDsl(document.uri)) return;
     const text = document.getText();
@@ -33,7 +33,7 @@ export function registerDiagnostics(): vscode.Disposable {
 }
 
 function isDsl(uri: vscode.Uri): boolean {
-  return uri.path.endsWith('.nvform.json');
+  return uri.path.endsWith('.bfm.json');
 }
 
 function toVscode(

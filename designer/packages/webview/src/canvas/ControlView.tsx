@@ -9,7 +9,7 @@ import {
   type ControlNode,
   type FormNode,
   type NodeLocation,
-} from '@no-vcl-designer/core';
+} from '@bethany-designer/core';
 import { createContext, useContext, type CSSProperties, type ReactNode } from 'react';
 import { boundsOf } from '../editing.ts';
 import {

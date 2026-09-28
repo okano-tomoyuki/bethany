@@ -1,5 +1,5 @@
-#ifndef NO_VCL_HPP
-#define NO_VCL_HPP
+#ifndef BETH_HPP
+#define BETH_HPP
 
 #include <cstdint>
 #include <exception>
@@ -17,7 +17,7 @@
 // メンバの公開範囲も LCL に合わせ、LCL で protected のメンバを派生クラスが公開している箇所は
 // using で公開している。詳細は docs/class-hierarchy.md を参照。
 
-namespace no_vcl
+namespace beth
 {
 
 // LCL のオブジェクトを指すハンドル(TObject::Handle())。DLL の関数に渡す値で、利用者が中身を解釈することはない。
@@ -38,11 +38,11 @@ const TColor clNone    = 0x1FFFFFFF;
 const TColor clDefault = 0x20000000;
 
 // LCL が送出した例外(docs/adr/0031)。VCL の Exception と同じく、catch (Exception& E) で受けて E.Message を使う。
-// - no_vcl の関数・プロパティの中で LCL が例外を送出すると(範囲外の添字・読み込めないファイル等)、その操作は中断し、
+// - Bethany の関数・プロパティの中で LCL が例外を送出すると(範囲外の添字・読み込めないファイル等)、その操作は中断し、
 //   この例外が送出される。ClassName() は LCL の例外のクラス名(EStringListError・EFOpenError 等)。
 // - イベントのハンドラから送出された例外(この例外に限らない)は、ハンドラを呼んだ DLL 側で送出し直される。
 //   メッセージループの中なら LCL が処理し(VCL と同じく、メッセージを表示して処理を続ける)、
-//   MenuItem1->Click() のように no_vcl の関数の中で起きたイベントなら、その関数からこの例外として送出される
+//   MenuItem1->Click() のように Bethany の関数の中で起きたイベントなら、その関数からこの例外として送出される
 //   (ClassName() は元の例外のクラス名。std::exception の派生なら "std::exception"、それ以外は空文字列)。
 class Exception : public std::exception
 {
@@ -445,7 +445,7 @@ public:
 private:
     static void InstallCallback();
     static std::unordered_map<ObjectHandle, TPersistent*>& Registry();
-    static void NO_VCL_CALL FreeTrampoline(ObjectHandle handle, void* data);
+    static void BETH_CALL FreeTrampoline(ObjectHandle handle, void* data);
 };
 
 
@@ -957,7 +957,7 @@ private:
     // そのときは LCL オブジェクトが取り残されないよう、ここで破棄する。
     bool freedByLcl_ = false;
 
-    static void NO_VCL_CALL FreeNotifyTrampoline(ObjectHandle handle, void* data);
+    static void BETH_CALL FreeNotifyTrampoline(ObjectHandle handle, void* data);
     static std::unordered_map<ObjectHandle, TComponent*>& Registry();
 
     static std::intptr_t GetTagImpl(TObject* owner);
@@ -1038,7 +1038,7 @@ private:
     static void          SetBkColorImpl(TObject* owner, const TColor& value);
     static TDrawingStyle GetDrawingStyleImpl(TObject* owner);
     static void          SetDrawingStyleImpl(TObject* owner, const TDrawingStyle& value);
-    static void NO_VCL_CALL ChangeTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL ChangeTrampoline(ObjectHandle sender, void* data);
     static TNotifyEvent  GetOnChangeImpl(TObject* owner);
     static void          SetOnChangeImpl(TObject* owner, const TNotifyEvent& value);
 };
@@ -1114,7 +1114,7 @@ private:
 
     TNotifyEvent onClick_;
     bool         onClickHooked_ = false;
-    static void NO_VCL_CALL ClickTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL ClickTrampoline(ObjectHandle sender, void* data);
 
     static std::string  GetCaptionImpl(TObject* owner);
     static void         SetCaptionImpl(TObject* owner, const std::string& value);
@@ -1206,8 +1206,8 @@ private:
     TNotifyEvent onClose_;
     bool         onPopupHooked_ = false;
     bool         onCloseHooked_ = false;
-    static void NO_VCL_CALL PopupTrampoline(ObjectHandle sender, void* data);
-    static void NO_VCL_CALL CloseTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL PopupTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL CloseTrampoline(ObjectHandle sender, void* data);
 
     static bool         GetAutoPopupImpl(TObject* owner);
     static void         SetAutoPopupImpl(TObject* owner, const bool& value);
@@ -1418,7 +1418,7 @@ private:
 
     TNotifyEvent onClick_;
     bool         onClickHooked_ = false;
-    static void NO_VCL_CALL ClickTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL ClickTrampoline(ObjectHandle sender, void* data);
     static TNotifyEvent GetOnClickImpl(TObject* owner);
     static void         SetOnClickImpl(TObject* owner, const TNotifyEvent& value);
 
@@ -1439,14 +1439,14 @@ private:
     bool onMouseLeaveHooked_ = false;
     bool onMouseWheelHooked_ = false;
 
-    static void NO_VCL_CALL DblClickTrampoline(ObjectHandle sender, void* data);
-    static void NO_VCL_CALL ResizeTrampoline(ObjectHandle sender, void* data);
-    static void NO_VCL_CALL MouseEnterTrampoline(ObjectHandle sender, void* data);
-    static void NO_VCL_CALL MouseLeaveTrampoline(ObjectHandle sender, void* data);
-    static void NO_VCL_CALL MouseDownTrampoline(ObjectHandle sender, internal::int_t button, internal::int_t shift, internal::int_t x, internal::int_t y, void* data);
-    static void NO_VCL_CALL MouseUpTrampoline(ObjectHandle sender, internal::int_t button, internal::int_t shift, internal::int_t x, internal::int_t y, void* data);
-    static void NO_VCL_CALL MouseMoveTrampoline(ObjectHandle sender, internal::int_t shift, internal::int_t x, internal::int_t y, void* data);
-    static void NO_VCL_CALL MouseWheelTrampoline(ObjectHandle sender, internal::int_t shift, internal::int_t wheelDelta, internal::int_t x, internal::int_t y, internal::bool_t* handled, void* data);
+    static void BETH_CALL DblClickTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL ResizeTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL MouseEnterTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL MouseLeaveTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL MouseDownTrampoline(ObjectHandle sender, internal::int_t button, internal::int_t shift, internal::int_t x, internal::int_t y, void* data);
+    static void BETH_CALL MouseUpTrampoline(ObjectHandle sender, internal::int_t button, internal::int_t shift, internal::int_t x, internal::int_t y, void* data);
+    static void BETH_CALL MouseMoveTrampoline(ObjectHandle sender, internal::int_t shift, internal::int_t x, internal::int_t y, void* data);
+    static void BETH_CALL MouseWheelTrampoline(ObjectHandle sender, internal::int_t shift, internal::int_t wheelDelta, internal::int_t x, internal::int_t y, internal::bool_t* handled, void* data);
 
     static TNotifyEvent GetOnDblClickImpl(TObject* owner);
     static void         SetOnDblClickImpl(TObject* owner, const TNotifyEvent& value);
@@ -1535,9 +1535,9 @@ private:
     bool onKeyUpHooked_    = false;
     bool onKeyPressHooked_ = false;
 
-    static void NO_VCL_CALL KeyDownTrampoline(ObjectHandle sender, internal::int_t* key, internal::int_t shift, void* data);
-    static void NO_VCL_CALL KeyUpTrampoline(ObjectHandle sender, internal::int_t* key, internal::int_t shift, void* data);
-    static void NO_VCL_CALL KeyPressTrampoline(ObjectHandle sender, internal::int_t* key, void* data);
+    static void BETH_CALL KeyDownTrampoline(ObjectHandle sender, internal::int_t* key, internal::int_t shift, void* data);
+    static void BETH_CALL KeyUpTrampoline(ObjectHandle sender, internal::int_t* key, internal::int_t shift, void* data);
+    static void BETH_CALL KeyPressTrampoline(ObjectHandle sender, internal::int_t* key, void* data);
 
     static TKeyEvent GetOnKeyDownImpl(TObject* owner);
     static void      SetOnKeyDownImpl(TObject* owner, const TKeyEvent& value);
@@ -1571,7 +1571,7 @@ protected:
 private:
     TNotifyEvent onChange_;
     bool         onChangeHooked_ = false;
-    static void NO_VCL_CALL ChangeTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL ChangeTrampoline(ObjectHandle sender, void* data);
 
     static TScrollBarKind GetKindImpl(TObject* owner);
     static void           SetKindImpl(TObject* owner, const TScrollBarKind& value);
@@ -1612,7 +1612,7 @@ protected:
 private:
     TNotifyEvent onChange_;
     bool         onChangeHooked_ = false;
-    static void NO_VCL_CALL ChangeTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL ChangeTrampoline(ObjectHandle sender, void* data);
 
     static int          GetMinImpl(TObject* owner);
     static void         SetMinImpl(TObject* owner, const int& value);
@@ -1782,13 +1782,13 @@ private:
     // OnCreate がまだ呼ばれていなければ呼ぶ。
     void DoCreate();
 
-    static void NO_VCL_CALL ShowTrampoline(ObjectHandle sender, void* data);
-    static void NO_VCL_CALL HideTrampoline(ObjectHandle sender, void* data);
-    static void NO_VCL_CALL ActivateTrampoline(ObjectHandle sender, void* data);
-    static void NO_VCL_CALL DeactivateTrampoline(ObjectHandle sender, void* data);
-    static void NO_VCL_CALL CloseQueryTrampoline(ObjectHandle sender, internal::bool_t* canClose, void* data);
-    static void NO_VCL_CALL CloseTrampoline(ObjectHandle sender, internal::int_t* action, void* data);
-    static void NO_VCL_CALL DestroyTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL ShowTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL HideTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL ActivateTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL DeactivateTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL CloseQueryTrampoline(ObjectHandle sender, internal::bool_t* canClose, void* data);
+    static void BETH_CALL CloseTrampoline(ObjectHandle sender, internal::int_t* action, void* data);
+    static void BETH_CALL DestroyTrampoline(ObjectHandle sender, void* data);
 
     static TNotifyEvent     GetOnCreateImpl(TObject* owner);
     static void             SetOnCreateImpl(TObject* owner, const TNotifyEvent& value);
@@ -1953,7 +1953,7 @@ private:
     static TStrings* GetItemsImpl(TObject* owner);
     TNotifyEvent onClick_;
     bool         onClickHooked_ = false;
-    static void NO_VCL_CALL ClickTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL ClickTrampoline(ObjectHandle sender, void* data);
 
     static int           GetItemIndexImpl(TObject* owner);
     static void          SetItemIndexImpl(TObject* owner, const int& value);
@@ -2203,7 +2203,7 @@ protected:
 private:
     TNotifyEvent onChange_;
     bool         onChangeHooked_ = false;
-    static void NO_VCL_CALL ChangeTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL ChangeTrampoline(ObjectHandle sender, void* data);
     static TNotifyEvent GetOnChangeImpl(TObject* owner);
     static void         SetOnChangeImpl(TObject* owner, const TNotifyEvent& value);
 
@@ -2372,7 +2372,7 @@ protected:
 private:
     TTabChangingEvent onChanging_;
     bool              onChangingHooked_ = false;
-    static void NO_VCL_CALL ChangingTrampoline(ObjectHandle sender, internal::bool_t* allowChange, void* data);
+    static void BETH_CALL ChangingTrampoline(ObjectHandle sender, internal::bool_t* allowChange, void* data);
 
     static int               GetPageCountImpl(TObject* owner);
     static bool              GetMultiLineImpl(TObject* owner);
@@ -2410,7 +2410,7 @@ private:
     static TStrings* GetTabsImpl(TObject* owner);
     TNotifyEvent onChange_;
     bool         onChangeHooked_ = false;
-    static void NO_VCL_CALL ChangeTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL ChangeTrampoline(ObjectHandle sender, void* data);
 
     static int           GetTabIndexImpl(TObject* owner);
     static void          SetTabIndexImpl(TObject* owner, const int& value);
@@ -2453,7 +2453,7 @@ private:
     static TTabSheet* GetPagesImpl(TObject* owner, int Index);
     TNotifyEvent onChange_;
     bool         onChangeHooked_ = false;
-    static void NO_VCL_CALL ChangeTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL ChangeTrampoline(ObjectHandle sender, void* data);
 
     static TTabSheet*   GetActivePageImpl(TObject* owner);
     static void         SetActivePageImpl(TObject* owner, TTabSheet* const& value);
@@ -2487,8 +2487,8 @@ private:
     TNotifyEvent onHide_;
     bool         onShowHooked_ = false;
     bool         onHideHooked_ = false;
-    static void NO_VCL_CALL ShowTrampoline(ObjectHandle sender, void* data);
-    static void NO_VCL_CALL HideTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL ShowTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL HideTrampoline(ObjectHandle sender, void* data);
 
     static int          GetPageIndexImpl(TObject* owner);
     static void         SetPageIndexImpl(TObject* owner, const int& value);
@@ -2753,13 +2753,13 @@ private:
     template<typename Event>
     static void DispatchNodeAllow(ObjectHandle sender, ObjectHandle node, internal::bool_t* allow, Event TTreeView::*slot);
 
-    static void NO_VCL_CALL ChangeTrampoline(ObjectHandle sender, ObjectHandle node, void* data);
-    static void NO_VCL_CALL ChangingTrampoline(ObjectHandle sender, ObjectHandle node, internal::bool_t* allow, void* data);
-    static void NO_VCL_CALL ExpandingTrampoline(ObjectHandle sender, ObjectHandle node, internal::bool_t* allow, void* data);
-    static void NO_VCL_CALL ExpandedTrampoline(ObjectHandle sender, ObjectHandle node, void* data);
-    static void NO_VCL_CALL CollapsingTrampoline(ObjectHandle sender, ObjectHandle node, internal::bool_t* allow, void* data);
-    static void NO_VCL_CALL CollapsedTrampoline(ObjectHandle sender, ObjectHandle node, void* data);
-    static void NO_VCL_CALL DeletionTrampoline(ObjectHandle sender, ObjectHandle node, void* data);
+    static void BETH_CALL ChangeTrampoline(ObjectHandle sender, ObjectHandle node, void* data);
+    static void BETH_CALL ChangingTrampoline(ObjectHandle sender, ObjectHandle node, internal::bool_t* allow, void* data);
+    static void BETH_CALL ExpandingTrampoline(ObjectHandle sender, ObjectHandle node, internal::bool_t* allow, void* data);
+    static void BETH_CALL ExpandedTrampoline(ObjectHandle sender, ObjectHandle node, void* data);
+    static void BETH_CALL CollapsingTrampoline(ObjectHandle sender, ObjectHandle node, internal::bool_t* allow, void* data);
+    static void BETH_CALL CollapsedTrampoline(ObjectHandle sender, ObjectHandle node, void* data);
+    static void BETH_CALL DeletionTrampoline(ObjectHandle sender, ObjectHandle node, void* data);
 
     static bool GetReadOnlyImpl(TObject* owner);
     static void SetReadOnlyImpl(TObject* owner, const bool& value);
@@ -3064,11 +3064,11 @@ private:
     bool onItemCheckedHooked_ = false;
     bool onColumnClickHooked_ = false;
 
-    static void NO_VCL_CALL SelectItemTrampoline(ObjectHandle sender, ObjectHandle item, internal::int_t selected, void* data);
-    static void NO_VCL_CALL ChangeTrampoline(ObjectHandle sender, ObjectHandle item, internal::int_t change, void* data);
-    static void NO_VCL_CALL DeletionTrampoline(ObjectHandle sender, ObjectHandle item, void* data);
-    static void NO_VCL_CALL ItemCheckedTrampoline(ObjectHandle sender, ObjectHandle item, void* data);
-    static void NO_VCL_CALL ColumnClickTrampoline(ObjectHandle sender, ObjectHandle column, void* data);
+    static void BETH_CALL SelectItemTrampoline(ObjectHandle sender, ObjectHandle item, internal::int_t selected, void* data);
+    static void BETH_CALL ChangeTrampoline(ObjectHandle sender, ObjectHandle item, internal::int_t change, void* data);
+    static void BETH_CALL DeletionTrampoline(ObjectHandle sender, ObjectHandle item, void* data);
+    static void BETH_CALL ItemCheckedTrampoline(ObjectHandle sender, ObjectHandle item, void* data);
+    static void BETH_CALL ColumnClickTrampoline(ObjectHandle sender, ObjectHandle column, void* data);
 
     static TListColumns*  GetColumnsImpl(TObject* owner);
     static TViewStyle     GetViewStyleImpl(TObject* owner);
@@ -3130,7 +3130,7 @@ protected:
 private:
     TNotifyEvent onMoved_;
     bool         onMovedHooked_ = false;
-    static void NO_VCL_CALL MovedTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL MovedTrampoline(ObjectHandle sender, void* data);
 
     static bool         GetAutoSnapImpl(TObject* owner);
     static void         SetAutoSnapImpl(TObject* owner, const bool& value);
@@ -3219,7 +3219,7 @@ protected:
 private:
     TNotifyEvent onChange_;
     bool         onChangeHooked_ = false;
-    static void NO_VCL_CALL ChangeTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL ChangeTrampoline(ObjectHandle sender, void* data);
     static TNotifyEvent GetOnChangeImpl(TObject* owner);
     static void         SetOnChangeImpl(TObject* owner, const TNotifyEvent& value);
 };
@@ -3272,7 +3272,7 @@ private:
     static void SetCheckedImpl(TObject* owner, int index, const bool& value);
     TNotifyEvent onClickCheck_;
     bool         onClickCheckHooked_ = false;
-    static void NO_VCL_CALL ClickCheckTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL ClickCheckTrampoline(ObjectHandle sender, void* data);
 
     static TNotifyEvent GetOnClickCheckImpl(TObject* owner);
     static void         SetOnClickCheckImpl(TObject* owner, const TNotifyEvent& value);
@@ -3447,7 +3447,7 @@ protected:
 private:
     TNotifyEvent onPaint_;
     bool         onPaintHooked_ = false;
-    static void NO_VCL_CALL PaintTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL PaintTrampoline(ObjectHandle sender, void* data);
     static TNotifyEvent GetOnPaintImpl(TObject* owner);
     static void         SetOnPaintImpl(TObject* owner, const TNotifyEvent& value);
 };
@@ -3502,7 +3502,7 @@ private:
     static void         SetProportionalImpl(TObject* owner, const bool& value);
     static bool         GetTransparentImpl(TObject* owner);
     static void         SetTransparentImpl(TObject* owner, const bool& value);
-    static void NO_VCL_CALL PictureChangedTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL PictureChangedTrampoline(ObjectHandle sender, void* data);
     static TNotifyEvent GetOnPictureChangedImpl(TObject* owner);
     static void         SetOnPictureChangedImpl(TObject* owner, const TNotifyEvent& value);
 
@@ -3656,12 +3656,12 @@ private:
     bool onSelectionHooked_   = false;
     bool onHeaderClickHooked_ = false;
 
-    static void NO_VCL_CALL DrawCellTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row,
+    static void BETH_CALL DrawCellTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row,
                                                internal::int_t left, internal::int_t top, internal::int_t right, internal::int_t bottom,
                                                internal::uint_t state, void* data);
-    static void NO_VCL_CALL SelectCellTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, internal::bool_t* canSelect, void* data);
-    static void NO_VCL_CALL SelectionTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, void* data);
-    static void NO_VCL_CALL HeaderClickTrampoline(ObjectHandle sender, internal::int_t isColumn, internal::int_t index, void* data);
+    static void BETH_CALL SelectCellTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, internal::bool_t* canSelect, void* data);
+    static void BETH_CALL SelectionTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, void* data);
+    static void BETH_CALL HeaderClickTrampoline(ObjectHandle sender, internal::int_t isColumn, internal::int_t index, void* data);
 
     static int          GetColCountImpl(TObject* owner);
     static void         SetColCountImpl(TObject* owner, const int& value);
@@ -3894,12 +3894,12 @@ private:
     bool onSectionDragHooked_              = false;
     bool onSectionEndDragHooked_           = false;
 
-    static void NO_VCL_CALL SectionClickTrampoline(ObjectHandle sender, ObjectHandle section, void* data);
-    static void NO_VCL_CALL SectionResizeTrampoline(ObjectHandle sender, ObjectHandle section, void* data);
-    static void NO_VCL_CALL SectionSeparatorDblClickTrampoline(ObjectHandle sender, ObjectHandle section, void* data);
-    static void NO_VCL_CALL SectionTrackTrampoline(ObjectHandle sender, ObjectHandle section, internal::int_t width, internal::int_t state, void* data);
-    static void NO_VCL_CALL SectionDragTrampoline(ObjectHandle sender, ObjectHandle fromSection, ObjectHandle toSection, internal::bool_t* allow, void* data);
-    static void NO_VCL_CALL SectionEndDragTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL SectionClickTrampoline(ObjectHandle sender, ObjectHandle section, void* data);
+    static void BETH_CALL SectionResizeTrampoline(ObjectHandle sender, ObjectHandle section, void* data);
+    static void BETH_CALL SectionSeparatorDblClickTrampoline(ObjectHandle sender, ObjectHandle section, void* data);
+    static void BETH_CALL SectionTrackTrampoline(ObjectHandle sender, ObjectHandle section, internal::int_t width, internal::int_t state, void* data);
+    static void BETH_CALL SectionDragTrampoline(ObjectHandle sender, ObjectHandle fromSection, ObjectHandle toSection, internal::bool_t* allow, void* data);
+    static void BETH_CALL SectionEndDragTrampoline(ObjectHandle sender, void* data);
 
     static THeaderSections* GetSectionsImpl(TObject* owner);
     static bool             GetDragReorderImpl(TObject* owner);
@@ -4095,7 +4095,7 @@ protected:
 private:
     TNotifyEvent onArrowClick_;
     bool         onArrowClickHooked_ = false;
-    static void NO_VCL_CALL ArrowClickTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL ArrowClickTrampoline(ObjectHandle sender, void* data);
 
     static bool             GetAllowAllUpImpl(TObject* owner);
     static void             SetAllowAllUpImpl(TObject* owner, const bool& value);
@@ -4284,7 +4284,7 @@ private:
     TCoolBands   bands_;
     TNotifyEvent onChange_;
     bool         onChangeHooked_ = false;
-    static void NO_VCL_CALL ChangeTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL ChangeTrampoline(ObjectHandle sender, void* data);
 
     static TCoolBands*  GetBandsImpl(TObject* owner);
     static bool         GetFixedSizeImpl(TObject* owner);
@@ -4341,7 +4341,7 @@ protected:
 private:
     TNotifyEvent onTimer_;
     bool         onTimerHooked_ = false;
-    static void NO_VCL_CALL TimerTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL TimerTrampoline(ObjectHandle sender, void* data);
     static TNotifyEvent GetOnTimerImpl(TObject* owner);
     static void         SetOnTimerImpl(TObject* owner, const TNotifyEvent& value);
 
@@ -4396,9 +4396,9 @@ private:
     bool onCloseHooked_    = false;
     bool onCanCloseHooked_ = false;
 
-    static void NO_VCL_CALL ShowTrampoline(ObjectHandle sender, void* data);
-    static void NO_VCL_CALL CloseTrampoline(ObjectHandle sender, void* data);
-    static void NO_VCL_CALL CanCloseTrampoline(ObjectHandle sender, internal::bool_t* canClose, void* data);
+    static void BETH_CALL ShowTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL CloseTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL CanCloseTrampoline(ObjectHandle sender, internal::bool_t* canClose, void* data);
 
     static std::string      GetTitleImpl(TObject* owner);
     static void             SetTitleImpl(TObject* owner, const std::string& value);
@@ -4647,8 +4647,8 @@ private:
     bool onFindHooked_    = false;
     bool onReplaceHooked_ = false;
 
-    static void NO_VCL_CALL FindTrampoline(ObjectHandle sender, void* data);
-    static void NO_VCL_CALL ReplaceTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL FindTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL ReplaceTrampoline(ObjectHandle sender, void* data);
 
     static std::string  GetFindTextImpl(TObject* owner);
     static void         SetFindTextImpl(TObject* owner, const std::string& value);
@@ -4679,6 +4679,6 @@ protected:
     ~TReplaceDialog() override = default;
 };
 
-} // namespace no_vcl
+} // namespace beth
 
-#endif // NO_VCL_HPP
+#endif // BETH_HPP

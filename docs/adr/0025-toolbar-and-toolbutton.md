@@ -26,8 +26,8 @@ LCL のソース(`comctrls.pp`・`toolwin.pp`・`include/toolbar.inc`・`include
 
 ## 決定
 
-- C API は宣言しているクラスの名前で、`no_vcl_TToolWindow_*`・`no_vcl_TToolBar_*`・`no_vcl_TToolButton_*`。
-  Caption・OnClick・Align は既存の `no_vcl_TControl_*` を使う。
+- C API は宣言しているクラスの名前で、`beth_TToolWindow_*`・`beth_TToolBar_*`・`beth_TToolButton_*`。
+  Caption・OnClick・Align は既存の `beth_TControl_*` を使う。
 - C++ の各クラス:
   - `TToolWindow`(EdgeBorders・EdgeInner・EdgeOuter・BeginUpdate・EndUpdate)
   - `TToolBar`: ButtonCount・`Buttons[i]`・RowCount・ButtonHeight・ButtonWidth・DropDownWidth・Indent・Flat・List・

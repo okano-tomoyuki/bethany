@@ -1,7 +1,7 @@
 import ctypes
-import no_vcl_internal
+import beth_internal
 
-lib = no_vcl_internal.lib
+lib = beth_internal.lib
 
 # ---- コールバック定義 ----
 
@@ -148,7 +148,7 @@ def main():
     lib.FreeNotify_SetCallback(cb_component_freed, ctypes.byref(freedCount))
 
     app = lib.GetApplication()
-    lib.TApplication_SetTitle(app, b"Python no_vcl internal test")
+    lib.TApplication_SetTitle(app, b"Python Bethany internal test")
 
     form = lib.TApplication_CreateForm(app)
     lib.TCustomForm_SetOnClose(form, cb_form_close, ctypes.byref(closeAttempts))
@@ -238,24 +238,24 @@ def main():
     lib.TPaintBox_SetOnPaint(paintBox, cb_paintbox_paint, None)
 
     # ---- 例外(docs/adr/0031) ----
-    # DLL の中で LCL が例外を送出すると、関数が NoVclError を送出する。
+    # DLL の中で LCL が例外を送出すると、関数が BethError を送出する。
     strList = lib.TStringList_Create()
     lib.TStrings_Add(strList, b"only")
     try:
         lib.TStrings_GetStrings(strList, 5)
         print("must not be reached")
-    except no_vcl_internal.NoVclError as e:
+    except beth_internal.BethError as e:
         print(f"GetStrings(5) on 1 item raised: class_name={e.class_name} (expected EStringListError), message={e.message}")
     print(f"after the exception: Count={lib.TStrings_GetCount(strList)} (expected 1)")
     lib.TStringList_Destroy(strList)
 
-    # コールバックの中で起きた Python の例外は、そのイベントを起こした関数(ここでは TMenuItem_Click)の NoVclError になる。
+    # コールバックの中で起きた Python の例外は、そのイベントを起こした関数(ここでは TMenuItem_Click)の BethError になる。
     failingItem = lib.TMenuItem_Create(form)
     lib.TMenuItem_SetOnClick(failingItem, cb_failing_menu_click, None)
     try:
         lib.TMenuItem_Click(failingItem)
         print("must not be reached")
-    except no_vcl_internal.NoVclError as e:
+    except beth_internal.BethError as e:
         print(f"TMenuItem_Click with a failing callback raised: class_name={e.class_name} (expected EMyError), "
               f"message={e.message}, cause={type(e.__cause__).__name__}")
 

@@ -1,4 +1,4 @@
-"""no_vcl の Python の公開 API(no_vcl.py)のテスト。test/main.cpp(C++ ラッパーのテスト)の移植で、同じ書式で出力する
+"""Bethany の Python の公開 API(beth.py)のテスト。test/main.cpp(C++ ラッパーのテスト)の移植で、同じ書式で出力する
 (C++ 版の出力と突き合わせられるように)。C++ との違い:
 - C++ のデストラクタが出力する行(~TMainForm 等)は無い。ラッパーが破棄済みかは ReferenceError で確かめる。
 - ハンドラから送出した Python の例外のクラス名は、Python の型名(C++ の std::exception の代わりに RuntimeError 等)。
@@ -6,7 +6,7 @@
 import ctypes
 import os
 
-from no_vcl import *
+from beth import *
 
 
 def pr(s):
@@ -99,7 +99,7 @@ class TMainForm(TForm):
         self.imageListChanges_ = 0
         self.StatusBar1 = None
 
-        self.Caption = "no_vcl C++ wrapper"
+        self.Caption = "Bethany C++ wrapper"
         self.Width = 640
         self.Height = 930
 
@@ -1307,7 +1307,7 @@ class TMainForm(TForm):
 def main():
     global Form1
     Application.Initialize()
-    Application.Title = "no_vcl test"
+    Application.Title = "Bethany test"
     Form1 = Application.CreateForm(TMainForm)
     f = Form1
 
@@ -1730,27 +1730,27 @@ def main():
        f"Strings[2] is empty: {yn(fields.Strings[2] == '')}, Delimiter={fields.Delimiter}")
 
     # ファイルへの保存と読み込み。
-    path = "no_vcl_stringlist_test_py.txt"
+    path = "beth_stringlist_test_py.txt"
     fields.SaveToFile(path)
     loaded = TStringList()
     loaded.LoadFromFile(path)
     os.remove(path)
     pr(f"SaveToFile/LoadFromFile: Count={loaded.Count} (expected 4), Strings[3]={loaded.Strings[3]} (expected d)")
 
-    # 例外(docs/adr/0031)。LCL が送出した例外は NoVclError として送出され、C++ の Exception と同じ名前で読める。
+    # 例外(docs/adr/0031)。LCL が送出した例外は BethError として送出され、C++ の Exception と同じ名前で読める。
     lst = TStringList()
     lst.Add("only")
     try:
         s = lst.Strings[5]
         pr(f"must not be reached: {s}")
-    except NoVclError as E:
+    except BethError as E:
         pr(f"Strings[5] on 1 item threw: ClassName={E.ClassName()} (expected EStringListError), Message={E.Message}")
     pr(f"After the exception: Count={lst.Count} (expected 1)")
 
     try:
         with TPicture() as picture:
-            picture.LoadFromFile("no_vcl_no_such_file.png")
-    except NoVclError as E:
+            picture.LoadFromFile("beth_no_such_file.png")
+    except BethError as E:
         pr(f"LoadFromFile(no such file) threw: ClassName={E.ClassName()} (expected EFOpenError)")
 
     # ハンドラから送出した例外は、ハンドラを呼んだ DLL の関数(ここでは Click)から送出し直される。
@@ -1763,17 +1763,17 @@ def main():
     try:
         failing.Click()
         pr("must not be reached")
-    except NoVclError as E:
+    except BethError as E:
         pr(f"Click with a throwing handler: ClassName={E.ClassName()} (expected Exception), Message={E.Message} (expected boom)")
 
     # クラス名を指定した例外・標準の例外・ハンドラの中で LCL が送出した例外。
     def custom(Sender):
-        raise NoVclError("EMyError", "custom")
+        raise BethError("EMyError", "custom")
 
     failing.OnClick = custom
     try:
         failing.Click()
-    except NoVclError as E:
+    except BethError as E:
         pr(f"Custom class: {E.ClassName()}/{E.Message} (expected EMyError/custom)")
 
     def std_error(Sender):
@@ -1782,7 +1782,7 @@ def main():
     failing.OnClick = std_error
     try:
         failing.Click()
-    except NoVclError as E:
+    except BethError as E:
         pr(f"std::runtime_error: {E.ClassName()}/{E.Message} (expected std::exception/std error; Python: RuntimeError), "
            f"__cause__ is RuntimeError: {yn(isinstance(E.__cause__, RuntimeError))}")
 
@@ -1793,7 +1793,7 @@ def main():
     failing.OnClick = inner_error
     try:
         failing.Click()
-    except NoVclError as E:
+    except BethError as E:
         pr(f"LCL exception inside the handler: {E.ClassName()} (expected EStringListError)")
 
     # 例外を送出しないハンドラに戻すと、Click は成功する。
@@ -1817,8 +1817,8 @@ def main():
        f"same Canvas wrapper: {yn(canvas1.Handle == canvas2.Handle)}")
 
     # 別の形式への変換(Assign)と保存。TPicture.LoadFromFile は拡張子から形式を選ぶ。
-    pngPath = "no_vcl_graphic_test_py.png"
-    jpgPath = "no_vcl_graphic_test_py.jpg"
+    pngPath = "beth_graphic_test_py.png"
+    jpgPath = "beth_graphic_test_py.jpg"
     png = TPortableNetworkGraphic()
     png.Assign(bmp)
     png.SaveToFile(pngPath)

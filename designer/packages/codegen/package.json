@@ -1,5 +1,5 @@
 {
-  "name": "@no-vcl-designer/codegen",
+  "name": "@bethany-designer/codegen",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,6 +10,6 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@no-vcl-designer/core": "workspace:*"
+    "@bethany-designer/core": "workspace:*"
   }
 }

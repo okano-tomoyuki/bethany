@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import sampleText from '../../../../samples/MainForm.nvform.json?raw';
+import sampleText from '../../../../samples/MainForm.bfm.json?raw';
 import { parseDocument } from './parse.ts';
 import { findNode, propertyValue, walkNodes } from './tree.ts';
 

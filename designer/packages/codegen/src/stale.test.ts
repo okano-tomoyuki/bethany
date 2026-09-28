@@ -1,11 +1,11 @@
-import type { ControlNode, NvformDocument } from '@no-vcl-designer/core';
+import type { ControlNode, BfmDocument } from '@bethany-designer/core';
 import { describe, expect, it } from 'vitest';
 import { generateAll } from './index.ts';
 import { CPP_SAMPLE, DSL_FILE } from './testing.ts';
 
 type Files = Record<string, string>;
 
-function generate(doc: NvformDocument, existing: Files): { files: Files; warnings: string[] } {
+function generate(doc: BfmDocument, existing: Files): { files: Files; warnings: string[] } {
   const result = generateAll(doc, DSL_FILE, (path) => existing[path]);
   if ('error' in result) throw new Error(result.error);
   const files: Files = {};
@@ -18,15 +18,15 @@ function generate(doc: NvformDocument, existing: Files): { files: Files; warning
 
 /** フォームの直下のコントロールを書き換えたドキュメント */
 function editControl(
-  doc: NvformDocument,
+  doc: BfmDocument,
   name: string,
   edit: (node: ControlNode) => ControlNode,
-): NvformDocument {
+): BfmDocument {
   const controls = doc.form.controls?.map((c) => (c.name === name ? edit(c) : c));
   return { ...doc, form: { ...doc.form, controls } };
 }
 
-const renameOk = (doc: NvformDocument) =>
+const renameOk = (doc: BfmDocument) =>
   editControl(doc, 'OkButton', (node) => ({
     ...node,
     name: 'AcceptButton',

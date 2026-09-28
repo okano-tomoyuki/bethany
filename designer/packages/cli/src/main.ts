@@ -1,7 +1,7 @@
 /**
  * コード生成 CLI(docs/designer/codegen-design.md。tk-designer の tkd から流用)。
  *
- *   nvd generate <file.nvform.json> [--force] [--check] [--locale <ja|en>]
+ *   beth generate <file.bfm.json> [--force] [--check] [--locale <ja|en>]
  *
  * - DSL の codegen に書かれたターゲット(C++ / Python)のコードを生成する。既存のファイルはマーカー区間だけを更新する。
  * - 手で編集された区間があれば書き込まずに失敗する(--force で上書き)。
@@ -11,11 +11,11 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { generateAll } from '@no-vcl-designer/codegen';
-import { configureL10n, isJapanese, l10n, parseDocument } from '@no-vcl-designer/core';
+import { generateAll } from '@bethany-designer/codegen';
+import { configureL10n, isJapanese, l10n, parseDocument } from '@bethany-designer/core';
 import ja from '../../extension/l10n/bundle.l10n.ja.json' with { type: 'json' };
 
-const USAGE = 'Usage: nvd generate <file.nvform.json> [--force] [--check] [--locale <ja|en>]';
+const USAGE = 'Usage: beth generate <file.bfm.json> [--force] [--check] [--locale <ja|en>]';
 
 /** メッセージの言語(--locale、環境変数、OS の設定の順) */
 function detectLanguage(option: string | undefined): string {
@@ -77,7 +77,7 @@ function main(argv: readonly string[]): number {
 
   if (values.check) {
     for (const f of changed)
-      console.error(l10n.t('{0}: not up to date (run nvd generate)', f.path));
+      console.error(l10n.t('{0}: not up to date (run beth generate)', f.path));
     return changed.length > 0 ? 1 : 0;
   }
 

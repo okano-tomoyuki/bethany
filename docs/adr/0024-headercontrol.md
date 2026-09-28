@@ -32,8 +32,8 @@ LCL のソース(`comctrls.pp`・`include/headercontrol.inc`)で確認したこ�
 - 選択肢A: TListColumns と同じ形。
   - この DLL の `THeaderSections_Delete`・`Clear` で、削除の前に通知する。
   - ヘッダーコントロールの破棄の最初にも、全セクションを通知する。
-- 選択肢B: `CreateSection` を上書きした内部の派生クラス `TNoVclHeaderControl` に、
-  デストラクタで通知する派生セクション `TNoVclHeaderSection` を生成させる。
+- 選択肢B: `CreateSection` を上書きした内部の派生クラス `TBethHeaderControl` に、
+  デストラクタで通知する派生セクション `TBethHeaderSection` を生成させる。
 
 ## 決定
 
@@ -48,9 +48,9 @@ LCL のソース(`comctrls.pp`・`include/headercontrol.inc`)で確認したこ�
 API:
 
 - C API:
-  - ヘッダーコントロールのメンバは、宣言しているクラスの名前で `no_vcl_TCustomHeaderControl_*`。
-  - 生成は `no_vcl_THeaderControl_Create`。
-  - 一覧は `no_vcl_THeaderSections_*`、セクションは `no_vcl_THeaderSection_*`。
+  - ヘッダーコントロールのメンバは、宣言しているクラスの名前で `beth_TCustomHeaderControl_*`。
+  - 生成は `beth_THeaderControl_Create`。
+  - 一覧は `beth_THeaderSections_*`、セクションは `beth_THeaderSection_*`。
 - C++ の各クラス:
   - `THeaderSection`(TPersistent): Text・Width・MinWidth・MaxWidth・Alignment・Visible・Index と、読み取り専用の Left・Right・OriginalIndex。
   - `THeaderSections`: ヘッダーコントロールの値メンバとして持つ非所有のビュー。

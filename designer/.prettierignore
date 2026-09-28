@@ -6,8 +6,8 @@ packages/codegen/src/__golden__/
 samples/*.hpp
 samples/*.cpp
 tools/catalog/
-# *.nvform.json は core の serializeDocument が決まった形で書き出す
-*.nvform.json
+# *.bfm.json は core の serializeDocument が決まった形で書き出す
+*.bfm.json
 packages/extension/schema/
 # 記録(tools/layout/record.mts が書く)
 packages/core/src/layout/metrics.json

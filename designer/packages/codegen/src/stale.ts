@@ -8,7 +8,7 @@
  * 前回の生成区間にあって今回の生成区間にない名前を「なくなった名前」とする。
  * 区間の中身から名前を取り出す規則は言語ごとに異なる。
  */
-import { l10n } from '@no-vcl-designer/core';
+import { l10n } from '@bethany-designer/core';
 import { splitRegions } from './region.ts';
 
 export interface NameRules {

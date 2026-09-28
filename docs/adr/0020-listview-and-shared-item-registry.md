@@ -1,6 +1,6 @@
 # 0020. Tier 2 の 3 バッチ目として TListView を追加し、TComponent ではない項目の寿命管理を共通化する
 
-- 状態: 承認(一部置換→0026。項目・列の破棄の通知は TNoVclListView・削除前の通知ではなく TPersistent の観察者から送る)
+- 状態: 承認(一部置換→0026。項目・列の破棄の通知は TBethListView・削除前の通知ではなく TPersistent の観察者から送る)
 - 日付: 2026-09-27
 
 ## 背景
@@ -25,7 +25,7 @@ TListView の項目(TListItem)と列(TListColumn)も TComponent ではないた�
 列の寿命:
 
 - 選択肢A: 列は TCanvas のように、取得するたびに作り直す非所有のハンドルにする。寿命管理は不要だが、項目・ノードと扱いが揃わない。
-- 選択肢B: 列も項目と同じくラッパーを持ち、列を破棄する経路を no_vcl の関数(TListColumns の Delete・Clear)とリストビューの破棄に限って、
+- 選択肢B: 列も項目と同じくラッパーを持ち、列を破棄する経路を Bethany の関数(TListColumns の Delete・Clear)とリストビューの破棄に限って、
   そこで通知する。LCL の中で列が消えるのは、実質的にこれらの経路だけ。
 
 破棄通知の仕組み:
@@ -37,18 +37,18 @@ TListView の項目(TListItem)と列(TListColumn)も TComponent ではないた�
 
 選択肢B と D を採る。
 
-- **破棄通知の共通化**: ADR 0019 の `TreeNodeFree_SetCallback` を `ItemFree_SetCallback`(C API は `no_vcl_ItemFree_SetCallback`)に改名し、
-  ノード・項目・列の破棄通知に共用する。コールバックの型も `no_vcl_node_callback_t` → `no_vcl_item_callback_t`、
-  `no_vcl_node_allow_callback_t` → `no_vcl_item_allow_callback_t` に改名した(ADR 0019 の直後で未公開のため、互換性は考えない)。
+- **破棄通知の共通化**: ADR 0019 の `TreeNodeFree_SetCallback` を `ItemFree_SetCallback`(C API は `beth_ItemFree_SetCallback`)に改名し、
+  ノード・項目・列の破棄通知に共用する。コールバックの型も `beth_node_callback_t` → `beth_item_callback_t`、
+  `beth_node_allow_callback_t` → `beth_item_allow_callback_t` に改名した(ADR 0019 の直後で未公開のため、互換性は考えない)。
   C++ 側は `ItemRegistry`(`TPersistent*` の表。`Wrap<T>(handle)` で初回の取得時にラッパーを作る)にまとめ、TTreeNode もこれを使う。
   レジストリは ADR 0019 と同じく、破棄しないオブジェクトにする。
-- **項目**: `TListView_Create` は `DoDeletion` を上書きした `TNoVclListView` を生成し、`inherited`(利用者の OnDeletion)の後に通知する。
-- **列**: `TListColumns_Delete`・`Clear` は削除する直前に通知し、`TNoVclListView.Destroy` は最初(`inherited` の前)に残っている列を通知する。
+- **項目**: `TListView_Create` は `DoDeletion` を上書きした `TBethListView` を生成し、`inherited`(利用者の OnDeletion)の後に通知する。
+- **列**: `TListColumns_Delete`・`Clear` は削除する直前に通知し、`TBethListView.Destroy` は最初(`inherited` の前)に残っている列を通知する。
 - **TListItems・TListColumns**: TTreeNodes と同じく、リストビューの値メンバとして持ち、`ReadOnlyProperty<T*>` で公開する
   (`ListView1->Items->Add()`・`ListView1->Columns->Add()` と VCL と同じに書ける)。
 - **SubItems**(TStrings)は、TComboBox の Items と同じく `SubItemsAdd`・`SubItemsGetText` 等のメンバ関数で操作する。書き換えのために `SubItemsSetText` も用意した。
 - **イベント**: OnDeletion/OnItemChecked/OnColumnClick(Sender, 項目または列)は既存の項目用ブリッジに型ごとのメソッドを足し、
-  OnSelectItem(Sender, Item, Selected)・OnChange(Sender, Item, Change)は、項目と整数を 1 つずつ渡す `no_vcl_item_int_callback_t` を追加した。
+  OnSelectItem(Sender, Item, Selected)・OnChange(Sender, Item, Change)は、項目と整数を 1 つずつ渡す `beth_item_int_callback_t` を追加した。
 - 見送ったもの: 画像(LargeImages/SmallImages。Tier 3 待ち)、OwnerData(仮想リスト)、ラベルの編集、オーナードロー、OnCompare・CustomSort、
   OnChanging、グループ表示。
 
@@ -70,4 +70,4 @@ TListView の項目(TListItem)と列(TListColumn)も TComponent ではないた�
 - 一覧表示(詳細表示)の UI を VCL と同じ書き方で組めるようになった。
 - TComponent ではない項目の寿命管理が `ItemRegistry` と `ItemFree_SetCallback` の 1 つの仕組みになった。今後の TStringGrid 等で
   項目のオブジェクトを扱う場合も、同じ仕組みに載せる。
-- 列は、no_vcl の関数を経由せずに(LCL の内部で)削除されると通知されない。現在の API の範囲ではそのような経路は無い。
+- 列は、Bethany の関数を経由せずに(LCL の内部で)削除されると通知されない。現在の API の範囲ではそのような経路は無い。

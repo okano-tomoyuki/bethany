@@ -36,15 +36,15 @@ AddTabSheet・Pages[i]・ActivePage が返すページの扱い:
 
 選択肢B を採る。
 
-- C API: `no_vcl_TPageControl_*`(ActivePage・ActivePageIndex・GetPage・AddTabSheet・Clear・SelectNextPage・TabIndex・OnChange)、
-  `no_vcl_TCustomTabControl_*`(PageCount・MultiLine・ShowTabs・TabPosition・OnChanging)、
-  `no_vcl_TTabSheet_*`(PageControl・TabIndex)、`no_vcl_TCustomPage_*`(PageIndex・TabVisible・OnShow・OnHide)。
+- C API: `beth_TPageControl_*`(ActivePage・ActivePageIndex・GetPage・AddTabSheet・Clear・SelectNextPage・TabIndex・OnChange)、
+  `beth_TCustomTabControl_*`(PageCount・MultiLine・ShowTabs・TabPosition・OnChanging)、
+  `beth_TTabSheet_*`(PageControl・TabIndex)、`beth_TCustomPage_*`(PageIndex・TabVisible・OnShow・OnHide)。
   ページを返す関数(GetActivePage・GetPage・AddTabSheet)は Watch してから返す。
 - C++: 既存の空だった `TCustomTabControl` に public メンバを追加し、`TPageControl`・`TCustomPage`・`TTabSheet` を追加した。
   `Pages[Index]` は `GetPage(Index)`(TMenuItem::GetItem と同じ、インデックス付きプロパティを Get メソッドで表す形)。
   TTabSheet のハンドルを受け取るコンストラクタは private にし、`friend class TComponent` で WrapExisting からだけ呼べるようにした。
 - OnChanging は、OnCloseQuery と同じブリッジ(`TVarCallbackBridge.DoCloseQuery`)と C のコールバック型
-  (`no_vcl_close_query_callback_t`)をそのまま使う。C++ は `TTabChangingEvent = std::function<void(TObject*, bool& AllowChange)>`。
+  (`beth_close_query_callback_t`)をそのまま使う。C++ は `TTabChangingEvent = std::function<void(TObject*, bool& AllowChange)>`。
 - 見送ったもの: Images/ImageIndex(Tier 3 待ち)、Style・HotTrack・TabHeight/TabWidth・Options、OnCloseTabClicked、ドッキング関連。
 
 ## 実装して分かったこと

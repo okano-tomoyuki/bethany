@@ -3,17 +3,17 @@ import type {
   EditCommand,
   ExtensionToWebviewMessage,
   WebviewToExtensionMessage,
-} from '@no-vcl-designer/core';
-import { isJapanese } from '@no-vcl-designer/core';
+} from '@bethany-designer/core';
+import { isJapanese } from '@bethany-designer/core';
 import * as vscode from 'vscode';
 import { applyEditCommand } from './applyEditCommand.ts';
 import { generateCode } from './generateCode.ts';
 
 /**
- * *.nvform.json を開くデザイナー。TextDocument を唯一の正とする(tk-designer ADR 0006。docs/designer/editor-design.md §3)。
+ * *.bfm.json を開くデザイナー。TextDocument を唯一の正とする(tk-designer ADR 0006。docs/designer/editor-design.md §3)。
  */
 export class DesignerEditorProvider implements vscode.CustomTextEditorProvider {
-  static readonly viewType = 'noVclDesigner.designer';
+  static readonly viewType = 'bethanyDesigner.designer';
 
   static register(context: vscode.ExtensionContext): vscode.Disposable {
     return vscode.window.registerCustomEditorProvider(
@@ -76,7 +76,7 @@ export class DesignerEditorProvider implements vscode.CustomTextEditorProvider {
         if (e.document.uri.toString() === document.uri.toString()) void postDocument();
       }),
       vscode.workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration('noVclDesigner.canvas')) void postSettings();
+        if (e.affectsConfiguration('bethanyDesigner.canvas')) void postSettings();
       }),
     ];
     panel.onDidDispose(() => {
@@ -87,7 +87,7 @@ export class DesignerEditorProvider implements vscode.CustomTextEditorProvider {
 
 /** キャンバスの設定(docs/designer/editor-design.md §5.4)。空欄・0 は表示言語から決める */
 function canvasSettings(): CanvasSettings {
-  const config = vscode.workspace.getConfiguration('noVclDesigner.canvas');
+  const config = vscode.workspace.getConfiguration('bethanyDesigner.canvas');
   const fontFamily = config.get<string>('fontFamily', '').trim();
   const fontSize = config.get<number>('fontSize', 0);
   return {
@@ -119,7 +119,7 @@ function renderHtml(webview: vscode.Webview, webviewRoot: vscode.Uri): string {
     content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="${styleUri.toString()}">
-  <title>no_vcl Designer</title>
+  <title>Bethany Designer</title>
 </head>
 <body>
   <div id="root" data-language="${language}" data-l10n="${l10n}"></div>

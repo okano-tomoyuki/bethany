@@ -21,8 +21,8 @@ import {
   type ControlNode,
   type MenuItemNode,
   type NodeLocation,
-  type NvformDocument,
-} from '@no-vcl-designer/core';
+  type BfmDocument,
+} from '@bethany-designer/core';
 import {
   useEffect,
   useMemo,
@@ -739,7 +739,7 @@ function SelectionOverlay({
   preview,
   form,
 }: {
-  readonly document: NvformDocument;
+  readonly document: BfmDocument;
   readonly selection: readonly string[];
   readonly preview: ReadonlyMap<string, Bounds>;
   /** フォームを選択しているときに、右と下の端につまみを出す */
@@ -843,7 +843,7 @@ function canResize(location: NodeLocation): boolean {
   return location.kind === 'control' && hasOwnBounds(location.node.class);
 }
 
-function sameParent(document: NvformDocument, a: string, b: string): boolean {
+function sameParent(document: BfmDocument, a: string, b: string): boolean {
   const la = findNode(document, a);
   const lb = findNode(document, b);
   if (la?.kind === 'control' && lb?.kind === 'control') return la.parent === lb.parent;
@@ -851,7 +851,7 @@ function sameParent(document: NvformDocument, a: string, b: string): boolean {
 }
 
 /** コントロールの name → 親(フォームかコントロール) */
-function parentMap(document: NvformDocument): Map<string, { name: string; class: string }> {
+function parentMap(document: BfmDocument): Map<string, { name: string; class: string }> {
   const map = new Map<string, { name: string; class: string }>();
   for (const location of walkNodes(document))
     if (location.kind === 'control') map.set(location.node.name, location.parent);
@@ -860,7 +860,7 @@ function parentMap(document: NvformDocument): Map<string, { name: string; class:
 
 /** 開いて表示するメニュー: 選んだメニュー項目の祖先と、その項目自身(サブメニューを持つもの) */
 function openedMenu(
-  document: NvformDocument,
+  document: BfmDocument,
   name: string | undefined,
 ): { menu: ComponentNode; open: ReadonlySet<string> } | undefined {
   const location = name === undefined ? undefined : findNode(document, name);
@@ -937,7 +937,7 @@ function MenuList({
   );
 }
 
-function mainMenuOf(document: NvformDocument) {
+function mainMenuOf(document: BfmDocument) {
   const name = document.form.properties?.Menu;
   return typeof name === 'string'
     ? document.components?.find((c) => c.name === name && c.class === 'TMainMenu')

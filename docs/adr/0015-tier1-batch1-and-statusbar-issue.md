@@ -24,19 +24,19 @@
 ## TStatusBar の既知の問題(重要)
 
 > **この問題は解消済み。** 根本原因は LCL の Win32 実装が DLL のときに行うフォールバック処理にあり、
-> no_vcl 側で回避した。下の「追記: TStatusBar の問題の根本原因と解消」を参照。以下は当初の調査記録として残す。
+> Bethany 側で回避した。下の「追記: TStatusBar の問題の根本原因と解消」を参照。以下は当初の調査記録として残す。
 
 実装後のテストで、**TStatusBar は Application->Run() がメッセージループを始める前にウィンドウハンドルを
 作らせると、Win32 エラー 1406(「トップレベルの子ウィンドウを作成できません」)で失敗する**ことが分かった。
-no_vcl の通常の使い方(`Application->CreateForm(&Form1); Application->Run();` で、フォームのコンストラクタの中で
+Bethany の通常の使い方(`Application->CreateForm(&Form1); Application->Run();` で、フォームのコンストラクタの中で
 子コントロールを生成し Parent を設定する)は、まさにこのタイミングでウィンドウハンドルを要求するため、
 **素朴に実装すると実用上ほぼ確実にこの問題を踏む**。
 
 ### 調査で分かったこと
 
 - 標準の Lazarus 実行ファイル(.lpr を fpc で直接コンパイルしたもの)では同じコードで問題が起きない。
-  LCL の DLL を、LCL を使わない C/C++ の実行ファイルから `LoadLibrary` でホストする no_vcl 特有の現象と見られる。
-- no_vcl の Pascal コード(`Watch` や `TStatusBar_Create` 自体)には依存しない。no_vcl を一切使わない、
+  LCL の DLL を、LCL を使わない C/C++ の実行ファイルから `LoadLibrary` でホストする Bethany 特有の現象と見られる。
+- Bethany の Pascal コード(`Watch` や `TStatusBar_Create` 自体)には依存しない。Bethany を一切使わない、
   最小限の DLL(`TStatusBar.Create` して `Parent` を設定し `Show` するだけ)でも同じ Win32 エラーで再現した。
 - **TStatusBar に固有の問題であり、ComCtrls の共通コントロール全般の問題ではない。** 同じ条件で
   TProgressBar(同じく comctl32 のネイティブコントロール)は問題なく生成・表示できた。`Align := alBottom`
@@ -56,7 +56,7 @@ no_vcl の通常の使い方(`Application->CreateForm(&Form1); Application->Run(
 
 1. TStatusBar の実装(Pascal・C API・C++)はそのまま採用する。問題は生成のタイミングに起因し、
    実装そのものは他のコントロールと同じ形で正しいため。
-2. **既知の問題として、C API ヘッダ(no_vcl_c.h)と C++ ヘッダ(no_vcl.hpp)の TStatusBar の宣言に
+2. **既知の問題として、C API ヘッダ(beth_c.h)と C++ ヘッダ(beth.hpp)の TStatusBar の宣言に
    直接コメントで警告し、回避策(Interval=1 の使い捨てタイマーで Run() 開始後に生成する)を明記する。**
    利用者がこのコメントを読まずに素朴な使い方をすると確実にクラッシュするため、ドキュメントの中でも
    最も目につく場所(型の宣言そのもの)に書く。
@@ -70,7 +70,7 @@ no_vcl の通常の使い方(`Application->CreateForm(&Form1); Application->Run(
 
 - TStatusBar を使うコードは、フォームのコンストラクタの中で直接 `Parent` を設定するのではなく、
   Interval=1 のタイマー等で Run() 開始後まで生成を遅らせる必要がある(C++Builder/Delphi の通常の
-  書き方とは異なる、no_vcl 固有の制約)。
+  書き方とは異なる、Bethany 固有の制約)。
 - 今回追加した他の 5 クラス(TScrollBox・TToggleBox・TBevel・TShape・TStaticText)にはこの問題は無く、
   通常どおりコンストラクタの中で生成・配置できる。
 
@@ -102,7 +102,7 @@ TStatusBar のような問題の心配は無い。
 - **TRadioGroup**(TCustomRadioGroup): `Items`(TComboBox 等と同じ ItemsAdd/Clear/Count/GetText の形)・
   `ItemIndex`・`OnClick`。**`OnClick` は `TCustomRadioGroup` 自身が持つ独自のフィールドで、
   `TControl.OnClick` とは別物**(LCL の宣言で再宣言されて隠れている)。そのため `TComboBox.OnChange` と
-  同じ理由で専用のブリッジ(`no_vcl_TCustomRadioGroup_SetOnClick`)を用意した。
+  同じ理由で専用のブリッジ(`beth_TCustomRadioGroup_SetOnClick`)を用意した。
 - **TCheckGroup**(TCustomCheckGroup): `Items` + インデックス付きの `Checked[Index]`。
   インデックス付きプロパティは C++ では `GetChecked(int)`/`SetChecked(int, bool)` という素朴なメソッドの
   組として表す(`Property<T>` は単一の値しか表せないため)。
@@ -131,12 +131,12 @@ TBitBtn(buttons.pp、TCustomBitBtn → TCustomButton、既存の TButton と同�
 を追加した。
 
 - **TFloatSpinEdit**(TCustomFloatSpinEdit): `Value`・`MinValue`・`MaxValue`・`Increment`(いずれも Double)・
-  `DecimalPlaces`。C API に `no_vcl_float_t`(`double`)を新たに追加した。
+  `DecimalPlaces`。C API に `beth_float_t`(`double`)を新たに追加した。
 - **TSpinEdit**(TCustomSpinEdit): LCL では `TCustomFloatSpinEdit` の派生で、`Value`・`MinValue`・
   `MaxValue`・`Increment` を **Integer で再宣言して Double 版を隠す**。C++ 側でも同じ隠蔽を再現するため、
   `TCustomSpinEdit` に同名の `Property<int>` を宣言し、C++ の名前隠蔽(派生クラスの同名メンバが基底の
   ものを隠す)で `TCustomFloatSpinEdit` の `Property<double>` を隠した。関数名は宣言元のクラスごとに
-  分けている(`no_vcl_TCustomFloatSpinEdit_*` は double、`no_vcl_TCustomSpinEdit_*` は int)。
+  分けている(`beth_TCustomFloatSpinEdit_*` は double、`beth_TCustomSpinEdit_*` は int)。
   テストで `SpinEdit1->Value` が int 版として振る舞うことを確認した。
 - **TMaskEdit**(TCustomMaskEdit): `EditMask` のみ対応。`EditMask` は `TCustomMaskEdit` では protected だが、
   唯一の具象クラス `TMaskEdit` が published にしているため、`TUpDown` と同じ形で `TMaskEdit` に直接置いた。
@@ -152,7 +152,7 @@ TBitBtn(buttons.pp、TCustomBitBtn → TCustomButton、既存の TButton と同�
   `TTabControl` が独自のフィールドで再宣言して published にしているため、`TUpDown` と同じ形で
   `TTabControl` に直接置いた。
 - **TPageControl・TTabSheet(ページ付きのタブ)は今回見送った。** `TTabSheet` は `TCustomPage`
-  (`TWinControl` 派生)で、タブごとにページというコンポーネントを所有し、その生成・破棄を no_vcl 側で
+  (`TWinControl` 派生)で、タブごとにページというコンポーネントを所有し、その生成・破棄を Bethany 側で
   どう表すか(`TPageControl.Pages[i]` の C++ での表現、`AddPage`/`DeletePage` 相当の API 設計)が
   単純な `Property<T>` の追加では済まないため、Tier 2 に位置づけ直した
   (component-coverage.md を更新済み)。
@@ -171,7 +171,7 @@ TBitBtn(buttons.pp、TCustomBitBtn → TCustomButton、既存の TButton と同�
 
 ### 原因
 
-no_vcl.dll をデバッグ情報付きでビルドし、例外発生時のバックトレースを取得したところ、失敗しているのは
+beth.dll をデバッグ情報付きでビルドし、例外発生時のバックトレースを取得したところ、失敗しているのは
 TStatusBar 自身のウィンドウではなく、LCL がステータスバーの推奨の高さを測るために一時的に作る、
 使い捨てのステータスバーであった。
 
@@ -216,7 +216,7 @@ Run の開始前はどちらも得られないため、親 0 の `WS_CHILD` ウ�
    `{$ifdef LCLwin32}`)。使い捨ての隠しウィンドウ(`WS_POPUP`)を作り、`WidgetSet.AppHandle` に一時的に
    設定したうえで `GetPreferredSize` を呼び、終わったらすぐに `AppHandle` を 0 に戻してウィンドウを破棄する。
    - `AppHandle` を恒久的に設定する案は採らなかった。`AppHandle` はフォームの所有関係(オーナーウィンドウ)や
-     タスクバーの扱いにも使われ、DLL としてホストされる no_vcl の他の挙動に影響しかねないため。
+     タスクバーの扱いにも使われ、DLL としてホストされる Bethany の他の挙動に影響しかねないため。
    - 計測はユニット内の変数(LCL の private な実装)を直接操作せず、公開されている `GetPreferredSize` を
      経由して LCL 自身に行わせる。LCL の実装が変わって計測が不要になっても、この処理は無害に終わる。
 2. C API・C++ ヘッダの警告コメントと、test/main.c・test/main.cpp のタイマーによる回避策を削除した。

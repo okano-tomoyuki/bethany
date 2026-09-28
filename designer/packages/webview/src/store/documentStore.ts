@@ -11,14 +11,14 @@ import {
   validateDocument,
   type Diagnostic,
   type EditCommand,
-  type NvformDocument,
+  type BfmDocument,
   type WebviewToExtensionMessage,
-} from '@no-vcl-designer/core';
+} from '@bethany-designer/core';
 import { createStore } from 'zustand/vanilla';
 
 interface Snapshot {
   /** 構造の検証を通過した場合のみ存在する */
-  readonly document: NvformDocument | undefined;
+  readonly document: BfmDocument | undefined;
   readonly diagnostics: readonly Diagnostic[];
 }
 

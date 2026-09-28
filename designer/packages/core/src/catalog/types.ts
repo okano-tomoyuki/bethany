@@ -1,6 +1,6 @@
 /**
  * コンポーネントカタログの型(docs/designer/catalog.md §4)。
- * catalog.json は designer/tools/catalog/extract.py が no_vcl.hpp・実測・overlay.json から作る。
+ * catalog.json は designer/tools/catalog/extract.py が beth.hpp・実測・overlay.json から作る。
  */
 
 /** プロパティの型。DSL の値の書き方(docs/designer/dsl-spec.md §5)が決まる */
@@ -61,7 +61,7 @@ export interface ClassInfo {
 
 export interface EventParam {
   readonly name: string;
-  /** no_vcl.hpp での型(例: "TObject*"・"bool&") */
+  /** beth.hpp での型(例: "TObject*"・"bool&") */
   readonly type: string;
 }
 

@@ -2,7 +2,7 @@
  * 右クリックのメニュー(docs/designer/editor-design.md §5.2)。選択に対してできる操作(actions.ts)を並べる。
  * 外側のクリック・Esc・操作の実行で閉じる。上下の矢印で項目を移り、Enter で実行する。
  */
-import { l10n } from '@no-vcl-designer/core';
+import { l10n } from '@bethany-designer/core';
 import {
   useEffect,
   useLayoutEffect,

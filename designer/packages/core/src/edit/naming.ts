@@ -2,11 +2,11 @@
  * 名前(DSL の name・ハンドラ名)の収集と採番(docs/designer/editor-design.md §3.2)。
  */
 import { memberNameProblem } from '../identifier.ts';
-import type { NvformDocument } from '../dsl/schema.ts';
+import type { BfmDocument } from '../dsl/schema.ts';
 import { walkNodes } from '../dsl/tree.ts';
 
 /** 生成するクラスのメンバになる名前(ノードの name とハンドラ名) */
-export function collectMemberNames(doc: NvformDocument): Set<string> {
+export function collectMemberNames(doc: BfmDocument): Set<string> {
   const names = new Set<string>();
   for (const { node } of walkNodes(doc)) {
     names.add(node.name);
@@ -16,7 +16,7 @@ export function collectMemberNames(doc: NvformDocument): Set<string> {
 }
 
 /** ハンドラ名だけ */
-export function collectHandlerNames(doc: NvformDocument): Set<string> {
+export function collectHandlerNames(doc: BfmDocument): Set<string> {
   const names = new Set<string>();
   for (const { node } of walkNodes(doc))
     for (const handler of Object.values(node.events ?? {})) names.add(handler);

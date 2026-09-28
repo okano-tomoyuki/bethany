@@ -1,6 +1,6 @@
 # 0019. Tier 2 の 2 バッチ目として TTreeView を追加し、TComponent ではない項目(TTreeNode)の寿命を削除通知で管理する
 
-- 状態: 承認(一部置換→0020。`TreeNodeFree_SetCallback` は `ItemFree_SetCallback` に改名し、ノード専用のレジストリは `ItemRegistry` に共通化した。一部置換→0023。インデックス付きプロパティは添字で書く。一部置換→0026。破棄の通知は TNoVclTreeView.Delete ではなく TPersistent の観察者から送る)
+- 状態: 承認(一部置換→0020。`TreeNodeFree_SetCallback` は `ItemFree_SetCallback` に改名し、ノード専用のレジストリは `ItemRegistry` に共通化した。一部置換→0023。インデックス付きプロパティは添字で書く。一部置換→0026。破棄の通知は TBethTreeView.Delete ではなく TPersistent の観察者から送る)
 - 日付: 2026-09-27
 
 ## 背景
@@ -34,15 +34,15 @@ LCL のソース(`comctrls.pp`・`include/treeview.inc`)で確認したこと:
 
 - 選択肢A-1: ツリービューの OnDeletion を内部で使い、利用者の OnDeletion を連鎖して呼ぶ。
   利用者の OnDeletion の登録・解除のたびに連鎖を管理する必要がある。
-- 選択肢A-2: `TCustomTreeView.Delete`(protected virtual)を上書きした内部クラス `TNoVclTreeView = class(TTreeView)` を
+- 選択肢A-2: `TCustomTreeView.Delete`(protected virtual)を上書きした内部クラス `TBethTreeView = class(TTreeView)` を
   `TTreeView_Create` で生成し、`inherited`(利用者の OnDeletion)の後に削除を通知する。OnDeletion は利用者のものがそのまま使える。
 
 ## 決定
 
 選択肢A と A-2 を採る。
 
-- **Pascal 側**: `TTreeView_Create` は `TNoVclTreeView` を生成する(C/C++ からは TTreeView として扱い、公開するクラス階層は変わらない)。
-  `TNoVclTreeView.Delete` は `inherited Delete`(OnDeletion)の後に、`TreeNodeFree_SetCallback` で登録したコールバックを呼ぶ
+- **Pascal 側**: `TTreeView_Create` は `TBethTreeView` を生成する(C/C++ からは TTreeView として扱い、公開するクラス階層は変わらない)。
+  `TBethTreeView.Delete` は `inherited Delete`(OnDeletion)の後に、`TreeNodeFree_SetCallback` で登録したコールバックを呼ぶ
   (`FreeNotify_SetCallback` のノード版)。利用者の OnDeletion の中ではノードはまだ有効で、その後にラッパーが delete される。
 - **C++ 側**: `TTreeNode`(`TPersistent` の派生)は独自のレジストリを持ち、`TTreeNode::Wrap(handle)` で初回の取得時にラッパーを作る。
   削除通知でレジストリから外して delete する。コンストラクタ・デストラクタは private(利用者は new/delete/Free しない)。
@@ -50,7 +50,7 @@ LCL のソース(`comctrls.pp`・`include/treeview.inc`)で確認したこと:
   VCL と同じ `TreeView1->Items->Add(nullptr, "Root")` と書けるよう、`ReadOnlyProperty<TTreeNodes*> Items` で公開する。
 - **イベント**: OnChange/OnExpanded/OnCollapsed/OnDeletion(Sender, Node)と OnChanging/OnExpanding/OnCollapsing(Sender, Node, var Allow)の
   2 種類のブリッジ(`TNodeCallbackBridge`・`TNodeAllowCallbackBridge`)を追加した。C のコールバック型は
-  `no_vcl_node_callback_t`・`no_vcl_node_allow_callback_t`。イベントの型(TTVChangedEvent・TTVExpandedEvent 等)は構造が同じ別名の型のため、
+  `beth_node_callback_t`・`beth_node_allow_callback_t`。イベントの型(TTVChangedEvent・TTVExpandedEvent 等)は構造が同じ別名の型のため、
   Pascal 側は `MethodData` の多重定義ではなく `TMethod(...).Data` を渡す。
 - インデックス付きプロパティ(`Items[Index]`)は、これまでと同じく `GetItem(Index)`。
 - 見送ったもの: 画像(Images/ImageIndex/StateIndex。Tier 3 待ち)、複数選択(MultiSelect・Selections)、ラベルの編集(OnEditing/OnEdited)、

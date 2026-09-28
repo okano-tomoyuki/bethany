@@ -1,4 +1,4 @@
-import { configureL10n } from '@no-vcl-designer/core';
+import { configureL10n } from '@bethany-designer/core';
 import * as vscode from 'vscode';
 import { DesignerEditorProvider } from './designerEditorProvider.ts';
 import { registerDiagnostics } from './diagnostics.ts';
@@ -11,10 +11,10 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     DesignerEditorProvider.register(context),
     registerDiagnostics(),
-    vscode.commands.registerCommand('noVclDesigner.newForm', (target?: vscode.Uri) =>
+    vscode.commands.registerCommand('bethanyDesigner.newForm', (target?: vscode.Uri) =>
       newForm(target),
     ),
-    vscode.commands.registerCommand('noVclDesigner.generateCode', async (target?: vscode.Uri) => {
+    vscode.commands.registerCommand('bethanyDesigner.generateCode', async (target?: vscode.Uri) => {
       const uri = target ?? activeDslUri();
       if (!uri) return;
       await generateCode(await vscode.workspace.openTextDocument(uri));

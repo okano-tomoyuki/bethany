@@ -33,12 +33,12 @@
 各コンストラクタの先頭で `assert(parent != nullptr)`(`<cassert>`)によるチェックを追加し、
 `nullptr` を渡した場合は(デバッグビルドで)即座に検知できるようにした。
 
-`TForm` は元々 Owner 引数を持たない(常に `no_vcl_TForm_Create(nullptr)`)ため、本 ADR の対象外。
+`TForm` は元々 Owner 引数を持たない(常に `beth_TForm_Create(nullptr)`)ため、本 ADR の対象外。
 
 ## 影響
 
-- `no_vcl.hpp`/`no_vcl.cpp` の全コントロールのコンストラクタ・`TPaintBox::MakeHandle` を変更。
+- `beth.hpp`/`beth.cpp` の全コントロールのコンストラクタ・`TPaintBox::MakeHandle` を変更。
 - 呼び出し側は `TButton button(form);` から `TButton button(&form);` に変更が必要
   (`test/main.cpp` を追随済み)。ADR 0004 のポインタメンバ規約とも自然に噛み合う
   (`button1.reset(new TButton(this));` のように `this` をそのまま渡せる)。
-- `no_vcl_c.h`(C API 層)は元々すべて `no_vcl_obj_t`(実質ポインタ)でやり取りしているため影響なし。
+- `beth_c.h`(C API 層)は元々すべて `beth_obj_t`(実質ポインタ)でやり取りしているため影響なし。

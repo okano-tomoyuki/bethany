@@ -1,7 +1,7 @@
 /**
  * オブジェクトインスペクタ(docs/designer/editor-design.md §6)。選択したノードの名前と、プロパティ・イベントの 2 つのタブ。
  */
-import { classOf, l10n, type NodeLocation } from '@no-vcl-designer/core';
+import { classOf, l10n, type NodeLocation } from '@bethany-designer/core';
 import { useState } from 'react';
 import { renameNode } from '../../editing.ts';
 import { uiStore, useDocumentStore, useSelectedNodes, useUiStore } from '../../store/stores.ts';

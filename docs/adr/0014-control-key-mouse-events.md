@@ -33,9 +33,9 @@ OnUTF8KeyPress・OnMouseWheelUp/Down/Horz/Left/Right は、利用頻度が低い
 
 1. **Shift 状態はビット集合として表す。** Pascal 側は `TShiftStateEnum` を 1 ビットずつ走査して `LongWord` に変換する
    (`{$packset}` の効果で集合の実バイト数が変わっても影響を受けないループ実装)。C API・C++ とも
-   `no_vcl_ss*` / `no_vcl::ss*`(`ssShift`, `ssCtrl`, `ssLeft` 等)の定数をビット OR して使う、`unsigned int` の単純なビット集合とする
+   `beth_ss*` / `beth::ss*`(`ssShift`, `ssCtrl`, `ssLeft` 等)の定数をビット OR して使う、`unsigned int` の単純なビット集合とする
    (TColor と同様、Pascal の集合型を素の整数として扱う実務的な選択)。
-2. **マウスボタンは `TMouseButton` の序数と同じ整数(`no_vcl_mb*` / `no_vcl::TMouseButton`)。**
+2. **マウスボタンは `TMouseButton` の序数と同じ整数(`beth_mb*` / `beth::TMouseButton`)。**
 3. **実装場所は TControl・TWinControl。** docs/class-hierarchy.md の「LCL で公開している階層に置く」方針に従い、
    TForm 専用にはしない。TForm は TWinControl の子孫として、これらをそのまま継承する。
 4. **書き換え可能な引数を持つイベント(OnKeyDown・OnKeyUp・OnKeyPress・OnMouseWheel)は、OnClose と同じくポインタ経由で書き換える。**
@@ -56,7 +56,7 @@ OnUTF8KeyPress・OnMouseWheelUp/Down/Horz/Left/Right は、利用頻度が低い
 | OnKeyPress | `Property<TKeyPressEvent>`(`std::function<void(TObject*, char& Key)>`) | TWinControl |
 
 あわせて、TCustomForm の各イベントの Setter で使っていた共通ヘルパ(ハンドラの保持 + 初回のブリッジ登録)を
-`SetSimpleEvent`(no_vcl.cpp 内の関数テンプレート)としてファイル冒頭に移動し、TControl・TWinControl からも使えるようにした。
+`SetSimpleEvent`(beth.cpp 内の関数テンプレート)としてファイル冒頭に移動し、TControl・TWinControl からも使えるようにした。
 
 ## 影響
 

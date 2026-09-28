@@ -1,23 +1,23 @@
-"""no_vcl の公開 API(no_vcl.py)の土台。no_vcl.py は gen_api.py が no_vcl.hpp から生成し、このモジュールの
-クラス・デスクリプタを使う。利用者は no_vcl を import し、このモジュールを直接使わない。
+"""Bethany の公開 API(beth.py)の土台。beth.py は gen_api.py が beth.hpp から生成し、このモジュールの
+クラス・デスクリプタを使う。利用者は beth を import し、このモジュールを直接使わない。
 
-C++ ラッパー(no_vcl.hpp)との対応:
+C++ ラッパー(beth.hpp)との対応:
 - プロパティは Python のプロパティ(Button1.Caption = "OK")、添字付きのプロパティは添字(Grid.Cells[c, r]・Grid.Cells[c][r])。
 - イベントは Python の呼び出し可能オブジェクトを代入する(Button1.OnClick = self.Button1Click)。ハンドラは
   C++ と同じく Sender を最初の引数に受け取る。C++ で参照渡し(int& Key・bool& CanClose 等)の引数は Ref で渡され、
   .value を書き換えると LCL に戻る。メソッドの出力引数(int& Index 等)にも Ref を渡す。
 - 文字列は str(DLL との間は UTF-8)。集合(TShiftState 等)は enum.IntFlag、列挙型は enum.IntEnum。
 - コンポーネントのラッパーの寿命は LCL オブジェクトに従う(docs/adr/0008)。破棄された後に触ると ReferenceError。
-- DLL の中で起きた例外は NoVclError(C++ の Exception。Message・ClassName())になる(docs/adr/0031)。
+- DLL の中で起きた例外は BethError(C++ の Exception。Message・ClassName())になる(docs/adr/0031)。
 """
 import atexit
 import ctypes
 import enum
 
-import no_vcl_internal as _internal
-from no_vcl_internal import NoVclError, lib
+import beth_internal as _internal
+from beth_internal import BethError, lib
 
-__all__ = ["NoVclError", "Ref", "TRect", "TPoint", "TObject", "TPersistent", "TComponent"]
+__all__ = ["BethError", "Ref", "TRect", "TPoint", "TObject", "TPersistent", "TComponent"]
 
 
 # ---------------- 値 ----------------
@@ -72,7 +72,7 @@ class TPoint:
 
 # ---------------- 変換 ----------------
 
-# no_vcl.py が定義したクラス・列挙型(名前 → 型)。変換は型を名前で受け取り、使うときに引く
+# beth.py が定義したクラス・列挙型(名前 → 型)。変換は型を名前で受け取り、使うときに引く
 # (クラスの定義順に関係なく、後で定義されるクラスを型として使えるように)。
 _types = {}
 
@@ -125,7 +125,7 @@ def _to_enum(name, raw):
 
 
 def _to_comp(name, raw):
-    """TComponent のラッパー(no_vcl のラッパーを介さずに作られたものなら None)。"""
+    """TComponent のラッパー(Bethany のラッパーを介さずに作られたものなら None)。"""
     return _components.get(raw) if raw else None
 
 
@@ -358,7 +358,7 @@ def _a_ref_enum(name):
     return _a_ref(lambda raw: _to_enum(name, raw), int)
 
 
-# イベントの型(TKeyEvent 等)→ Sender 以外の引数の変換。no_vcl.py が設定する。
+# イベントの型(TKeyEvent 等)→ Sender 以外の引数の変換。beth.py が設定する。
 _event_types = {}
 
 
@@ -388,7 +388,7 @@ class _Event:
             obj.__dict__[self.hooked] = True
 
     def _trampoline(self, sender, *raws):
-        # 例外は no_vcl_internal が SetCallbackError で DLL へ知らせる(docs/adr/0031)。
+        # 例外は beth_internal が SetCallbackError で DLL へ知らせる(docs/adr/0031)。
         self_ = _components.get(sender)
         if self_ is None:
             return
@@ -573,7 +573,7 @@ class _ItemMixin:
         return obj
 
 
-# ---------------- 手書きのメンバ(no_vcl.py の生成したクラスに混ぜる) ----------------
+# ---------------- 手書きのメンバ(beth.py の生成したクラスに混ぜる) ----------------
 # gen_api.py は、ここで定義したメンバを生成しない。
 
 
@@ -719,7 +719,7 @@ class TForm:
 
 
 class TApplication:
-    """C++Builder の TApplication。インスタンスは no_vcl.Application の 1 つだけ。
+    """C++Builder の TApplication。インスタンスは beth.Application の 1 つだけ。
     Application が所有するフォームは、プログラムの終了時(atexit)にまとめて破棄される。"""
 
     _instance = None

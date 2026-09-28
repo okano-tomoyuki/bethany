@@ -6,7 +6,7 @@
 ## 背景
 
 [component-coverage.md](../component-coverage.md) の Tier 3 は、画像を扱うもの(TImage・TBitBtn/TSpeedButton の Glyph・TImageList)で、
-いずれも no_vcl にまだ無いグラフィックス基盤(TBitmap・TPicture)を前提にしていた。
+いずれも Bethany にまだ無いグラフィックス基盤(TBitmap・TPicture)を前提にしていた。
 Tier 3 は大きいため、これまでと同じくバッチに分ける。
 
 - 1 バッチ目(この ADR): グラフィックス基盤、TImage、Glyph。
@@ -32,7 +32,7 @@ LCL のソース(`graphics.pp`・`include/picture.inc`・`include/rasterimage.in
   - TCustomBitBtn・TCustomSpeedButton の Glyph は、ボタンの生成時に作られる TBitmap で、差し替わらない(Setter は `Assign`)。
   - Glyph を設定すると、`NumGlyphs` は画像の幅と高さの比から決め直される。
   - **TCustomBitBtn は Glyph を設定すると `Kind` を bkCustom に戻す**(`SetGlyph` の先頭で `Kind := bkCustom`。Caption はそのまま)。
-- **AutoSize** は TControl の public。TCustomImage を含め、多くのコントロールが使うが no_vcl には無かった。
+- **AutoSize** は TControl の public。TCustomImage を含め、多くのコントロールが使うが Bethany には無かった。
 
 ## 検討した選択肢
 
@@ -60,16 +60,16 @@ Picture・Graphic・Glyph への代入:
 ## 決定
 
 - **C API**:
-  - TGraphic: `no_vcl_TGraphic_Destroy`・`Get/SetWidth`・`Get/SetHeight`・`GetEmpty`・`Get/SetTransparent`・`LoadFromFile`・`SaveToFile`・`Assign`・`Clear`。
+  - TGraphic: `beth_TGraphic_Destroy`・`Get/SetWidth`・`Get/SetHeight`・`GetEmpty`・`Get/SetTransparent`・`LoadFromFile`・`SaveToFile`・`Assign`・`Clear`。
   - TRasterImage: `GetCanvas`・`Get/SetPixelFormat`・`Get/SetTransparentColor`・`Get/SetTransparentMode`。TCustomBitmap: `SetSize`。
-  - 生成: `no_vcl_TBitmap_Create`・`TPortableNetworkGraphic_Create`・`TJPEGImage_Create`(破棄は共通の `no_vcl_TGraphic_Destroy`)。
+  - 生成: `beth_TBitmap_Create`・`TPortableNetworkGraphic_Create`・`TJPEGImage_Create`(破棄は共通の `beth_TGraphic_Destroy`)。
     TJPEGImage: `Get/SetCompressionQuality`。
   - TPicture: `Create`・`Destroy`・`Get/SetGraphic`・`GetBitmap`・`GetPNG`・`GetJpeg`・`GetWidth`・`GetHeight`・`LoadFromFile`・`SaveToFile`・`Assign`・`Clear`。
-  - TImage: `no_vcl_TImage_Create`、TCustomImage の `Get/SetPicture`・`GetCanvas`・`GetHasGraphic`・`Center`・`Stretch`・`StretchOutEnabled`・
+  - TImage: `beth_TImage_Create`、TCustomImage の `Get/SetPicture`・`GetCanvas`・`GetHasGraphic`・`Center`・`Stretch`・`StretchOutEnabled`・
     `StretchInEnabled`・`Proportional`・`Transparent`・`SetOnPictureChanged`。
   - Glyph: TCustomBitBtn・TCustomSpeedButton の `Get/SetGlyph`・`NumGlyphs`・`Layout`・`Margin`・`Spacing`。
   - TCanvas: `Draw`・`StretchDraw`・`FillRect`・`Get/SetPixels`。TControl: `Get/SetAutoSize`。
-  - 列挙は `no_vcl_pf*`・`no_vcl_tm*`・`no_vcl_blGlyph*`。
+  - 列挙は `beth_pf*`・`beth_tm*`・`beth_blGlyph*`。
   - TPicture の中身・Canvas のハンドルは**保存せず、使うたびに取得する**ことを、ヘッダーに明記した(TStrings と同じ)。
 - **C++**:
   - 階層: `TGraphic → TRasterImage → TCustomBitmap → TBitmap / TPortableNetworkGraphic / TJPEGImage` と `TPicture`(いずれも TPersistent)。

@@ -1,6 +1,6 @@
 /**
  * 言語に依らない中間表現(docs/designer/codegen-design.md §1・§4)。
- * DSL を、生成するメンバ・ハンドラと、nvd_CreateComponents の中で実行する文の並びにする。
+ * DSL を、生成するメンバ・ハンドラと、beth_CreateComponents の中で実行する文の並びにする。
  * C++ と Python のエミッタは、この並びをそれぞれの書き方で書き出すだけにする(順序の決まりをここに集める)。
  */
 import {
@@ -12,10 +12,10 @@ import {
   classOf,
   type EventParam,
   type NodeLocation,
-  type NvformDocument,
+  type BfmDocument,
   type PropertyInfo,
   type PropertyType,
-} from '@no-vcl-designer/core';
+} from '@bethany-designer/core';
 
 /** プロパティに設定する値 */
 export type Value =
@@ -28,7 +28,7 @@ export type Value =
   | { readonly kind: 'flags'; readonly type: string; readonly names: readonly string[] }
   /** Set<E>(C++ は `TAnchors() << a << b`) */
   | { readonly kind: 'set'; readonly type: string; readonly names: readonly string[] }
-  /** "#RRGGBB" の色。value は no_vcl の TColor($00BBGGRR) */
+  /** "#RRGGBB" の色。value は Bethany の TColor($00BBGGRR) */
   | { readonly kind: 'rgb'; readonly value: number; readonly text: string }
   | { readonly kind: 'shortcut'; readonly text: string }
   /** 同じフォームのコンポーネント */
@@ -95,12 +95,12 @@ export interface FormModel {
   readonly members: readonly Member[];
   /** ハンドラ(最初に現れた順。同じ名前は 1 つ) */
   readonly handlers: readonly Handler[];
-  /** nvd_CreateComponents の中身 */
+  /** beth_CreateComponents の中身 */
   readonly statements: readonly Statement[];
 }
 
 /** 検証を通過したドキュメントから中間表現を作る */
-export function buildModel(doc: NvformDocument, className: string): FormModel {
+export function buildModel(doc: BfmDocument, className: string): FormModel {
   const nodes = [...walkNodes(doc)];
   const members = nodes
     .filter((n) => n.kind !== 'form')

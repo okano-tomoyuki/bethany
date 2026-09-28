@@ -3,19 +3,19 @@
 デザイナーが扱うコンポーネントの一覧と、それぞれのプロパティ・イベントの情報。DSL の検証([dsl-spec.md](dsl-spec.md) §7)、
 デザイナーのパレット・プロパティエディタ、コード生成(プロパティの型・ハンドラの引数)が使う。
 
-tk-designer は Tk を実際に動かしてオプションを抽出した(tk-designer ADR 0007)。no_vcl では、型の情報は no_vcl.hpp に揃っているので、
-**no_vcl.hpp の解析(型)と、Python のバインディングでの実測(既定値)と、手書きの補足(デザイン時の扱い)の 3 つを重ねて作る。**
+tk-designer は Tk を実際に動かしてオプションを抽出した(tk-designer ADR 0007)。Bethany では、型の情報は beth.hpp に揃っているので、
+**beth.hpp の解析(型)と、Python のバインディングでの実測(既定値)と、手書きの補足(デザイン時の扱い)の 3 つを重ねて作る。**
 
 ## 1. 情報の出どころ
 
 | 情報 | 出どころ |
 |---|---|
-| クラスの一覧と継承関係(`ancestors`。参照の型・親子の制約の照合に使う)、利用者が生成できるか(`(TComponent* AOwner)` の public のコンストラクタがあるか) | no_vcl.hpp の解析(py/gen_api.py の `parse_hpp`) |
+| クラスの一覧と継承関係(`ancestors`。参照の型・親子の制約の照合に使う)、利用者が生成できるか(`(TComponent* AOwner)` の public のコンストラクタがあるか) | beth.hpp の解析(py/gen_api.py の `parse_hpp`) |
 | プロパティの名前・型・読み取り専用か・宣言したクラス(protected を `using` で公開したものを含む) | 同上 |
 | イベントの名前・型と、その型の引数(ハンドラの引数) | 同上(`using TXxxEvent = std::function<...>`) |
 | 列挙型・集合型(`Set<E>` とビット集合)の要素、TColor・TCursor 等の定数 | 同上 |
 | 各プロパティの既定値、パレットから置いたときの大きさ | Python のバインディングで各クラスを生成して読む(実測) |
-| TForm の public なメンバの名前(`formMembers`。コンポーネント・ハンドラの名前と衝突してはならないもの) | no_vcl.hpp の解析 |
+| TForm の public なメンバの名前(`formMembers`。コンポーネント・ハンドラの名前と衝突してはならないもの) | beth.hpp の解析 |
 | デザイン時に設定できるか、パレットの分類と順、子を置けるか、親子の制約、プロパティエディタの種類 | 手書きの補足(オーバーレイ) |
 
 2026-09-28 時点で、gen_api.py の解析から、利用者が生成できるクラス 56 個(TButton 等のコントロール、TTimer・ダイアログ・TImageList・
@@ -27,9 +27,9 @@ tk-designer は Tk を実際に動かしてオプションを抽出した(tk-des
 生成したカタログは [designer/packages/core/src/catalog/catalog.json](../../designer/packages/core/src/catalog/catalog.json) にコミットする。
 
 ```sh
-python designer/tools/catalog/extract.py              # 静的な抽出 + 実測 + 補足(py/no_vcl.dll が要る)
+python designer/tools/catalog/extract.py              # 静的な抽出 + 実測 + 補足(py/beth.dll が要る)
 python designer/tools/catalog/extract.py --no-runtime # 実測せず、既定値は今のカタログから引き継ぐ
-python designer/tools/catalog/extract.py --check      # カタログが no_vcl.hpp・overlay.json と食い違っていればエラー
+python designer/tools/catalog/extract.py --check      # カタログが beth.hpp・overlay.json と食い違っていればエラー
 ```
 
 1. **静的な抽出**: `parse_hpp` の結果から、クラス・プロパティ・イベント・列挙型を取り出す。
@@ -95,7 +95,7 @@ python designer/tools/catalog/extract.py --check      # カタログが no_vcl.h
 
 値(既定値・大きさ・定数)は形を示すための例で、実際の値は実測・抽出で決まる。
 継承したプロパティ・イベントは、各クラスに展開して持つ(DSL の検証・プロパティエディタで継承をたどらなくて済むように)。
-デザイン時に設定できないプロパティは書き出さない。`doc` は no_vcl.hpp のコメント(日本語)。
+デザイン時に設定できないプロパティは書き出さない。`doc` は beth.hpp のコメント(日本語)。
 
 ## 4.1 実測して分かったこと(2026-09-28、Win32)
 
@@ -105,9 +105,9 @@ python designer/tools/catalog/extract.py --check      # カタログが no_vcl.h
 - ダイアログの Title の既定値は LCL の英語の文字列(TOpenDialog は `Open existing file`)。
 - 既定の大きさ: TButton 75x25、TEdit 80x23、TLabel 65x17(AutoSize)、TPanel 170x50、TForm 320x240 等。
 
-## 5. no_vcl.hpp との整合
+## 5. beth.hpp との整合
 
-no_vcl.hpp を変えたら、カタログを抽出し直す([ADR 0035](../adr/0035-designer-in-this-repository.md) の影響)。
+beth.hpp を変えたら、カタログを抽出し直す([ADR 0035](../adr/0035-designer-in-this-repository.md) の影響)。
 静的な部分(クラス・プロパティ・イベント・列挙型)は DLL が無くても抽出できるので、`extract.py --check` で抽出し直した結果と
 コミットされたカタログを比べ、食い違っていればエラーにする(`designer/` の TS のパッケージを作ったら `pnpm check` から呼ぶ)。
 既定値(実測)は DLL が要るため、抽出し直すのは手で行う(新しいクラス・プロパティの既定値は、実測するまで空になる)。

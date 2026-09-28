@@ -18,10 +18,10 @@
 
 どちらの向きでも、例外は境界の手前で捕まえるしかない。そのうえで、捕まえた例外を C API でどう渡すかを検討した。
 
-- 選択肢A: すべての関数の末尾に、エラーを受け取る引数(`no_vcl_error_t*`。NULL 可)を足す。
+- 選択肢A: すべての関数の末尾に、エラーを受け取る引数(`beth_error_t*`。NULL 可)を足す。
   - 利点: 失敗が明示的に分かる。
   - 欠点: 約 930 個の関数のシグネチャがすべて変わる。
-    既存の C の呼び出しと no_vcl.cpp の約 870 か所の呼び出しを書き換えることになり、エラーを気にしない呼び出しにも NULL を足すことになる。
+    既存の C の呼び出しと beth.cpp の約 870 か所の呼び出しを書き換えることになり、エラーを気にしない呼び出しにも NULL を足すことになる。
 - 選択肢B: Win32 の GetLastError と同じく、スレッドごとに「直前のエラー」を持つ。
   - シグネチャは変えず、各関数の呼び出しの最初にクリアし、失敗したら内容を入れる。
   - C の利用者は、必要な呼び出しの直後に確かめる。
@@ -29,10 +29,10 @@
 
 C++ で例外を送出する場所:
 
-- 選択肢A: C API の中継関数(no_vcl_c.cpp)自体が throw する。
+- 選択肢A: C API の中継関数(beth_c.cpp)自体が throw する。
   - C API は `extern "C"` で、C++ の例外を送出しないと仮定するコンパイラ(MSVC の /EHsc 等)がある。
   - C API の利用者にとっても予想外になる。
-- 選択肢B: C API は例外を送出しない。C++ ラッパー(no_vcl.cpp)が、C API を呼んだ直後に確かめて送出する。
+- 選択肢B: C API は例外を送出しない。C++ ラッパー(beth.cpp)が、C API を呼んだ直後に確かめて送出する。
 
 ## 決定
 
@@ -45,28 +45,28 @@ C++ で例外を送出する場所:
     - どの関数も「0 桁目の begin と end;、入れ子の関数なし」の同じ形だったため、スクリプトで一括変換した。
   - 逆向き:
     - 呼び出し側がコールバックの中で `SetCallbackError(ClassName, Message)` を呼ぶと、スレッドごとの保留に入る。
-    - コールバックを呼ぶブリッジ(21 か所)は、コールバックから戻った後に `CheckCallbackError` で確かめ、`ENoVclCallbackError` として送出し直す。
+    - コールバックを呼ぶブリッジ(21 か所)は、コールバックから戻った後に `CheckCallbackError` で確かめ、`EBethCallbackError` として送出し直す。
     - 呼び出し側へ知らせるときは、元のクラス名を使う。
     - その先の扱い:
       - メッセージループの中なら、LCL の `Application.HandleException` が処理する(VCL と同じ)。
       - 公開関数の中で起きたイベント(`TMenuItem_Click` 等)なら、その関数の except で呼び出し側へ知らせる。
   - `SysUtils` を uses に加えた(Exception のため)。
-- **C API(no_vcl_c.cpp)**:
-  - 関数の一覧(X マクロ `NO_VCL_FUNCS`)を、内部ヘッダー `no_vcl_funcs.h` に移した(no_vcl.cpp と共有するため)。
+- **C API(beth_c.cpp)**:
+  - 関数の一覧(X マクロ `BETH_FUNCS`)を、内部ヘッダー `beth_funcs.h` に移した(beth.cpp と共有するため)。
   - 中継関数は、呼び出しの最初にスレッドごとの直前のエラーをクリアする。DLL の読み込み時に `Error_SetCallback` へ通知先を登録する。
   - 追加した関数:
-    - `no_vcl_HasLastError`・`no_vcl_GetLastErrorClassName`・`no_vcl_GetLastErrorMessage`・`no_vcl_ClearLastError`(この 4 つは直前のエラーをクリアしない)。
-    - `no_vcl_SetCallbackError`。
+    - `beth_HasLastError`・`beth_GetLastErrorClassName`・`beth_GetLastErrorMessage`・`beth_ClearLastError`(この 4 つは直前のエラーをクリアしない)。
+    - `beth_SetCallbackError`。
   - シグネチャは変えていない。
 - **C++**:
-  - `no_vcl::Exception`(std::exception の派生)を追加した。
+  - `beth::Exception`(std::exception の派生)を追加した。
     - VCL と同じく `Message`(std::string)と `ClassName()` を持ち、`Exception("msg")` で送出することもできる。
-  - no_vcl.cpp は、C API を `nv::` 経由で呼ぶ。`nv::` は同じ関数一覧から生成した、呼び出しの直後に直前のエラーを確かめて送出する版。
+  - beth.cpp は、C API を `nv::` 経由で呼ぶ。`nv::` は同じ関数一覧から生成した、呼び出しの直後に直前のエラーを確かめて送出する版。
     - 生の C API のまま残したのは、次の 2 つだけ。
       - デストラクタの中の呼び出し(送出すると std::terminate になる)。
       - TStrings 等に取得関数として渡す関数ポインタ。
   - DLL から呼ばれるトランポリン(64 個)の本体は `GuardCallback` で包んだ。
-    - ハンドラから送出された例外を捕まえ、`no_vcl_SetCallbackError` で知らせる。渡すクラス名は次のとおり。
+    - ハンドラから送出された例外を捕まえ、`beth_SetCallbackError` で知らせる。渡すクラス名は次のとおり。
       - Exception なら、そのクラス名。
       - std::exception の派生なら、`"std::exception"`。
       - それ以外なら、空文字列。
@@ -84,9 +84,9 @@ C++ で例外を送出する場所:
   - ハンドラの中で LCL が送出した例外(TStringList の範囲外の Delete)は、ハンドラ内で Exception になり、そのまま `Click()` から EStringListError として受けられた。
   - その後、例外を送出しないハンドラに戻すと、`Click()` は成功した(保留が残らない)。
 - **C のテスト**:
-  - 失敗した `no_vcl_TStrings_GetStrings` は空文字列を返し、直前のエラーに EStringListError が入った。次の成功した呼び出しでクリアされた。
-  - C のコールバックで `no_vcl_SetCallbackError` を呼ぶと、`no_vcl_TMenuItem_Click` が失敗し、直前のエラーに EMyError が入った。
-  - 最初のテストは、`printf` の引数に「成功する呼び出し」と `no_vcl_HasLastError()` を並べていた。
+  - 失敗した `beth_TStrings_GetStrings` は空文字列を返し、直前のエラーに EStringListError が入った。次の成功した呼び出しでクリアされた。
+  - C のコールバックで `beth_SetCallbackError` を呼ぶと、`beth_TMenuItem_Click` が失敗し、直前のエラーに EMyError が入った。
+  - 最初のテストは、`printf` の引数に「成功する呼び出し」と `beth_HasLastError()` を並べていた。
     引数の評価順が決まっていないため HasLastError が先に評価され、誤って 1 になった。
     直前のエラーは「関数の直後に」確かめる必要がある(ヘッダーに明記した)。
 - **既存テスト**: 出力は変更前と完全に一致した(Win32)。
@@ -101,7 +101,7 @@ C++ で例外を送出する場所:
 
 - VCL の `try ... catch (Exception& E)` を使うコードを、そのまま移植できる。
 - ADR 0028〜0030 で「使い方の制約」としていた例外(範囲外の添字・Sorted の一覧への Insert・読み込めないファイル・画像リストの範囲外の Move 等)は、すべて Exception として受けられる。
-- C の利用者は、失敗しうる呼び出しの直後に `no_vcl_HasLastError` で確かめる。シグネチャは変わっていないため、既存の C のコードはそのまま動く。
+- C の利用者は、失敗しうる呼び出しの直後に `beth_HasLastError` で確かめる。シグネチャは変わっていないため、既存の C のコードはそのまま動く。
 - 新しい公開関数を追加するときは、次の 2 つを守る。
   - 本体を `try ... except` で包み、except で `ReportException` を呼ぶ(戻り値があれば既定の値を入れる)。
   - C++ 側では `nv::` 経由で呼ぶ。

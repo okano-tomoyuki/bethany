@@ -1,4 +1,4 @@
-import type { NvformDocument } from '@no-vcl-designer/core';
+import type { BfmDocument } from '@bethany-designer/core';
 
 /** パスを区切りで分割する(Windows と POSIX の両方の区切りに対応する) */
 function pathSegments(path: string): string[] {
@@ -10,10 +10,10 @@ export function fileNameOf(path: string): string {
   return pathSegments(path).pop() ?? path;
 }
 
-/** DSL のファイル名(例: "MainForm.nvform.json")から拡張子を除いた名前("MainForm") */
+/** DSL のファイル名(例: "MainForm.bfm.json")から拡張子を除いた名前("MainForm") */
 export function baseName(dslFileName: string): string {
   return fileNameOf(dslFileName)
-    .replace(/\.nvform\.json$/, '')
+    .replace(/\.bfm\.json$/, '')
     .replace(/\.json$/, '');
 }
 
@@ -39,7 +39,7 @@ export interface ResolvedTargets {
  * クラス名はフォームの名前から(MainForm → TMainForm。§10 Q2)、ファイル名は DSL のファイル名から決める
  * (C++Builder の Unit1.cpp・Unit1.h と Form1 のように、ファイル名とフォームの名前は別のもの)。
  */
-export function resolveTargets(doc: NvformDocument, dslFileName: string): ResolvedTargets {
+export function resolveTargets(doc: BfmDocument, dslFileName: string): ResolvedTargets {
   const settings = doc.codegen ?? {};
   const base = baseName(dslFileName);
   const className = `T${doc.form.name}`;

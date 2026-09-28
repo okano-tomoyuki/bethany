@@ -2,7 +2,7 @@
  * パレット(docs/designer/editor-design.md §5.2)。カタログの分類ごとにクラスを並べる。
  * クリックでクラスを選び(次にキャンバスをクリック・ドラッグしたところに追加する)、ダブルクリックで既定の位置に追加する。
  */
-import { getCatalog, l10n } from '@no-vcl-designer/core';
+import { getCatalog, l10n } from '@bethany-designer/core';
 import { useMemo } from 'react';
 import { addFromPalette } from '../editing.ts';
 import { uiStore, useUiStore } from '../store/stores.ts';

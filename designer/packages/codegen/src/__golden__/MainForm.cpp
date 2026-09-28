@@ -1,18 +1,18 @@
 #include "MainForm.hpp"
 
-using namespace no_vcl;
+using namespace beth;
 
 TMainForm* MainForm = nullptr;
 
 TMainForm::TMainForm(TComponent* AOwner)
     : TForm(AOwner)
 {
-    nvd_CreateComponents();
+    beth_CreateComponents();
 }
 
-// <no_vcl-designer:begin id="nvd_CreateComponents">
+// <bethany-designer:begin id="beth_CreateComponents">
 // Creates the components and sets their properties (generated).
-void TMainForm::nvd_CreateComponents()
+void TMainForm::beth_CreateComponents()
 {
     NameEdit = new TEdit(this);
     OkButton = new TButton(this);
@@ -148,9 +148,9 @@ void TMainForm::nvd_CreateComponents()
     Timer1->Enabled = false;
     Timer1->OnTimer = [this](TObject* Sender) { Timer1Timer(Sender); };
 }
-// <no_vcl-designer:end id="nvd_CreateComponents" hash="43c1d0c7">
+// <bethany-designer:end id="beth_CreateComponents" hash="c7aa4e9a">
 
-// <no_vcl-designer:handler-stubs>
+// <bethany-designer:handler-stubs>
 
 void TMainForm::FormCreate(TObject* Sender)
 {

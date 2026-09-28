@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import sampleText from '../../../../samples/MainForm.nvform.json?raw';
+import sampleText from '../../../../samples/MainForm.bfm.json?raw';
 import { parseDocument } from './parse.ts';
-import type { NvformDocument } from './schema.ts';
+import type { BfmDocument } from './schema.ts';
 import { serializeDocument } from './serialize.ts';
 
 const SAMPLE_TEXT = sampleText.replace(/\r\n/g, '\n');
@@ -34,7 +34,7 @@ describe('serializeDocument', () => {
       },
       codegen: { python: { file: 'a.py', className: 'A' }, commentLocale: 'ja' },
       formatVersion: 1,
-    } as unknown as NvformDocument;
+    } as unknown as BfmDocument;
     expect(serializeDocument(doc)).toBe(`{
   "formatVersion": 1,
   "codegen": {
@@ -64,7 +64,7 @@ describe('serializeDocument', () => {
 
   it('1 行に収まらない単純な値は複数行にする', () => {
     const lines = Array.from({ length: 12 }, (_, i) => `line ${String(i)}`);
-    const doc: NvformDocument = {
+    const doc: BfmDocument = {
       formatVersion: 1,
       form: {
         name: 'F',
@@ -88,7 +88,7 @@ describe('serializeDocument', () => {
           { name: 'Y', class: 'TButton', properties: { Zzz: 1, Left: 2 } },
         ],
       },
-    } as NvformDocument;
+    } as BfmDocument;
     const text = serializeDocument(doc);
     expect(text).toContain('"B": 1,\n          "A": 2');
     expect(text).toContain('"Left": 2,\n          "Zzz": 1');

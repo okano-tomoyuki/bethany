@@ -8,7 +8,7 @@ import {
   propertyValue,
   type CanvasSettings,
   type NodeLocation,
-} from '@no-vcl-designer/core';
+} from '@bethany-designer/core';
 
 /** 解決したフォント(CSS に渡す形) */
 export interface ResolvedFont {

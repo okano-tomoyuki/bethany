@@ -1,4 +1,4 @@
-import { configureL10n, type L10nBundle } from '@no-vcl-designer/core';
+import { configureL10n, type L10nBundle } from '@bethany-designer/core';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App.tsx';

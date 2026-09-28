@@ -8,7 +8,7 @@ import {
   type ComponentNode,
   type ControlNode,
   type MenuItemNode,
-} from '@no-vcl-designer/core';
+} from '@bethany-designer/core';
 import type { MouseEvent } from 'react';
 import { useShallow } from 'zustand/shallow';
 import { select } from '../editing.ts';

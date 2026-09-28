@@ -17,7 +17,7 @@ import type {
   ControlNode,
   FormNode,
   MenuItemNode,
-  NvformDocument,
+  BfmDocument,
   Properties,
   PropertyValue,
 } from './schema.ts';
@@ -26,14 +26,14 @@ const INDENT = '  ';
 /** 1 行で書くときの行の長さの上限(Prettier の printWidth と同じ) */
 const MAX_WIDTH = 100;
 
-export function serializeDocument(doc: NvformDocument): string {
+export function serializeDocument(doc: BfmDocument): string {
   return `${stringify(ordered(doc), '', '')}\n`;
 }
 
 // ---- キーの順 -------------------------------------------------------------------
 
 /** キーを並べ替えた写し(値の中身は変えない) */
-function ordered(doc: NvformDocument): Json {
+function ordered(doc: BfmDocument): Json {
   return pick(doc, ['$schema', 'formatVersion', 'codegen', 'form', 'components'], {
     codegen: (c) =>
       pick(c as object, ['commentLocale', 'cpp', 'python'], {

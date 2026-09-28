@@ -1,12 +1,12 @@
 /**
- * C++(no_vcl.hpp)のエミッタ(docs/designer/codegen-design.md §3 の C++)。
+ * C++(beth.hpp)のエミッタ(docs/designer/codegen-design.md §3 の C++)。
  *
- * - ヘッダ: 生成するクラス(no_vcl::TForm の派生)。区間 declarations にコンポーネントのメンバとハンドラの宣言。
- *   ヘッダでは using namespace せず no_vcl:: で修飾する(N2)。
- * - ソース: using namespace no_vcl; とフォームのグローバル変数(N3)、コンストラクタ、区間 nvd_CreateComponents、
+ * - ヘッダ: 生成するクラス(beth::TForm の派生)。区間 declarations にコンポーネントのメンバとハンドラの宣言。
+ *   ヘッダでは using namespace せず beth:: で修飾する(N2)。
+ * - ソース: using namespace beth; とフォームのグローバル変数(N3)、コンストラクタ、区間 beth_CreateComponents、
  *   ハンドラの雛形。
  */
-import type { CommentLocale, EventParam } from '@no-vcl-designer/core';
+import type { CommentLocale, EventParam } from '@bethany-designer/core';
 import { generatedComments } from '../comments.ts';
 import type { FormModel, Statement, Target, Value } from '../model.ts';
 import type { GeneratedCode, HandlerStub, Region } from '../region.ts';
@@ -35,7 +35,7 @@ export function emitCpp(
     id: 'declarations',
     indent: 1,
     content: [
-      ...model.members.map((m) => `${INDENT}no_vcl::${m.class}* ${m.name};`),
+      ...model.members.map((m) => `${INDENT}beth::${m.class}* ${m.name};`),
       ...(model.members.length > 0 && model.handlers.length > 0 ? [''] : []),
       ...model.handlers.map((h) => `${INDENT}void ${h.name}(${paramList(h.params, true)});`),
     ].join('\n'),
@@ -48,21 +48,21 @@ export function emitCpp(
       [
         '#pragma once',
         '',
-        '#include "no_vcl.hpp"',
+        '#include "beth.hpp"',
         '',
         `/** ${comments.classDoc(sourceName)} */`,
-        `class ${className} : public no_vcl::TForm`,
+        `class ${className} : public beth::TForm`,
         '{',
         'public:',
         rendered('declarations'),
         '',
-        `${INDENT}explicit ${className}(no_vcl::TComponent* AOwner);`,
+        `${INDENT}explicit ${className}(beth::TComponent* AOwner);`,
         '',
         'protected:',
         `${INDENT}~${className}() override = default;`,
         '',
         'private:',
-        `${INDENT}void nvd_CreateComponents();`,
+        `${INDENT}void beth_CreateComponents();`,
         '};',
         '',
         `extern ${className}* ${formName};`,
@@ -71,11 +71,11 @@ export function emitCpp(
   };
 
   const create: Region = {
-    id: 'nvd_CreateComponents',
+    id: 'beth_CreateComponents',
     indent: 0,
     content: [
       `// ${comments.createComponents}`,
-      `void ${className}::nvd_CreateComponents()`,
+      `void ${className}::beth_CreateComponents()`,
       '{',
       ...trimBlanks(model.statements).map((s) => (s.kind === 'blank' ? '' : INDENT + statement(s))),
       '}',
@@ -99,19 +99,19 @@ export function emitCpp(
       [
         `#include "${headerInclude}"`,
         '',
-        'using namespace no_vcl;',
+        'using namespace beth;',
         '',
         `${className}* ${formName} = nullptr;`,
         '',
         `${className}::${className}(TComponent* AOwner)`,
         `${INDENT}: TForm(AOwner)`,
         '{',
-        `${INDENT}nvd_CreateComponents();`,
+        `${INDENT}beth_CreateComponents();`,
         '}',
         '',
-        rendered('nvd_CreateComponents'),
+        rendered('beth_CreateComponents'),
         '',
-        '// <no_vcl-designer:handler-stubs>',
+        '// <bethany-designer:handler-stubs>',
         ...stubs.flatMap((s) => ['', s.code]),
         '',
       ].join('\n'),
@@ -183,10 +183,10 @@ function value(v: Value): string {
   }
 }
 
-/** ハンドラの引数の並び。ヘッダでは no_vcl の型を修飾する */
+/** ハンドラの引数の並び。ヘッダでは Bethany の型を修飾する */
 function paramList(params: readonly EventParam[], qualify: boolean): string {
   return params
-    .map((p) => `${qualify && /^T[A-Z]/.test(p.type) ? `no_vcl::${p.type}` : p.type} ${p.name}`)
+    .map((p) => `${qualify && /^T[A-Z]/.test(p.type) ? `beth::${p.type}` : p.type} ${p.name}`)
     .join(', ');
 }
 

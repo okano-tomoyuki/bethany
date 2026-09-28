@@ -9,8 +9,8 @@ import {
   l10n,
   walkNodes,
   type NodeLocation,
-  type NvformDocument,
-} from '@no-vcl-designer/core';
+  type BfmDocument,
+} from '@bethany-designer/core';
 import { useState } from 'react';
 import { renameHandler, setEvent } from '../../editing.ts';
 import { useDocumentStore } from '../../store/stores.ts';
@@ -48,7 +48,7 @@ export function EventsGrid({
             doc={info.doc}
             value={mixed ? '' : (values[0] ?? '')}
             mixed={mixed}
-            listId={`nvd-handlers-${info.type}`}
+            listId={`beth-handlers-${info.type}`}
             candidates={handlers.get(info.type) ?? []}
             error={
               nodes.length === 1
@@ -153,7 +153,7 @@ function EventRow({
 }
 
 /** イベントの型 → その型のイベントに使われているハンドラ名 */
-function handlersByType(document: NvformDocument): Map<string, string[]> {
+function handlersByType(document: BfmDocument): Map<string, string[]> {
   const result = new Map<string, Set<string>>();
   for (const location of walkNodes(document)) {
     const events = findClass(classOf(location))?.events ?? {};

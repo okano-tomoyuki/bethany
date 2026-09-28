@@ -2,13 +2,13 @@
 
 [ADR 0035](../adr/0035-designer-in-this-repository.md) の順序の 4 番目。VS Code 拡張(カスタムエディタ)と、
 Webview のデザイナーの画面の設計。tk-designer(`cc00e22`)の拡張ホスト・Webview の骨組みを土台にし、
-DSL・カタログ・キャンバスは no_vcl に合わせて作る。キャンバスの方式は [ADR 0036](../adr/0036-designer-canvas.md)。
+DSL・カタログ・キャンバスは Bethany に合わせて作る。キャンバスの方式は [ADR 0036](../adr/0036-designer-canvas.md)。
 
 ## 1. 範囲
 
 ### 1.1 最初の版(MVP)で作るもの
 
-- `*.nvform.json` を開くカスタムエディタ(テキストエディタでも開ける。同時に開いても整合する)。
+- `*.bfm.json` を開くカスタムエディタ(テキストエディタでも開ける。同時に開いても整合する)。
 - 画面: パレット・キャンバス・構造の木・プロパティ(オブジェクトインスペクタ)・問題の一覧。
 - キャンバス: コントロールの描画(Windows の見た目の近似)、選択(複数選択を含む)、ドラッグでの移動と大きさの変更、
   パレットからの追加、親の変更、Align・Anchors の配置の計算、非ビジュアルコンポーネントのアイコン、メインメニューの表示。
@@ -151,10 +151,10 @@ ADR 0036 の決定 2〜4。実装は [engine.ts](../../designer/packages/core/sr
 `pnpm layout:record`([tools/layout/record.mts](../../designer/tools/layout/record.mts))で、Windows で次を記録する。
 `pnpm layout:check` は、今の LCL の結果が記録と食い違っていないかを調べる。
 
-- 配置の見本(`core/src/layout/fixtures/*.nvform.json`: Align の組み合わせと並び・BorderSpacing・Constraints・非表示・入れ子・
-  Anchors・各コンテナの余白)から Python のコードを生成し(verify-python と同じ)、py/no_vcl.py で表示した後の配置と、
+- 配置の見本(`core/src/layout/fixtures/*.bfm.json`: Align の組み合わせと並び・BorderSpacing・Constraints・非表示・入れ子・
+  Anchors・各コンテナの余白)から Python のコードを生成し(verify-python と同じ)、py/beth.py で表示した後の配置と、
   フォームを 100×50 広げた後の配置を `*.lcl.json` に書く。
-- クライアント領域(§4.3)は、no_vcl にウィンドウのハンドルや座標の変換が無いため、Windows の API(ctypes の EnumChildWindows・
+- クライアント領域(§4.3)は、Bethany にウィンドウのハンドルや座標の変換が無いため、Windows の API(ctypes の EnumChildWindows・
   GetWindowRect)で、Caption で見分けた子のウィンドウの画面上の位置を測る。
 
 テスト([engine.lcl.test.ts](../../designer/packages/core/src/layout/engine.lcl.test.ts))では、見本ごとに次を確かめる。
@@ -207,8 +207,8 @@ AutoSize のコントロール(dsl-spec.md §5)の大きさは、キャンバス
 | ダブルクリック | 既定のイベント(TForm は OnCreate、値を入力するもの(TEdit 等)は OnChange、TTimer は OnTimer、それ以外は OnClick。C++Builder と同じ。core の `defaultEventOf`)のハンドラ名を設定し、イベントのタブを開く(未設定なら名前 + イベント名から `On` を除いたもの) |
 | 右クリック | メニュー(削除・前面へ/背面へ・タブを追加・親を選択) |
 
-- 移動と大きさの変更は、8px の格子に合わせる(Alt を押している間は合わせない。格子の大きさは設定 `noVclDesigner.canvas.gridSize`
-  で変えられる)。格子の点はフォームのクライアント領域に描く(設定 `noVclDesigner.canvas.showGrid` で消せる)。
+- 移動と大きさの変更は、8px の格子に合わせる(Alt を押している間は合わせない。格子の大きさは設定 `bethanyDesigner.canvas.gridSize`
+  で変えられる)。格子の点はフォームのクライアント領域に描く(設定 `bethanyDesigner.canvas.showGrid` で消せる)。
 - Align で寄せたコントロールもドラッグできる。離した位置で同じ Align の兄弟を並べ直す(§4.2)。
 - フォームを選択すると、クライアント領域の右と下の端につまみが出て、ドラッグでフォームの大きさを変えられる(Anchors で追従する)。
 - ドラッグ中は、移動後の枠と、配置を計算し直した結果を一時的に表示する。離したときに `batch`(移動・親の変更・
@@ -232,7 +232,7 @@ AutoSize のコントロール(dsl-spec.md §5)の大きさは、キャンバス
 
 LCL の `default` のフォントは、Windows ではメッセージのフォント(日本語版は Yu Gothic UI 9pt、英語版は Segoe UI 9pt)。
 
-- 最初の版では、設定 `noVclDesigner.canvas.fontFamily`・`fontSize`(空なら VS Code の UI の言語が日本語なら Yu Gothic UI、
+- 最初の版では、設定 `bethanyDesigner.canvas.fontFamily`・`fontSize`(空なら VS Code の UI の言語が日本語なら Yu Gothic UI、
   それ以外は Segoe UI、9pt)で決め、文字列の幅はブラウザで測る。
 - ずれが問題になったら、tk-designer ADR 0013 の GDI での計測を複製する。
 
@@ -278,16 +278,16 @@ tk-designer ADR 0010 と同じく、利用者の明示的な操作で生成す�
 
 ## 8. 拡張のその他
 
-- **新しいフォーム**: エクスプローラーの右クリックと「新しいファイル」から。フォームの名前を入力し、`<名前>.nvform.json` を
+- **新しいフォーム**: エクスプローラーの右クリックと「新しいファイル」から。フォームの名前を入力し、`<名前>.bfm.json` を
   既定の内容(TForm・320×240・Caption・`codegen` に C++ と Python)で作って開く。
 - **診断**: TextDocument が変わるたびに検証し、`DiagnosticCollection` に出す。JSON 上の位置は `core/src/dsl/locate.ts`
   (JSON のテキストを走査して、パスの値の範囲を求める)で範囲にする。
-- **JSON Schema**: Zod のスキーマから `schema/nvform.schema.json` を生成してコミットし(`--check` で食い違いを検査)、
+- **JSON Schema**: Zod のスキーマから `schema/bfm.schema.json` を生成してコミットし(`--check` で食い違いを検査)、
   `jsonValidation` に登録する。
 - **l10n**: 拡張は `vscode.l10n`、Webview・core・codegen・CLI は `@vscode/l10n`。元の言語は英語、訳は日本語(`l10n/bundle.l10n.ja.json`)。
   tk-designer の `tools/l10n`(訳の漏れの検査・統合)を複製した(`pnpm l10n:check` は `pnpm check` に含む)。CLI も同じ訳を使う。
   パレットのカテゴリ名(Standard など)は C++Builder・Lazarus のタブ名と同じく訳さない。
-- **梱包**: vsce(`--no-dependencies`、バンドルした成果物だけ)。拡張の ID は `no-vcl-designer`、表示名は「no_vcl Designer」。
+- **梱包**: vsce(`--no-dependencies`、バンドルした成果物だけ)。拡張の ID は `bethany-designer`、表示名は「Bethany Designer」。
 
 ## 9. 未決の論点
 

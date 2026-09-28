@@ -13,7 +13,7 @@
  * - TToolBar・TCoolBar の子は、バーが自分で並べるので扱わない。TTabSheet は親の TPageControl のクライアント領域いっぱい。
  */
 import { findClass } from '../catalog/catalog.ts';
-import type { ControlNode, FormNode, NvformDocument, PropertyValue } from '../dsl/schema.ts';
+import type { ControlNode, FormNode, BfmDocument, PropertyValue } from '../dsl/schema.ts';
 import { clientMetrics } from './insets.ts';
 
 export interface Rect {
@@ -36,8 +36,8 @@ type Align = (typeof ALIGN_ORDER)[number];
  * 新しく作ったものは追従しない)。計算で変わったコントロールの Left・Top・Width・Height だけを書き換えた結果を返す。
  */
 export function computeLayout(
-  before: NvformDocument | undefined,
-  after: NvformDocument,
+  before: BfmDocument | undefined,
+  after: BfmDocument,
 ): ReadonlyMap<string, Rect> {
   const previous = new Map<string, Container>();
   if (before) {

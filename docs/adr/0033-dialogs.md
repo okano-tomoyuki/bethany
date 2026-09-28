@@ -11,7 +11,7 @@ VCL のアプリでは、ファイルの読み書き・色やフォントの選�
 - 形は VCL と同じく「プロパティを設定して `Execute()` を呼び、結果を bool で受け取る」。
 - ダイアログの結果は、コントロールの Color・Font に適用することが多い
   (`Panel1->Color = ColorDialog1->Color;`・`Memo1->Font->Assign(FontDialog1->Font);`)。
-  しかし no_vcl の TControl には Color も Font も無く、TFont も Name・Size・Color だけだった(Style・Assign が無い)。
+  しかし Bethany の TControl には Color も Font も無く、TFont も Name・Size・Color だけだった(Style・Assign が無い)。
 
 LCL のソース(`dialogs.pp`・`include/filedialog.inc`・`finddialog.inc`・`replacedialog.inc`・
 `interfaces/win32/win32wsdialogs.pp`)で確認したこと:
@@ -44,7 +44,7 @@ LCL のソース(`dialogs.pp`・`include/filedialog.inc`・`finddialog.inc`・`r
 
 - 選択肢A: 優先度の高いもの(ファイル・色・フォント)だけ。
 - 選択肢B: 選択肢A に検索・置換も加える。検索・置換は LCL 本体にあり、LCL のフォームなので OS に依存しない。
-- 選択肢C: 選択肢B に印刷も加える。印刷の基盤(TPrinter)が no_vcl に無く、ビルドのパスの追加が前提になる。
+- 選択肢C: 選択肢B に印刷も加える。印刷の基盤(TPrinter)が Bethany に無く、ビルドのパスの追加が前提になる。
 
 ダイアログの結果を適用する先:
 

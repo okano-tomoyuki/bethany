@@ -19,7 +19,7 @@
 
 ## 検討した選択肢
 
-- OnClose の C API: 戻り値で Action を返す / Action へのポインタ(`no_vcl_int_t*`)を渡して書き換えさせる
+- OnClose の C API: 戻り値で Action を返す / Action へのポインタ(`beth_int_t*`)を渡して書き換えさせる
 - OnCreate の発火時点:
   - (a) 発火させない(コンストラクタの末尾に書けばよいとする)
   - (b) `Application->CreateForm` の完了時だけ発火させる
@@ -32,8 +32,8 @@
 2. **OnClose は `Property<TCloseEvent>`**、`using TCloseEvent = std::function<void(TObject* Sender, TCloseAction& Action)>;` とする。
    `TCloseAction` は C++Builder と同じ名前・値の列挙型(`caNone, caHide, caFree, caMinimize`)。
    Action には LCL が決めた既定値(MainForm なら `caFree`、それ以外は `caHide`)が入っており、書き換えると動作が変わる。
-3. **C API の OnClose は `void (*)(no_vcl_obj_t sender, no_vcl_int_t* action, void* data)`** とし、Pascal の `var` 引数と同じく
-   ポインタ先を書き換えさせる(C++ の `TCloseAction&` と 1 対 1 に対応させるため、戻り値は使わない)。値は `no_vcl_caNone` 等の定数で表す。
+3. **C API の OnClose は `void (*)(beth_obj_t sender, beth_int_t* action, void* data)`** とし、Pascal の `var` 引数と同じく
+   ポインタ先を書き換えさせる(C++ の `TCloseAction&` と 1 対 1 に対応させるため、戻り値は使わない)。値は `beth_caNone` 等の定数で表す。
    範囲外の値が書き込まれた場合は既定値のままにする。
 4. **OnCreate は (c)。** `Application->CreateForm` で生成した場合は、派生クラスのコンストラクタの完了直後(C++Builder と同じ時点。
    `Form1` への代入も済んでいる)に呼ぶ。`new` で直接生成した場合は、最初に表示される直前に呼ぶ。
@@ -44,7 +44,7 @@
 5. **OnShow も公開する。** 4. のために OnShow のブリッジが必要で、公開のコストがほぼ無いため(C++Builder にもある)。
    OnCreate がまだ呼ばれていなければ、OnShow の前に呼ぶ。
 
-いずれも LCL で TCustomForm の public メンバのため、TCustomForm に置き、C API も `no_vcl_TCustomForm_*` とする。
+いずれも LCL で TCustomForm の public メンバのため、TCustomForm に置き、C API も `beth_TCustomForm_*` とする。
 C API では OnCreate は提供しない(C では生成直後に続けて処理を書けばよく、LCL の OnCreate は生成中に終わってしまうため)。
 
 ## 影響

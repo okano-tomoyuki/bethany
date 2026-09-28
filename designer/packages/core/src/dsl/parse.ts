@@ -1,15 +1,15 @@
 import type { Diagnostic } from './diagnostics.ts';
 import { l10n } from '../l10n.ts';
-import { FORMAT_VERSION, NvformDocument } from './schema.ts';
+import { FORMAT_VERSION, BfmDocument } from './schema.ts';
 import { validateDocument } from './validate.ts';
 
 export interface ParseResult {
   /** 構造の検証を通過した場合のみ存在する(意味の検証でエラーがあっても存在する) */
-  readonly document?: NvformDocument;
+  readonly document?: BfmDocument;
   readonly diagnostics: readonly Diagnostic[];
 }
 
-/** *.nvform.json のテキストを読み込み、構造と意味を検証する */
+/** *.bfm.json のテキストを読み込み、構造と意味を検証する */
 export function parseDocument(text: string): ParseResult {
   let json: unknown;
   try {
@@ -37,7 +37,7 @@ export function parseDocument(text: string): ParseResult {
     };
   }
 
-  const result = NvformDocument.safeParse(json);
+  const result = BfmDocument.safeParse(json);
   if (!result.success) {
     return {
       diagnostics: result.error.issues.map((issue) => ({

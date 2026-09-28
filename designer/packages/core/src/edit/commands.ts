@@ -7,7 +7,7 @@ import { produce } from 'immer';
 import { findClass, getCatalog, isSubclassOf } from '../catalog/catalog.ts';
 import type { PropertyInfo } from '../catalog/types.ts';
 import { childProblem } from '../dsl/constraints.ts';
-import type { CodegenSettings, NvformDocument, PropertyValue } from '../dsl/schema.ts';
+import type { CodegenSettings, BfmDocument, PropertyValue } from '../dsl/schema.ts';
 import { memberNameProblem } from '../identifier.ts';
 import { l10n } from '../l10n.ts';
 import { computeLayout } from '../layout/engine.ts';
@@ -101,7 +101,7 @@ export type EditCommand =
   | { readonly type: 'batch'; readonly commands: readonly EditCommand[] };
 
 export type CommandResult =
-  | { readonly ok: true; readonly document: NvformDocument }
+  | { readonly ok: true; readonly document: BfmDocument }
   | { readonly ok: false; readonly error: string };
 
 class CommandError extends Error {}
@@ -136,12 +136,9 @@ interface Found {
   readonly parent: Node | undefined;
 }
 
-const produceDocument = produce as (
-  base: NvformDocument,
-  recipe: (draft: Doc) => void,
-) => NvformDocument;
+const produceDocument = produce as (base: BfmDocument, recipe: (draft: Doc) => void) => BfmDocument;
 
-export function applyCommand(doc: NvformDocument, command: EditCommand): CommandResult {
+export function applyCommand(doc: BfmDocument, command: EditCommand): CommandResult {
   try {
     const edited = produceDocument(doc, (draft) => {
       apply(draft, command);
@@ -157,7 +154,7 @@ export function applyCommand(doc: NvformDocument, command: EditCommand): Command
  * 配置を計算し直し、Align で寄せたコントロールと Anchors で追従するコントロールの位置と大きさを書き換える
  * (docs/designer/editor-design.md §3.1・§4)。Webview と拡張で同じ結果になるよう、コマンドの適用の中で行う。
  */
-function relayout(before: NvformDocument, after: NvformDocument): NvformDocument {
+function relayout(before: BfmDocument, after: BfmDocument): BfmDocument {
   const changes = computeLayout(before, after);
   if (changes.size === 0) return after;
   return produceDocument(after, (draft) => {
@@ -539,7 +536,7 @@ function requireChildAllowed(parentClass: string, childClass: string): void {
 function requireNewName(doc: Doc, name: string): void {
   const problem = memberNameProblem(name);
   if (problem) throw new CommandError(l10n.t('"{0}" cannot be used as a name: {1}', name, problem));
-  const document = doc as unknown as NvformDocument;
+  const document = doc as unknown as BfmDocument;
   if (collectMemberNames(document).has(name)) {
     throw new CommandError(
       collectHandlerNames(document).has(name)

@@ -6,15 +6,15 @@
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
-using no_vcl_module_t = HMODULE;
+using beth_module_t = HMODULE;
 #else
 #include <dlfcn.h>
-using no_vcl_module_t = void*;
+using beth_module_t = void*;
 #endif
 
-#include "no_vcl.hpp"
+#include "beth.hpp"
 
-namespace no_vcl
+namespace beth
 {
 namespace internal
 {
@@ -23,11 +23,11 @@ namespace
 {
 
 /* 関数ポインタ型と thread_local 変数 */
-#define NO_VCL_DECLARE(ret, name, params, args) \
-    typedef ret (NO_VCL_CALL *name##_fn) params; \
+#define BETH_DECLARE(ret, name, params, args) \
+    typedef ret (BETH_CALL *name##_fn) params; \
     thread_local name##_fn name##_ = nullptr;
-NO_VCL_FUNCS(NO_VCL_DECLARE)
-#undef NO_VCL_DECLARE
+BETH_FUNCS(BETH_DECLARE)
+#undef BETH_DECLARE
 
 /* 直前のエラー(docs/adr/0031)。DLL の公開関数の中で例外が起きると、DLL が OnDllError で知らせる
    (通知は失敗した呼び出しと同じスレッドで、その呼び出しから戻る前に行われる)。 */
@@ -39,9 +39,9 @@ struct LastError
 };
 thread_local LastError g_lastError;
 
-typedef void (NO_VCL_CALL *error_callback_t)(str_t className, str_t message);
+typedef void (BETH_CALL *error_callback_t)(str_t className, str_t message);
 
-void NO_VCL_CALL OnDllError(str_t className, str_t message)
+void BETH_CALL OnDllError(str_t className, str_t message)
 {
     g_lastError.set = true;
     g_lastError.className = className ? className : "";
@@ -82,7 +82,7 @@ struct Checked<void>
 
 /* 関数ポインタマッピング */
 template<typename Func>
-void no_vcl_map(Func& f, no_vcl_module_t m, const char* n)
+void beth_map(Func& f, beth_module_t m, const char* n)
 {
 #if defined(_WIN32) || defined(_WIN64)
     void* p = reinterpret_cast<void*>(::GetProcAddress(m, n));
@@ -92,37 +92,37 @@ void no_vcl_map(Func& f, no_vcl_module_t m, const char* n)
     f = reinterpret_cast<Func>(p);
 }
 
-void no_vcl_init(void)
+void beth_init(void)
 {
-    static no_vcl_module_t m = nullptr;
+    static beth_module_t m = nullptr;
     static std::once_flag once;
 
     if (!m)
     {
         std::call_once(once, [&](){
 #if defined(_WIN32) || defined(_WIN64)
-            m = ::LoadLibraryA("no_vcl.dll");
+            m = ::LoadLibraryA("beth.dll");
 #else
-            m = ::dlopen("libno_vcl.so", RTLD_LAZY);
+            m = ::dlopen("libbeth.so", RTLD_LAZY);
 #endif
             // エラーの通知先は DLL 全体で 1 つ。
-            void (NO_VCL_CALL *setErrorCallback)(error_callback_t) = nullptr;
-            no_vcl_map(setErrorCallback, m, "Error_SetCallback");
+            void (BETH_CALL *setErrorCallback)(error_callback_t) = nullptr;
+            beth_map(setErrorCallback, m, "Error_SetCallback");
             assert(setErrorCallback != nullptr);
             setErrorCallback(&OnDllError);
         });
     }
 
-#define NO_VCL_MAP(ret, name, params, args) no_vcl_map(name##_, m, #name);
-    NO_VCL_FUNCS(NO_VCL_MAP)
-#undef NO_VCL_MAP
+#define BETH_MAP(ret, name, params, args) beth_map(name##_, m, #name);
+    BETH_FUNCS(BETH_MAP)
+#undef BETH_MAP
 }
 
-#define NO_VCL_INIT_CHECK(f) \
+#define BETH_INIT_CHECK(f) \
     do { \
         if (!f) \
         { \
-            no_vcl_init(); \
+            beth_init(); \
         } \
         assert(f != nullptr); \
     } while (0)
@@ -130,15 +130,15 @@ void no_vcl_init(void)
 } // namespace
 
 // 中継関数。呼び出しの最初に直前のエラーをクリアし、戻った後に確かめる。
-#define NO_VCL_DEFINE(ret, name, params, args) \
+#define BETH_DEFINE(ret, name, params, args) \
     ret name params \
     { \
-        NO_VCL_INIT_CHECK(name##_); \
+        BETH_INIT_CHECK(name##_); \
         g_lastError.set = false; \
         return Checked<ret>::Call([&]() { return name##_ args; }); \
     }
-NO_VCL_FUNCS(NO_VCL_DEFINE)
-#undef NO_VCL_DEFINE
+BETH_FUNCS(BETH_DEFINE)
+#undef BETH_DEFINE
 
 } // namespace internal
-} // namespace no_vcl
+} // namespace beth

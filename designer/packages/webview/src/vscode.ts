@@ -1,4 +1,4 @@
-import type { ExtensionToWebviewMessage, WebviewToExtensionMessage } from '@no-vcl-designer/core';
+import type { ExtensionToWebviewMessage, WebviewToExtensionMessage } from '@bethany-designer/core';
 
 // acquireVsCodeApi は1 つの Webview につき 1 回しか呼べないため、モジュールで1 度だけ取得する
 const vscode = acquireVsCodeApi();

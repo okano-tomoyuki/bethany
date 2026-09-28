@@ -2,7 +2,7 @@
  * UI ストア(tk-designer ADR 0006)。選択・表示の切り替え・キャンバスの設定など、Webview 内で閉じる一時的な状態を持つ。
  * ドキュメントには保存されない。
  */
-import type { CanvasSettings } from '@no-vcl-designer/core';
+import type { CanvasSettings } from '@bethany-designer/core';
 import { createStore } from 'zustand/vanilla';
 
 /** 表示中の画面。デザイナー(キャンバス)とコード生成の設定 */

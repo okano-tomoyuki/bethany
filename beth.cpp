@@ -1,8 +1,8 @@
-#include "no_vcl.hpp"
+#include "beth.hpp"
 
 #include <cstdlib>
 
-namespace no_vcl
+namespace beth
 {
 
 namespace
@@ -226,7 +226,7 @@ void TComponent::Free()
 std::intptr_t TComponent::GetTagImpl(TObject* owner)                             { return internal::TComponent_GetTag(owner->Handle()); }
 void          TComponent::SetTagImpl(TObject* owner, const std::intptr_t& value) { internal::TComponent_SetTag(owner->Handle(), value); }
 
-void NO_VCL_CALL TComponent::FreeNotifyTrampoline(ObjectHandle handle, void*)
+void BETH_CALL TComponent::FreeNotifyTrampoline(ObjectHandle handle, void*)
 {
     GuardCallback([&] {
         std::unordered_map<ObjectHandle, TComponent*>& registry = Registry();
@@ -319,7 +319,7 @@ void TControl::SetOnClickImpl(TObject* owner, const TNotifyEvent& value)
     }
 }
 
-void NO_VCL_CALL TControl::ClickTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TControl::ClickTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         TControl* self = static_cast<TControl*>(FromHandle(sender));
@@ -504,7 +504,7 @@ void TControl::SetOnMouseWheelImpl(TObject* owner, const TMouseWheelEvent& value
     }
 }
 
-void NO_VCL_CALL TControl::DblClickTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TControl::DblClickTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         if (TControl* self = static_cast<TControl*>(FromHandle(sender)))
@@ -512,7 +512,7 @@ void NO_VCL_CALL TControl::DblClickTrampoline(ObjectHandle sender, void*)
     });
 }
 
-void NO_VCL_CALL TControl::ResizeTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TControl::ResizeTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         if (TControl* self = static_cast<TControl*>(FromHandle(sender)))
@@ -520,7 +520,7 @@ void NO_VCL_CALL TControl::ResizeTrampoline(ObjectHandle sender, void*)
     });
 }
 
-void NO_VCL_CALL TControl::MouseEnterTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TControl::MouseEnterTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         if (TControl* self = static_cast<TControl*>(FromHandle(sender)))
@@ -528,7 +528,7 @@ void NO_VCL_CALL TControl::MouseEnterTrampoline(ObjectHandle sender, void*)
     });
 }
 
-void NO_VCL_CALL TControl::MouseLeaveTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TControl::MouseLeaveTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         if (TControl* self = static_cast<TControl*>(FromHandle(sender)))
@@ -536,7 +536,7 @@ void NO_VCL_CALL TControl::MouseLeaveTrampoline(ObjectHandle sender, void*)
     });
 }
 
-void NO_VCL_CALL TControl::MouseDownTrampoline(ObjectHandle sender, internal::int_t button, internal::int_t shift, internal::int_t x, internal::int_t y, void*)
+void BETH_CALL TControl::MouseDownTrampoline(ObjectHandle sender, internal::int_t button, internal::int_t shift, internal::int_t x, internal::int_t y, void*)
 {
     GuardCallback([&] {
         TControl* self = static_cast<TControl*>(FromHandle(sender));
@@ -547,7 +547,7 @@ void NO_VCL_CALL TControl::MouseDownTrampoline(ObjectHandle sender, internal::in
     });
 }
 
-void NO_VCL_CALL TControl::MouseUpTrampoline(ObjectHandle sender, internal::int_t button, internal::int_t shift, internal::int_t x, internal::int_t y, void*)
+void BETH_CALL TControl::MouseUpTrampoline(ObjectHandle sender, internal::int_t button, internal::int_t shift, internal::int_t x, internal::int_t y, void*)
 {
     GuardCallback([&] {
         TControl* self = static_cast<TControl*>(FromHandle(sender));
@@ -558,7 +558,7 @@ void NO_VCL_CALL TControl::MouseUpTrampoline(ObjectHandle sender, internal::int_
     });
 }
 
-void NO_VCL_CALL TControl::MouseMoveTrampoline(ObjectHandle sender, internal::int_t shift, internal::int_t x, internal::int_t y, void*)
+void BETH_CALL TControl::MouseMoveTrampoline(ObjectHandle sender, internal::int_t shift, internal::int_t x, internal::int_t y, void*)
 {
     GuardCallback([&] {
         TControl* self = static_cast<TControl*>(FromHandle(sender));
@@ -569,7 +569,7 @@ void NO_VCL_CALL TControl::MouseMoveTrampoline(ObjectHandle sender, internal::in
     });
 }
 
-void NO_VCL_CALL TControl::MouseWheelTrampoline(ObjectHandle sender, internal::int_t shift, internal::int_t wheelDelta, internal::int_t x, internal::int_t y, internal::bool_t* handled, void*)
+void BETH_CALL TControl::MouseWheelTrampoline(ObjectHandle sender, internal::int_t shift, internal::int_t wheelDelta, internal::int_t x, internal::int_t y, internal::bool_t* handled, void*)
 {
     GuardCallback([&] {
         TControl* self = static_cast<TControl*>(FromHandle(sender));
@@ -635,7 +635,7 @@ void TWinControl::SetOnKeyPressImpl(TObject* owner, const TKeyPressEvent& value)
     }
 }
 
-void NO_VCL_CALL TWinControl::KeyDownTrampoline(ObjectHandle sender, internal::int_t* key, internal::int_t shift, void*)
+void BETH_CALL TWinControl::KeyDownTrampoline(ObjectHandle sender, internal::int_t* key, internal::int_t shift, void*)
 {
     GuardCallback([&] {
         TWinControl* self = static_cast<TWinControl*>(FromHandle(sender));
@@ -648,7 +648,7 @@ void NO_VCL_CALL TWinControl::KeyDownTrampoline(ObjectHandle sender, internal::i
     });
 }
 
-void NO_VCL_CALL TWinControl::KeyUpTrampoline(ObjectHandle sender, internal::int_t* key, internal::int_t shift, void*)
+void BETH_CALL TWinControl::KeyUpTrampoline(ObjectHandle sender, internal::int_t* key, internal::int_t shift, void*)
 {
     GuardCallback([&] {
         TWinControl* self = static_cast<TWinControl*>(FromHandle(sender));
@@ -661,7 +661,7 @@ void NO_VCL_CALL TWinControl::KeyUpTrampoline(ObjectHandle sender, internal::int
     });
 }
 
-void NO_VCL_CALL TWinControl::KeyPressTrampoline(ObjectHandle sender, internal::int_t* key, void*)
+void BETH_CALL TWinControl::KeyPressTrampoline(ObjectHandle sender, internal::int_t* key, void*)
 {
     GuardCallback([&] {
         TWinControl* self = static_cast<TWinControl*>(FromHandle(sender));
@@ -703,7 +703,7 @@ void TCustomScrollBar::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value
                    &internal::TCustomScrollBar_SetOnChange, &TCustomScrollBar::ChangeTrampoline);
 }
 
-void NO_VCL_CALL TCustomScrollBar::ChangeTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TCustomScrollBar::ChangeTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         if (TCustomScrollBar* self = static_cast<TCustomScrollBar*>(FromHandle(sender)))
@@ -738,7 +738,7 @@ void TCustomTrackBar::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value)
                    &internal::TCustomTrackBar_SetOnChange, &TCustomTrackBar::ChangeTrampoline);
 }
 
-void NO_VCL_CALL TCustomTrackBar::ChangeTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TCustomTrackBar::ChangeTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         if (TCustomTrackBar* self = static_cast<TCustomTrackBar*>(FromHandle(sender)))
@@ -834,7 +834,7 @@ void TCustomForm::DoCreate()
         handler(this);
 }
 
-void NO_VCL_CALL TCustomForm::ShowTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TCustomForm::ShowTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender));
@@ -847,7 +847,7 @@ void NO_VCL_CALL TCustomForm::ShowTrampoline(ObjectHandle sender, void*)
     });
 }
 
-void NO_VCL_CALL TCustomForm::CloseTrampoline(ObjectHandle sender, internal::int_t* action, void*)
+void BETH_CALL TCustomForm::CloseTrampoline(ObjectHandle sender, internal::int_t* action, void*)
 {
     GuardCallback([&] {
         TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender));
@@ -877,7 +877,7 @@ void TCustomForm::SetOnCloseImpl(TObject* owner, const TCloseEvent& value)
     }
 }
 
-void NO_VCL_CALL TCustomForm::HideTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TCustomForm::HideTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         if (TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender)))
@@ -885,7 +885,7 @@ void NO_VCL_CALL TCustomForm::HideTrampoline(ObjectHandle sender, void*)
     });
 }
 
-void NO_VCL_CALL TCustomForm::ActivateTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TCustomForm::ActivateTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         if (TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender)))
@@ -893,7 +893,7 @@ void NO_VCL_CALL TCustomForm::ActivateTrampoline(ObjectHandle sender, void*)
     });
 }
 
-void NO_VCL_CALL TCustomForm::DeactivateTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TCustomForm::DeactivateTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         if (TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender)))
@@ -901,7 +901,7 @@ void NO_VCL_CALL TCustomForm::DeactivateTrampoline(ObjectHandle sender, void*)
     });
 }
 
-void NO_VCL_CALL TCustomForm::DestroyTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TCustomForm::DestroyTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         if (TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender)))
@@ -909,7 +909,7 @@ void NO_VCL_CALL TCustomForm::DestroyTrampoline(ObjectHandle sender, void*)
     });
 }
 
-void NO_VCL_CALL TCustomForm::CloseQueryTrampoline(ObjectHandle sender, internal::bool_t* canClose, void*)
+void BETH_CALL TCustomForm::CloseQueryTrampoline(ObjectHandle sender, internal::bool_t* canClose, void*)
 {
     GuardCallback([&] {
         TCustomForm* self = dynamic_cast<TCustomForm*>(FromHandle(sender));
@@ -1104,7 +1104,7 @@ void TCustomRadioGroup::SetOnClickImpl(TObject* owner, const TNotifyEvent& value
                    &internal::TCustomRadioGroup_SetOnClick, &TCustomRadioGroup::ClickTrampoline);
 }
 
-void NO_VCL_CALL TCustomRadioGroup::ClickTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TCustomRadioGroup::ClickTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         if (TCustomRadioGroup* self = static_cast<TCustomRadioGroup*>(FromHandle(sender)))
@@ -1298,7 +1298,7 @@ void TCustomEdit::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value)
     }
 }
 
-void NO_VCL_CALL TCustomEdit::ChangeTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TCustomEdit::ChangeTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         TCustomEdit* self = static_cast<TCustomEdit*>(FromHandle(sender));
@@ -1418,7 +1418,7 @@ void TTabControl::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value)
                    &internal::TTabControl_SetOnChange, &TTabControl::ChangeTrampoline);
 }
 
-void NO_VCL_CALL TTabControl::ChangeTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TTabControl::ChangeTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         if (TTabControl* self = static_cast<TTabControl*>(FromHandle(sender)))
@@ -1453,7 +1453,7 @@ void TCustomTabControl::SetOnChangingImpl(TObject* owner, const TTabChangingEven
                    &internal::TCustomTabControl_SetOnChanging, &TCustomTabControl::ChangingTrampoline);
 }
 
-void NO_VCL_CALL TCustomTabControl::ChangingTrampoline(ObjectHandle sender, internal::bool_t* allowChange, void*)
+void BETH_CALL TCustomTabControl::ChangingTrampoline(ObjectHandle sender, internal::bool_t* allowChange, void*)
 {
     GuardCallback([&] {
         TCustomTabControl* self = static_cast<TCustomTabControl*>(FromHandle(sender));
@@ -1496,7 +1496,7 @@ void TPageControl::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value)
                    &internal::TPageControl_SetOnChange, &TPageControl::ChangeTrampoline);
 }
 
-void NO_VCL_CALL TPageControl::ChangeTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TPageControl::ChangeTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         if (TPageControl* self = static_cast<TPageControl*>(FromHandle(sender)))
@@ -1535,7 +1535,7 @@ void TCustomPage::SetOnHideImpl(TObject* owner, const TNotifyEvent& value)
                    &internal::TCustomPage_SetOnHide, &TCustomPage::HideTrampoline);
 }
 
-void NO_VCL_CALL TCustomPage::ShowTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TCustomPage::ShowTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         if (TCustomPage* self = static_cast<TCustomPage*>(FromHandle(sender)))
@@ -1543,7 +1543,7 @@ void NO_VCL_CALL TCustomPage::ShowTrampoline(ObjectHandle sender, void*)
     });
 }
 
-void NO_VCL_CALL TCustomPage::HideTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TCustomPage::HideTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         if (TCustomPage* self = static_cast<TCustomPage*>(FromHandle(sender)))
@@ -1595,7 +1595,7 @@ void ItemRegistry::InstallCallback()
     }
 }
 
-void NO_VCL_CALL ItemRegistry::FreeTrampoline(ObjectHandle handle, void*)
+void BETH_CALL ItemRegistry::FreeTrampoline(ObjectHandle handle, void*)
 {
     GuardCallback([&] {
         std::unordered_map<ObjectHandle, TPersistent*>& registry = Registry();
@@ -1803,26 +1803,26 @@ void TTreeView::DispatchNodeAllow(ObjectHandle sender, ObjectHandle node, intern
     *allow = value ? 1 : 0;
 }
 
-void NO_VCL_CALL TTreeView::ChangeTrampoline(ObjectHandle s, ObjectHandle n, void*)    { GuardCallback([&] { DispatchNode(s, n, &TTreeView::onChange_); }); }
-void NO_VCL_CALL TTreeView::ExpandedTrampoline(ObjectHandle s, ObjectHandle n, void*)  { GuardCallback([&] { DispatchNode(s, n, &TTreeView::onExpanded_); }); }
-void NO_VCL_CALL TTreeView::CollapsedTrampoline(ObjectHandle s, ObjectHandle n, void*) { GuardCallback([&] { DispatchNode(s, n, &TTreeView::onCollapsed_); }); }
-void NO_VCL_CALL TTreeView::DeletionTrampoline(ObjectHandle s, ObjectHandle n, void*)  { GuardCallback([&] { DispatchNode(s, n, &TTreeView::onDeletion_); }); }
+void BETH_CALL TTreeView::ChangeTrampoline(ObjectHandle s, ObjectHandle n, void*)    { GuardCallback([&] { DispatchNode(s, n, &TTreeView::onChange_); }); }
+void BETH_CALL TTreeView::ExpandedTrampoline(ObjectHandle s, ObjectHandle n, void*)  { GuardCallback([&] { DispatchNode(s, n, &TTreeView::onExpanded_); }); }
+void BETH_CALL TTreeView::CollapsedTrampoline(ObjectHandle s, ObjectHandle n, void*) { GuardCallback([&] { DispatchNode(s, n, &TTreeView::onCollapsed_); }); }
+void BETH_CALL TTreeView::DeletionTrampoline(ObjectHandle s, ObjectHandle n, void*)  { GuardCallback([&] { DispatchNode(s, n, &TTreeView::onDeletion_); }); }
 
-void NO_VCL_CALL TTreeView::ChangingTrampoline(ObjectHandle s, ObjectHandle n, internal::bool_t* a, void*)
+void BETH_CALL TTreeView::ChangingTrampoline(ObjectHandle s, ObjectHandle n, internal::bool_t* a, void*)
 {
     GuardCallback([&] {
         DispatchNodeAllow(s, n, a, &TTreeView::onChanging_);
     });
 }
 
-void NO_VCL_CALL TTreeView::ExpandingTrampoline(ObjectHandle s, ObjectHandle n, internal::bool_t* a, void*)
+void BETH_CALL TTreeView::ExpandingTrampoline(ObjectHandle s, ObjectHandle n, internal::bool_t* a, void*)
 {
     GuardCallback([&] {
         DispatchNodeAllow(s, n, a, &TTreeView::onExpanding_);
     });
 }
 
-void NO_VCL_CALL TTreeView::CollapsingTrampoline(ObjectHandle s, ObjectHandle n, internal::bool_t* a, void*)
+void BETH_CALL TTreeView::CollapsingTrampoline(ObjectHandle s, ObjectHandle n, internal::bool_t* a, void*)
 {
     GuardCallback([&] {
         DispatchNodeAllow(s, n, a, &TTreeView::onCollapsing_);
@@ -2065,7 +2065,7 @@ void TListView::SetSortDirectionImpl(TObject* owner, const TSortDirection& value
 
 // リストビューの破棄では、リストビュー自身のラッパーが delete された後に項目が破棄される(LCL の順序)。
 // そのときの OnDeletion は FromHandle が nullptr を返すため、ハンドラは呼ばれない。
-void NO_VCL_CALL TListView::SelectItemTrampoline(ObjectHandle sender, ObjectHandle item, internal::int_t selected, void*)
+void BETH_CALL TListView::SelectItemTrampoline(ObjectHandle sender, ObjectHandle item, internal::int_t selected, void*)
 {
     GuardCallback([&] {
         TListView* self = static_cast<TListView*>(FromHandle(sender));
@@ -2076,7 +2076,7 @@ void NO_VCL_CALL TListView::SelectItemTrampoline(ObjectHandle sender, ObjectHand
     });
 }
 
-void NO_VCL_CALL TListView::ChangeTrampoline(ObjectHandle sender, ObjectHandle item, internal::int_t change, void*)
+void BETH_CALL TListView::ChangeTrampoline(ObjectHandle sender, ObjectHandle item, internal::int_t change, void*)
 {
     GuardCallback([&] {
         TListView* self = static_cast<TListView*>(FromHandle(sender));
@@ -2087,7 +2087,7 @@ void NO_VCL_CALL TListView::ChangeTrampoline(ObjectHandle sender, ObjectHandle i
     });
 }
 
-void NO_VCL_CALL TListView::DeletionTrampoline(ObjectHandle sender, ObjectHandle item, void*)
+void BETH_CALL TListView::DeletionTrampoline(ObjectHandle sender, ObjectHandle item, void*)
 {
     GuardCallback([&] {
         TListView* self = static_cast<TListView*>(FromHandle(sender));
@@ -2098,7 +2098,7 @@ void NO_VCL_CALL TListView::DeletionTrampoline(ObjectHandle sender, ObjectHandle
     });
 }
 
-void NO_VCL_CALL TListView::ItemCheckedTrampoline(ObjectHandle sender, ObjectHandle item, void*)
+void BETH_CALL TListView::ItemCheckedTrampoline(ObjectHandle sender, ObjectHandle item, void*)
 {
     GuardCallback([&] {
         TListView* self = static_cast<TListView*>(FromHandle(sender));
@@ -2109,7 +2109,7 @@ void NO_VCL_CALL TListView::ItemCheckedTrampoline(ObjectHandle sender, ObjectHan
     });
 }
 
-void NO_VCL_CALL TListView::ColumnClickTrampoline(ObjectHandle sender, ObjectHandle column, void*)
+void BETH_CALL TListView::ColumnClickTrampoline(ObjectHandle sender, ObjectHandle column, void*)
 {
     GuardCallback([&] {
         TListView* self = static_cast<TListView*>(FromHandle(sender));
@@ -2195,7 +2195,7 @@ void TCustomSplitter::SetOnMovedImpl(TObject* owner, const TNotifyEvent& value)
                    &internal::TCustomSplitter_SetOnMoved, &TCustomSplitter::MovedTrampoline);
 }
 
-void NO_VCL_CALL TCustomSplitter::MovedTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TCustomSplitter::MovedTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         if (TCustomSplitter* self = static_cast<TCustomSplitter*>(FromHandle(sender)))
@@ -2258,7 +2258,7 @@ void TComboBox::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value)
     }
 }
 
-void NO_VCL_CALL TComboBox::ChangeTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TComboBox::ChangeTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         TComboBox* self = static_cast<TComboBox*>(FromHandle(sender));
@@ -2303,7 +2303,7 @@ void TCustomCheckListBox::SetOnClickCheckImpl(TObject* owner, const TNotifyEvent
                    &internal::TCustomCheckListBox_SetOnClickCheck, &TCustomCheckListBox::ClickCheckTrampoline);
 }
 
-void NO_VCL_CALL TCustomCheckListBox::ClickCheckTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TCustomCheckListBox::ClickCheckTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         if (TCustomCheckListBox* self = static_cast<TCustomCheckListBox*>(FromHandle(sender)))
@@ -2682,7 +2682,7 @@ void TPaintBox::SetOnPaintImpl(TObject* owner, const TNotifyEvent& value)
     }
 }
 
-void NO_VCL_CALL TPaintBox::PaintTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TPaintBox::PaintTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         TPaintBox* self = static_cast<TPaintBox*>(FromHandle(sender));
@@ -2742,7 +2742,7 @@ void TCustomImage::SetProportionalImpl(TObject* owner, const bool& value) { inte
 bool TCustomImage::GetTransparentImpl(TObject* owner)  { return internal::TCustomImage_GetTransparent(owner->Handle()) != 0; }
 void TCustomImage::SetTransparentImpl(TObject* owner, const bool& value) { internal::TCustomImage_SetTransparent(owner->Handle(), value ? 1 : 0); }
 
-void NO_VCL_CALL TCustomImage::PictureChangedTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TCustomImage::PictureChangedTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         if (TCustomImage* self = static_cast<TCustomImage*>(FromHandle(sender)))
@@ -2788,7 +2788,7 @@ void TCustomTimer::SetOnTimerImpl(TObject* owner, const TNotifyEvent& value)
     }
 }
 
-void NO_VCL_CALL TCustomTimer::TimerTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TCustomTimer::TimerTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         TCustomTimer* self = static_cast<TCustomTimer*>(FromHandle(sender));
@@ -2875,7 +2875,7 @@ void TCustomImageList::SetDrawingStyleImpl(TObject* owner, const TDrawingStyle& 
     internal::TCustomImageList_SetDrawingStyle(owner->Handle(), value);
 }
 
-void NO_VCL_CALL TCustomImageList::ChangeTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TCustomImageList::ChangeTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         if (TCustomImageList* self = static_cast<TCustomImageList*>(FromHandle(sender)))
@@ -2982,7 +2982,7 @@ void TMenuItem::SetOnClickImpl(TObject* owner, const TNotifyEvent& value)
                    &internal::TMenuItem_SetOnClick, &TMenuItem::ClickTrampoline);
 }
 
-void NO_VCL_CALL TMenuItem::ClickTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TMenuItem::ClickTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         if (TMenuItem* self = static_cast<TMenuItem*>(FromHandle(sender)))
@@ -3034,7 +3034,7 @@ void TPopupMenu::SetOnCloseImpl(TObject* owner, const TNotifyEvent& value)
                    &internal::TPopupMenu_SetOnClose, &TPopupMenu::CloseTrampoline);
 }
 
-void NO_VCL_CALL TPopupMenu::PopupTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TPopupMenu::PopupTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         if (TPopupMenu* self = static_cast<TPopupMenu*>(FromHandle(sender)))
@@ -3042,7 +3042,7 @@ void NO_VCL_CALL TPopupMenu::PopupTrampoline(ObjectHandle sender, void*)
     });
 }
 
-void NO_VCL_CALL TPopupMenu::CloseTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TPopupMenu::CloseTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         if (TPopupMenu* self = static_cast<TPopupMenu*>(FromHandle(sender)))
@@ -3149,7 +3149,7 @@ void TCustomDrawGrid::SetSelectionImpl(TObject* owner, const TGridRect& value)
     internal::TCustomDrawGrid_SetSelection(owner->Handle(), value.Left, value.Top, value.Right, value.Bottom);
 }
 
-void NO_VCL_CALL TCustomDrawGrid::DrawCellTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row,
+void BETH_CALL TCustomDrawGrid::DrawCellTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row,
                                                      internal::int_t left, internal::int_t top, internal::int_t right, internal::int_t bottom,
                                                      internal::uint_t state, void*)
 {
@@ -3162,7 +3162,7 @@ void NO_VCL_CALL TCustomDrawGrid::DrawCellTrampoline(ObjectHandle sender, intern
     });
 }
 
-void NO_VCL_CALL TCustomDrawGrid::SelectCellTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, internal::bool_t* canSelect, void*)
+void BETH_CALL TCustomDrawGrid::SelectCellTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, internal::bool_t* canSelect, void*)
 {
     GuardCallback([&] {
         TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
@@ -3175,7 +3175,7 @@ void NO_VCL_CALL TCustomDrawGrid::SelectCellTrampoline(ObjectHandle sender, inte
     });
 }
 
-void NO_VCL_CALL TCustomDrawGrid::SelectionTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, void*)
+void BETH_CALL TCustomDrawGrid::SelectionTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, void*)
 {
     GuardCallback([&] {
         TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
@@ -3186,7 +3186,7 @@ void NO_VCL_CALL TCustomDrawGrid::SelectionTrampoline(ObjectHandle sender, inter
     });
 }
 
-void NO_VCL_CALL TCustomDrawGrid::HeaderClickTrampoline(ObjectHandle sender, internal::int_t isColumn, internal::int_t index, void*)
+void BETH_CALL TCustomDrawGrid::HeaderClickTrampoline(ObjectHandle sender, internal::int_t isColumn, internal::int_t index, void*)
 {
     GuardCallback([&] {
         TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
@@ -3347,7 +3347,7 @@ void CallSectionNotify(TCustomHeaderControl* self, TCustomSectionNotifyEvent han
 
 } // namespace
 
-void NO_VCL_CALL TCustomHeaderControl::SectionClickTrampoline(ObjectHandle sender, ObjectHandle section, void*)
+void BETH_CALL TCustomHeaderControl::SectionClickTrampoline(ObjectHandle sender, ObjectHandle section, void*)
 {
     GuardCallback([&] {
         if (TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(FromHandle(sender)))
@@ -3355,7 +3355,7 @@ void NO_VCL_CALL TCustomHeaderControl::SectionClickTrampoline(ObjectHandle sende
     });
 }
 
-void NO_VCL_CALL TCustomHeaderControl::SectionResizeTrampoline(ObjectHandle sender, ObjectHandle section, void*)
+void BETH_CALL TCustomHeaderControl::SectionResizeTrampoline(ObjectHandle sender, ObjectHandle section, void*)
 {
     GuardCallback([&] {
         if (TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(FromHandle(sender)))
@@ -3363,7 +3363,7 @@ void NO_VCL_CALL TCustomHeaderControl::SectionResizeTrampoline(ObjectHandle send
     });
 }
 
-void NO_VCL_CALL TCustomHeaderControl::SectionSeparatorDblClickTrampoline(ObjectHandle sender, ObjectHandle section, void*)
+void BETH_CALL TCustomHeaderControl::SectionSeparatorDblClickTrampoline(ObjectHandle sender, ObjectHandle section, void*)
 {
     GuardCallback([&] {
         if (TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(FromHandle(sender)))
@@ -3371,7 +3371,7 @@ void NO_VCL_CALL TCustomHeaderControl::SectionSeparatorDblClickTrampoline(Object
     });
 }
 
-void NO_VCL_CALL TCustomHeaderControl::SectionTrackTrampoline(ObjectHandle sender, ObjectHandle section,
+void BETH_CALL TCustomHeaderControl::SectionTrackTrampoline(ObjectHandle sender, ObjectHandle section,
                                                               internal::int_t width, internal::int_t state, void*)
 {
     GuardCallback([&] {
@@ -3383,7 +3383,7 @@ void NO_VCL_CALL TCustomHeaderControl::SectionTrackTrampoline(ObjectHandle sende
     });
 }
 
-void NO_VCL_CALL TCustomHeaderControl::SectionDragTrampoline(ObjectHandle sender, ObjectHandle fromSection,
+void BETH_CALL TCustomHeaderControl::SectionDragTrampoline(ObjectHandle sender, ObjectHandle fromSection,
                                                              ObjectHandle toSection, internal::bool_t* allow, void*)
 {
     GuardCallback([&] {
@@ -3397,7 +3397,7 @@ void NO_VCL_CALL TCustomHeaderControl::SectionDragTrampoline(ObjectHandle sender
     });
 }
 
-void NO_VCL_CALL TCustomHeaderControl::SectionEndDragTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TCustomHeaderControl::SectionEndDragTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         if (TCustomHeaderControl* self = static_cast<TCustomHeaderControl*>(FromHandle(sender)))
@@ -3573,7 +3573,7 @@ TMenuItem* TToolButton::GetMenuItemImpl(TObject* owner) { return WrapExisting<TM
 void TToolButton::SetMenuItemImpl(TObject* owner, TMenuItem* const& value) { internal::TToolButton_SetMenuItem(owner->Handle(), HandleOf(value)); }
 int  TToolButton::GetIndexImpl(TObject* owner) { return internal::TToolButton_GetIndex(owner->Handle()); }
 
-void NO_VCL_CALL TToolButton::ArrowClickTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TToolButton::ArrowClickTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         if (TToolButton* self = static_cast<TToolButton*>(FromHandle(sender)))
@@ -3719,7 +3719,7 @@ void TCustomCoolBar::SetThemedImpl(TObject* owner, const bool& value)         { 
 bool TCustomCoolBar::GetVerticalImpl(TObject* owner)                         { return internal::TCustomCoolBar_GetVertical(owner->Handle()) != 0; }
 void TCustomCoolBar::SetVerticalImpl(TObject* owner, const bool& value)       { internal::TCustomCoolBar_SetVertical(owner->Handle(), value ? 1 : 0); }
 
-void NO_VCL_CALL TCustomCoolBar::ChangeTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TCustomCoolBar::ChangeTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         if (TCustomCoolBar* self = static_cast<TCustomCoolBar*>(FromHandle(sender)))
@@ -3879,7 +3879,7 @@ void TCommonDialog::SetOnCanCloseImpl(TObject* owner, const TCloseQueryEvent& va
                    &internal::TCommonDialog_SetOnCanClose, &TCommonDialog::CanCloseTrampoline);
 }
 
-void NO_VCL_CALL TCommonDialog::ShowTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TCommonDialog::ShowTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         TCommonDialog* self = static_cast<TCommonDialog*>(FromHandle(sender));
@@ -3888,7 +3888,7 @@ void NO_VCL_CALL TCommonDialog::ShowTrampoline(ObjectHandle sender, void*)
     });
 }
 
-void NO_VCL_CALL TCommonDialog::CloseTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TCommonDialog::CloseTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         TCommonDialog* self = static_cast<TCommonDialog*>(FromHandle(sender));
@@ -3897,7 +3897,7 @@ void NO_VCL_CALL TCommonDialog::CloseTrampoline(ObjectHandle sender, void*)
     });
 }
 
-void NO_VCL_CALL TCommonDialog::CanCloseTrampoline(ObjectHandle sender, internal::bool_t* canClose, void*)
+void BETH_CALL TCommonDialog::CanCloseTrampoline(ObjectHandle sender, internal::bool_t* canClose, void*)
 {
     GuardCallback([&] {
         TCommonDialog* self = static_cast<TCommonDialog*>(FromHandle(sender));
@@ -4030,7 +4030,7 @@ void TFindDialog::SetOnReplaceImpl(TObject* owner, const TNotifyEvent& value)
                    &internal::TFindDialog_SetOnReplace, &TFindDialog::ReplaceTrampoline);
 }
 
-void NO_VCL_CALL TFindDialog::FindTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TFindDialog::FindTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         TFindDialog* self = static_cast<TFindDialog*>(FromHandle(sender));
@@ -4039,7 +4039,7 @@ void NO_VCL_CALL TFindDialog::FindTrampoline(ObjectHandle sender, void*)
     });
 }
 
-void NO_VCL_CALL TFindDialog::ReplaceTrampoline(ObjectHandle sender, void*)
+void BETH_CALL TFindDialog::ReplaceTrampoline(ObjectHandle sender, void*)
 {
     GuardCallback([&] {
         TFindDialog* self = static_cast<TFindDialog*>(FromHandle(sender));
@@ -4052,4 +4052,4 @@ TReplaceDialog::TReplaceDialog(TComponent* AOwner)
     : TFindDialog(internal::TReplaceDialog_Create(HandleOf(AOwner)), DerivedTag())
 {}
 
-} // namespace no_vcl
+} // namespace beth

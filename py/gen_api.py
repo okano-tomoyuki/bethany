@@ -1,8 +1,8 @@
-"""no_vcl.hpp(C++ の公開 API)と internal/funcs.h・internal/api.h から、Python の公開 API(no_vcl.py)を生成する。
+"""beth.hpp(C++ の公開 API)と internal/funcs.h・internal/api.h から、Python の公開 API(beth.py)を生成する。
 
-no_vcl.hpp のクラス・プロパティ・イベント・メソッド・列挙型・定数を、命名規則(docs/adr/0007。TControl::Left なら
+beth.hpp のクラス・プロパティ・イベント・メソッド・列挙型・定数を、命名規則(docs/adr/0007。TControl::Left なら
 TControl_GetLeft・TControl_SetLeft)で DLL の関数に対応付ける。寿命の管理や C++ で独自の実装を持つメンバは
-no_vcl_core.py に手で書き(_mixins)、ここでは生成しない。
+beth_core.py に手で書き(_mixins)、ここでは生成しない。
 対応付けられないメンバがあれば、生成を止めて一覧を表示する(黙って落とさない)。
 """
 import re
@@ -11,13 +11,13 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
-HPP = ROOT / "no_vcl.hpp"
+HPP = ROOT / "beth.hpp"
 FUNCS_HEADER = ROOT / "internal" / "funcs.h"
 API_HEADER = ROOT / "internal" / "api.h"
-CORE_FILE = HERE / "no_vcl_core.py"
-OUTPUT_FILE = HERE / "no_vcl.py"
+CORE_FILE = HERE / "beth_core.py"
+OUTPUT_FILE = HERE / "beth.py"
 
-# 手書き(no_vcl_core.py)のクラスと、C++ の実装のための補助クラス(生成しない)。
+# 手書き(beth_core.py)のクラスと、C++ の実装のための補助クラス(生成しない)。
 CORE_CLASSES = {"TObject", "TPersistent", "TComponent"}
 HELPER_CLASSES = {"Property", "ReadOnlyProperty", "IndexedProperty", "ReadOnlyIndexedProperty", "IndexedProperty2",
                   "ItemRegistry", "CanvasHolder", "Exception"}
@@ -145,7 +145,7 @@ def read_funcs():
 def read_callbacks():
     text = API_HEADER.read_text(encoding="utf-8")
     cbs = {}
-    for m in re.finditer(r"using\s+(\w*callback_t)\s*=\s*void\s*\(\s*NO_VCL_CALL\s*\*\s*\)\s*\(([^)]*)\)\s*;", text):
+    for m in re.finditer(r"using\s+(\w*callback_t)\s*=\s*void\s*\(\s*BETH_CALL\s*\*\s*\)\s*\(([^)]*)\)\s*;", text):
         cbs[m.group(1)] = len([p for p in m.group(2).split(",") if p.strip()])
     return cbs
 
@@ -171,7 +171,7 @@ def cxx_value(v):
 
 def parse_hpp():
     src = HPP.read_text(encoding="utf-8")
-    ns = re.search(r"namespace no_vcl\s*\{", src)
+    ns = re.search(r"namespace beth\s*\{", src)
     body = src[ns.end():match_brace(src, ns.end() - 1)]
     model = Model()
     type_of_const = {}
@@ -312,7 +312,7 @@ class Gen:
         return "obj"
 
     def conv(self, t):
-        """プロパティ・添字の値の変換(no_vcl_core の _Conv)の式。"""
+        """プロパティ・添字の値の変換(beth_core の _Conv)の式。"""
         if t in self.m.sets:
             return f'_set("{self.m.sets[t]}")'
         s = self.scalar(t)
@@ -395,7 +395,7 @@ class Gen:
         return "\n".join(out)
 
     def public_names(self):
-        names = ["NoVclError", "Ref", "TRect", "TPoint", "TObject", "TPersistent", "TComponent",
+        names = ["BethError", "Ref", "TRect", "TPoint", "TObject", "TPersistent", "TComponent",
                  "ShortCut", "TextToShortCut", "ShortCutToText", "Application"]
         for e, items in self.m.enums.items():
             names.append(e)
@@ -706,10 +706,10 @@ class Gen:
 
 
 HEADER = '''\
-# このファイルは gen_api.py が no_vcl.hpp から生成する。直接編集しない。
-"""no_vcl の Python の公開 API。C++ の公開 API(no_vcl.hpp)と同じクラス・メンバを持つ。
+# このファイルは gen_api.py が beth.hpp から生成する。直接編集しない。
+"""Bethany の Python の公開 API。C++ の公開 API(beth.hpp)と同じクラス・メンバを持つ。
 
-    from no_vcl import *
+    from beth import *
 
     class TForm1(TForm):
         def __init__(self, AOwner):
@@ -727,19 +727,19 @@ HEADER = '''\
     Form1 = Application.CreateForm(TForm1)
     Application.Run()
 
-C++ との違い(詳しくは no_vcl_core.py):
+C++ との違い(詳しくは beth_core.py):
 - 参照渡しの引数(int& Key・bool& CanClose・TCloseAction& Action 等)・メソッドの出力引数は Ref(.value を読み書きする)。
 - Application->CreateForm(&Form1) は Form1 = Application.CreateForm(TForm1)。
 - 利用者が生成するもの(TStringList・TBitmap・TPicture 等)の delete は Free()(参照が無くなったときにも破棄される)。
 - LCL オブジェクトが破棄された後にラッパーへ触ると ReferenceError(C++ では未定義動作)。
-- C++ の Exception は NoVclError(E.Message・E.ClassName())。
+- C++ の Exception は BethError(E.Message・E.ClassName())。
 """
 import ctypes
 import enum
 
-from no_vcl_core import (NoVclError, Ref, TRect, TPoint, TObject, TPersistent, TComponent,
+from beth_core import (BethError, Ref, TRect, TPoint, TObject, TPersistent, TComponent,
                          ShortCut, TextToShortCut, ShortCutToText)
-from no_vcl_core import (lib, _mixins, _register, _event_types, _ItemMixin, _Prop, _Indexed, _Event,
+from beth_core import (lib, _mixins, _register, _event_types, _ItemMixin, _Prop, _Indexed, _Event,
                          _int, _float, _bool, _str, _char, _ptr, _rect_conv, _enum, _set, _comp, _existing, _item, _obj, _view,
                          _str_key, _enc, _dec, _h, _b, _rect, _point, _to_enum, _to_comp, _to_existing, _to_item, _to_obj,
                          _a_int, _a_bool, _a_rect, _a_enum, _a_comp, _a_item, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_enum)
@@ -758,14 +758,14 @@ __all__ = [
 
 
 class MixinInfo:
-    """no_vcl_core.py の手書きのメンバ(クラスの __dict__ の代わりに、定義されている名前の集合を持つ)。"""
+    """beth_core.py の手書きのメンバ(クラスの __dict__ の代わりに、定義されている名前の集合を持つ)。"""
 
     def __init__(self, names):
         self.__dict__ = {name: True for name in names}
 
 
 def read_mixins():
-    """no_vcl_core.py の _mixins(クラス名 → 手書きのクラス)を、import せずに(DLL を読み込まずに)ソースから読む。"""
+    """beth_core.py の _mixins(クラス名 → 手書きのクラス)を、import せずに(DLL を読み込まずに)ソースから読む。"""
     import ast
     tree = ast.parse(CORE_FILE.read_text(encoding="utf-8"))
     classes = {n.name: n for n in tree.body if isinstance(n, ast.ClassDef)}
@@ -790,7 +790,7 @@ def main():
     gen = Gen(model, read_funcs(), read_callbacks(), read_mixins())
     code = gen.generate()
     if gen.errors:
-        print("対応付けられないメンバがある(no_vcl_core.py の _mixins に書くか、生成の規則を直す):")
+        print("対応付けられないメンバがある(beth_core.py の _mixins に書くか、生成の規則を直す):")
         for e in gen.errors:
             print("  " + e)
         sys.exit(1)

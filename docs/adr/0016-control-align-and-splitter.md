@@ -6,7 +6,7 @@
 ## 背景
 
 [docs/component-coverage.md](../component-coverage.md) の「cross-cutting な既知の課題」に挙げていたとおり、
-no_vcl にはレイアウトの基本である `TControl.Align` が無かった。ツールバーを alTop、メインの領域を alClient、
+Bethany にはレイアウトの基本である `TControl.Align` が無かった。ツールバーを alTop、メインの領域を alClient、
 ステータス行を alBottom のように置く VCL アプリの典型的なレイアウトを再現できず、
 Align を前提とする TSplitter も Tier 1 から見送っていた。
 
@@ -29,11 +29,11 @@ var 引数を 2 つ持つ独自の形で、既存のブリッジ(var 引数 1 �
 
 選択肢A を採る。
 
-- **TControl.Align**: C API は `no_vcl_TControl_GetAlign` / `SetAlign`(TAlign の序数と、`no_vcl_al*` 定数)。
+- **TControl.Align**: C API は `beth_TControl_GetAlign` / `SetAlign`(TAlign の序数と、`beth_al*` 定数)。
   C++ は `enum TAlign { alNone, alTop, ... }` と `TControl::Align`(`Property<TAlign>`)。
   他の列挙型プロパティと同じく `Ord`/型キャストで整数として受け渡す。
 - **TSplitter**(`extctrls.pp`): C++ は `TCustomControl → TCustomSplitter → TSplitter`。メンバはすべて
-  TCustomSplitter の public なので、C API は `no_vcl_TCustomSplitter_*`、C++ も TCustomSplitter に置く。
+  TCustomSplitter の public なので、C API は `beth_TCustomSplitter_*`、C++ も TCustomSplitter に置く。
   - AutoSnap・Beveled・MinSize・ResizeAnchor(`TAnchorKind`。VCL には無い LCL のもの)・ResizeStyle(`TResizeStyle`)。
   - SplitterPosition は LCL ではプロパティではなく `GetSplitterPosition` / `SetSplitterPosition` メソッドの組のため、
     C++ でもメソッドのままにする。
@@ -47,7 +47,7 @@ var 引数を 2 つ持つ独自の形で、既存のブリッジ(var 引数 1 �
   「表示されていないコントロールは配置を遅らせる」(`not IsControlVisible`)ため、フォームのコンストラクタの中や
   `Application->Run()` の前に Left/Top/Width/Height を読むと、Align を設定する前の値のまま。
   OnShow の時点では配置が済んでいる。VCL は表示前でも即座に配置するため、ここは VCL と挙動が異なる。
-  LCL の標準の挙動であり、no_vcl 側では手を入れない(テストも OnShow で配置後の値を確認している)。
+  LCL の標準の挙動であり、Bethany 側では手を入れない(テストも OnShow で配置後の値を確認している)。
 - **同じ Align のコントロール同士は Left(alTop/alBottom なら Top)の小さい順に並ぶ。** TSplitter は既定で
   alLeft かつ Left=0 のため、そのまま Parent を設定すると、先に置いた alLeft のパネルより左に並んでしまう。
   VCL と同じ注意点で、Parent を設定する前に Left をパネルより右にしておく。

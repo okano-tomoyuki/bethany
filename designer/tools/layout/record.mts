@@ -1,19 +1,19 @@
 /**
- * 配置の見本(packages/core/src/layout/fixtures/*.nvform.json)を実物の LCL で表示して、配置を記録する
+ * 配置の見本(packages/core/src/layout/fixtures/*.bfm.json)を実物の LCL で表示して、配置を記録する
  * (docs/designer/editor-design.md §4.4。ADR 0036)。
  *
  *   node tools/layout/record.mts           見本ごとに <見本>.lcl.json を書く
  *   node tools/layout/record.mts --check   記録と今の LCL の結果が食い違っていないか調べる(書かない)
  *
- * 見本から Python のコードを生成し(verify-python と同じ)、py/no_vcl.py で表示して、各コントロールの Left・Top・Width・Height を
+ * 見本から Python のコードを生成し(verify-python と同じ)、py/beth.py で表示して、各コントロールの Left・Top・Width・Height を
  * 読む。続けてフォームの Width・Height を広げ、Anchors で追従した後の配置も読む。
  *
- * 必要なもの: Python 3(環境変数 PYTHON で指定できる)と、ビルド済みの no_vcl の DLL。記録は Windows で行う(ADR 0036)。
+ * 必要なもの: Python 3(環境変数 PYTHON で指定できる)と、ビルド済みの Bethany の DLL。記録は Windows で行う(ADR 0036)。
  */
 import { copyFileSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { parseDocument, walkNodes, type NvformDocument } from '../../packages/core/src/index.ts';
+import { parseDocument, walkNodes, type BfmDocument } from '../../packages/core/src/index.ts';
 import { generatePython } from '../../packages/codegen/src/index.ts';
 import type { LayoutRecord } from '../../packages/core/src/layout/fixtures/record.ts';
 import { designerRoot, repoRoot, writeIfChanged } from '../codegen/report.mts';
@@ -23,18 +23,18 @@ export const RESIZE = { width: 100, height: 50 } as const;
 const fixturesDir = join(designerRoot, 'packages/core/src/layout/fixtures');
 const workDir = join(designerRoot, '.cache/layout-record');
 const isWindows = process.platform === 'win32';
-const dllName = isWindows ? 'no_vcl.dll' : 'libno_vcl.so';
+const dllName = isWindows ? 'beth.dll' : 'libbeth.so';
 const python = process.env.PYTHON ?? (isWindows ? 'python' : 'python3');
 const check = process.argv.includes('--check');
 
 mkdirSync(workDir, { recursive: true });
-for (const file of ['no_vcl.py', 'no_vcl_core.py', 'no_vcl_internal.py'])
+for (const file of ['beth.py', 'beth_core.py', 'beth_internal.py'])
   copyFileSync(join(repoRoot, 'py', file), join(workDir, file));
 copyFileSync(join(repoRoot, dllName), join(workDir, dllName));
 
 let mismatches = 0;
 for (const file of readdirSync(fixturesDir)
-  .filter((f) => f.endsWith('.nvform.json'))
+  .filter((f) => f.endsWith('.bfm.json'))
   .sort()) {
   const doc = load(join(fixturesDir, file));
   const result = generatePython(doc, file, undefined);
@@ -44,7 +44,7 @@ for (const file of readdirSync(fixturesDir)
   const output = runPython('record.py');
   const record = JSON.parse(lastLine(output)) as LayoutRecord;
   const text = `${JSON.stringify(record, null, 2).replace(/\[\s+(-?\d+),\s+(-?\d+),\s+(-?\d+),\s+(-?\d+)\s+\]/g, '[$1, $2, $3, $4]')}\n`;
-  save(join(fixturesDir, file.replace(/\.nvform\.json$/, '.lcl.json')), text);
+  save(join(fixturesDir, file.replace(/\.bfm\.json$/, '.lcl.json')), text);
 }
 
 // ---- クライアント領域の余白と、生成しただけでは大きさが 0 のクラスの大きさ(metrics.json) ----
@@ -92,19 +92,19 @@ function save(path: string, text: string): void {
   }
 }
 
-function load(path: string): NvformDocument {
+function load(path: string): BfmDocument {
   const { document, diagnostics } = parseDocument(readFileSync(path, 'utf8'));
   if (!document || diagnostics.length > 0)
     throw new Error(`${path}: 検証を通りません: ${JSON.stringify(diagnostics)}`);
   return document;
 }
 
-function harness(doc: NvformDocument): string {
+function harness(doc: BfmDocument): string {
   const controls = [...walkNodes(doc)].flatMap((n) => (n.kind === 'control' ? [n.node.name] : []));
   return `import json
 
 import fixture
-from no_vcl import *
+from beth import *
 
 Application.Initialize()
 f = Application.CreateForm(fixture.T${doc.form.name})
@@ -136,7 +136,7 @@ print(json.dumps({"shown": shown, "resize": {"width": ${String(RESIZE.width)}, "
 
 /**
  * コンテナのクライアント領域を、Windows のウィンドウの位置(ctypes の GetWindowRect)で測る。
- * no_vcl にはウィンドウのハンドルや座標の変換が無いため、フォームをタイトルで探し、子のウィンドウを Caption で見分ける。
+ * Bethany にはウィンドウのハンドルや座標の変換が無いため、フォームをタイトルで探し、子のウィンドウを Caption で見分ける。
  *
  * - origin: 子の座標の原点(子の Left・Top が 0 の位置)の、コンテナの外側の左上からの位置
  * - insets: Align で寄せる範囲の、コンテナの外側からの余白(alClient の子の位置から求める)
@@ -146,12 +146,12 @@ function metricsScript(): string {
 import ctypes.wintypes as wt
 import json
 
-from no_vcl import *
+from beth import *
 
 user32 = ctypes.windll.user32
 Application.Initialize()
 f = Application.CreateForm(TForm)
-f.Caption = "nvd-metrics"
+f.Caption = "beth-metrics"
 f.Width = 1000
 f.Height = 400
 
@@ -193,7 +193,7 @@ f.Show()
 for _ in range(10):
     Application.ProcessMessages()
 
-top = user32.FindWindowW(None, "nvd-metrics")
+top = user32.FindWindowW(None, "beth-metrics")
 rects = {}
 
 

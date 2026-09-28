@@ -9,15 +9,15 @@ import {
   findClass,
   parseDocument,
   walkNodes,
-  type NvformDocument,
+  type BfmDocument,
 } from '../../packages/core/src/index.ts';
 
 export const designerRoot = fileURLToPath(new URL('../../', import.meta.url));
 export const repoRoot = join(designerRoot, '..');
-export const SAMPLE_FILE = 'MainForm.nvform.json';
+export const SAMPLE_FILE = 'MainForm.bfm.json';
 
-/** 見本(samples/MainForm.nvform.json)を読み込む */
-export function loadSample(): NvformDocument {
+/** 見本(samples/MainForm.bfm.json)を読み込む */
+export function loadSample(): BfmDocument {
   const text = readFileSync(join(designerRoot, 'samples', SAMPLE_FILE), 'utf8');
   const { document, diagnostics } = parseDocument(text);
   if (!document || diagnostics.length > 0)
@@ -82,7 +82,7 @@ export const EXPECTED_CHECKS: Readonly<Record<string, string>> = {
 };
 
 /** 実行結果を期待と照合して表示し、不一致があれば process.exitCode を 1 にする */
-export function checkReport(doc: NvformDocument, report: Report): void {
+export function checkReport(doc: BfmDocument, report: Report): void {
   let failures = 0;
 
   // 1. 配置

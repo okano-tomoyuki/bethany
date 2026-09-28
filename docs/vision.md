@@ -36,12 +36,12 @@ RAD Studio 本体が持つビジュアルデザイナー(フォームデザイ�
 
 1. **C++Builder ライクなプロパティ API**(`form.Caption = "...";` / `canvas.Pen.Color = clRed;` 等)。
    `Property<T>` による軽量プロキシで実現し、`std::function` ベースのイベントハンドラ登録も備える。
-2. **VCL の代替としての C++ ラッパー(`no_vcl.hpp`)**。
-   当初は低レベル C API(`no_vcl_c.h`)との二層公開構成だったが、C API の公開は終了し、DLL の呼び出し層は
-   内部層(`no_vcl::internal`)とした([ADR 0032](adr/0032-internalize-c-api.md))。別の言語から使う場合は、DLL の関数を直接呼ぶ層を作る
+2. **VCL の代替としての C++ ラッパー(`beth.hpp`)**。
+   当初は低レベル C API(`beth_c.h`)との二層公開構成だったが、C API の公開は終了し、DLL の呼び出し層は
+   内部層(`beth::internal`)とした([ADR 0032](adr/0032-internalize-c-api.md))。別の言語から使う場合は、DLL の関数を直接呼ぶ層を作る
    (決まりは [dll-abi.md](dll-abi.md))。
 3. **専用デザイナーアプリケーションによるビジュアル編集**(tk-designer と同様の戦略。ADR 0001)。
-   本リポジトリの `designer/` に no_vcl 専用として作る([ADR 0035](adr/0035-designer-in-this-repository.md))。
+   本リポジトリの `designer/` に Bethany 専用として作る([ADR 0035](adr/0035-designer-in-this-repository.md))。
    DSL からのコード生成を前提に、C++ 側のオブジェクトモデルを見直す(ADR 0003)。
 
 ## スコープ

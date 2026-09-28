@@ -4,7 +4,7 @@
  * - 選択肢・チェックは変更した時点で確定する。
  * - 空欄は「値を書かない(既定値)」を表す。
  */
-import { l10n } from '@no-vcl-designer/core';
+import { l10n } from '@bethany-designer/core';
 import { useId, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react';
 
 interface FieldRowProps {

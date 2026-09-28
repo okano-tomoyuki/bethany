@@ -1,9 +1,9 @@
-import type { NvformDocument } from '@no-vcl-designer/core';
+import type { BfmDocument } from '@bethany-designer/core';
 import { describe, expect, it } from 'vitest';
 import { generateAll, generateCpp } from '../index.ts';
 import { CPP_SAMPLE, DSL_FILE, SAMPLE } from '../testing.ts';
 
-function generate(doc: NvformDocument = CPP_SAMPLE, dslFile = DSL_FILE) {
+function generate(doc: BfmDocument = CPP_SAMPLE, dslFile = DSL_FILE) {
   const result = generateCpp(doc, dslFile, undefined, undefined);
   if ('error' in result) throw new Error(result.error);
   if (!result.header.ok) throw new Error(result.header.error);
@@ -11,17 +11,17 @@ function generate(doc: NvformDocument = CPP_SAMPLE, dslFile = DSL_FILE) {
   return { header: result.header, source: result.source };
 }
 
-/** nvd_CreateComponents の中身の文(字下げを除く) */
-function statements(doc: NvformDocument): string[] {
+/** beth_CreateComponents の中身の文(字下げを除く) */
+function statements(doc: BfmDocument): string[] {
   const text = generate(doc).source.text;
   const body = text.slice(
-    text.indexOf('::nvd_CreateComponents()\n{\n') + '::nvd_CreateComponents()\n{\n'.length,
-    text.indexOf('\n}\n// <no_vcl-designer:end'),
+    text.indexOf('::beth_CreateComponents()\n{\n') + '::beth_CreateComponents()\n{\n'.length,
+    text.indexOf('\n}\n// <bethany-designer:end'),
   );
   return body.split('\n').map((l) => l.trim());
 }
 
-function form(props: NvformDocument['form']): NvformDocument {
+function form(props: BfmDocument['form']): BfmDocument {
   return { formatVersion: 1, codegen: { cpp: {} }, form: props };
 }
 
@@ -36,10 +36,10 @@ describe('generateCpp', () => {
   it('クラス名はフォームの名前から、ファイル名は DSL のファイル名から決める', () => {
     const { header, source } = generate(
       { ...CPP_SAMPLE, form: { ...CPP_SAMPLE.form, name: 'Form1' } },
-      'forms/Unit1.nvform.json',
+      'forms/Unit1.bfm.json',
     );
     expect([header.path, source.path]).toEqual(['Unit1.hpp', 'Unit1.cpp']);
-    expect(header.text).toContain('class TForm1 : public no_vcl::TForm');
+    expect(header.text).toContain('class TForm1 : public beth::TForm');
     expect(header.text).toContain('extern TForm1* Form1;');
     expect(source.text).toContain('TForm1* Form1 = nullptr;');
   });
@@ -97,7 +97,7 @@ describe('generateCpp', () => {
   });
 
   it('既定の中身がある TStrings は Clear してから加える', () => {
-    const doc: NvformDocument = {
+    const doc: BfmDocument = {
       ...form({ name: 'F', class: 'TForm' }),
       components: [
         { name: 'Colors', class: 'TColorDialog', properties: { CustomColors: ['ColorA=FFFFFF'] } },
@@ -109,7 +109,7 @@ describe('generateCpp', () => {
     ]);
   });
 
-  it('ハンドラの引数はイベントの型から作り、ヘッダでは no_vcl の型を修飾する', () => {
+  it('ハンドラの引数はイベントの型から作り、ヘッダでは Bethany の型を修飾する', () => {
     const doc = form({
       name: 'F',
       class: 'TForm',
@@ -117,10 +117,10 @@ describe('generateCpp', () => {
     });
     const { header, source } = generate(doc);
     expect(header.text).toContain(
-      '    void FormKeyDown(no_vcl::TObject* Sender, int& Key, no_vcl::TShiftState Shift);',
+      '    void FormKeyDown(beth::TObject* Sender, int& Key, beth::TShiftState Shift);',
     );
     expect(header.text).toContain(
-      '    void FormClose(no_vcl::TObject* Sender, no_vcl::TCloseAction& Action);',
+      '    void FormClose(beth::TObject* Sender, beth::TCloseAction& Action);',
     );
     expect(source.text).toContain(
       'OnKeyDown = [this](TObject* Sender, int& Key, TShiftState Shift) { FormKeyDown(Sender, Key, Shift); };',
@@ -151,7 +151,7 @@ describe('generateCpp', () => {
       codegen: { commentLocale: 'ja', cpp: {} },
     });
     expect(header.text).toContain(
-      '/** no_vcl のデザイナーで作成したフォーム(MainForm.nvform.json)。',
+      '/** Bethany のデザイナーで作成したフォーム(MainForm.bfm.json)。',
     );
     expect(source.text).toContain('// TODO: 実装');
   });

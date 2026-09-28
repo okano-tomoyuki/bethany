@@ -51,10 +51,10 @@ TStringList の寿命:
 
 - **TLabeledEdit**:
   - C API:
-    - `no_vcl_TLabeledEdit_Create`。
-    - `no_vcl_TCustomLabeledEdit_GetEditLabel`: 返すときに Watch する(ADR 0017 と同じ形)。
-    - `no_vcl_TCustomLabeledEdit_Get/SetLabelPosition`・`Get/SetLabelSpacing`。
-    - 列挙は `no_vcl_lpAbove` 等。
+    - `beth_TLabeledEdit_Create`。
+    - `beth_TCustomLabeledEdit_GetEditLabel`: 返すときに Watch する(ADR 0017 と同じ形)。
+    - `beth_TCustomLabeledEdit_Get/SetLabelPosition`・`Get/SetLabelSpacing`。
+    - 列挙は `beth_lpAbove` 等。
   - C++:
     - `TBoundLabel`(TCustomLabel)は、ハンドルを受け取るコンストラクタを private にし、`friend class TComponent` とした
       (TTabSheet・TMenuItem と同じく、利用者は生成しない)。
@@ -63,13 +63,13 @@ TStringList の寿命:
     - `LabeledEdit1->EditLabel->Caption = "Zip:";` のように VCL と同じく書ける。
 - **TStringList**:
   - C API:
-    - `no_vcl_TStringList_Create`・`Destroy`・`Sort`・`Find`・`Get/SetSorted`・`Get/SetDuplicates`・`Get/SetCaseSensitive`。
-    - 列挙は `no_vcl_dupIgnore` 等。
-    - それ以外の操作は `no_vcl_TStrings_*` をそのまま使う。
+    - `beth_TStringList_Create`・`Destroy`・`Sort`・`Find`・`Get/SetSorted`・`Get/SetDuplicates`・`Get/SetCaseSensitive`。
+    - 列挙は `beth_dupIgnore` 等。
+    - それ以外の操作は `beth_TStrings_*` をそのまま使う。
     - ハンドルは生成した側の持ち物なので、コントロールの Items と違って保存してよい。
   - C++:
     - `TStringList : public TStrings` に `Sorted`・`Duplicates`・`CaseSensitive`・`Sort`・`Find` を置いた。
-    - TStrings に protected のコンストラクタ `TStrings(no_vcl_obj_t handle)` を足した。所有者を自分、取得関数を恒等関数とし、
+    - TStrings に protected のコンストラクタ `TStrings(beth_obj_t handle)` を足した。所有者を自分、取得関数を恒等関数とし、
       `Handle()` も `Current()` も自分のハンドルを返す。
     - 寿命: 選択肢B(VCL と同じく `new` / `delete`。スタックや値メンバにも置ける)。
 - **TStrings に足したもの**(TStringList でよく使うが、宣言元は TStrings なのでコントロールの Items でも使える):

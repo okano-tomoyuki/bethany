@@ -8,7 +8,7 @@
 
 これまでの C++ ラッパーは、`TForm`・`TButton` 等をすべて `TObject` の直接の派生にしており、
 `Left`・`Top`・`Width`・`Height`・`Visible`・`Enabled`・`Caption` といった共通プロパティを
-13 クラスそれぞれに複製していた。C API も `no_vcl_TButton_GetLeft` のようにクラスごとに同じ関数を持っていた。
+13 クラスそれぞれに複製していた。C API も `beth_TButton_GetLeft` のようにクラスごとに同じ関数を持っていた。
 
 また、コンストラクタの引数 `TObject* parent` は Owner(破棄の責任)と Parent(画面上の親)を兼ねており、
 型としては任意の `TObject` を受け付けていた。例えば `TPaintBox` や `TTimer` を親として渡すことができ、
@@ -40,9 +40,9 @@ LCL のクラス階層を調べると、コントロールはかなり整然と�
    画面上の親は `Property<TWinControl*> Parent` で設定する(`button.Parent = &form;`)。
    Parent の型が `TWinControl*` なので、TLabel・TPaintBox(TGraphicControl)や TTimer を親にするとコンパイルエラーになる。
 3. **C API を再構成し、重複は削除する。** 関数は LCL でそのメンバが公開される階層のクラス名で 1 本にする
-   (`no_vcl_TControl_GetLeft` 等)。兄弟クラスがそれぞれ公開していて重複する場合(Text・Checked)だけ、
+   (`beth_TControl_GetLeft` 等)。兄弟クラスがそれぞれ公開していて重複する場合(Text・Checked)だけ、
    宣言元の共通祖先の名前で 1 本にし、Pascal 側は protected hack でアクセスする。
-   破棄は `no_vcl_TComponent_Destroy` に 1 本化する。
+   破棄は `beth_TComponent_Destroy` に 1 本化する。
 
 あわせて次を行った。
 
@@ -51,9 +51,9 @@ LCL のクラス階層を調べると、コントロールはかなり整然と�
 - **ハンドル → C++ ラッパーの共通レジストリを `TComponent` に置く。** `Parent` の Getter はこれでラッパーを引く。
   クラスごとに複製していたコールバック用のレジストリもこれに統一した。
   Pascal 側のブリッジは最初の `SetOnXxx` 呼び出し時に 1 度だけ登録する。
-- **`no_vcl_c.cpp` は関数一覧(X マクロ)から生成する。** 1 関数につき「関数ポインタ型・thread_local 変数・
+- **`beth_c.cpp` は関数一覧(X マクロ)から生成する。** 1 関数につき「関数ポインタ型・thread_local 変数・
   マッピング・ラッパー」の 4 箇所を手で書いていたのを、一覧の 1 行から展開する形にした。
-  `no_vcl_c.h` は可読性のため手書きのまま残す(型が食い違えばコンパイルエラーになる)。
+  `beth_c.h` は可読性のため手書きのまま残す(型が食い違えばコンパイルエラーになる)。
 
 ## 影響
 
@@ -62,7 +62,7 @@ LCL のクラス階層を調べると、コントロールはかなり整然と�
   TLabel・TPaintBox を Parent にする、TButton・TLabel の `Checked` に触る、TLabel の `Text` に触る、TCustomEdit を直接生成する。
 - 既存コードは次の変更が必要:
   `TForm form;` → `TForm form(nullptr);`、`TButton button(&form);` の後に `button.Parent = &form;`、
-  C API の関数名(`no_vcl_TButton_SetCaption` → `no_vcl_TControl_SetCaption` 等)。
+  C API の関数名(`beth_TButton_SetCaption` → `beth_TControl_SetCaption` 等)。
   [ADR 0004](0004-pointer-members-for-deferred-declaration.md) の生成コードの例も、生成の後に `Parent` の設定が 1 行加わる。
 - TMemo は TCustomEdit の派生になったため、TEdit と同じく Text・MaxLength・ReadOnly・SetOnChange を持つ。
   TLabel・TPanel・TPaintBox 等も LCL と同じく OnClick を持つようになった。

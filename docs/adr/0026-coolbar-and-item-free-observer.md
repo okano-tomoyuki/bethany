@@ -70,22 +70,22 @@ LCL のソース(`comctrls.pp`・`include/coolbar.inc`)で確認したこと:
   - `ooFree` を受け取ると、木から外して `NotifyItemFreed` を呼ぶ。
 - ハンドルを渡す箇所は、関数の戻り値とイベントのブリッジの引数で、ツリー・リスト・ヘッダー・クールバーのすべて。
 - 不要になったものを取り除いた:
-  - `TNoVclTreeView`(Delete の上書き)
-  - `TNoVclListView`(DoDeletion とデストラクタの上書き)
+  - `TBethTreeView`(Delete の上書き)
+  - `TBethListView`(DoDeletion とデストラクタの上書き)
   - `TListColumns_Delete`・`Clear` の削除前の通知
-  - `TNoVclHeaderSection`・`TNoVclHeaderControl`(CreateSection の上書き)
+  - `TBethHeaderSection`・`TBethHeaderControl`(CreateSection の上書き)
   - TTreeView・TListView・THeaderControl は、LCL のクラスをそのまま生成する。
 - 通知の対象と時点:
   - 対象は、一度でも C 側へ返された項目だけ。返されたことの無い項目には C 側のラッパーが無いので、通知も要らない。
   - 通知は、削除の処理とイベントがすべて終わった後に届く。途中のイベントで再びラップされても、最後の通知で必ず消える。
-- C API・C++ API の形は変えていない(`no_vcl_ItemFree_SetCallback` と `ItemRegistry` はそのまま)。
+- C API・C++ API の形は変えていない(`beth_ItemFree_SetCallback` と `ItemRegistry` はそのまま)。
 
 ### TCoolBar
 
 - C API:
-  - 宣言しているクラスの名前で、`no_vcl_TCustomCoolBar_*`・`no_vcl_TCoolBands_*`・`no_vcl_TCoolBand_*`。
-  - 生成は `no_vcl_TCoolBar_Create`。
-  - EdgeBorders 等は `no_vcl_TToolWindow_*`([ADR 0025](0025-toolbar-and-toolbutton.md))。
+  - 宣言しているクラスの名前で、`beth_TCustomCoolBar_*`・`beth_TCoolBands_*`・`beth_TCoolBand_*`。
+  - 生成は `beth_TCoolBar_Create`。
+  - EdgeBorders 等は `beth_TToolWindow_*`([ADR 0025](0025-toolbar-and-toolbutton.md))。
 - C++ の各クラス:
   - `TCoolBand`(TPersistent): Text・Width・MinWidth・MinHeight・Break・Visible・FixedSize・FixedBackground・HorizontalOnly・
     Color・ParentColor・Index・Control と、読み取り専用の Left・Top・Right・Height、AutosizeWidth。
@@ -95,7 +95,7 @@ LCL のソース(`comctrls.pp`・`include/coolbar.inc`)で確認したこと:
     ShowText・Themed・Vertical・OnChange・AutosizeBands・MouseToBandPos。
   - `TCoolBar`: コンストラクタだけ。
 - Align:
-  - `no_vcl_TControl_SetAlign` は、対象が TCustomCoolBar なら、その Setter を呼ぶようにした。
+  - `beth_TControl_SetAlign` は、対象が TCustomCoolBar なら、その Setter を呼ぶようにした。
   - C++ の `Align` も同じ関数を通るので、alLeft/alRight で Vertical が true になる。
 - 見送ったもの:
   - Bitmap・ParentBitmap・Images・ImagesWidth・ImageIndex(TBitmap/TImageList は Tier 3 待ち)

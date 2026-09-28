@@ -33,7 +33,7 @@ describe('マーカー区間のマージ', () => {
     const edited = INITIAL.replace('Caption = "Sample";', 'Caption = "Edited";');
     const result = generate(edited);
     expect(result.text).toBe(INITIAL);
-    expect(result.modifiedRegions).toEqual(['nvd_CreateComponents']);
+    expect(result.modifiedRegions).toEqual(['beth_CreateComponents']);
   });
 
   it('空白・改行の違い(フォーマッタによる整形)は手編集とみなさない', () => {
@@ -49,7 +49,7 @@ describe('マーカー区間のマージ', () => {
     const result = generate(withoutStub);
     expect(result.addedStubs).toEqual(['FormCreate']);
     expect(result.text).toContain(
-      '// <no_vcl-designer:handler-stubs>\n\nvoid TMainForm::FormCreate(TObject* Sender)\n',
+      '// <bethany-designer:handler-stubs>\n\nvoid TMainForm::FormCreate(TObject* Sender)\n',
     );
   });
 
@@ -61,20 +61,20 @@ describe('マーカー区間のマージ', () => {
   const corruptions: [string, (text: string) => string, string][] = [
     [
       '終了マーカーがない',
-      (t) => t.replace(/.*<no_vcl-designer:end id="nvd_CreateComponents".*\n/, ''),
+      (t) => t.replace(/.*<bethany-designer:end id="beth_CreateComponents".*\n/, ''),
       'no end marker',
     ],
     [
       '区間が見つからない',
-      (t) => t.replace(/.*<no_vcl-designer:(begin|end) id="nvd_CreateComponents".*\n/g, ''),
-      'nvd_CreateComponents',
+      (t) => t.replace(/.*<bethany-designer:(begin|end) id="beth_CreateComponents".*\n/g, ''),
+      'beth_CreateComponents',
     ],
     [
       '入れ子',
       (t) =>
         t.replace(
-          '// <no_vcl-designer:end id="nvd_CreateComponents"',
-          '// <no_vcl-designer:begin id="x">\n// <no_vcl-designer:end id="nvd_CreateComponents"',
+          '// <bethany-designer:end id="beth_CreateComponents"',
+          '// <bethany-designer:begin id="x">\n// <bethany-designer:end id="beth_CreateComponents"',
         ),
       'is closed',
     ],

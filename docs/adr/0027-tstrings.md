@@ -9,13 +9,13 @@
 
 | 所有者 | LCL のプロパティ | これまでの C++ | これまでの C API |
 |---|---|---|---|
-| TCustomListBox(TListBox・TCheckListBox) | `Items` | `ItemsAdd`・`ItemsClear`・`ItemsCount`・`ItemsGetText` | `no_vcl_TCustomListBox_Items_*` |
-| TCustomComboBox | `Items` | 同上 | `no_vcl_TCustomComboBox_Items_*` |
-| TCustomRadioGroup | `Items` | 同上 | `no_vcl_TCustomRadioGroup_Items_*` |
-| TCustomCheckGroup | `Items` | 同上 | `no_vcl_TCustomCheckGroup_Items_*` |
-| TCustomMemo | `Lines` | `LinesAdd` 等 | `no_vcl_TCustomMemo_Lines_*` |
-| TTabControl | `Tabs` | `TabsAdd` 等 | `no_vcl_TTabControl_Tabs_*` |
-| TListItem | `SubItems` | `SubItemsAdd` 等(SetText を含む) | `no_vcl_TListItem_SubItems_*` |
+| TCustomListBox(TListBox・TCheckListBox) | `Items` | `ItemsAdd`・`ItemsClear`・`ItemsCount`・`ItemsGetText` | `beth_TCustomListBox_Items_*` |
+| TCustomComboBox | `Items` | 同上 | `beth_TCustomComboBox_Items_*` |
+| TCustomRadioGroup | `Items` | 同上 | `beth_TCustomRadioGroup_Items_*` |
+| TCustomCheckGroup | `Items` | 同上 | `beth_TCustomCheckGroup_Items_*` |
+| TCustomMemo | `Lines` | `LinesAdd` 等 | `beth_TCustomMemo_Lines_*` |
+| TTabControl | `Tabs` | `TabsAdd` 等 | `beth_TTabControl_Tabs_*` |
+| TListItem | `SubItems` | `SubItemsAdd` 等(SetText を含む) | `beth_TListItem_SubItems_*` |
 
 平たいメンバ関数には、次の問題があった。
 - VCL からの移植で最もよく使う書き方(`ListBox1->Items->Add("x")`・`Memo1->Lines->Text = ...`・`Items->Strings[i]`)を書き換える必要がある。
@@ -45,9 +45,9 @@ C++ の TStrings の持ち方:
 
 - **C API**:
   - 取得関数: 各所有者に TStrings のハンドルを返す関数を 1 つずつ置いた
-    (`no_vcl_TCustomListBox_GetItems`・`TCustomComboBox_GetItems`・`TCustomRadioGroup_GetItems`・`TCustomCheckGroup_GetItems`・
+    (`beth_TCustomListBox_GetItems`・`TCustomComboBox_GetItems`・`TCustomRadioGroup_GetItems`・`TCustomCheckGroup_GetItems`・
     `TCustomMemo_GetLines`・`TTabControl_GetTabs`・`TListItem_GetSubItems`)。
-  - 操作: TStrings の操作は、どの所有者のものでも共通の `no_vcl_TStrings_*`。
+  - 操作: TStrings の操作は、どの所有者のものでも共通の `beth_TStrings_*`。
     GetCount・Get/SetStrings・Get/SetObjects・Add・AddObject・Insert・Delete・Clear・IndexOf・Exchange・Move・BeginUpdate・EndUpdate・
     Get/SetText・Get/SetCommaText・Assign・AddStrings。
   - **ハンドルは保存せず、使うたびに取得する**ことを、ヘッダーに明記した。

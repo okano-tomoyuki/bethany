@@ -1,15 +1,15 @@
 /**
  * マーカー区間の書き出しと、既存のファイルへのマージ(docs/designer/codegen-design.md §2・§5。tk-designer から流用)。
  *
- *   // <no_vcl-designer:begin id="nvd_CreateComponents">
+ *   // <bethany-designer:begin id="beth_CreateComponents">
  *   ...(生成したコード)
- *   // <no_vcl-designer:end id="nvd_CreateComponents" hash="1a2b3c4d">
+ *   // <bethany-designer:end id="beth_CreateComponents" hash="1a2b3c4d">
  *
  * - 区間の中身は毎回置き換える。hash が中身と合わなければ、利用者が手で編集したものとして知らせる(M2 / M3)。
  * - マーカーの欠落・重複・入れ子・対応の誤りがあれば、何も書き込まずにエラーにする(M4)。
- * - ハンドラの雛形は、まだ定義されていないものだけを 1行マーカー <no_vcl-designer:handler-stubs> の直後に追記する(M1)。
+ * - ハンドラの雛形は、まだ定義されていないものだけを 1行マーカー <bethany-designer:handler-stubs> の直後に追記する(M1)。
  */
-import { l10n } from '@no-vcl-designer/core';
+import { l10n } from '@bethany-designer/core';
 import { regionHash } from './hash.ts';
 
 export interface Region {
@@ -54,15 +54,15 @@ export type MergeResult =
     }
   | { readonly ok: false; readonly error: string };
 
-const STUBS_MARKER = '<no_vcl-designer:handler-stubs>';
+const STUBS_MARKER = '<bethany-designer:handler-stubs>';
 
 export function renderRegion(region: Region, syntax: LanguageSyntax): string {
   const indent = syntax.indentUnit.repeat(region.indent);
   const hash = regionHash(region.content);
   return [
-    `${indent}${syntax.comment} <no_vcl-designer:begin id="${region.id}">`,
+    `${indent}${syntax.comment} <bethany-designer:begin id="${region.id}">`,
     region.content,
-    `${indent}${syntax.comment} <no_vcl-designer:end id="${region.id}" hash="${hash}">`,
+    `${indent}${syntax.comment} <bethany-designer:end id="${region.id}" hash="${hash}">`,
   ].join('\n');
 }
 
@@ -83,8 +83,8 @@ interface ParsedRegion {
   readonly hash: string | undefined;
 }
 
-const BEGIN = /^\s*(?:#|\/\/)\s*<no_vcl-designer:begin id="([^"]+)">\s*$/;
-const END = /^\s*(?:#|\/\/)\s*<no_vcl-designer:end id="([^"]+)"(?: hash="([0-9a-f]*)")?>\s*$/;
+const BEGIN = /^\s*(?:#|\/\/)\s*<bethany-designer:begin id="([^"]+)">\s*$/;
+const END = /^\s*(?:#|\/\/)\s*<bethany-designer:end id="([^"]+)"(?: hash="([0-9a-f]*)")?>\s*$/;
 
 function parseRegions(lines: readonly string[]): ParsedRegion[] | string {
   const regions: ParsedRegion[] = [];

@@ -3,8 +3,8 @@
  * 生成する言語と、クラス名・出力先を指定して生成する。設定は DSL の codegen に保存する(Undo できる)。
  * 空欄は既定値(クラス名はフォームの名前、ファイル名は DSL のファイル名から決まる。dsl-spec.md §9)を表す。
  */
-import { baseName } from '@no-vcl-designer/codegen';
-import { hasErrors, l10n, type CodegenSettings, type CommentLocale } from '@no-vcl-designer/core';
+import { baseName } from '@bethany-designer/codegen';
+import { hasErrors, l10n, type CodegenSettings, type CommentLocale } from '@bethany-designer/core';
 import { generateCode } from '../editing.ts';
 import { useDocumentStore, useUiStore } from '../store/stores.ts';
 import { messagesAt } from './inspector/diagnostics.ts';
@@ -92,7 +92,7 @@ export function CodegenView() {
               toggle('cpp', e.target.checked);
             }}
           />
-          {l10n.t('C++ (no_vcl.hpp)')}
+          {l10n.t('C++ (beth.hpp)')}
         </label>
         {codegen.cpp && (
           <div className="codegen-fields">
@@ -130,7 +130,7 @@ export function CodegenView() {
               toggle('python', e.target.checked);
             }}
           />
-          {l10n.t('Python (py/no_vcl.py)')}
+          {l10n.t('Python (py/beth.py)')}
         </label>
         {codegen.python && (
           <div className="codegen-fields">

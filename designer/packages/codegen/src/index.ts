@@ -2,7 +2,7 @@
  * コード生成(docs/designer/codegen-design.md)。
  * 文字列を受け取り文字列を返すだけで、ファイルの入出力は呼び出し側(拡張機能・CLI)が行う。
  */
-import { l10n, type NvformDocument } from '@no-vcl-designer/core';
+import { l10n, type BfmDocument } from '@bethany-designer/core';
 import { emitCpp } from './cpp/emit.ts';
 import { CPP_NAMES, cppSyntax } from './cpp/syntax.ts';
 import { buildModel } from './model.ts';
@@ -39,7 +39,7 @@ export interface CppGenerateResult {
  * @param dslFileName DSL のファイル名(出力先の既定値と、生成物の説明に使う)
  */
 export function generatePython(
-  doc: NvformDocument,
+  doc: BfmDocument,
   dslFileName: string,
   existing: string | undefined,
 ): GenerateResult {
@@ -69,7 +69,7 @@ export function generatePython(
  * @param dslFileName DSL のファイル名(出力先の既定値と、生成物の説明に使う)
  */
 export function generateCpp(
-  doc: NvformDocument,
+  doc: BfmDocument,
   dslFileName: string,
   existingHeader: string | undefined,
   existingSource: string | undefined,
@@ -114,7 +114,7 @@ export interface GenerateAllResult {
  * @param readExisting 出力先の既存の内容を返す(なければ undefined)
  */
 export function generateAll(
-  doc: NvformDocument,
+  doc: BfmDocument,
   dslFileName: string,
   readExisting: (path: string) => string | undefined,
 ): GenerateAllResult | { readonly error: string } {

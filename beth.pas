@@ -1,10 +1,10 @@
-library no_vcl;
+library beth;
 
 {$macro on}
 {$ifdef WINDOWS}
-  {$define NO_VCL_CALL := stdcall}
+  {$define BETH_CALL := stdcall}
 {$else}
-  {$define NO_VCL_CALL := cdecl}
+  {$define BETH_CALL := cdecl}
 {$endif}
 
 { エクスポート関数は「LCLでそのメンバが公開(public/published)されるクラス」の名前で1本ずつ用意する。
@@ -40,20 +40,20 @@ uses
 
 type
   { Data は登録時に渡された利用者データをそのまま返す(C 側で状態を持ち回るため) }
-  TNoVclCallback = procedure(Sender: Pointer; Data: Pointer); NO_VCL_CALL;
+  TBethCallback = procedure(Sender: Pointer; Data: Pointer); BETH_CALL;
 
   { 公開関数の中で起きた例外を呼び出し側へ知らせる(docs/adr/0031)。文字列は UTF-8 で、呼び出しの間だけ有効。 }
-  TNoVclErrorCallback = procedure(ClassName: PChar; Message: PChar); NO_VCL_CALL;
+  TBethErrorCallback = procedure(ClassName: PChar; Message: PChar); BETH_CALL;
 
-  { Cのプレーンな関数ポインタ(no_vcl_callback_t)を
+  { Cのプレーンな関数ポインタ(beth_callback_t)を
     LCLのTNotifyEvent(オブジェクトメソッド)へ橋渡しする }
   TCallbackBridge = class(TComponent)
   private
-    FCallback: TNoVclCallback;
+    FCallback: TBethCallback;
     FData: Pointer;
   public
     procedure DoClick(Sender: TObject);
-    property Callback: TNoVclCallback read FCallback write FCallback;
+    property Callback: TBethCallback read FCallback write FCallback;
     property Data: Pointer read FData write FData;
   end;
 
@@ -61,11 +61,11 @@ type
     コールバックの中で書き換えると呼び出し元に反映される。
       OnClose      (TCloseEvent)     : TCloseAction の序数(caNone=0, caHide, caFree, caMinimize)
       OnCloseQuery (TCloseQueryEvent): CanClose(0 = False、0 以外 = True。渡すときの True は -1) }
-  TNoVclVarCallback = procedure(Sender: Pointer; Value: PInteger; Data: Pointer); NO_VCL_CALL;
+  TBethVarCallback = procedure(Sender: Pointer; Value: PInteger; Data: Pointer); BETH_CALL;
 
   TVarCallbackBridge = class(TComponent)
   private
-    FCallback: TNoVclVarCallback;
+    FCallback: TBethVarCallback;
     FData: Pointer;
   public
     procedure DoClose(Sender: TObject; var CloseAction: TCloseAction);
@@ -73,45 +73,45 @@ type
   end;
 
   { OnKeyDown/OnKeyUp(TKeyEvent)用。Key(キーコード)は書き換え可能(var 引数)。0 にすると LCL に渡さない。
-    Shift は TShiftStateEnum の各値をビットとして表した LongWord(no_vcl_ss* のビット和、ShiftStateToInt 参照)。 }
-  TNoVclKeyCallback = procedure(Sender: Pointer; Key: PInteger; Shift: LongWord; Data: Pointer); NO_VCL_CALL;
+    Shift は TShiftStateEnum の各値をビットとして表した LongWord(beth_ss* のビット和、ShiftStateToInt 参照)。 }
+  TBethKeyCallback = procedure(Sender: Pointer; Key: PInteger; Shift: LongWord; Data: Pointer); BETH_CALL;
 
   TKeyCallbackBridge = class(TComponent)
   private
-    FCallback: TNoVclKeyCallback;
+    FCallback: TBethKeyCallback;
     FData: Pointer;
   public
     procedure DoKey(Sender: TObject; var Key: Word; Shift: TShiftState);
   end;
 
   { OnKeyPress(TKeyPressEvent)用。Key は文字コード、書き換え可能。0 にすると LCL に渡さない。 }
-  TNoVclKeyPressCallback = procedure(Sender: Pointer; Key: PInteger; Data: Pointer); NO_VCL_CALL;
+  TBethKeyPressCallback = procedure(Sender: Pointer; Key: PInteger; Data: Pointer); BETH_CALL;
 
   TKeyPressCallbackBridge = class(TComponent)
   private
-    FCallback: TNoVclKeyPressCallback;
+    FCallback: TBethKeyPressCallback;
     FData: Pointer;
   public
     procedure DoKeyPress(Sender: TObject; var Key: char);
   end;
 
-  { OnMouseDown/OnMouseUp(TMouseEvent)用。Button は TMouseButton の序数(no_vcl_mb*)、Shift は上記と同じ。 }
-  TNoVclMouseCallback = procedure(Sender: Pointer; Button, Shift, X, Y: Integer; Data: Pointer); NO_VCL_CALL;
+  { OnMouseDown/OnMouseUp(TMouseEvent)用。Button は TMouseButton の序数(beth_mb*)、Shift は上記と同じ。 }
+  TBethMouseCallback = procedure(Sender: Pointer; Button, Shift, X, Y: Integer; Data: Pointer); BETH_CALL;
 
   TMouseCallbackBridge = class(TComponent)
   private
-    FCallback: TNoVclMouseCallback;
+    FCallback: TBethMouseCallback;
     FData: Pointer;
   public
     procedure DoMouse(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
   end;
 
   { OnMouseMove(TMouseMoveEvent)用。 }
-  TNoVclMouseMoveCallback = procedure(Sender: Pointer; Shift, X, Y: Integer; Data: Pointer); NO_VCL_CALL;
+  TBethMouseMoveCallback = procedure(Sender: Pointer; Shift, X, Y: Integer; Data: Pointer); BETH_CALL;
 
   TMouseMoveCallbackBridge = class(TComponent)
   private
-    FCallback: TNoVclMouseMoveCallback;
+    FCallback: TBethMouseMoveCallback;
     FData: Pointer;
   public
     procedure DoMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
@@ -119,11 +119,11 @@ type
 
   { OnMouseWheel(TMouseWheelEvent)用。Handled は書き換え可能(0 以外 = True)。
     True にすると、ホイール操作をこのハンドラで処理済みとして扱う(既定のスクロール等が起きなくなる)。 }
-  TNoVclMouseWheelCallback = procedure(Sender: Pointer; Shift, WheelDelta, X, Y: Integer; Handled: PInteger; Data: Pointer); NO_VCL_CALL;
+  TBethMouseWheelCallback = procedure(Sender: Pointer; Shift, WheelDelta, X, Y: Integer; Handled: PInteger; Data: Pointer); BETH_CALL;
 
   TMouseWheelCallbackBridge = class(TComponent)
   private
-    FCallback: TNoVclMouseWheelCallback;
+    FCallback: TBethMouseWheelCallback;
     FData: Pointer;
   public
     procedure DoMouseWheel(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
@@ -143,23 +143,23 @@ type
 
 var
   GFreeNotifier: TFreeNotifier;
-  GFreeCallback: TNoVclCallback = nil;
+  GFreeCallback: TBethCallback = nil;
   GFreeData: Pointer = nil;
   { TComponent ではない項目(TTreeNode・TListItem・TListColumn・THeaderSection・TCoolBand。FreeNotification が無い)の破棄通知。
     WatchItem で付けた観察者が、項目の破棄(TPersistent.Destroy の ooFree)で呼ぶ(NotifyItemFreed)。 }
-  GItemFreeCallback: TNoVclCallback = nil;
+  GItemFreeCallback: TBethCallback = nil;
   GItemFreeData: Pointer = nil;
   { DLL の切り離し中は True。LCL の終了処理で起きるイベント(フォームの OnDestroy・OnHide 等)を呼び出し側へ送らない。 }
   GDetaching: Boolean = False;
 
   { 例外の受け渡し(docs/adr/0031)。
-    - 公開関数の中で送出された例外は、その関数の except で捕まえ、GErrorCallback で呼び出し側(no_vcl_c.cpp)へ
+    - 公開関数の中で送出された例外は、その関数の except で捕まえ、GErrorCallback で呼び出し側(beth_c.cpp)へ
       クラス名とメッセージを知らせる(FPC の例外は C/C++ の関数をまたいで伝わらないため、公開関数の外へは出さない)。
     - 呼び出し側のイベントのコールバックの中で起きた例外(C++ の throw)は、呼び出し側が SetCallbackError で知らせ、
-      コールバックから戻った後にブリッジが CheckCallbackError で ENoVclCallbackError として送出し直す。
+      コールバックから戻った後にブリッジが CheckCallbackError で EBethCallbackError として送出し直す。
       メッセージループの中なら LCL の Application.HandleException が処理し(VCL と同じくメッセージボックス)、
       公開関数の中(MenuItem の Click 等)なら、その関数の except で呼び出し側へ知らせる。 }
-  GErrorCallback: TNoVclErrorCallback = nil;
+  GErrorCallback: TBethErrorCallback = nil;
 
 threadvar
   GCallbackErrorPending: Boolean;
@@ -168,7 +168,7 @@ threadvar
 
 type
   { 呼び出し側のコールバックで起きた例外。呼び出し側へ知らせるときは、元のクラス名(OriginalClassName)を使う。 }
-  ENoVclCallbackError = class(Exception)
+  EBethCallbackError = class(Exception)
   private
     FOriginalClassName: AnsiString;
   public
@@ -182,8 +182,8 @@ var
   C, M: AnsiString;
 begin
   E := ExceptObject;
-  if E is ENoVclCallbackError then
-    C := ENoVclCallbackError(E).OriginalClassName
+  if E is EBethCallbackError then
+    C := EBethCallbackError(E).OriginalClassName
   else if E <> nil then
     C := E.ClassName
   else
@@ -199,12 +199,12 @@ end;
 { ブリッジが呼び出し側のコールバックから戻った後に呼ぶ。コールバックの中で例外が起きていれば送出し直す。 }
 procedure CheckCallbackError;
 var
-  E: ENoVclCallbackError;
+  E: EBethCallbackError;
 begin
   if not GCallbackErrorPending then
     Exit;
   GCallbackErrorPending := False;
-  E := ENoVclCallbackError.Create(GCallbackErrorMessage);
+  E := EBethCallbackError.Create(GCallbackErrorMessage);
   E.FOriginalClassName := GCallbackErrorClass;
   raise E;
 end;
@@ -242,7 +242,7 @@ begin
   CheckCallbackError;
 end;
 
-{ TShiftState(集合型)を LongWord のビット集合(no_vcl_ss* と対応)に変換する。
+{ TShiftState(集合型)を LongWord のビット集合(beth_ss* と対応)に変換する。
   ループで変換することで、集合の実際のバイトサイズ(packset ディレクティブの効果)に依存しない。 }
 function ShiftStateToInt(const S: TShiftState): LongWord;
 var
@@ -367,7 +367,7 @@ begin
   Result := TMethod(M).Data;
 end;
 
-function KeyBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclKeyCallback; Data: Pointer): TKeyCallbackBridge;
+function KeyBridgeFor(Owner: TComponent; Current: Pointer; Cb: TBethKeyCallback; Data: Pointer): TKeyCallbackBridge;
 begin
   if (Current <> nil) and (TObject(Current) is TKeyCallbackBridge) and (TKeyCallbackBridge(Current).Owner = Owner) then
     Result := TKeyCallbackBridge(Current)
@@ -377,7 +377,7 @@ begin
   Result.FData := Data;
 end;
 
-function KeyPressBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclKeyPressCallback; Data: Pointer): TKeyPressCallbackBridge;
+function KeyPressBridgeFor(Owner: TComponent; Current: Pointer; Cb: TBethKeyPressCallback; Data: Pointer): TKeyPressCallbackBridge;
 begin
   if (Current <> nil) and (TObject(Current) is TKeyPressCallbackBridge) and (TKeyPressCallbackBridge(Current).Owner = Owner) then
     Result := TKeyPressCallbackBridge(Current)
@@ -387,7 +387,7 @@ begin
   Result.FData := Data;
 end;
 
-function MouseBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclMouseCallback; Data: Pointer): TMouseCallbackBridge;
+function MouseBridgeFor(Owner: TComponent; Current: Pointer; Cb: TBethMouseCallback; Data: Pointer): TMouseCallbackBridge;
 begin
   if (Current <> nil) and (TObject(Current) is TMouseCallbackBridge) and (TMouseCallbackBridge(Current).Owner = Owner) then
     Result := TMouseCallbackBridge(Current)
@@ -397,7 +397,7 @@ begin
   Result.FData := Data;
 end;
 
-function MouseMoveBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclMouseMoveCallback; Data: Pointer): TMouseMoveCallbackBridge;
+function MouseMoveBridgeFor(Owner: TComponent; Current: Pointer; Cb: TBethMouseMoveCallback; Data: Pointer): TMouseMoveCallbackBridge;
 begin
   if (Current <> nil) and (TObject(Current) is TMouseMoveCallbackBridge) and (TMouseMoveCallbackBridge(Current).Owner = Owner) then
     Result := TMouseMoveCallbackBridge(Current)
@@ -407,7 +407,7 @@ begin
   Result.FData := Data;
 end;
 
-function MouseWheelBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclMouseWheelCallback; Data: Pointer): TMouseWheelCallbackBridge;
+function MouseWheelBridgeFor(Owner: TComponent; Current: Pointer; Cb: TBethMouseWheelCallback; Data: Pointer): TMouseWheelCallbackBridge;
 begin
   if (Current <> nil) and (TObject(Current) is TMouseWheelCallbackBridge) and (TMouseWheelCallbackBridge(Current).Owner = Owner) then
     Result := TMouseWheelCallbackBridge(Current)
@@ -417,7 +417,7 @@ begin
   Result.FData := Data;
 end;
 
-function VarBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclVarCallback; Data: Pointer): TVarCallbackBridge;
+function VarBridgeFor(Owner: TComponent; Current: Pointer; Cb: TBethVarCallback; Data: Pointer): TVarCallbackBridge;
 begin
   if (Current <> nil) and (TObject(Current) is TVarCallbackBridge) and (TVarCallbackBridge(Current).Owner = Owner) then
     Result := TVarCallbackBridge(Current)
@@ -434,7 +434,7 @@ begin
     GFreeCallback(Pointer(AComponent), GFreeData);
 end;
 
-function BridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclCallback; Data: Pointer): TCallbackBridge;
+function BridgeFor(Owner: TComponent; Current: Pointer; Cb: TBethCallback; Data: Pointer): TCallbackBridge;
 begin
   if (Current <> nil) and (TObject(Current) is TCallbackBridge) and (TCallbackBridge(Current).Owner = Owner) then
     Result := TCallbackBridge(Current)
@@ -480,7 +480,7 @@ end;
 
 { FreeNotify }
 
-procedure FreeNotify_SetCallback(Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure FreeNotify_SetCallback(Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     GFreeCallback := Cb;
@@ -492,13 +492,13 @@ end;
 
 { 例外の受け渡し(docs/adr/0031)。この 2 つは例外を送出しないため、try/except で包まない。 }
 
-procedure Error_SetCallback(Cb: TNoVclErrorCallback); NO_VCL_CALL;
+procedure Error_SetCallback(Cb: TBethErrorCallback); BETH_CALL;
 begin
   GErrorCallback := Cb;
 end;
 
 { 呼び出し側のイベントのコールバックの中で起きた例外を知らせる。コールバックから戻った後に、DLL 側で送出し直す。 }
-procedure SetCallbackError(ClassName: PChar; Message: PChar); NO_VCL_CALL;
+procedure SetCallbackError(ClassName: PChar; Message: PChar); BETH_CALL;
 begin
   GCallbackErrorPending := True;
   GCallbackErrorClass := ClassName;
@@ -507,7 +507,7 @@ end;
 
 { TComponent }
 
-procedure TComponent_Destroy(Obj: Pointer); NO_VCL_CALL;
+procedure TComponent_Destroy(Obj: Pointer); BETH_CALL;
 begin
   try
     TComponent(Obj).Free;
@@ -517,7 +517,7 @@ begin
 end;
 
 { 所有しているコンポーネントをすべて破棄する(自身は残る)。 }
-procedure TComponent_DestroyComponents(Obj: Pointer); NO_VCL_CALL;
+procedure TComponent_DestroyComponents(Obj: Pointer); BETH_CALL;
 begin
   try
     TComponent(Obj).DestroyComponents;
@@ -528,7 +528,7 @@ end;
 
 { TControl }
 
-function TControl_GetParent(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TControl_GetParent(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TControl(Obj).Parent);
@@ -538,7 +538,7 @@ begin
   end;
 end;
 
-procedure TControl_SetParent(Obj: Pointer; ParentObj: Pointer); NO_VCL_CALL;
+procedure TControl_SetParent(Obj: Pointer; ParentObj: Pointer); BETH_CALL;
 begin
   try
     TControl(Obj).Parent := TWinControl(ParentObj);
@@ -547,7 +547,7 @@ begin
   end;
 end;
 
-function TControl_GetLeft(Obj: Pointer): Integer; NO_VCL_CALL;
+function TControl_GetLeft(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TControl(Obj).Left;
@@ -557,7 +557,7 @@ begin
   end;
 end;
 
-procedure TControl_SetLeft(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TControl_SetLeft(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TControl(Obj).Left := Value;
@@ -566,7 +566,7 @@ begin
   end;
 end;
 
-function TControl_GetTop(Obj: Pointer): Integer; NO_VCL_CALL;
+function TControl_GetTop(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TControl(Obj).Top;
@@ -576,7 +576,7 @@ begin
   end;
 end;
 
-procedure TControl_SetTop(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TControl_SetTop(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TControl(Obj).Top := Value;
@@ -585,7 +585,7 @@ begin
   end;
 end;
 
-function TControl_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+function TControl_GetWidth(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TControl(Obj).Width;
@@ -595,7 +595,7 @@ begin
   end;
 end;
 
-procedure TControl_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TControl_SetWidth(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TControl(Obj).Width := Value;
@@ -604,7 +604,7 @@ begin
   end;
 end;
 
-function TControl_GetHeight(Obj: Pointer): Integer; NO_VCL_CALL;
+function TControl_GetHeight(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TControl(Obj).Height;
@@ -614,7 +614,7 @@ begin
   end;
 end;
 
-procedure TControl_SetHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TControl_SetHeight(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TControl(Obj).Height := Value;
@@ -623,7 +623,7 @@ begin
   end;
 end;
 
-function TControl_GetVisible(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TControl_GetVisible(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TControl(Obj).Visible;
@@ -633,7 +633,7 @@ begin
   end;
 end;
 
-procedure TControl_SetVisible(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TControl_SetVisible(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TControl(Obj).Visible := Value;
@@ -642,7 +642,7 @@ begin
   end;
 end;
 
-function TControl_GetEnabled(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TControl_GetEnabled(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TControl(Obj).Enabled;
@@ -652,7 +652,7 @@ begin
   end;
 end;
 
-procedure TControl_SetEnabled(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TControl_SetEnabled(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TControl(Obj).Enabled := Value;
@@ -661,7 +661,7 @@ begin
   end;
 end;
 
-function TControl_GetCaption(Obj: Pointer): PChar; NO_VCL_CALL;
+function TControl_GetCaption(Obj: Pointer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TControl(Obj).Caption);
@@ -671,7 +671,7 @@ begin
   end;
 end;
 
-procedure TControl_SetCaption(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+procedure TControl_SetCaption(Obj: Pointer; Value: PChar); BETH_CALL;
 begin
   try
     TControl(Obj).Caption := Value;
@@ -682,7 +682,7 @@ end;
 
 { Align は TControl の public。TAlign の序数(alNone=0, alTop, alBottom, alLeft, alRight, alClient, alCustom)で受け渡す。
   既定値はクラスごとに異なる(TControl は alNone、TStatusBar は alBottom、TSplitter は alLeft)。 }
-function TControl_GetAlign(Obj: Pointer): Integer; NO_VCL_CALL;
+function TControl_GetAlign(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TControl(Obj).Align);
@@ -692,7 +692,7 @@ begin
   end;
 end;
 
-procedure TControl_SetAlign(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TControl_SetAlign(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     { TCustomCoolBar は Align の Setter を reintroduce で差し替え(非仮想)、alLeft/alRight なら Vertical も切り替えるため、
@@ -707,7 +707,7 @@ begin
 end;
 
 { AutoSize は TControl の public(docs/adr/0029)。LCL では Align と同じく、配置はフォームの表示まで行われないことがある。 }
-function TControl_GetAutoSize(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TControl_GetAutoSize(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TControl(Obj).AutoSize;
@@ -717,7 +717,7 @@ begin
   end;
 end;
 
-procedure TControl_SetAutoSize(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TControl_SetAutoSize(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TControl(Obj).AutoSize := Value;
@@ -727,7 +727,7 @@ begin
 end;
 
 { Text は TControl で protected。TCustomEdit と TCustomComboBox がそれぞれ公開している。 }
-function TControl_GetText(Obj: Pointer): PChar; NO_VCL_CALL;
+function TControl_GetText(Obj: Pointer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TControlAccess(Obj).Text);
@@ -737,7 +737,7 @@ begin
   end;
 end;
 
-procedure TControl_SetText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+procedure TControl_SetText(Obj: Pointer; Value: PChar); BETH_CALL;
 begin
   try
     TControlAccess(Obj).Text := Value;
@@ -746,7 +746,7 @@ begin
   end;
 end;
 
-procedure TControl_Show(Obj: Pointer); NO_VCL_CALL;
+procedure TControl_Show(Obj: Pointer); BETH_CALL;
 begin
   try
     TControl(Obj).Show;
@@ -755,7 +755,7 @@ begin
   end;
 end;
 
-procedure TControl_Hide(Obj: Pointer); NO_VCL_CALL;
+procedure TControl_Hide(Obj: Pointer); BETH_CALL;
 begin
   try
     TControl(Obj).Hide;
@@ -764,7 +764,7 @@ begin
   end;
 end;
 
-procedure TControl_SetOnClick(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TControl_SetOnClick(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TControl(Obj).OnClick := @BridgeFor(TControl(Obj), MethodData(TControl(Obj).OnClick), Cb, Data).DoClick;
@@ -773,7 +773,7 @@ begin
   end;
 end;
 
-procedure TControl_SetOnDblClick(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TControl_SetOnDblClick(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TControlAccess(Obj).OnDblClick := @BridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnDblClick), Cb, Data).DoClick;
@@ -782,7 +782,7 @@ begin
   end;
 end;
 
-procedure TControl_SetOnResize(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TControl_SetOnResize(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TControl(Obj).OnResize := @BridgeFor(TControl(Obj), MethodData(TControl(Obj).OnResize), Cb, Data).DoClick;
@@ -791,7 +791,7 @@ begin
   end;
 end;
 
-procedure TControl_SetOnMouseDown(Obj: Pointer; Cb: TNoVclMouseCallback; Data: Pointer); NO_VCL_CALL;
+procedure TControl_SetOnMouseDown(Obj: Pointer; Cb: TBethMouseCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TControlAccess(Obj).OnMouseDown := @MouseBridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnMouseDown), Cb, Data).DoMouse;
@@ -800,7 +800,7 @@ begin
   end;
 end;
 
-procedure TControl_SetOnMouseUp(Obj: Pointer; Cb: TNoVclMouseCallback; Data: Pointer); NO_VCL_CALL;
+procedure TControl_SetOnMouseUp(Obj: Pointer; Cb: TBethMouseCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TControlAccess(Obj).OnMouseUp := @MouseBridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnMouseUp), Cb, Data).DoMouse;
@@ -809,7 +809,7 @@ begin
   end;
 end;
 
-procedure TControl_SetOnMouseMove(Obj: Pointer; Cb: TNoVclMouseMoveCallback; Data: Pointer); NO_VCL_CALL;
+procedure TControl_SetOnMouseMove(Obj: Pointer; Cb: TBethMouseMoveCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TControlAccess(Obj).OnMouseMove := @MouseMoveBridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnMouseMove), Cb, Data).DoMouseMove;
@@ -818,7 +818,7 @@ begin
   end;
 end;
 
-procedure TControl_SetOnMouseEnter(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TControl_SetOnMouseEnter(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TControlAccess(Obj).OnMouseEnter := @BridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnMouseEnter), Cb, Data).DoClick;
@@ -827,7 +827,7 @@ begin
   end;
 end;
 
-procedure TControl_SetOnMouseLeave(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TControl_SetOnMouseLeave(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TControlAccess(Obj).OnMouseLeave := @BridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnMouseLeave), Cb, Data).DoClick;
@@ -836,7 +836,7 @@ begin
   end;
 end;
 
-procedure TControl_SetOnMouseWheel(Obj: Pointer; Cb: TNoVclMouseWheelCallback; Data: Pointer); NO_VCL_CALL;
+procedure TControl_SetOnMouseWheel(Obj: Pointer; Cb: TBethMouseWheelCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TControlAccess(Obj).OnMouseWheel := @MouseWheelBridgeFor(TControl(Obj), MethodData(TControlAccess(Obj).OnMouseWheel), Cb, Data).DoMouseWheel;
@@ -847,7 +847,7 @@ end;
 
 { TWinControl }
 
-procedure TWinControl_SetOnKeyDown(Obj: Pointer; Cb: TNoVclKeyCallback; Data: Pointer); NO_VCL_CALL;
+procedure TWinControl_SetOnKeyDown(Obj: Pointer; Cb: TBethKeyCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TWinControl(Obj).OnKeyDown := @KeyBridgeFor(TWinControl(Obj), MethodData(TWinControl(Obj).OnKeyDown), Cb, Data).DoKey;
@@ -856,7 +856,7 @@ begin
   end;
 end;
 
-procedure TWinControl_SetOnKeyUp(Obj: Pointer; Cb: TNoVclKeyCallback; Data: Pointer); NO_VCL_CALL;
+procedure TWinControl_SetOnKeyUp(Obj: Pointer; Cb: TBethKeyCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TWinControl(Obj).OnKeyUp := @KeyBridgeFor(TWinControl(Obj), MethodData(TWinControl(Obj).OnKeyUp), Cb, Data).DoKey;
@@ -865,7 +865,7 @@ begin
   end;
 end;
 
-procedure TWinControl_SetOnKeyPress(Obj: Pointer; Cb: TNoVclKeyPressCallback; Data: Pointer); NO_VCL_CALL;
+procedure TWinControl_SetOnKeyPress(Obj: Pointer; Cb: TBethKeyPressCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TWinControl(Obj).OnKeyPress := @KeyPressBridgeFor(TWinControl(Obj), MethodData(TWinControl(Obj).OnKeyPress), Cb, Data).DoKeyPress;
@@ -876,7 +876,7 @@ end;
 
 { TCustomForm / TForm }
 
-function TForm_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TForm_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TForm.Create(TComponent(Owner)));
@@ -886,7 +886,7 @@ begin
   end;
 end;
 
-procedure TCustomForm_Show(Obj: Pointer); NO_VCL_CALL;
+procedure TCustomForm_Show(Obj: Pointer); BETH_CALL;
 begin
   try
     TCustomForm(Obj).Show;
@@ -895,7 +895,7 @@ begin
   end;
 end;
 
-procedure TCustomForm_Hide(Obj: Pointer); NO_VCL_CALL;
+procedure TCustomForm_Hide(Obj: Pointer); BETH_CALL;
 begin
   try
     TCustomForm(Obj).Hide;
@@ -904,7 +904,7 @@ begin
   end;
 end;
 
-function TCustomForm_ShowModal(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomForm_ShowModal(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomForm(Obj).ShowModal;
@@ -914,7 +914,7 @@ begin
   end;
 end;
 
-procedure TCustomForm_Close(Obj: Pointer); NO_VCL_CALL;
+procedure TCustomForm_Close(Obj: Pointer); BETH_CALL;
 begin
   try
     TCustomForm(Obj).Close;
@@ -925,7 +925,7 @@ end;
 
 { 保留中のメッセージを処理し終えてから破棄する(Application.ReleaseComponent)。
   フォーム自身やその子のイベントハンドラの中からでも安全に呼べる。 }
-procedure TCustomForm_Release(Obj: Pointer); NO_VCL_CALL;
+procedure TCustomForm_Release(Obj: Pointer); BETH_CALL;
 begin
   try
     TCustomForm(Obj).Release;
@@ -934,7 +934,7 @@ begin
   end;
 end;
 
-procedure TCustomForm_SetOnClose(Obj: Pointer; Cb: TNoVclVarCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomForm_SetOnClose(Obj: Pointer; Cb: TBethVarCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCustomForm(Obj).OnClose := @VarBridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnClose), Cb, Data).DoClose;
@@ -943,7 +943,7 @@ begin
   end;
 end;
 
-procedure TCustomForm_SetOnCloseQuery(Obj: Pointer; Cb: TNoVclVarCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomForm_SetOnCloseQuery(Obj: Pointer; Cb: TBethVarCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCustomForm(Obj).OnCloseQuery := @VarBridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnCloseQuery), Cb, Data).DoCloseQuery;
@@ -952,7 +952,7 @@ begin
   end;
 end;
 
-procedure TCustomForm_SetOnShow(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomForm_SetOnShow(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCustomForm(Obj).OnShow := @BridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnShow), Cb, Data).DoClick;
@@ -961,7 +961,7 @@ begin
   end;
 end;
 
-procedure TCustomForm_SetOnHide(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomForm_SetOnHide(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCustomForm(Obj).OnHide := @BridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnHide), Cb, Data).DoClick;
@@ -970,7 +970,7 @@ begin
   end;
 end;
 
-procedure TCustomForm_SetOnActivate(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomForm_SetOnActivate(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCustomForm(Obj).OnActivate := @BridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnActivate), Cb, Data).DoClick;
@@ -979,7 +979,7 @@ begin
   end;
 end;
 
-procedure TCustomForm_SetOnDeactivate(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomForm_SetOnDeactivate(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCustomForm(Obj).OnDeactivate := @BridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnDeactivate), Cb, Data).DoClick;
@@ -989,7 +989,7 @@ begin
 end;
 
 { 破棄の最初(BeforeDestruction)で呼ばれる。子コントロールはまだ生きており、破棄通知はこの後に来る。 }
-procedure TCustomForm_SetOnDestroy(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomForm_SetOnDestroy(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCustomForm(Obj).OnDestroy := @BridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnDestroy), Cb, Data).DoClick;
@@ -1004,7 +1004,7 @@ end;
   LCL の TApplication は FCL の TCustomApplication から派生するが、C++Builder に合わせ
   TComponent 直下のクラスとして扱い、関数名も TApplication_* にそろえる。 }
 
-function GetApplication: Pointer; NO_VCL_CALL;
+function GetApplication: Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(Application);
@@ -1017,7 +1017,7 @@ end;
 { MainForm を設定できるのは LCL では CreateForm の中だけ(UpdateMainForm は CreateForm が
   生成中のフォームにしか効かない)ため、クラスを渡せない C/C++ 側向けに素の TForm を
   CreateForm で生成して返す。最初に生成したフォームが MainForm になる。 }
-function TApplication_CreateForm(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TApplication_CreateForm(Obj: Pointer): Pointer; BETH_CALL;
 var
   F: TForm;
 begin
@@ -1030,7 +1030,7 @@ begin
   end;
 end;
 
-function TApplication_GetMainForm(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TApplication_GetMainForm(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TApplication(Obj).MainForm);
@@ -1040,7 +1040,7 @@ begin
   end;
 end;
 
-procedure TApplication_Run(Obj: Pointer); NO_VCL_CALL;
+procedure TApplication_Run(Obj: Pointer); BETH_CALL;
 begin
   try
     TApplication(Obj).Run;
@@ -1049,7 +1049,7 @@ begin
   end;
 end;
 
-procedure TApplication_ProcessMessages(Obj: Pointer); NO_VCL_CALL;
+procedure TApplication_ProcessMessages(Obj: Pointer); BETH_CALL;
 begin
   try
     TApplication(Obj).ProcessMessages;
@@ -1058,7 +1058,7 @@ begin
   end;
 end;
 
-procedure TApplication_Terminate(Obj: Pointer); NO_VCL_CALL;
+procedure TApplication_Terminate(Obj: Pointer); BETH_CALL;
 begin
   try
     TApplication(Obj).Terminate;
@@ -1067,7 +1067,7 @@ begin
   end;
 end;
 
-function TApplication_GetTerminated(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TApplication_GetTerminated(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TApplication(Obj).Terminated;
@@ -1077,7 +1077,7 @@ begin
   end;
 end;
 
-function TApplication_GetTitle(Obj: Pointer): PChar; NO_VCL_CALL;
+function TApplication_GetTitle(Obj: Pointer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TApplication(Obj).Title);
@@ -1087,7 +1087,7 @@ begin
   end;
 end;
 
-procedure TApplication_SetTitle(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+procedure TApplication_SetTitle(Obj: Pointer; Value: PChar); BETH_CALL;
 begin
   try
     TApplication(Obj).Title := Value;
@@ -1096,7 +1096,7 @@ begin
   end;
 end;
 
-function TApplication_GetShowMainForm(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TApplication_GetShowMainForm(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TApplication(Obj).ShowMainForm;
@@ -1106,7 +1106,7 @@ begin
   end;
 end;
 
-procedure TApplication_SetShowMainForm(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TApplication_SetShowMainForm(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TApplication(Obj).ShowMainForm := Value;
@@ -1117,7 +1117,7 @@ end;
 
 { TPanel / TGroupBox / TLabel }
 
-function TPanel_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TPanel_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TPanel.Create(TComponent(Owner)));
@@ -1127,7 +1127,7 @@ begin
   end;
 end;
 
-function TGroupBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TGroupBox_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TGroupBox.Create(TComponent(Owner)));
@@ -1137,7 +1137,7 @@ begin
   end;
 end;
 
-function TLabel_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TLabel_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TLabel.Create(TComponent(Owner)));
@@ -1150,7 +1150,7 @@ end;
 { TButtonControl / TButton / TCheckBox / TRadioButton }
 
 { Checked は TButtonControl で protected。TCheckBox と TRadioButton がそれぞれ公開している。 }
-function TButtonControl_GetChecked(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TButtonControl_GetChecked(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TButtonControlAccess(Obj).Checked;
@@ -1160,7 +1160,7 @@ begin
   end;
 end;
 
-procedure TButtonControl_SetChecked(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TButtonControl_SetChecked(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TButtonControlAccess(Obj).Checked := Value;
@@ -1169,7 +1169,7 @@ begin
   end;
 end;
 
-function TButton_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TButton_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TButton.Create(TComponent(Owner)));
@@ -1179,7 +1179,7 @@ begin
   end;
 end;
 
-function TCheckBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TCheckBox_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TCheckBox.Create(TComponent(Owner)));
@@ -1189,7 +1189,7 @@ begin
   end;
 end;
 
-function TRadioButton_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TRadioButton_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TRadioButton.Create(TComponent(Owner)));
@@ -1201,7 +1201,7 @@ end;
 
 { TCustomEdit / TEdit }
 
-function TCustomEdit_GetMaxLength(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomEdit_GetMaxLength(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomEdit(Obj).MaxLength;
@@ -1211,7 +1211,7 @@ begin
   end;
 end;
 
-procedure TCustomEdit_SetMaxLength(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomEdit_SetMaxLength(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomEdit(Obj).MaxLength := Value;
@@ -1220,7 +1220,7 @@ begin
   end;
 end;
 
-function TCustomEdit_GetReadOnly(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomEdit_GetReadOnly(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomEdit(Obj).ReadOnly;
@@ -1230,7 +1230,7 @@ begin
   end;
 end;
 
-procedure TCustomEdit_SetReadOnly(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomEdit_SetReadOnly(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomEdit(Obj).ReadOnly := Value;
@@ -1239,7 +1239,7 @@ begin
   end;
 end;
 
-procedure TCustomEdit_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomEdit_SetOnChange(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCustomEdit(Obj).OnChange := @BridgeFor(TCustomEdit(Obj), MethodData(TCustomEdit(Obj).OnChange), Cb, Data).DoClick;
@@ -1248,7 +1248,7 @@ begin
   end;
 end;
 
-function TEdit_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TEdit_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TEdit.Create(TComponent(Owner)));
@@ -1261,7 +1261,7 @@ end;
 { TCustomMemo / TMemo }
 
 { Lines(TStrings)。LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがあるため、ハンドルは保存せず、使うたびに取得する(docs/adr/0027)。 }
-function TCustomMemo_GetLines(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomMemo_GetLines(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomMemo(Obj).Lines);
@@ -1271,7 +1271,7 @@ begin
   end;
 end;
 
-function TCustomMemo_GetScrollBars(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomMemo_GetScrollBars(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TCustomMemo(Obj).ScrollBars);
@@ -1281,7 +1281,7 @@ begin
   end;
 end;
 
-procedure TCustomMemo_SetScrollBars(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomMemo_SetScrollBars(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomMemo(Obj).ScrollBars := TScrollStyle(Value);
@@ -1290,7 +1290,7 @@ begin
   end;
 end;
 
-function TMemo_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TMemo_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TMemo.Create(TComponent(Owner)));
@@ -1302,7 +1302,7 @@ end;
 
 { TCustomComboBox / TComboBox }
 
-function TCustomComboBox_GetItemIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomComboBox_GetItemIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomComboBox(Obj).ItemIndex;
@@ -1312,7 +1312,7 @@ begin
   end;
 end;
 
-procedure TCustomComboBox_SetItemIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomComboBox_SetItemIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomComboBox(Obj).ItemIndex := Value;
@@ -1322,7 +1322,7 @@ begin
 end;
 
 { Items(TStrings)。LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがあるため、ハンドルは保存せず、使うたびに取得する(docs/adr/0027)。 }
-function TCustomComboBox_GetItems(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomComboBox_GetItems(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomComboBox(Obj).Items);
@@ -1332,7 +1332,7 @@ begin
   end;
 end;
 
-function TComboBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TComboBox_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TComboBox.Create(TComponent(Owner)));
@@ -1343,7 +1343,7 @@ begin
 end;
 
 { OnChange は TCustomComboBox では protected で、公開しているのは TComboBox だけ。 }
-procedure TComboBox_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TComboBox_SetOnChange(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TComboBox(Obj).OnChange := @BridgeFor(TComboBox(Obj), MethodData(TComboBox(Obj).OnChange), Cb, Data).DoClick;
@@ -1354,7 +1354,7 @@ end;
 
 { TCustomListBox / TListBox }
 
-function TCustomListBox_GetItemIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomListBox_GetItemIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomListBox(Obj).ItemIndex;
@@ -1364,7 +1364,7 @@ begin
   end;
 end;
 
-procedure TCustomListBox_SetItemIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomListBox_SetItemIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomListBox(Obj).ItemIndex := Value;
@@ -1374,7 +1374,7 @@ begin
 end;
 
 { Items(TStrings)。LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがあるため、ハンドルは保存せず、使うたびに取得する(docs/adr/0027)。 }
-function TCustomListBox_GetItems(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomListBox_GetItems(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomListBox(Obj).Items);
@@ -1384,7 +1384,7 @@ begin
   end;
 end;
 
-function TListBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TListBox_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TListBox.Create(TComponent(Owner)));
@@ -1396,7 +1396,7 @@ end;
 
 { TCustomTimer / TTimer }
 
-function TCustomTimer_GetInterval(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomTimer_GetInterval(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomTimer(Obj).Interval;
@@ -1406,7 +1406,7 @@ begin
   end;
 end;
 
-procedure TCustomTimer_SetInterval(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomTimer_SetInterval(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomTimer(Obj).Interval := Value;
@@ -1415,7 +1415,7 @@ begin
   end;
 end;
 
-function TCustomTimer_GetEnabled(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomTimer_GetEnabled(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomTimer(Obj).Enabled;
@@ -1425,7 +1425,7 @@ begin
   end;
 end;
 
-procedure TCustomTimer_SetEnabled(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomTimer_SetEnabled(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomTimer(Obj).Enabled := Value;
@@ -1434,7 +1434,7 @@ begin
   end;
 end;
 
-procedure TCustomTimer_SetOnTimer(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomTimer_SetOnTimer(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCustomTimer(Obj).OnTimer := @BridgeFor(TCustomTimer(Obj), MethodData(TCustomTimer(Obj).OnTimer), Cb, Data).DoClick;
@@ -1443,7 +1443,7 @@ begin
   end;
 end;
 
-function TTimer_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TTimer_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TTimer.Create(TComponent(Owner)));
@@ -1455,7 +1455,7 @@ end;
 
 { TPaintBox }
 
-function TPaintBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TPaintBox_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TPaintBox.Create(TComponent(Owner)));
@@ -1465,7 +1465,7 @@ begin
   end;
 end;
 
-function TPaintBox_GetCanvas(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TPaintBox_GetCanvas(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TPaintBox(Obj).Canvas);
@@ -1475,7 +1475,7 @@ begin
   end;
 end;
 
-procedure TPaintBox_SetOnPaint(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TPaintBox_SetOnPaint(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TPaintBox(Obj).OnPaint := @BridgeFor(TPaintBox(Obj), MethodData(TPaintBox(Obj).OnPaint), Cb, Data).DoClick;
@@ -1489,7 +1489,7 @@ end;
   独自のCreate/Destroyは持たない。取得元のコントロールが破棄されれば
   一緒に破棄される。 }
 
-procedure TCanvas_MoveTo(Obj: Pointer; X, Y: Integer); NO_VCL_CALL;
+procedure TCanvas_MoveTo(Obj: Pointer; X, Y: Integer); BETH_CALL;
 begin
   try
     TCanvas(Obj).MoveTo(X, Y);
@@ -1498,7 +1498,7 @@ begin
   end;
 end;
 
-procedure TCanvas_LineTo(Obj: Pointer; X, Y: Integer); NO_VCL_CALL;
+procedure TCanvas_LineTo(Obj: Pointer; X, Y: Integer); BETH_CALL;
 begin
   try
     TCanvas(Obj).LineTo(X, Y);
@@ -1507,7 +1507,7 @@ begin
   end;
 end;
 
-procedure TCanvas_Rectangle(Obj: Pointer; X1, Y1, X2, Y2: Integer); NO_VCL_CALL;
+procedure TCanvas_Rectangle(Obj: Pointer; X1, Y1, X2, Y2: Integer); BETH_CALL;
 begin
   try
     TCanvas(Obj).Rectangle(X1, Y1, X2, Y2);
@@ -1516,7 +1516,7 @@ begin
   end;
 end;
 
-procedure TCanvas_Ellipse(Obj: Pointer; X1, Y1, X2, Y2: Integer); NO_VCL_CALL;
+procedure TCanvas_Ellipse(Obj: Pointer; X1, Y1, X2, Y2: Integer); BETH_CALL;
 begin
   try
     TCanvas(Obj).Ellipse(X1, Y1, X2, Y2);
@@ -1525,7 +1525,7 @@ begin
   end;
 end;
 
-procedure TCanvas_TextOut(Obj: Pointer; X, Y: Integer; Text: PChar); NO_VCL_CALL;
+procedure TCanvas_TextOut(Obj: Pointer; X, Y: Integer; Text: PChar); BETH_CALL;
 begin
   try
     TCanvas(Obj).TextOut(X, Y, Text);
@@ -1534,7 +1534,7 @@ begin
   end;
 end;
 
-function TCanvas_GetPen(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCanvas_GetPen(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCanvas(Obj).Pen);
@@ -1544,7 +1544,7 @@ begin
   end;
 end;
 
-function TCanvas_GetBrush(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCanvas_GetBrush(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCanvas(Obj).Brush);
@@ -1554,7 +1554,7 @@ begin
   end;
 end;
 
-function TCanvas_GetFont(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCanvas_GetFont(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCanvas(Obj).Font);
@@ -1565,7 +1565,7 @@ begin
 end;
 
 { グラフィック(TGraphic の派生のハンドル)を描く(docs/adr/0029)。Graphic が nil なら何もしない。 }
-procedure TCanvas_Draw(Obj: Pointer; X, Y: Integer; Graphic: Pointer); NO_VCL_CALL;
+procedure TCanvas_Draw(Obj: Pointer; X, Y: Integer; Graphic: Pointer); BETH_CALL;
 begin
   try
     if Graphic <> nil then
@@ -1575,7 +1575,7 @@ begin
   end;
 end;
 
-procedure TCanvas_StretchDraw(Obj: Pointer; X1, Y1, X2, Y2: Integer; Graphic: Pointer); NO_VCL_CALL;
+procedure TCanvas_StretchDraw(Obj: Pointer; X1, Y1, X2, Y2: Integer; Graphic: Pointer); BETH_CALL;
 var
   R: TRect;
 begin
@@ -1594,7 +1594,7 @@ begin
 end;
 
 { Brush で塗りつぶす(枠は描かない)。 }
-procedure TCanvas_FillRect(Obj: Pointer; X1, Y1, X2, Y2: Integer); NO_VCL_CALL;
+procedure TCanvas_FillRect(Obj: Pointer; X1, Y1, X2, Y2: Integer); BETH_CALL;
 begin
   try
     TCanvas(Obj).FillRect(X1, Y1, X2, Y2);
@@ -1603,7 +1603,7 @@ begin
   end;
 end;
 
-function TCanvas_GetPixels(Obj: Pointer; X, Y: Integer): Integer; NO_VCL_CALL;
+function TCanvas_GetPixels(Obj: Pointer; X, Y: Integer): Integer; BETH_CALL;
 begin
   try
     Result := Integer(TCanvas(Obj).Pixels[X, Y]);
@@ -1613,7 +1613,7 @@ begin
   end;
 end;
 
-procedure TCanvas_SetPixels(Obj: Pointer; X, Y: Integer; Value: Integer); NO_VCL_CALL;
+procedure TCanvas_SetPixels(Obj: Pointer; X, Y: Integer; Value: Integer); BETH_CALL;
 begin
   try
     TCanvas(Obj).Pixels[X, Y] := TColor(Value);
@@ -1624,7 +1624,7 @@ end;
 
 { TPen / TBrush / TFont (いずれも非所有) }
 
-function TPen_GetColor(Obj: Pointer): Integer; NO_VCL_CALL;
+function TPen_GetColor(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Integer(TPen(Obj).Color);
@@ -1634,7 +1634,7 @@ begin
   end;
 end;
 
-procedure TPen_SetColor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TPen_SetColor(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TPen(Obj).Color := TColor(Value);
@@ -1643,7 +1643,7 @@ begin
   end;
 end;
 
-function TPen_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+function TPen_GetWidth(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TPen(Obj).Width;
@@ -1653,7 +1653,7 @@ begin
   end;
 end;
 
-procedure TPen_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TPen_SetWidth(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TPen(Obj).Width := Value;
@@ -1662,7 +1662,7 @@ begin
   end;
 end;
 
-function TBrush_GetColor(Obj: Pointer): Integer; NO_VCL_CALL;
+function TBrush_GetColor(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Integer(TBrush(Obj).Color);
@@ -1672,7 +1672,7 @@ begin
   end;
 end;
 
-procedure TBrush_SetColor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TBrush_SetColor(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TBrush(Obj).Color := TColor(Value);
@@ -1681,7 +1681,7 @@ begin
   end;
 end;
 
-function TFont_GetName(Obj: Pointer): PChar; NO_VCL_CALL;
+function TFont_GetName(Obj: Pointer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TFont(Obj).Name);
@@ -1691,7 +1691,7 @@ begin
   end;
 end;
 
-procedure TFont_SetName(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+procedure TFont_SetName(Obj: Pointer; Value: PChar); BETH_CALL;
 begin
   try
     TFont(Obj).Name := Value;
@@ -1700,7 +1700,7 @@ begin
   end;
 end;
 
-function TFont_GetSize(Obj: Pointer): Integer; NO_VCL_CALL;
+function TFont_GetSize(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TFont(Obj).Size;
@@ -1710,7 +1710,7 @@ begin
   end;
 end;
 
-procedure TFont_SetSize(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TFont_SetSize(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TFont(Obj).Size := Value;
@@ -1719,7 +1719,7 @@ begin
   end;
 end;
 
-function TFont_GetColor(Obj: Pointer): Integer; NO_VCL_CALL;
+function TFont_GetColor(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Integer(TFont(Obj).Color);
@@ -1729,7 +1729,7 @@ begin
   end;
 end;
 
-procedure TFont_SetColor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TFont_SetColor(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TFont(Obj).Color := TColor(Value);
@@ -1741,7 +1741,7 @@ end;
 { docs/component-coverage.md の Tier 1 で挙げたコントロール。既存クラスの部分列として追加する。 }
 
 { TScrollBox: TScrollingWinControl(実装済み)の直接の派生で、追加のメンバは無い。 }
-function TScrollBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TScrollBox_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TScrollBox.Create(TComponent(Owner)));
@@ -1752,7 +1752,7 @@ begin
 end;
 
 { TToggleBox: TCustomCheckBox(実装済み)の直接の派生で、追加のメンバは無い(Checked を共有)。 }
-function TToggleBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TToggleBox_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TToggleBox.Create(TComponent(Owner)));
@@ -1764,7 +1764,7 @@ end;
 
 { TBevel }
 
-function TBevel_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TBevel_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TBevel.Create(TComponent(Owner)));
@@ -1774,7 +1774,7 @@ begin
   end;
 end;
 
-function TBevel_GetShape(Obj: Pointer): Integer; NO_VCL_CALL;
+function TBevel_GetShape(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TBevel(Obj).Shape);
@@ -1784,7 +1784,7 @@ begin
   end;
 end;
 
-procedure TBevel_SetShape(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TBevel_SetShape(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TBevel(Obj).Shape := TBevelShape(Value);
@@ -1793,7 +1793,7 @@ begin
   end;
 end;
 
-function TBevel_GetStyle(Obj: Pointer): Integer; NO_VCL_CALL;
+function TBevel_GetStyle(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TBevel(Obj).Style);
@@ -1803,7 +1803,7 @@ begin
   end;
 end;
 
-procedure TBevel_SetStyle(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TBevel_SetStyle(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TBevel(Obj).Style := TBevelStyle(Value);
@@ -1814,7 +1814,7 @@ end;
 
 { TShape: Pen/Brush は TCustomShape が所有する実体で、TCanvas の Pen/Brush と同じく非所有のハンドルとして返す。 }
 
-function TShape_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TShape_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TShape.Create(TComponent(Owner)));
@@ -1824,7 +1824,7 @@ begin
   end;
 end;
 
-function TCustomShape_GetShape(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomShape_GetShape(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TCustomShape(Obj).Shape);
@@ -1834,7 +1834,7 @@ begin
   end;
 end;
 
-procedure TCustomShape_SetShape(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomShape_SetShape(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomShape(Obj).Shape := TShapeType(Value);
@@ -1843,7 +1843,7 @@ begin
   end;
 end;
 
-function TCustomShape_GetPen(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomShape_GetPen(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomShape(Obj).Pen);
@@ -1853,7 +1853,7 @@ begin
   end;
 end;
 
-function TCustomShape_GetBrush(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomShape_GetBrush(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomShape(Obj).Brush);
@@ -1865,7 +1865,7 @@ end;
 
 { TStaticText }
 
-function TStaticText_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TStaticText_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TStaticText.Create(TComponent(Owner)));
@@ -1875,7 +1875,7 @@ begin
   end;
 end;
 
-function TCustomStaticText_GetBorderStyle(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomStaticText_GetBorderStyle(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TCustomStaticText(Obj).BorderStyle);
@@ -1885,7 +1885,7 @@ begin
   end;
 end;
 
-procedure TCustomStaticText_SetBorderStyle(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomStaticText_SetBorderStyle(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomStaticText(Obj).BorderStyle := TStaticBorderStyle(Value);
@@ -1931,7 +1931,7 @@ begin
 end;
 {$endif}
 
-function TStatusBar_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TStatusBar_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TStatusBar.Create(TComponent(Owner)));
@@ -1944,7 +1944,7 @@ begin
   end;
 end;
 
-function TStatusBar_GetSimpleText(Obj: Pointer): PChar; NO_VCL_CALL;
+function TStatusBar_GetSimpleText(Obj: Pointer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TStatusBar(Obj).SimpleText);
@@ -1954,7 +1954,7 @@ begin
   end;
 end;
 
-procedure TStatusBar_SetSimpleText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+procedure TStatusBar_SetSimpleText(Obj: Pointer; Value: PChar); BETH_CALL;
 begin
   try
     TStatusBar(Obj).SimpleText := Value;
@@ -1963,7 +1963,7 @@ begin
   end;
 end;
 
-function TStatusBar_GetSimplePanel(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TStatusBar_GetSimplePanel(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TStatusBar(Obj).SimplePanel;
@@ -1973,7 +1973,7 @@ begin
   end;
 end;
 
-procedure TStatusBar_SetSimplePanel(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TStatusBar_SetSimplePanel(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TStatusBar(Obj).SimplePanel := Value;
@@ -1988,7 +1988,7 @@ end;
 
 { TScrollBar }
 
-function TScrollBar_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TScrollBar_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TScrollBar.Create(TComponent(Owner)));
@@ -1998,7 +1998,7 @@ begin
   end;
 end;
 
-function TCustomScrollBar_GetKind(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomScrollBar_GetKind(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TCustomScrollBar(Obj).Kind);
@@ -2008,7 +2008,7 @@ begin
   end;
 end;
 
-procedure TCustomScrollBar_SetKind(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomScrollBar_SetKind(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomScrollBar(Obj).Kind := TScrollBarKind(Value);
@@ -2017,7 +2017,7 @@ begin
   end;
 end;
 
-function TCustomScrollBar_GetMin(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomScrollBar_GetMin(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomScrollBar(Obj).Min;
@@ -2027,7 +2027,7 @@ begin
   end;
 end;
 
-procedure TCustomScrollBar_SetMin(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomScrollBar_SetMin(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomScrollBar(Obj).Min := Value;
@@ -2036,7 +2036,7 @@ begin
   end;
 end;
 
-function TCustomScrollBar_GetMax(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomScrollBar_GetMax(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomScrollBar(Obj).Max;
@@ -2046,7 +2046,7 @@ begin
   end;
 end;
 
-procedure TCustomScrollBar_SetMax(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomScrollBar_SetMax(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomScrollBar(Obj).Max := Value;
@@ -2055,7 +2055,7 @@ begin
   end;
 end;
 
-function TCustomScrollBar_GetPosition(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomScrollBar_GetPosition(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomScrollBar(Obj).Position;
@@ -2065,7 +2065,7 @@ begin
   end;
 end;
 
-procedure TCustomScrollBar_SetPosition(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomScrollBar_SetPosition(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomScrollBar(Obj).Position := Value;
@@ -2074,7 +2074,7 @@ begin
   end;
 end;
 
-function TCustomScrollBar_GetPageSize(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomScrollBar_GetPageSize(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomScrollBar(Obj).PageSize;
@@ -2084,7 +2084,7 @@ begin
   end;
 end;
 
-procedure TCustomScrollBar_SetPageSize(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomScrollBar_SetPageSize(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomScrollBar(Obj).PageSize := Value;
@@ -2093,7 +2093,7 @@ begin
   end;
 end;
 
-procedure TCustomScrollBar_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomScrollBar_SetOnChange(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCustomScrollBar(Obj).OnChange := @BridgeFor(TCustomScrollBar(Obj), MethodData(TCustomScrollBar(Obj).OnChange), Cb, Data).DoClick;
@@ -2104,7 +2104,7 @@ end;
 
 { TTrackBar }
 
-function TTrackBar_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TTrackBar_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TTrackBar.Create(TComponent(Owner)));
@@ -2114,7 +2114,7 @@ begin
   end;
 end;
 
-function TCustomTrackBar_GetMin(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomTrackBar_GetMin(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomTrackBar(Obj).Min;
@@ -2124,7 +2124,7 @@ begin
   end;
 end;
 
-procedure TCustomTrackBar_SetMin(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomTrackBar_SetMin(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomTrackBar(Obj).Min := Value;
@@ -2133,7 +2133,7 @@ begin
   end;
 end;
 
-function TCustomTrackBar_GetMax(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomTrackBar_GetMax(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomTrackBar(Obj).Max;
@@ -2143,7 +2143,7 @@ begin
   end;
 end;
 
-procedure TCustomTrackBar_SetMax(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomTrackBar_SetMax(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomTrackBar(Obj).Max := Value;
@@ -2152,7 +2152,7 @@ begin
   end;
 end;
 
-function TCustomTrackBar_GetPosition(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomTrackBar_GetPosition(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomTrackBar(Obj).Position;
@@ -2162,7 +2162,7 @@ begin
   end;
 end;
 
-procedure TCustomTrackBar_SetPosition(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomTrackBar_SetPosition(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomTrackBar(Obj).Position := Value;
@@ -2171,7 +2171,7 @@ begin
   end;
 end;
 
-procedure TCustomTrackBar_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomTrackBar_SetOnChange(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCustomTrackBar(Obj).OnChange := @BridgeFor(TCustomTrackBar(Obj), MethodData(TCustomTrackBar(Obj).OnChange), Cb, Data).DoClick;
@@ -2182,7 +2182,7 @@ end;
 
 { TProgressBar: 表示専用で、対応するイベントは無い。 }
 
-function TProgressBar_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TProgressBar_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TProgressBar.Create(TComponent(Owner)));
@@ -2192,7 +2192,7 @@ begin
   end;
 end;
 
-function TCustomProgressBar_GetMin(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomProgressBar_GetMin(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomProgressBar(Obj).Min;
@@ -2202,7 +2202,7 @@ begin
   end;
 end;
 
-procedure TCustomProgressBar_SetMin(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomProgressBar_SetMin(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomProgressBar(Obj).Min := Value;
@@ -2211,7 +2211,7 @@ begin
   end;
 end;
 
-function TCustomProgressBar_GetMax(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomProgressBar_GetMax(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomProgressBar(Obj).Max;
@@ -2221,7 +2221,7 @@ begin
   end;
 end;
 
-procedure TCustomProgressBar_SetMax(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomProgressBar_SetMax(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomProgressBar(Obj).Max := Value;
@@ -2230,7 +2230,7 @@ begin
   end;
 end;
 
-function TCustomProgressBar_GetPosition(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomProgressBar_GetPosition(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomProgressBar(Obj).Position;
@@ -2240,7 +2240,7 @@ begin
   end;
 end;
 
-procedure TCustomProgressBar_SetPosition(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomProgressBar_SetPosition(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomProgressBar(Obj).Position := Value;
@@ -2255,7 +2255,7 @@ end;
   Associate は対象の TWinControl(TEdit 等)への参照で、TControl.Parent と同じくハンドルで表す。
   OnClick/OnChanging は独自のシグネチャ(ボタン方向・ユーザー操作かどうかを渡す)のため今回は未対応。 }
 
-function TUpDown_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TUpDown_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TUpDown.Create(TComponent(Owner)));
@@ -2265,7 +2265,7 @@ begin
   end;
 end;
 
-function TUpDown_GetMin(Obj: Pointer): Integer; NO_VCL_CALL;
+function TUpDown_GetMin(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TUpDown(Obj).Min;
@@ -2275,7 +2275,7 @@ begin
   end;
 end;
 
-procedure TUpDown_SetMin(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TUpDown_SetMin(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TUpDown(Obj).Min := Value;
@@ -2284,7 +2284,7 @@ begin
   end;
 end;
 
-function TUpDown_GetMax(Obj: Pointer): Integer; NO_VCL_CALL;
+function TUpDown_GetMax(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TUpDown(Obj).Max;
@@ -2294,7 +2294,7 @@ begin
   end;
 end;
 
-procedure TUpDown_SetMax(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TUpDown_SetMax(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TUpDown(Obj).Max := Value;
@@ -2303,7 +2303,7 @@ begin
   end;
 end;
 
-function TUpDown_GetPosition(Obj: Pointer): Integer; NO_VCL_CALL;
+function TUpDown_GetPosition(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TUpDown(Obj).Position;
@@ -2313,7 +2313,7 @@ begin
   end;
 end;
 
-procedure TUpDown_SetPosition(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TUpDown_SetPosition(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TUpDown(Obj).Position := Value;
@@ -2322,7 +2322,7 @@ begin
   end;
 end;
 
-function TUpDown_GetIncrement(Obj: Pointer): Integer; NO_VCL_CALL;
+function TUpDown_GetIncrement(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TUpDown(Obj).Increment;
@@ -2332,7 +2332,7 @@ begin
   end;
 end;
 
-procedure TUpDown_SetIncrement(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TUpDown_SetIncrement(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TUpDown(Obj).Increment := Value;
@@ -2341,7 +2341,7 @@ begin
   end;
 end;
 
-function TUpDown_GetAssociate(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TUpDown_GetAssociate(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TUpDown(Obj).Associate);
@@ -2351,7 +2351,7 @@ begin
   end;
 end;
 
-procedure TUpDown_SetAssociate(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TUpDown_SetAssociate(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TUpDown(Obj).Associate := TWinControl(Value);
@@ -2365,7 +2365,7 @@ end;
 { TRadioGroup: OnClick は TCustomRadioGroup 自身のフィールド(TControl.OnClick とは別)なので、
   専用のブリッジで登録する(TComboBox の OnChange と同じ理由)。 }
 
-function TRadioGroup_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TRadioGroup_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TRadioGroup.Create(TComponent(Owner)));
@@ -2376,7 +2376,7 @@ begin
 end;
 
 { Items(TStrings)。LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがあるため、ハンドルは保存せず、使うたびに取得する(docs/adr/0027)。 }
-function TCustomRadioGroup_GetItems(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomRadioGroup_GetItems(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomRadioGroup(Obj).Items);
@@ -2386,7 +2386,7 @@ begin
   end;
 end;
 
-function TCustomRadioGroup_GetItemIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomRadioGroup_GetItemIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomRadioGroup(Obj).ItemIndex;
@@ -2396,7 +2396,7 @@ begin
   end;
 end;
 
-procedure TCustomRadioGroup_SetItemIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomRadioGroup_SetItemIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomRadioGroup(Obj).ItemIndex := Value;
@@ -2405,7 +2405,7 @@ begin
   end;
 end;
 
-procedure TCustomRadioGroup_SetOnClick(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomRadioGroup_SetOnClick(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCustomRadioGroup(Obj).OnClick := @BridgeFor(TCustomRadioGroup(Obj), MethodData(TCustomRadioGroup(Obj).OnClick), Cb, Data).DoClick;
@@ -2417,7 +2417,7 @@ end;
 { TCheckGroup: Checked はインデックス付きプロパティ。値は他のインデックス付きアクセスと同様、
   引数に Index を追加して表す(TCustomDrawGrid_GetColWidths 等と同じ形)。 }
 
-function TCheckGroup_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TCheckGroup_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TCheckGroup.Create(TComponent(Owner)));
@@ -2428,7 +2428,7 @@ begin
 end;
 
 { Items(TStrings)。LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがあるため、ハンドルは保存せず、使うたびに取得する(docs/adr/0027)。 }
-function TCustomCheckGroup_GetItems(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomCheckGroup_GetItems(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomCheckGroup(Obj).Items);
@@ -2438,7 +2438,7 @@ begin
   end;
 end;
 
-function TCustomCheckGroup_GetChecked(Obj: Pointer; Index: Integer): LongBool; NO_VCL_CALL;
+function TCustomCheckGroup_GetChecked(Obj: Pointer; Index: Integer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomCheckGroup(Obj).Checked[Index];
@@ -2448,7 +2448,7 @@ begin
   end;
 end;
 
-procedure TCustomCheckGroup_SetChecked(Obj: Pointer; Index: Integer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomCheckGroup_SetChecked(Obj: Pointer; Index: Integer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomCheckGroup(Obj).Checked[Index] := Value;
@@ -2457,10 +2457,10 @@ begin
   end;
 end;
 
-{ TCheckListBox: Items は基底 TCustomListBox のものをそのまま使う(no_vcl_TCustomListBox_GetItems で
+{ TCheckListBox: Items は基底 TCustomListBox のものをそのまま使う(beth_TCustomListBox_GetItems で
   共通)。Checked はインデックス付き。OnClickCheck は Sender のみの TNotifyEvent。 }
 
-function TCheckListBox_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TCheckListBox_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TCheckListBox.Create(TComponent(Owner)));
@@ -2470,7 +2470,7 @@ begin
   end;
 end;
 
-function TCustomCheckListBox_GetChecked(Obj: Pointer; Index: Integer): LongBool; NO_VCL_CALL;
+function TCustomCheckListBox_GetChecked(Obj: Pointer; Index: Integer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomCheckListBox(Obj).Checked[Index];
@@ -2480,7 +2480,7 @@ begin
   end;
 end;
 
-procedure TCustomCheckListBox_SetChecked(Obj: Pointer; Index: Integer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomCheckListBox_SetChecked(Obj: Pointer; Index: Integer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomCheckListBox(Obj).Checked[Index] := Value;
@@ -2489,7 +2489,7 @@ begin
   end;
 end;
 
-procedure TCustomCheckListBox_SetOnClickCheck(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomCheckListBox_SetOnClickCheck(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCustomCheckListBox(Obj).OnClickCheck := @BridgeFor(TCustomCheckListBox(Obj), MethodData(TCustomCheckListBox(Obj).OnClickCheck), Cb, Data).DoClick;
@@ -2502,7 +2502,7 @@ end;
   Down/GroupIndex/Flat/AllowAllUp(TCustomSpeedButton)、Kind(TCustomBitBtn)はいずれも public のため
   protected hack は不要。Caption/OnClick は TControl から共有する。Glyph(ビットマップ)は未対応。 }
 
-function TSpeedButton_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TSpeedButton_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TSpeedButton.Create(TComponent(Owner)));
@@ -2512,7 +2512,7 @@ begin
   end;
 end;
 
-function TCustomSpeedButton_GetDown(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomSpeedButton_GetDown(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomSpeedButton(Obj).Down;
@@ -2522,7 +2522,7 @@ begin
   end;
 end;
 
-procedure TCustomSpeedButton_SetDown(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomSpeedButton_SetDown(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomSpeedButton(Obj).Down := Value;
@@ -2531,7 +2531,7 @@ begin
   end;
 end;
 
-function TCustomSpeedButton_GetGroupIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomSpeedButton_GetGroupIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomSpeedButton(Obj).GroupIndex;
@@ -2541,7 +2541,7 @@ begin
   end;
 end;
 
-procedure TCustomSpeedButton_SetGroupIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomSpeedButton_SetGroupIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomSpeedButton(Obj).GroupIndex := Value;
@@ -2550,7 +2550,7 @@ begin
   end;
 end;
 
-function TCustomSpeedButton_GetFlat(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomSpeedButton_GetFlat(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomSpeedButton(Obj).Flat;
@@ -2560,7 +2560,7 @@ begin
   end;
 end;
 
-procedure TCustomSpeedButton_SetFlat(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomSpeedButton_SetFlat(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomSpeedButton(Obj).Flat := Value;
@@ -2569,7 +2569,7 @@ begin
   end;
 end;
 
-function TCustomSpeedButton_GetAllowAllUp(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomSpeedButton_GetAllowAllUp(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomSpeedButton(Obj).AllowAllUp;
@@ -2579,7 +2579,7 @@ begin
   end;
 end;
 
-procedure TCustomSpeedButton_SetAllowAllUp(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomSpeedButton_SetAllowAllUp(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomSpeedButton(Obj).AllowAllUp := Value;
@@ -2588,7 +2588,7 @@ begin
   end;
 end;
 
-function TBitBtn_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TBitBtn_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TBitBtn.Create(TComponent(Owner)));
@@ -2598,7 +2598,7 @@ begin
   end;
 end;
 
-function TCustomBitBtn_GetKind(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomBitBtn_GetKind(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TCustomBitBtn(Obj).Kind);
@@ -2608,7 +2608,7 @@ begin
   end;
 end;
 
-procedure TCustomBitBtn_SetKind(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomBitBtn_SetKind(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomBitBtn(Obj).Kind := TBitBtnKind(Value);
@@ -2622,7 +2622,7 @@ end;
   Integer で再宣言して Double 版を隠す。C++ 側でも同じ隠蔽を再現するため、関数名を宣言元のクラスごとに
   分ける(TCustomFloatSpinEdit_* は Double、TCustomSpinEdit_* は Integer)。 }
 
-function TFloatSpinEdit_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TFloatSpinEdit_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TFloatSpinEdit.Create(TComponent(Owner)));
@@ -2632,7 +2632,7 @@ begin
   end;
 end;
 
-function TCustomFloatSpinEdit_GetValue(Obj: Pointer): Double; NO_VCL_CALL;
+function TCustomFloatSpinEdit_GetValue(Obj: Pointer): Double; BETH_CALL;
 begin
   try
     Result := TCustomFloatSpinEdit(Obj).Value;
@@ -2642,7 +2642,7 @@ begin
   end;
 end;
 
-procedure TCustomFloatSpinEdit_SetValue(Obj: Pointer; Value: Double); NO_VCL_CALL;
+procedure TCustomFloatSpinEdit_SetValue(Obj: Pointer; Value: Double); BETH_CALL;
 begin
   try
     TCustomFloatSpinEdit(Obj).Value := Value;
@@ -2651,7 +2651,7 @@ begin
   end;
 end;
 
-function TCustomFloatSpinEdit_GetMinValue(Obj: Pointer): Double; NO_VCL_CALL;
+function TCustomFloatSpinEdit_GetMinValue(Obj: Pointer): Double; BETH_CALL;
 begin
   try
     Result := TCustomFloatSpinEdit(Obj).MinValue;
@@ -2661,7 +2661,7 @@ begin
   end;
 end;
 
-procedure TCustomFloatSpinEdit_SetMinValue(Obj: Pointer; Value: Double); NO_VCL_CALL;
+procedure TCustomFloatSpinEdit_SetMinValue(Obj: Pointer; Value: Double); BETH_CALL;
 begin
   try
     TCustomFloatSpinEdit(Obj).MinValue := Value;
@@ -2670,7 +2670,7 @@ begin
   end;
 end;
 
-function TCustomFloatSpinEdit_GetMaxValue(Obj: Pointer): Double; NO_VCL_CALL;
+function TCustomFloatSpinEdit_GetMaxValue(Obj: Pointer): Double; BETH_CALL;
 begin
   try
     Result := TCustomFloatSpinEdit(Obj).MaxValue;
@@ -2680,7 +2680,7 @@ begin
   end;
 end;
 
-procedure TCustomFloatSpinEdit_SetMaxValue(Obj: Pointer; Value: Double); NO_VCL_CALL;
+procedure TCustomFloatSpinEdit_SetMaxValue(Obj: Pointer; Value: Double); BETH_CALL;
 begin
   try
     TCustomFloatSpinEdit(Obj).MaxValue := Value;
@@ -2689,7 +2689,7 @@ begin
   end;
 end;
 
-function TCustomFloatSpinEdit_GetIncrement(Obj: Pointer): Double; NO_VCL_CALL;
+function TCustomFloatSpinEdit_GetIncrement(Obj: Pointer): Double; BETH_CALL;
 begin
   try
     Result := TCustomFloatSpinEdit(Obj).Increment;
@@ -2699,7 +2699,7 @@ begin
   end;
 end;
 
-procedure TCustomFloatSpinEdit_SetIncrement(Obj: Pointer; Value: Double); NO_VCL_CALL;
+procedure TCustomFloatSpinEdit_SetIncrement(Obj: Pointer; Value: Double); BETH_CALL;
 begin
   try
     TCustomFloatSpinEdit(Obj).Increment := Value;
@@ -2708,7 +2708,7 @@ begin
   end;
 end;
 
-function TCustomFloatSpinEdit_GetDecimalPlaces(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomFloatSpinEdit_GetDecimalPlaces(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomFloatSpinEdit(Obj).DecimalPlaces;
@@ -2718,7 +2718,7 @@ begin
   end;
 end;
 
-procedure TCustomFloatSpinEdit_SetDecimalPlaces(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomFloatSpinEdit_SetDecimalPlaces(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomFloatSpinEdit(Obj).DecimalPlaces := Value;
@@ -2727,7 +2727,7 @@ begin
   end;
 end;
 
-function TSpinEdit_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TSpinEdit_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TSpinEdit.Create(TComponent(Owner)));
@@ -2737,7 +2737,7 @@ begin
   end;
 end;
 
-function TCustomSpinEdit_GetValue(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomSpinEdit_GetValue(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomSpinEdit(Obj).Value;
@@ -2747,7 +2747,7 @@ begin
   end;
 end;
 
-procedure TCustomSpinEdit_SetValue(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomSpinEdit_SetValue(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomSpinEdit(Obj).Value := Value;
@@ -2756,7 +2756,7 @@ begin
   end;
 end;
 
-function TCustomSpinEdit_GetMinValue(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomSpinEdit_GetMinValue(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomSpinEdit(Obj).MinValue;
@@ -2766,7 +2766,7 @@ begin
   end;
 end;
 
-procedure TCustomSpinEdit_SetMinValue(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomSpinEdit_SetMinValue(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomSpinEdit(Obj).MinValue := Value;
@@ -2775,7 +2775,7 @@ begin
   end;
 end;
 
-function TCustomSpinEdit_GetMaxValue(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomSpinEdit_GetMaxValue(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomSpinEdit(Obj).MaxValue;
@@ -2785,7 +2785,7 @@ begin
   end;
 end;
 
-procedure TCustomSpinEdit_SetMaxValue(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomSpinEdit_SetMaxValue(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomSpinEdit(Obj).MaxValue := Value;
@@ -2794,7 +2794,7 @@ begin
   end;
 end;
 
-function TCustomSpinEdit_GetIncrement(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomSpinEdit_GetIncrement(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomSpinEdit(Obj).Increment;
@@ -2804,7 +2804,7 @@ begin
   end;
 end;
 
-procedure TCustomSpinEdit_SetIncrement(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomSpinEdit_SetIncrement(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomSpinEdit(Obj).Increment := Value;
@@ -2816,7 +2816,7 @@ end;
 { TMaskEdit: EditMask は TCustomMaskEdit では protected だが、唯一の具象クラス TMaskEdit が
   published にしているため、TMaskEdit(Obj) で直接アクセスする(TUpDown と同じ形)。 }
 
-function TMaskEdit_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TMaskEdit_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TMaskEdit.Create(TComponent(Owner)));
@@ -2826,7 +2826,7 @@ begin
   end;
 end;
 
-function TMaskEdit_GetEditMask(Obj: Pointer): PChar; NO_VCL_CALL;
+function TMaskEdit_GetEditMask(Obj: Pointer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TMaskEdit(Obj).EditMask);
@@ -2836,7 +2836,7 @@ begin
   end;
 end;
 
-procedure TMaskEdit_SetEditMask(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+procedure TMaskEdit_SetEditMask(Obj: Pointer; Value: PChar); BETH_CALL;
 begin
   try
     TMaskEdit(Obj).EditMask := Value;
@@ -2849,7 +2849,7 @@ end;
   (Owner は LabeledEdit 自身。LabeledEdit と一緒に破棄される)。返すときに Watch し、C++ 側は WrapExisting でラップする
   (ADR 0017 と同じ形)。ラベルの Parent と位置は、LabeledEdit の Parent・LabelPosition・LabelSpacing に合わせて LCL が決める。 }
 
-function TLabeledEdit_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TLabeledEdit_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TLabeledEdit.Create(TComponent(Owner)));
@@ -2859,7 +2859,7 @@ begin
   end;
 end;
 
-function TCustomLabeledEdit_GetEditLabel(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomLabeledEdit_GetEditLabel(Obj: Pointer): Pointer; BETH_CALL;
 var
   L: TBoundLabel;
 begin
@@ -2875,7 +2875,7 @@ begin
   end;
 end;
 
-function TCustomLabeledEdit_GetLabelPosition(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomLabeledEdit_GetLabelPosition(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TCustomLabeledEdit(Obj).LabelPosition);
@@ -2885,7 +2885,7 @@ begin
   end;
 end;
 
-procedure TCustomLabeledEdit_SetLabelPosition(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomLabeledEdit_SetLabelPosition(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomLabeledEdit(Obj).LabelPosition := TLabelPosition(Value);
@@ -2894,7 +2894,7 @@ begin
   end;
 end;
 
-function TCustomLabeledEdit_GetLabelSpacing(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomLabeledEdit_GetLabelSpacing(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomLabeledEdit(Obj).LabelSpacing;
@@ -2904,7 +2904,7 @@ begin
   end;
 end;
 
-procedure TCustomLabeledEdit_SetLabelSpacing(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomLabeledEdit_SetLabelSpacing(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomLabeledEdit(Obj).LabelSpacing := Value;
@@ -2918,7 +2918,7 @@ end;
   独自のフィールドで再宣言して published にしているため、TTabControl(Obj) で直接アクセスする
   (TUpDown と同じ形)。TPageControl/TTabSheet(所有ページの生成・破棄)は今回見送る。 }
 
-function TTabControl_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TTabControl_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TTabControl.Create(TComponent(Owner)));
@@ -2929,7 +2929,7 @@ begin
 end;
 
 { Tabs(TStrings)。LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがあるため、ハンドルは保存せず、使うたびに取得する(docs/adr/0027)。 }
-function TTabControl_GetTabs(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TTabControl_GetTabs(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TTabControl(Obj).Tabs);
@@ -2939,7 +2939,7 @@ begin
   end;
 end;
 
-function TTabControl_GetTabIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TTabControl_GetTabIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TTabControl(Obj).TabIndex;
@@ -2949,7 +2949,7 @@ begin
   end;
 end;
 
-procedure TTabControl_SetTabIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TTabControl_SetTabIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TTabControl(Obj).TabIndex := Value;
@@ -2958,7 +2958,7 @@ begin
   end;
 end;
 
-procedure TTabControl_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TTabControl_SetOnChange(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TTabControl(Obj).OnChange := @BridgeFor(TTabControl(Obj), MethodData(TTabControl(Obj).OnChange), Cb, Data).DoClick;
@@ -2971,7 +2971,7 @@ end;
   Align=alLeft/alRight なら縦のバー、alTop/alBottom なら横のバーになる(既定は alLeft)。
   メンバはすべて TCustomSplitter の public。OnCanResize/OnCanOffset(var 引数 2 つの独自のイベント形)は今回見送る。 }
 
-function TSplitter_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TSplitter_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TSplitter.Create(TComponent(Owner)));
@@ -2981,7 +2981,7 @@ begin
   end;
 end;
 
-function TCustomSplitter_GetAutoSnap(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomSplitter_GetAutoSnap(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomSplitter(Obj).AutoSnap;
@@ -2991,7 +2991,7 @@ begin
   end;
 end;
 
-procedure TCustomSplitter_SetAutoSnap(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomSplitter_SetAutoSnap(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomSplitter(Obj).AutoSnap := Value;
@@ -3000,7 +3000,7 @@ begin
   end;
 end;
 
-function TCustomSplitter_GetBeveled(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomSplitter_GetBeveled(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomSplitter(Obj).Beveled;
@@ -3010,7 +3010,7 @@ begin
   end;
 end;
 
-procedure TCustomSplitter_SetBeveled(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomSplitter_SetBeveled(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomSplitter(Obj).Beveled := Value;
@@ -3019,7 +3019,7 @@ begin
   end;
 end;
 
-function TCustomSplitter_GetMinSize(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomSplitter_GetMinSize(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomSplitter(Obj).MinSize;
@@ -3029,7 +3029,7 @@ begin
   end;
 end;
 
-procedure TCustomSplitter_SetMinSize(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomSplitter_SetMinSize(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomSplitter(Obj).MinSize := Value;
@@ -3039,7 +3039,7 @@ begin
 end;
 
 { TAnchorKind の序数(akTop=0, akLeft, akRight, akBottom)。 }
-function TCustomSplitter_GetResizeAnchor(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomSplitter_GetResizeAnchor(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TCustomSplitter(Obj).ResizeAnchor);
@@ -3049,7 +3049,7 @@ begin
   end;
 end;
 
-procedure TCustomSplitter_SetResizeAnchor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomSplitter_SetResizeAnchor(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomSplitter(Obj).ResizeAnchor := TAnchorKind(Value);
@@ -3059,7 +3059,7 @@ begin
 end;
 
 { TResizeStyle の序数(rsLine=0, rsNone, rsPattern, rsUpdate)。 }
-function TCustomSplitter_GetResizeStyle(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomSplitter_GetResizeStyle(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TCustomSplitter(Obj).ResizeStyle);
@@ -3069,7 +3069,7 @@ begin
   end;
 end;
 
-procedure TCustomSplitter_SetResizeStyle(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomSplitter_SetResizeStyle(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomSplitter(Obj).ResizeStyle := TResizeStyle(Value);
@@ -3078,7 +3078,7 @@ begin
   end;
 end;
 
-function TCustomSplitter_GetSplitterPosition(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomSplitter_GetSplitterPosition(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomSplitter(Obj).GetSplitterPosition;
@@ -3088,7 +3088,7 @@ begin
   end;
 end;
 
-procedure TCustomSplitter_SetSplitterPosition(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomSplitter_SetSplitterPosition(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomSplitter(Obj).SetSplitterPosition(Value);
@@ -3097,7 +3097,7 @@ begin
   end;
 end;
 
-procedure TCustomSplitter_SetOnMoved(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomSplitter_SetOnMoved(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCustomSplitter(Obj).OnMoved := @BridgeFor(TCustomSplitter(Obj), MethodData(TCustomSplitter(Obj).OnMoved), Cb, Data).DoClick;
@@ -3113,8 +3113,8 @@ end;
   (FreeNotification は同じ相手に何度呼んでも 1 回分しか登録されない)。
   これにより、C++ 側は初めて受け取ったハンドルにラッパーを後から作っても、破棄通知で寿命を合わせられる。 }
 
-{ ShortCut: Key は仮想キーコード、Shift は no_vcl_ss* のビット集合。VCL と同じ値(scShift=$2000 等)を返す。 }
-function ShortCut_Make(Key: Integer; Shift: LongWord): Integer; NO_VCL_CALL;
+{ ShortCut: Key は仮想キーコード、Shift は beth_ss* のビット集合。VCL と同じ値(scShift=$2000 等)を返す。 }
+function ShortCut_Make(Key: Integer; Shift: LongWord): Integer; BETH_CALL;
 begin
   try
     Result := Menus.ShortCut(Word(Key), IntToShiftState(Shift));
@@ -3124,7 +3124,7 @@ begin
   end;
 end;
 
-function ShortCut_FromText(Text: PChar): Integer; NO_VCL_CALL;
+function ShortCut_FromText(Text: PChar): Integer; BETH_CALL;
 begin
   try
     Result := TextToShortCut(Text);
@@ -3134,7 +3134,7 @@ begin
   end;
 end;
 
-function ShortCut_ToText(Value: Integer): PChar; NO_VCL_CALL;
+function ShortCut_ToText(Value: Integer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(ShortCutToText(TShortCut(Value)));
@@ -3146,7 +3146,7 @@ end;
 
 { TMenuItem }
 
-function TMenuItem_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TMenuItem_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TMenuItem.Create(TComponent(Owner)));
@@ -3156,7 +3156,7 @@ begin
   end;
 end;
 
-function TMenuItem_GetCaption(Obj: Pointer): PChar; NO_VCL_CALL;
+function TMenuItem_GetCaption(Obj: Pointer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TMenuItem(Obj).Caption);
@@ -3166,7 +3166,7 @@ begin
   end;
 end;
 
-procedure TMenuItem_SetCaption(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+procedure TMenuItem_SetCaption(Obj: Pointer; Value: PChar); BETH_CALL;
 begin
   try
     TMenuItem(Obj).Caption := Value;
@@ -3175,7 +3175,7 @@ begin
   end;
 end;
 
-function TMenuItem_GetChecked(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TMenuItem_GetChecked(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TMenuItem(Obj).Checked;
@@ -3185,7 +3185,7 @@ begin
   end;
 end;
 
-procedure TMenuItem_SetChecked(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TMenuItem_SetChecked(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TMenuItem(Obj).Checked := Value;
@@ -3194,7 +3194,7 @@ begin
   end;
 end;
 
-function TMenuItem_GetEnabled(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TMenuItem_GetEnabled(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TMenuItem(Obj).Enabled;
@@ -3204,7 +3204,7 @@ begin
   end;
 end;
 
-procedure TMenuItem_SetEnabled(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TMenuItem_SetEnabled(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TMenuItem(Obj).Enabled := Value;
@@ -3213,7 +3213,7 @@ begin
   end;
 end;
 
-function TMenuItem_GetVisible(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TMenuItem_GetVisible(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TMenuItem(Obj).Visible;
@@ -3223,7 +3223,7 @@ begin
   end;
 end;
 
-procedure TMenuItem_SetVisible(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TMenuItem_SetVisible(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TMenuItem(Obj).Visible := Value;
@@ -3232,7 +3232,7 @@ begin
   end;
 end;
 
-function TMenuItem_GetAutoCheck(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TMenuItem_GetAutoCheck(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TMenuItem(Obj).AutoCheck;
@@ -3242,7 +3242,7 @@ begin
   end;
 end;
 
-procedure TMenuItem_SetAutoCheck(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TMenuItem_SetAutoCheck(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TMenuItem(Obj).AutoCheck := Value;
@@ -3251,7 +3251,7 @@ begin
   end;
 end;
 
-function TMenuItem_GetRadioItem(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TMenuItem_GetRadioItem(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TMenuItem(Obj).RadioItem;
@@ -3261,7 +3261,7 @@ begin
   end;
 end;
 
-procedure TMenuItem_SetRadioItem(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TMenuItem_SetRadioItem(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TMenuItem(Obj).RadioItem := Value;
@@ -3270,7 +3270,7 @@ begin
   end;
 end;
 
-function TMenuItem_GetGroupIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TMenuItem_GetGroupIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TMenuItem(Obj).GroupIndex;
@@ -3280,7 +3280,7 @@ begin
   end;
 end;
 
-procedure TMenuItem_SetGroupIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TMenuItem_SetGroupIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TMenuItem(Obj).GroupIndex := Byte(Value);
@@ -3289,7 +3289,7 @@ begin
   end;
 end;
 
-function TMenuItem_GetDefault(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TMenuItem_GetDefault(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TMenuItem(Obj).Default;
@@ -3299,7 +3299,7 @@ begin
   end;
 end;
 
-procedure TMenuItem_SetDefault(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TMenuItem_SetDefault(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TMenuItem(Obj).Default := Value;
@@ -3308,7 +3308,7 @@ begin
   end;
 end;
 
-function TMenuItem_GetShortCut(Obj: Pointer): Integer; NO_VCL_CALL;
+function TMenuItem_GetShortCut(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TMenuItem(Obj).ShortCut;
@@ -3318,7 +3318,7 @@ begin
   end;
 end;
 
-procedure TMenuItem_SetShortCut(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TMenuItem_SetShortCut(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TMenuItem(Obj).ShortCut := TShortCut(Value);
@@ -3327,7 +3327,7 @@ begin
   end;
 end;
 
-function TMenuItem_GetHint(Obj: Pointer): PChar; NO_VCL_CALL;
+function TMenuItem_GetHint(Obj: Pointer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TMenuItem(Obj).Hint);
@@ -3337,7 +3337,7 @@ begin
   end;
 end;
 
-procedure TMenuItem_SetHint(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+procedure TMenuItem_SetHint(Obj: Pointer; Value: PChar); BETH_CALL;
 begin
   try
     TMenuItem(Obj).Hint := Value;
@@ -3346,7 +3346,7 @@ begin
   end;
 end;
 
-procedure TMenuItem_SetOnClick(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TMenuItem_SetOnClick(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TMenuItem(Obj).OnClick := @BridgeFor(TMenuItem(Obj), MethodData(TMenuItem(Obj).OnClick), Cb, Data).DoClick;
@@ -3355,7 +3355,7 @@ begin
   end;
 end;
 
-function TMenuItem_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
+function TMenuItem_GetCount(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TMenuItem(Obj).Count;
@@ -3365,7 +3365,7 @@ begin
   end;
 end;
 
-function TMenuItem_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
+function TMenuItem_GetItem(Obj: Pointer; Index: Integer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TMenuItem(Obj).Items[Index]);
@@ -3376,7 +3376,7 @@ begin
 end;
 
 { 親の TMenuItem(TMenu のルートの Items 直下の項目なら、そのルート)。どこにも追加されていなければ nil。 }
-function TMenuItem_GetParent(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TMenuItem_GetParent(Obj: Pointer): Pointer; BETH_CALL;
 var
   P: TMenuItem;
 begin
@@ -3392,7 +3392,7 @@ begin
   end;
 end;
 
-procedure TMenuItem_Add(Obj: Pointer; Item: Pointer); NO_VCL_CALL;
+procedure TMenuItem_Add(Obj: Pointer; Item: Pointer); BETH_CALL;
 begin
   try
     TMenuItem(Obj).Add(TMenuItem(Item));
@@ -3401,7 +3401,7 @@ begin
   end;
 end;
 
-procedure TMenuItem_Insert(Obj: Pointer; Index: Integer; Item: Pointer); NO_VCL_CALL;
+procedure TMenuItem_Insert(Obj: Pointer; Index: Integer; Item: Pointer); BETH_CALL;
 begin
   try
     TMenuItem(Obj).Insert(Index, TMenuItem(Item));
@@ -3412,7 +3412,7 @@ end;
 
 { Delete/Remove は子から外すだけで破棄しない(VCL と同じ。破棄は Owner に任せるか、明示的に行う)。
   Clear はすべての子を破棄する。 }
-procedure TMenuItem_Delete(Obj: Pointer; Index: Integer); NO_VCL_CALL;
+procedure TMenuItem_Delete(Obj: Pointer; Index: Integer); BETH_CALL;
 begin
   try
     TMenuItem(Obj).Delete(Index);
@@ -3421,7 +3421,7 @@ begin
   end;
 end;
 
-procedure TMenuItem_Remove(Obj: Pointer; Item: Pointer); NO_VCL_CALL;
+procedure TMenuItem_Remove(Obj: Pointer; Item: Pointer); BETH_CALL;
 begin
   try
     TMenuItem(Obj).Remove(TMenuItem(Item));
@@ -3430,7 +3430,7 @@ begin
   end;
 end;
 
-procedure TMenuItem_Clear(Obj: Pointer); NO_VCL_CALL;
+procedure TMenuItem_Clear(Obj: Pointer); BETH_CALL;
 begin
   try
     TMenuItem(Obj).Clear;
@@ -3439,7 +3439,7 @@ begin
   end;
 end;
 
-function TMenuItem_IndexOf(Obj: Pointer; Item: Pointer): Integer; NO_VCL_CALL;
+function TMenuItem_IndexOf(Obj: Pointer; Item: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TMenuItem(Obj).IndexOf(TMenuItem(Item));
@@ -3450,7 +3450,7 @@ begin
 end;
 
 { 区切り線(Caption が '-' の項目)を末尾に追加する。追加される項目は LCL が内部で生成する(Owner はこの項目)。 }
-procedure TMenuItem_AddSeparator(Obj: Pointer); NO_VCL_CALL;
+procedure TMenuItem_AddSeparator(Obj: Pointer); BETH_CALL;
 begin
   try
     TMenuItem(Obj).AddSeparator;
@@ -3459,7 +3459,7 @@ begin
   end;
 end;
 
-function TMenuItem_IsLine(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TMenuItem_IsLine(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TMenuItem(Obj).IsLine;
@@ -3470,7 +3470,7 @@ begin
 end;
 
 { 利用者が項目を選んだときと同じ処理(AutoCheck の反映と OnClick)を行う。 }
-procedure TMenuItem_Click(Obj: Pointer); NO_VCL_CALL;
+procedure TMenuItem_Click(Obj: Pointer); BETH_CALL;
 begin
   try
     TMenuItem(Obj).Click;
@@ -3481,7 +3481,7 @@ end;
 
 { TMenu / TMainMenu / TPopupMenu }
 
-function TMenu_GetItems(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TMenu_GetItems(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TMenu(Obj).Items);
@@ -3491,7 +3491,7 @@ begin
   end;
 end;
 
-function TMainMenu_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TMainMenu_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TMainMenu.Create(TComponent(Owner)));
@@ -3501,7 +3501,7 @@ begin
   end;
 end;
 
-function TPopupMenu_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TPopupMenu_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TPopupMenu.Create(TComponent(Owner)));
@@ -3512,7 +3512,7 @@ begin
 end;
 
 { X, Y はスクリーン座標。Win32 ではメニューが閉じるまで戻らない。 }
-procedure TPopupMenu_Popup(Obj: Pointer; X, Y: Integer); NO_VCL_CALL;
+procedure TPopupMenu_Popup(Obj: Pointer; X, Y: Integer); BETH_CALL;
 begin
   try
     TPopupMenu(Obj).PopUp(X, Y);
@@ -3521,7 +3521,7 @@ begin
   end;
 end;
 
-function TPopupMenu_GetAutoPopup(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TPopupMenu_GetAutoPopup(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TPopupMenu(Obj).AutoPopup;
@@ -3531,7 +3531,7 @@ begin
   end;
 end;
 
-procedure TPopupMenu_SetAutoPopup(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TPopupMenu_SetAutoPopup(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TPopupMenu(Obj).AutoPopup := Value;
@@ -3541,7 +3541,7 @@ begin
 end;
 
 { 右クリック等でメニューを開いたコントロール(OnPopup の中で、どのコントロールから開かれたかを知るのに使う)。 }
-function TPopupMenu_GetPopupComponent(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TPopupMenu_GetPopupComponent(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TPopupMenu(Obj).PopupComponent);
@@ -3551,7 +3551,7 @@ begin
   end;
 end;
 
-procedure TPopupMenu_SetPopupComponent(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TPopupMenu_SetPopupComponent(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TPopupMenu(Obj).PopupComponent := TComponent(Value);
@@ -3560,7 +3560,7 @@ begin
   end;
 end;
 
-procedure TPopupMenu_SetOnPopup(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TPopupMenu_SetOnPopup(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TPopupMenu(Obj).OnPopup := @BridgeFor(TPopupMenu(Obj), MethodData(TPopupMenu(Obj).OnPopup), Cb, Data).DoClick;
@@ -3569,7 +3569,7 @@ begin
   end;
 end;
 
-procedure TPopupMenu_SetOnClose(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TPopupMenu_SetOnClose(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TPopupMenu(Obj).OnClose := @BridgeFor(TPopupMenu(Obj), MethodData(TPopupMenu(Obj).OnClose), Cb, Data).DoClick;
@@ -3580,7 +3580,7 @@ end;
 
 { TCustomForm.Menu(public。TForm が published)と TControl.PopupMenu(public)。 }
 
-function TCustomForm_GetMenu(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomForm_GetMenu(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomForm(Obj).Menu);
@@ -3590,7 +3590,7 @@ begin
   end;
 end;
 
-procedure TCustomForm_SetMenu(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TCustomForm_SetMenu(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TCustomForm(Obj).Menu := TMainMenu(Value);
@@ -3599,7 +3599,7 @@ begin
   end;
 end;
 
-function TControl_GetPopupMenu(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TControl_GetPopupMenu(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TControl(Obj).PopupMenu);
@@ -3609,7 +3609,7 @@ begin
   end;
 end;
 
-procedure TControl_SetPopupMenu(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TControl_SetPopupMenu(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TControl(Obj).PopupMenu := TPopupMenu(Value);
@@ -3624,7 +3624,7 @@ end;
   AddTabSheet が生成するページは LCL の内部で生成される(Owner はページコントロール)ため、ページを返す関数は
   TMenu_GetItems と同じく Watch してから返す(docs/adr/0017-... を参照)。 }
 
-function TPageControl_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TPageControl_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TPageControl.Create(TComponent(Owner)));
@@ -3642,7 +3642,7 @@ begin
     Result := Watch(C);
 end;
 
-function TPageControl_GetActivePage(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TPageControl_GetActivePage(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchOrNil(TPageControl(Obj).ActivePage);
@@ -3652,7 +3652,7 @@ begin
   end;
 end;
 
-procedure TPageControl_SetActivePage(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TPageControl_SetActivePage(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TPageControl(Obj).ActivePage := TTabSheet(Value);
@@ -3661,7 +3661,7 @@ begin
   end;
 end;
 
-function TPageControl_GetActivePageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TPageControl_GetActivePageIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TPageControl(Obj).ActivePageIndex;
@@ -3671,7 +3671,7 @@ begin
   end;
 end;
 
-procedure TPageControl_SetActivePageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TPageControl_SetActivePageIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TPageControl(Obj).ActivePageIndex := Value;
@@ -3680,7 +3680,7 @@ begin
   end;
 end;
 
-function TPageControl_GetPage(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
+function TPageControl_GetPage(Obj: Pointer; Index: Integer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchOrNil(TPageControl(Obj).Pages[Index]);
@@ -3690,7 +3690,7 @@ begin
   end;
 end;
 
-function TCustomTabControl_GetPageCount(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomTabControl_GetPageCount(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomTabControl(Obj).PageCount;
@@ -3700,7 +3700,7 @@ begin
   end;
 end;
 
-function TPageControl_AddTabSheet(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TPageControl_AddTabSheet(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TPageControl(Obj).AddTabSheet);
@@ -3712,7 +3712,7 @@ end;
 
 { すべてのページを外して破棄する。LCL の TNBPages.Delete は Application.ReleaseComponent を使うため、
   破棄は遅延され、次にメッセージを処理したとき(または Owner の破棄時)に行われる。 }
-procedure TPageControl_Clear(Obj: Pointer); NO_VCL_CALL;
+procedure TPageControl_Clear(Obj: Pointer); BETH_CALL;
 begin
   try
     TPageControl(Obj).Clear;
@@ -3721,7 +3721,7 @@ begin
   end;
 end;
 
-procedure TPageControl_SelectNextPage(Obj: Pointer; GoForward: LongBool); NO_VCL_CALL;
+procedure TPageControl_SelectNextPage(Obj: Pointer; GoForward: LongBool); BETH_CALL;
 begin
   try
     TPageControl(Obj).SelectNextPage(GoForward);
@@ -3730,7 +3730,7 @@ begin
   end;
 end;
 
-function TPageControl_GetTabIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TPageControl_GetTabIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TPageControl(Obj).TabIndex;
@@ -3740,7 +3740,7 @@ begin
   end;
 end;
 
-procedure TPageControl_SetTabIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TPageControl_SetTabIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TPageControl(Obj).TabIndex := Value;
@@ -3749,7 +3749,7 @@ begin
   end;
 end;
 
-procedure TPageControl_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TPageControl_SetOnChange(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TPageControl(Obj).OnChange := @BridgeFor(TPageControl(Obj), MethodData(TPageControl(Obj).OnChange), Cb, Data).DoClick;
@@ -3759,7 +3759,7 @@ begin
 end;
 
 { OnChanging(TTabChangingEvent: Sender, var AllowChange)は OnCloseQuery と同じ形のため、同じブリッジ(DoCloseQuery)を使う。 }
-procedure TCustomTabControl_SetOnChanging(Obj: Pointer; Cb: TNoVclVarCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomTabControl_SetOnChanging(Obj: Pointer; Cb: TBethVarCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCustomTabControl(Obj).OnChanging := @VarBridgeFor(TComponent(Obj), MethodData(TCustomTabControl(Obj).OnChanging), Cb, Data).DoCloseQuery;
@@ -3768,7 +3768,7 @@ begin
   end;
 end;
 
-function TCustomTabControl_GetMultiLine(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomTabControl_GetMultiLine(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomTabControl(Obj).MultiLine;
@@ -3778,7 +3778,7 @@ begin
   end;
 end;
 
-procedure TCustomTabControl_SetMultiLine(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomTabControl_SetMultiLine(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomTabControl(Obj).MultiLine := Value;
@@ -3787,7 +3787,7 @@ begin
   end;
 end;
 
-function TCustomTabControl_GetShowTabs(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomTabControl_GetShowTabs(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomTabControl(Obj).ShowTabs;
@@ -3797,7 +3797,7 @@ begin
   end;
 end;
 
-procedure TCustomTabControl_SetShowTabs(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomTabControl_SetShowTabs(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomTabControl(Obj).ShowTabs := Value;
@@ -3807,7 +3807,7 @@ begin
 end;
 
 { TTabPosition の序数(tpTop=0, tpBottom, tpLeft, tpRight)。 }
-function TCustomTabControl_GetTabPosition(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomTabControl_GetTabPosition(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TCustomTabControl(Obj).TabPosition);
@@ -3817,7 +3817,7 @@ begin
   end;
 end;
 
-procedure TCustomTabControl_SetTabPosition(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomTabControl_SetTabPosition(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomTabControl(Obj).TabPosition := TTabPosition(Value);
@@ -3828,7 +3828,7 @@ end;
 
 { TTabSheet(TCustomPage の派生)。タブの文字列は Caption(TControl_SetCaption)。 }
 
-function TTabSheet_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TTabSheet_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TTabSheet.Create(TComponent(Owner)));
@@ -3838,7 +3838,7 @@ begin
   end;
 end;
 
-function TTabSheet_GetPageControl(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TTabSheet_GetPageControl(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TTabSheet(Obj).PageControl);
@@ -3848,7 +3848,7 @@ begin
   end;
 end;
 
-procedure TTabSheet_SetPageControl(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TTabSheet_SetPageControl(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TTabSheet(Obj).PageControl := TPageControl(Value);
@@ -3857,7 +3857,7 @@ begin
   end;
 end;
 
-function TTabSheet_GetTabIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TTabSheet_GetTabIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TTabSheet(Obj).TabIndex;
@@ -3867,7 +3867,7 @@ begin
   end;
 end;
 
-function TCustomPage_GetPageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomPage_GetPageIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomPage(Obj).PageIndex;
@@ -3877,7 +3877,7 @@ begin
   end;
 end;
 
-procedure TCustomPage_SetPageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomPage_SetPageIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomPage(Obj).PageIndex := Value;
@@ -3886,7 +3886,7 @@ begin
   end;
 end;
 
-function TCustomPage_GetTabVisible(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomPage_GetTabVisible(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomPage(Obj).TabVisible;
@@ -3896,7 +3896,7 @@ begin
   end;
 end;
 
-procedure TCustomPage_SetTabVisible(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomPage_SetTabVisible(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomPage(Obj).TabVisible := Value;
@@ -3905,7 +3905,7 @@ begin
   end;
 end;
 
-procedure TCustomPage_SetOnShow(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomPage_SetOnShow(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCustomPage(Obj).OnShow := @BridgeFor(TCustomPage(Obj), MethodData(TCustomPage(Obj).OnShow), Cb, Data).DoClick;
@@ -3914,7 +3914,7 @@ begin
   end;
 end;
 
-procedure TCustomPage_SetOnHide(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomPage_SetOnHide(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCustomPage(Obj).OnHide := @BridgeFor(TCustomPage(Obj), MethodData(TCustomPage(Obj).OnHide), Cb, Data).DoClick;
@@ -3932,11 +3932,11 @@ type
     ツリービューの OnChange/OnExpanded/OnCollapsed/OnDeletion、リストビューの OnDeletion/OnItemChecked/OnColumnClick、
     ヘッダーコントロールの OnSectionClick/OnSectionResize/OnSectionSeparatorDblClick。
     イベントの型ごとに引数の型が異なるため、メソッドを分ける(コールバックの形は同じ)。 }
-  TNoVclItemCallback = procedure(Sender: Pointer; Item: Pointer; Data: Pointer); NO_VCL_CALL;
+  TBethItemCallback = procedure(Sender: Pointer; Item: Pointer; Data: Pointer); BETH_CALL;
 
   TItemCallbackBridge = class(TComponent)
   private
-    FCallback: TNoVclItemCallback;
+    FCallback: TBethItemCallback;
     FData: Pointer;
   public
     procedure DoNode(Sender: TObject; Node: TTreeNode);
@@ -3946,11 +3946,11 @@ type
   end;
 
   { 項目と整数(または真偽値)を 1 つずつ受け取るイベント用。リストビューの OnSelectItem(Selected)・OnChange(TItemChange の序数)。 }
-  TNoVclItemIntCallback = procedure(Sender: Pointer; Item: Pointer; Value: Integer; Data: Pointer); NO_VCL_CALL;
+  TBethItemIntCallback = procedure(Sender: Pointer; Item: Pointer; Value: Integer; Data: Pointer); BETH_CALL;
 
   TItemIntCallbackBridge = class(TComponent)
   private
-    FCallback: TNoVclItemIntCallback;
+    FCallback: TBethItemIntCallback;
     FData: Pointer;
   public
     procedure DoSelectItem(Sender: TObject; Item: TListItem; Selected: Boolean);
@@ -3958,11 +3958,11 @@ type
   end;
 
   { OnChanging/OnExpanding/OnCollapsing(Sender, Node, var Allow)用。Allow は書き換え可能(0 = False)。 }
-  TNoVclItemAllowCallback = procedure(Sender: Pointer; Node: Pointer; Allow: PInteger; Data: Pointer); NO_VCL_CALL;
+  TBethItemAllowCallback = procedure(Sender: Pointer; Node: Pointer; Allow: PInteger; Data: Pointer); BETH_CALL;
 
   TItemAllowCallbackBridge = class(TComponent)
   private
-    FCallback: TNoVclItemAllowCallback;
+    FCallback: TBethItemAllowCallback;
     FData: Pointer;
   public
     procedure DoNodeAllow(Sender: TObject; Node: TTreeNode; var Allow: Boolean);
@@ -4088,7 +4088,7 @@ end;
 { BridgeFor と同じく、同じイベントに何度登録してもブリッジを再利用する。
   イベントの型(TTVChangedEvent・TTVExpandedEvent 等)は構造が同じ別名の型のため、MethodData の多重定義ではなく
   呼び出し側で TMethod(...).Data を渡す。 }
-function ItemBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclItemCallback; Data: Pointer): TItemCallbackBridge;
+function ItemBridgeFor(Owner: TComponent; Current: Pointer; Cb: TBethItemCallback; Data: Pointer): TItemCallbackBridge;
 begin
   if (Current <> nil) and (TObject(Current) is TItemCallbackBridge) and (TItemCallbackBridge(Current).Owner = Owner) then
     Result := TItemCallbackBridge(Current)
@@ -4098,7 +4098,7 @@ begin
   Result.FData := Data;
 end;
 
-function ItemAllowBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclItemAllowCallback; Data: Pointer): TItemAllowCallbackBridge;
+function ItemAllowBridgeFor(Owner: TComponent; Current: Pointer; Cb: TBethItemAllowCallback; Data: Pointer): TItemAllowCallbackBridge;
 begin
   if (Current <> nil) and (TObject(Current) is TItemAllowCallbackBridge) and (TItemAllowCallbackBridge(Current).Owner = Owner) then
     Result := TItemAllowCallbackBridge(Current)
@@ -4108,7 +4108,7 @@ begin
   Result.FData := Data;
 end;
 
-function ItemIntBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclItemIntCallback; Data: Pointer): TItemIntCallbackBridge;
+function ItemIntBridgeFor(Owner: TComponent; Current: Pointer; Cb: TBethItemIntCallback; Data: Pointer): TItemIntCallbackBridge;
 begin
   if (Current <> nil) and (TObject(Current) is TItemIntCallbackBridge) and (TItemIntCallbackBridge(Current).Owner = Owner) then
     Result := TItemIntCallbackBridge(Current)
@@ -4118,7 +4118,7 @@ begin
   Result.FData := Data;
 end;
 
-procedure ItemFree_SetCallback(Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure ItemFree_SetCallback(Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     GItemFreeCallback := Cb;
@@ -4130,7 +4130,7 @@ end;
 
 { TTreeView / TCustomTreeView }
 
-function TTreeView_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TTreeView_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TTreeView.Create(TComponent(Owner)));
@@ -4141,7 +4141,7 @@ begin
 end;
 
 { Items(TTreeNodes)はツリービューが所有する非所有のハンドル(TCanvas と同じく、ツリービューと寿命が一致する)。 }
-function TCustomTreeView_GetItems(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomTreeView_GetItems(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomTreeView(Obj).Items);
@@ -4151,7 +4151,7 @@ begin
   end;
 end;
 
-function TCustomTreeView_GetSelected(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomTreeView_GetSelected(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TCustomTreeView(Obj).Selected);
@@ -4161,7 +4161,7 @@ begin
   end;
 end;
 
-procedure TCustomTreeView_SetSelected(Obj: Pointer; Node: Pointer); NO_VCL_CALL;
+procedure TCustomTreeView_SetSelected(Obj: Pointer; Node: Pointer); BETH_CALL;
 begin
   try
     TCustomTreeView(Obj).Selected := TTreeNode(Node);
@@ -4170,7 +4170,7 @@ begin
   end;
 end;
 
-procedure TCustomTreeView_FullExpand(Obj: Pointer); NO_VCL_CALL;
+procedure TCustomTreeView_FullExpand(Obj: Pointer); BETH_CALL;
 begin
   try
     TCustomTreeView(Obj).FullExpand;
@@ -4179,7 +4179,7 @@ begin
   end;
 end;
 
-procedure TCustomTreeView_FullCollapse(Obj: Pointer); NO_VCL_CALL;
+procedure TCustomTreeView_FullCollapse(Obj: Pointer); BETH_CALL;
 begin
   try
     TCustomTreeView(Obj).FullCollapse;
@@ -4188,7 +4188,7 @@ begin
   end;
 end;
 
-function TCustomTreeView_AlphaSort(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomTreeView_AlphaSort(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomTreeView(Obj).AlphaSort;
@@ -4199,7 +4199,7 @@ begin
 end;
 
 { X, Y はツリービューのクライアント座標。そこにノードが無ければ nil。 }
-function TCustomTreeView_GetNodeAt(Obj: Pointer; X, Y: Integer): Pointer; NO_VCL_CALL;
+function TCustomTreeView_GetNodeAt(Obj: Pointer; X, Y: Integer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TCustomTreeView(Obj).GetNodeAt(X, Y));
@@ -4211,7 +4211,7 @@ end;
 
 { TCustomTreeView の protected を TTreeView が published にしているプロパティ。 }
 
-function TTreeView_GetReadOnly(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TTreeView_GetReadOnly(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TTreeView(Obj).ReadOnly;
@@ -4221,7 +4221,7 @@ begin
   end;
 end;
 
-procedure TTreeView_SetReadOnly(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TTreeView_SetReadOnly(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TTreeView(Obj).ReadOnly := Value;
@@ -4230,7 +4230,7 @@ begin
   end;
 end;
 
-function TTreeView_GetShowLines(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TTreeView_GetShowLines(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TTreeView(Obj).ShowLines;
@@ -4240,7 +4240,7 @@ begin
   end;
 end;
 
-procedure TTreeView_SetShowLines(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TTreeView_SetShowLines(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TTreeView(Obj).ShowLines := Value;
@@ -4249,7 +4249,7 @@ begin
   end;
 end;
 
-function TTreeView_GetShowRoot(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TTreeView_GetShowRoot(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TTreeView(Obj).ShowRoot;
@@ -4259,7 +4259,7 @@ begin
   end;
 end;
 
-procedure TTreeView_SetShowRoot(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TTreeView_SetShowRoot(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TTreeView(Obj).ShowRoot := Value;
@@ -4268,7 +4268,7 @@ begin
   end;
 end;
 
-function TTreeView_GetShowButtons(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TTreeView_GetShowButtons(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TTreeView(Obj).ShowButtons;
@@ -4278,7 +4278,7 @@ begin
   end;
 end;
 
-procedure TTreeView_SetShowButtons(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TTreeView_SetShowButtons(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TTreeView(Obj).ShowButtons := Value;
@@ -4287,7 +4287,7 @@ begin
   end;
 end;
 
-function TTreeView_GetAutoExpand(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TTreeView_GetAutoExpand(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TTreeView(Obj).AutoExpand;
@@ -4297,7 +4297,7 @@ begin
   end;
 end;
 
-procedure TTreeView_SetAutoExpand(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TTreeView_SetAutoExpand(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TTreeView(Obj).AutoExpand := Value;
@@ -4306,7 +4306,7 @@ begin
   end;
 end;
 
-function TTreeView_GetHideSelection(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TTreeView_GetHideSelection(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TTreeView(Obj).HideSelection;
@@ -4316,7 +4316,7 @@ begin
   end;
 end;
 
-procedure TTreeView_SetHideSelection(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TTreeView_SetHideSelection(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TTreeView(Obj).HideSelection := Value;
@@ -4325,7 +4325,7 @@ begin
   end;
 end;
 
-function TTreeView_GetRowSelect(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TTreeView_GetRowSelect(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TTreeView(Obj).RowSelect;
@@ -4335,7 +4335,7 @@ begin
   end;
 end;
 
-procedure TTreeView_SetRowSelect(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TTreeView_SetRowSelect(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TTreeView(Obj).RowSelect := Value;
@@ -4344,7 +4344,7 @@ begin
   end;
 end;
 
-procedure TTreeView_SetOnChange(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
+procedure TTreeView_SetOnChange(Obj: Pointer; Cb: TBethItemCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TTreeView(Obj).OnChange := @ItemBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnChange).Data, Cb, Data).DoNode;
@@ -4353,7 +4353,7 @@ begin
   end;
 end;
 
-procedure TTreeView_SetOnExpanded(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
+procedure TTreeView_SetOnExpanded(Obj: Pointer; Cb: TBethItemCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TTreeView(Obj).OnExpanded := @ItemBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnExpanded).Data, Cb, Data).DoNode;
@@ -4362,7 +4362,7 @@ begin
   end;
 end;
 
-procedure TTreeView_SetOnCollapsed(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
+procedure TTreeView_SetOnCollapsed(Obj: Pointer; Cb: TBethItemCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TTreeView(Obj).OnCollapsed := @ItemBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnCollapsed).Data, Cb, Data).DoNode;
@@ -4371,7 +4371,7 @@ begin
   end;
 end;
 
-procedure TTreeView_SetOnDeletion(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
+procedure TTreeView_SetOnDeletion(Obj: Pointer; Cb: TBethItemCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TTreeView(Obj).OnDeletion := @ItemBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnDeletion).Data, Cb, Data).DoNode;
@@ -4380,7 +4380,7 @@ begin
   end;
 end;
 
-procedure TTreeView_SetOnChanging(Obj: Pointer; Cb: TNoVclItemAllowCallback; Data: Pointer); NO_VCL_CALL;
+procedure TTreeView_SetOnChanging(Obj: Pointer; Cb: TBethItemAllowCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TTreeView(Obj).OnChanging := @ItemAllowBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnChanging).Data, Cb, Data).DoNodeAllow;
@@ -4389,7 +4389,7 @@ begin
   end;
 end;
 
-procedure TTreeView_SetOnExpanding(Obj: Pointer; Cb: TNoVclItemAllowCallback; Data: Pointer); NO_VCL_CALL;
+procedure TTreeView_SetOnExpanding(Obj: Pointer; Cb: TBethItemAllowCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TTreeView(Obj).OnExpanding := @ItemAllowBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnExpanding).Data, Cb, Data).DoNodeAllow;
@@ -4398,7 +4398,7 @@ begin
   end;
 end;
 
-procedure TTreeView_SetOnCollapsing(Obj: Pointer; Cb: TNoVclItemAllowCallback; Data: Pointer); NO_VCL_CALL;
+procedure TTreeView_SetOnCollapsing(Obj: Pointer; Cb: TBethItemAllowCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TTreeView(Obj).OnCollapsing := @ItemAllowBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnCollapsing).Data, Cb, Data).DoNodeAllow;
@@ -4409,7 +4409,7 @@ end;
 
 { TTreeNodes。Sibling/Parent に nil を渡すと最上位のノードになる(LCL と同じ)。 }
 
-function TTreeNodes_Add(Obj: Pointer; Sibling: Pointer; Text: PChar): Pointer; NO_VCL_CALL;
+function TTreeNodes_Add(Obj: Pointer; Sibling: Pointer; Text: PChar): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TTreeNodes(Obj).Add(TTreeNode(Sibling), Text));
@@ -4419,7 +4419,7 @@ begin
   end;
 end;
 
-function TTreeNodes_AddFirst(Obj: Pointer; Sibling: Pointer; Text: PChar): Pointer; NO_VCL_CALL;
+function TTreeNodes_AddFirst(Obj: Pointer; Sibling: Pointer; Text: PChar): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TTreeNodes(Obj).AddFirst(TTreeNode(Sibling), Text));
@@ -4429,7 +4429,7 @@ begin
   end;
 end;
 
-function TTreeNodes_AddChild(Obj: Pointer; Parent: Pointer; Text: PChar): Pointer; NO_VCL_CALL;
+function TTreeNodes_AddChild(Obj: Pointer; Parent: Pointer; Text: PChar): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TTreeNodes(Obj).AddChild(TTreeNode(Parent), Text));
@@ -4439,7 +4439,7 @@ begin
   end;
 end;
 
-function TTreeNodes_AddChildFirst(Obj: Pointer; Parent: Pointer; Text: PChar): Pointer; NO_VCL_CALL;
+function TTreeNodes_AddChildFirst(Obj: Pointer; Parent: Pointer; Text: PChar): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TTreeNodes(Obj).AddChildFirst(TTreeNode(Parent), Text));
@@ -4449,7 +4449,7 @@ begin
   end;
 end;
 
-function TTreeNodes_Insert(Obj: Pointer; NextNode: Pointer; Text: PChar): Pointer; NO_VCL_CALL;
+function TTreeNodes_Insert(Obj: Pointer; NextNode: Pointer; Text: PChar): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TTreeNodes(Obj).Insert(TTreeNode(NextNode), Text));
@@ -4459,7 +4459,7 @@ begin
   end;
 end;
 
-procedure TTreeNodes_Clear(Obj: Pointer); NO_VCL_CALL;
+procedure TTreeNodes_Clear(Obj: Pointer); BETH_CALL;
 begin
   try
     TTreeNodes(Obj).Clear;
@@ -4468,7 +4468,7 @@ begin
   end;
 end;
 
-procedure TTreeNodes_Delete(Obj: Pointer; Node: Pointer); NO_VCL_CALL;
+procedure TTreeNodes_Delete(Obj: Pointer; Node: Pointer); BETH_CALL;
 begin
   try
     TTreeNodes(Obj).Delete(TTreeNode(Node));
@@ -4478,7 +4478,7 @@ begin
 end;
 
 { すべてのノード(子孫を含む)の数。GetItem の Index は、上から順に数えた位置(AbsoluteIndex)。 }
-function TTreeNodes_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
+function TTreeNodes_GetCount(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TTreeNodes(Obj).Count;
@@ -4488,7 +4488,7 @@ begin
   end;
 end;
 
-function TTreeNodes_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
+function TTreeNodes_GetItem(Obj: Pointer; Index: Integer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TTreeNodes(Obj).Item[Index]);
@@ -4498,7 +4498,7 @@ begin
   end;
 end;
 
-function TTreeNodes_GetFirstNode(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TTreeNodes_GetFirstNode(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TTreeNodes(Obj).GetFirstNode);
@@ -4508,7 +4508,7 @@ begin
   end;
 end;
 
-function TTreeNodes_FindNodeWithText(Obj: Pointer; Text: PChar): Pointer; NO_VCL_CALL;
+function TTreeNodes_FindNodeWithText(Obj: Pointer; Text: PChar): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TTreeNodes(Obj).FindNodeWithText(Text));
@@ -4518,7 +4518,7 @@ begin
   end;
 end;
 
-procedure TTreeNodes_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
+procedure TTreeNodes_BeginUpdate(Obj: Pointer); BETH_CALL;
 begin
   try
     TTreeNodes(Obj).BeginUpdate;
@@ -4527,7 +4527,7 @@ begin
   end;
 end;
 
-procedure TTreeNodes_EndUpdate(Obj: Pointer); NO_VCL_CALL;
+procedure TTreeNodes_EndUpdate(Obj: Pointer); BETH_CALL;
 begin
   try
     TTreeNodes(Obj).EndUpdate;
@@ -4538,7 +4538,7 @@ end;
 
 { TTreeNode }
 
-function TTreeNode_GetText(Obj: Pointer): PChar; NO_VCL_CALL;
+function TTreeNode_GetText(Obj: Pointer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TTreeNode(Obj).Text);
@@ -4548,7 +4548,7 @@ begin
   end;
 end;
 
-procedure TTreeNode_SetText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+procedure TTreeNode_SetText(Obj: Pointer; Value: PChar); BETH_CALL;
 begin
   try
     TTreeNode(Obj).Text := Value;
@@ -4557,7 +4557,7 @@ begin
   end;
 end;
 
-function TTreeNode_GetExpanded(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TTreeNode_GetExpanded(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TTreeNode(Obj).Expanded;
@@ -4567,7 +4567,7 @@ begin
   end;
 end;
 
-procedure TTreeNode_SetExpanded(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TTreeNode_SetExpanded(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TTreeNode(Obj).Expanded := Value;
@@ -4576,7 +4576,7 @@ begin
   end;
 end;
 
-function TTreeNode_GetSelected(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TTreeNode_GetSelected(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TTreeNode(Obj).Selected;
@@ -4586,7 +4586,7 @@ begin
   end;
 end;
 
-procedure TTreeNode_SetSelected(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TTreeNode_SetSelected(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TTreeNode(Obj).Selected := Value;
@@ -4595,7 +4595,7 @@ begin
   end;
 end;
 
-function TTreeNode_GetHasChildren(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TTreeNode_GetHasChildren(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TTreeNode(Obj).HasChildren;
@@ -4605,7 +4605,7 @@ begin
   end;
 end;
 
-procedure TTreeNode_SetHasChildren(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TTreeNode_SetHasChildren(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TTreeNode(Obj).HasChildren := Value;
@@ -4615,7 +4615,7 @@ begin
 end;
 
 { 利用者データ(LCL は解釈しない)。 }
-function TTreeNode_GetData(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TTreeNode_GetData(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := TTreeNode(Obj).Data;
@@ -4625,7 +4625,7 @@ begin
   end;
 end;
 
-procedure TTreeNode_SetData(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TTreeNode_SetData(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TTreeNode(Obj).Data := Value;
@@ -4634,7 +4634,7 @@ begin
   end;
 end;
 
-function TTreeNode_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
+function TTreeNode_GetCount(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TTreeNode(Obj).Count;
@@ -4644,7 +4644,7 @@ begin
   end;
 end;
 
-function TTreeNode_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
+function TTreeNode_GetItem(Obj: Pointer; Index: Integer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TTreeNode(Obj).Items[Index]);
@@ -4654,7 +4654,7 @@ begin
   end;
 end;
 
-function TTreeNode_GetIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TTreeNode_GetIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TTreeNode(Obj).Index;
@@ -4664,7 +4664,7 @@ begin
   end;
 end;
 
-function TTreeNode_GetLevel(Obj: Pointer): Integer; NO_VCL_CALL;
+function TTreeNode_GetLevel(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TTreeNode(Obj).Level;
@@ -4674,7 +4674,7 @@ begin
   end;
 end;
 
-function TTreeNode_GetAbsoluteIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TTreeNode_GetAbsoluteIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TTreeNode(Obj).AbsoluteIndex;
@@ -4684,7 +4684,7 @@ begin
   end;
 end;
 
-function TTreeNode_GetParent(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TTreeNode_GetParent(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TTreeNode(Obj).Parent);
@@ -4694,7 +4694,7 @@ begin
   end;
 end;
 
-function TTreeNode_GetTreeView(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TTreeNode_GetTreeView(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TTreeNode(Obj).TreeView);
@@ -4704,7 +4704,7 @@ begin
   end;
 end;
 
-function TTreeNode_GetFirstChild(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TTreeNode_GetFirstChild(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TTreeNode(Obj).GetFirstChild);
@@ -4714,7 +4714,7 @@ begin
   end;
 end;
 
-function TTreeNode_GetLastChild(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TTreeNode_GetLastChild(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TTreeNode(Obj).GetLastChild);
@@ -4724,7 +4724,7 @@ begin
   end;
 end;
 
-function TTreeNode_GetNextSibling(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TTreeNode_GetNextSibling(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TTreeNode(Obj).GetNextSibling);
@@ -4734,7 +4734,7 @@ begin
   end;
 end;
 
-function TTreeNode_GetPrevSibling(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TTreeNode_GetPrevSibling(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TTreeNode(Obj).GetPrevSibling);
@@ -4745,7 +4745,7 @@ begin
 end;
 
 { 上から順(子孫を含む)の次/前のノード。 }
-function TTreeNode_GetNext(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TTreeNode_GetNext(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TTreeNode(Obj).GetNext);
@@ -4755,7 +4755,7 @@ begin
   end;
 end;
 
-function TTreeNode_GetPrev(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TTreeNode_GetPrev(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TTreeNode(Obj).GetPrev);
@@ -4765,7 +4765,7 @@ begin
   end;
 end;
 
-function TTreeNode_IndexOf(Obj: Pointer; Node: Pointer): Integer; NO_VCL_CALL;
+function TTreeNode_IndexOf(Obj: Pointer; Node: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TTreeNode(Obj).IndexOf(TTreeNode(Node));
@@ -4775,7 +4775,7 @@ begin
   end;
 end;
 
-procedure TTreeNode_Expand(Obj: Pointer; Recurse: LongBool); NO_VCL_CALL;
+procedure TTreeNode_Expand(Obj: Pointer; Recurse: LongBool); BETH_CALL;
 begin
   try
     TTreeNode(Obj).Expand(Recurse);
@@ -4784,7 +4784,7 @@ begin
   end;
 end;
 
-procedure TTreeNode_Collapse(Obj: Pointer; Recurse: LongBool); NO_VCL_CALL;
+procedure TTreeNode_Collapse(Obj: Pointer; Recurse: LongBool); BETH_CALL;
 begin
   try
     TTreeNode(Obj).Collapse(Recurse);
@@ -4794,7 +4794,7 @@ begin
 end;
 
 { このノード(と子孫)を削除する。削除されたノードごとに OnDeletion と破棄通知が呼ばれる。 }
-procedure TTreeNode_Delete(Obj: Pointer); NO_VCL_CALL;
+procedure TTreeNode_Delete(Obj: Pointer); BETH_CALL;
 begin
   try
     TTreeNode(Obj).Delete;
@@ -4803,7 +4803,7 @@ begin
   end;
 end;
 
-procedure TTreeNode_DeleteChildren(Obj: Pointer); NO_VCL_CALL;
+procedure TTreeNode_DeleteChildren(Obj: Pointer); BETH_CALL;
 begin
   try
     TTreeNode(Obj).DeleteChildren;
@@ -4812,7 +4812,7 @@ begin
   end;
 end;
 
-procedure TTreeNode_MakeVisible(Obj: Pointer); NO_VCL_CALL;
+procedure TTreeNode_MakeVisible(Obj: Pointer); BETH_CALL;
 begin
   try
     TTreeNode(Obj).MakeVisible;
@@ -4822,7 +4822,7 @@ begin
 end;
 
 { Mode は TNodeAttachMode の序数(naAdd=0, naAddFirst, naAddChild, naAddChildFirst, naInsert, naInsertBehind)。 }
-procedure TTreeNode_MoveTo(Obj: Pointer; Destination: Pointer; Mode: Integer); NO_VCL_CALL;
+procedure TTreeNode_MoveTo(Obj: Pointer; Destination: Pointer; Mode: Integer); BETH_CALL;
 begin
   try
     TTreeNode(Obj).MoveTo(TTreeNode(Destination), TNodeAttachMode(Mode));
@@ -4839,7 +4839,7 @@ end;
 
 { TListView / TCustomListView }
 
-function TListView_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TListView_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TListView.Create(TComponent(Owner)));
@@ -4850,7 +4850,7 @@ begin
 end;
 
 { Items(TListItems)と Columns(TListColumns)は、リストビューが所有する非所有のハンドル(リストビューと寿命が一致する)。 }
-function TCustomListView_GetItems(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomListView_GetItems(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomListView(Obj).Items);
@@ -4860,7 +4860,7 @@ begin
   end;
 end;
 
-function TCustomListView_GetSelected(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomListView_GetSelected(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TCustomListView(Obj).Selected);
@@ -4889,7 +4889,7 @@ begin
     Item.Selected := True;
 end;
 
-procedure TCustomListView_SetSelected(Obj: Pointer; Item: Pointer); NO_VCL_CALL;
+procedure TCustomListView_SetSelected(Obj: Pointer; Item: Pointer); BETH_CALL;
 begin
   try
     SelectListItem(TCustomListView(Obj), TListItem(Item));
@@ -4898,7 +4898,7 @@ begin
   end;
 end;
 
-function TCustomListView_GetItemIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomListView_GetItemIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomListView(Obj).ItemIndex;
@@ -4909,7 +4909,7 @@ begin
 end;
 
 { -1 で選択を外す。範囲外の値は無視する。 }
-procedure TCustomListView_SetItemIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomListView_SetItemIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 var
   LV: TCustomListView;
 begin
@@ -4924,7 +4924,7 @@ begin
   end;
 end;
 
-function TCustomListView_GetSelCount(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomListView_GetSelCount(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomListView(Obj).SelCount;
@@ -4934,7 +4934,7 @@ begin
   end;
 end;
 
-function TCustomListView_GetCheckboxes(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomListView_GetCheckboxes(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomListView(Obj).Checkboxes;
@@ -4944,7 +4944,7 @@ begin
   end;
 end;
 
-procedure TCustomListView_SetCheckboxes(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomListView_SetCheckboxes(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomListView(Obj).Checkboxes := Value;
@@ -4953,7 +4953,7 @@ begin
   end;
 end;
 
-function TCustomListView_GetGridLines(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomListView_GetGridLines(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomListView(Obj).GridLines;
@@ -4963,7 +4963,7 @@ begin
   end;
 end;
 
-procedure TCustomListView_SetGridLines(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomListView_SetGridLines(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomListView(Obj).GridLines := Value;
@@ -4972,7 +4972,7 @@ begin
   end;
 end;
 
-function TCustomListView_GetMultiSelect(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomListView_GetMultiSelect(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomListView(Obj).MultiSelect;
@@ -4982,7 +4982,7 @@ begin
   end;
 end;
 
-procedure TCustomListView_SetMultiSelect(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomListView_SetMultiSelect(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomListView(Obj).MultiSelect := Value;
@@ -4991,7 +4991,7 @@ begin
   end;
 end;
 
-function TCustomListView_GetReadOnly(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomListView_GetReadOnly(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomListView(Obj).ReadOnly;
@@ -5001,7 +5001,7 @@ begin
   end;
 end;
 
-procedure TCustomListView_SetReadOnly(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomListView_SetReadOnly(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomListView(Obj).ReadOnly := Value;
@@ -5010,7 +5010,7 @@ begin
   end;
 end;
 
-function TCustomListView_GetRowSelect(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomListView_GetRowSelect(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomListView(Obj).RowSelect;
@@ -5020,7 +5020,7 @@ begin
   end;
 end;
 
-procedure TCustomListView_SetRowSelect(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomListView_SetRowSelect(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomListView(Obj).RowSelect := Value;
@@ -5029,7 +5029,7 @@ begin
   end;
 end;
 
-procedure TCustomListView_Clear(Obj: Pointer); NO_VCL_CALL;
+procedure TCustomListView_Clear(Obj: Pointer); BETH_CALL;
 begin
   try
     TCustomListView(Obj).Clear;
@@ -5038,7 +5038,7 @@ begin
   end;
 end;
 
-procedure TCustomListView_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
+procedure TCustomListView_BeginUpdate(Obj: Pointer); BETH_CALL;
 begin
   try
     TCustomListView(Obj).BeginUpdate;
@@ -5047,7 +5047,7 @@ begin
   end;
 end;
 
-procedure TCustomListView_EndUpdate(Obj: Pointer); NO_VCL_CALL;
+procedure TCustomListView_EndUpdate(Obj: Pointer); BETH_CALL;
 begin
   try
     TCustomListView(Obj).EndUpdate;
@@ -5057,7 +5057,7 @@ begin
 end;
 
 { X, Y はクライアント座標。そこに項目が無ければ nil。 }
-function TCustomListView_GetItemAt(Obj: Pointer; X, Y: Integer): Pointer; NO_VCL_CALL;
+function TCustomListView_GetItemAt(Obj: Pointer; X, Y: Integer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TCustomListView(Obj).GetItemAt(X, Y));
@@ -5067,7 +5067,7 @@ begin
   end;
 end;
 
-procedure TCustomListView_ClearSelection(Obj: Pointer); NO_VCL_CALL;
+procedure TCustomListView_ClearSelection(Obj: Pointer); BETH_CALL;
 begin
   try
     TCustomListView(Obj).ClearSelection;
@@ -5076,7 +5076,7 @@ begin
   end;
 end;
 
-procedure TCustomListView_SelectAll(Obj: Pointer); NO_VCL_CALL;
+procedure TCustomListView_SelectAll(Obj: Pointer); BETH_CALL;
 begin
   try
     TCustomListView(Obj).SelectAll;
@@ -5087,7 +5087,7 @@ end;
 
 { TCustomListView の protected を TListView が published にしているメンバ。 }
 
-function TListView_GetColumns(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TListView_GetColumns(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TListView(Obj).Columns);
@@ -5098,7 +5098,7 @@ begin
 end;
 
 { TViewStyle の序数(vsIcon=0, vsSmallIcon, vsList, vsReport)。 }
-function TListView_GetViewStyle(Obj: Pointer): Integer; NO_VCL_CALL;
+function TListView_GetViewStyle(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TListView(Obj).ViewStyle);
@@ -5108,7 +5108,7 @@ begin
   end;
 end;
 
-procedure TListView_SetViewStyle(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TListView_SetViewStyle(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TListView(Obj).ViewStyle := TViewStyle(Value);
@@ -5117,7 +5117,7 @@ begin
   end;
 end;
 
-function TListView_GetHideSelection(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TListView_GetHideSelection(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TListView(Obj).HideSelection;
@@ -5127,7 +5127,7 @@ begin
   end;
 end;
 
-procedure TListView_SetHideSelection(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TListView_SetHideSelection(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TListView(Obj).HideSelection := Value;
@@ -5137,7 +5137,7 @@ begin
 end;
 
 { TSortType の序数(stNone=0, stData, stText, stBoth)。 }
-function TListView_GetSortType(Obj: Pointer): Integer; NO_VCL_CALL;
+function TListView_GetSortType(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TListView(Obj).SortType);
@@ -5147,7 +5147,7 @@ begin
   end;
 end;
 
-procedure TListView_SetSortType(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TListView_SetSortType(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TListView(Obj).SortType := TSortType(Value);
@@ -5157,7 +5157,7 @@ begin
 end;
 
 { 並べ替えに使う列の位置(0 が Caption の列)。既定の -1 のままでは、SortType を設定しても並べ替えない(LCL の Sort)。 }
-function TListView_GetSortColumn(Obj: Pointer): Integer; NO_VCL_CALL;
+function TListView_GetSortColumn(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TListView(Obj).SortColumn;
@@ -5167,7 +5167,7 @@ begin
   end;
 end;
 
-procedure TListView_SetSortColumn(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TListView_SetSortColumn(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TListView(Obj).SortColumn := Value;
@@ -5177,7 +5177,7 @@ begin
 end;
 
 { TSortDirection の序数(sdAscending=0, sdDescending)。 }
-function TListView_GetSortDirection(Obj: Pointer): Integer; NO_VCL_CALL;
+function TListView_GetSortDirection(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TListView(Obj).SortDirection);
@@ -5187,7 +5187,7 @@ begin
   end;
 end;
 
-procedure TListView_SetSortDirection(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TListView_SetSortDirection(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TListView(Obj).SortDirection := TSortDirection(Value);
@@ -5196,7 +5196,7 @@ begin
   end;
 end;
 
-procedure TListView_SetOnSelectItem(Obj: Pointer; Cb: TNoVclItemIntCallback; Data: Pointer); NO_VCL_CALL;
+procedure TListView_SetOnSelectItem(Obj: Pointer; Cb: TBethItemIntCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TListView(Obj).OnSelectItem := @ItemIntBridgeFor(TListView(Obj), TMethod(TListView(Obj).OnSelectItem).Data, Cb, Data).DoSelectItem;
@@ -5205,7 +5205,7 @@ begin
   end;
 end;
 
-procedure TListView_SetOnChange(Obj: Pointer; Cb: TNoVclItemIntCallback; Data: Pointer); NO_VCL_CALL;
+procedure TListView_SetOnChange(Obj: Pointer; Cb: TBethItemIntCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TListView(Obj).OnChange := @ItemIntBridgeFor(TListView(Obj), TMethod(TListView(Obj).OnChange).Data, Cb, Data).DoItemChange;
@@ -5214,7 +5214,7 @@ begin
   end;
 end;
 
-procedure TListView_SetOnDeletion(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
+procedure TListView_SetOnDeletion(Obj: Pointer; Cb: TBethItemCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TListView(Obj).OnDeletion := @ItemBridgeFor(TListView(Obj), TMethod(TListView(Obj).OnDeletion).Data, Cb, Data).DoListItem;
@@ -5223,7 +5223,7 @@ begin
   end;
 end;
 
-procedure TListView_SetOnItemChecked(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
+procedure TListView_SetOnItemChecked(Obj: Pointer; Cb: TBethItemCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TListView(Obj).OnItemChecked := @ItemBridgeFor(TListView(Obj), TMethod(TListView(Obj).OnItemChecked).Data, Cb, Data).DoListItem;
@@ -5232,7 +5232,7 @@ begin
   end;
 end;
 
-procedure TListView_SetOnColumnClick(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
+procedure TListView_SetOnColumnClick(Obj: Pointer; Cb: TBethItemCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TListView(Obj).OnColumnClick := @ItemBridgeFor(TListView(Obj), TMethod(TListView(Obj).OnColumnClick).Data, Cb, Data).DoColumn;
@@ -5243,7 +5243,7 @@ end;
 
 { TListItems }
 
-function TListItems_Add(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TListItems_Add(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TListItems(Obj).Add);
@@ -5253,7 +5253,7 @@ begin
   end;
 end;
 
-function TListItems_Insert(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
+function TListItems_Insert(Obj: Pointer; Index: Integer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TListItems(Obj).Insert(Index));
@@ -5263,7 +5263,7 @@ begin
   end;
 end;
 
-procedure TListItems_Delete(Obj: Pointer; Index: Integer); NO_VCL_CALL;
+procedure TListItems_Delete(Obj: Pointer; Index: Integer); BETH_CALL;
 begin
   try
     TListItems(Obj).Delete(Index);
@@ -5272,7 +5272,7 @@ begin
   end;
 end;
 
-procedure TListItems_Clear(Obj: Pointer); NO_VCL_CALL;
+procedure TListItems_Clear(Obj: Pointer); BETH_CALL;
 begin
   try
     TListItems(Obj).Clear;
@@ -5281,7 +5281,7 @@ begin
   end;
 end;
 
-function TListItems_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
+function TListItems_GetCount(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TListItems(Obj).Count;
@@ -5291,7 +5291,7 @@ begin
   end;
 end;
 
-function TListItems_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
+function TListItems_GetItem(Obj: Pointer; Index: Integer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TListItems(Obj).Item[Index]);
@@ -5301,7 +5301,7 @@ begin
   end;
 end;
 
-function TListItems_IndexOf(Obj: Pointer; Item: Pointer): Integer; NO_VCL_CALL;
+function TListItems_IndexOf(Obj: Pointer; Item: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TListItems(Obj).IndexOf(TListItem(Item));
@@ -5312,7 +5312,7 @@ begin
 end;
 
 { StartIndex の次(Inclusive なら StartIndex から)から Caption を探す。Partial なら前方一致、Wrap なら末尾から先頭へ続けて探す。 }
-function TListItems_FindCaption(Obj: Pointer; StartIndex: Integer; Value: PChar; Partial, Inclusive, Wrap: LongBool): Pointer; NO_VCL_CALL;
+function TListItems_FindCaption(Obj: Pointer; StartIndex: Integer; Value: PChar; Partial, Inclusive, Wrap: LongBool): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TListItems(Obj).FindCaption(StartIndex, Value, Partial, Inclusive, Wrap));
@@ -5322,7 +5322,7 @@ begin
   end;
 end;
 
-procedure TListItems_Exchange(Obj: Pointer; Index1, Index2: Integer); NO_VCL_CALL;
+procedure TListItems_Exchange(Obj: Pointer; Index1, Index2: Integer); BETH_CALL;
 begin
   try
     TListItems(Obj).Exchange(Index1, Index2);
@@ -5331,7 +5331,7 @@ begin
   end;
 end;
 
-procedure TListItems_Move(Obj: Pointer; FromIndex, ToIndex: Integer); NO_VCL_CALL;
+procedure TListItems_Move(Obj: Pointer; FromIndex, ToIndex: Integer); BETH_CALL;
 begin
   try
     TListItems(Obj).Move(FromIndex, ToIndex);
@@ -5340,7 +5340,7 @@ begin
   end;
 end;
 
-procedure TListItems_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
+procedure TListItems_BeginUpdate(Obj: Pointer); BETH_CALL;
 begin
   try
     TListItems(Obj).BeginUpdate;
@@ -5349,7 +5349,7 @@ begin
   end;
 end;
 
-procedure TListItems_EndUpdate(Obj: Pointer); NO_VCL_CALL;
+procedure TListItems_EndUpdate(Obj: Pointer); BETH_CALL;
 begin
   try
     TListItems(Obj).EndUpdate;
@@ -5360,7 +5360,7 @@ end;
 
 { TListItem }
 
-function TListItem_GetCaption(Obj: Pointer): PChar; NO_VCL_CALL;
+function TListItem_GetCaption(Obj: Pointer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TListItem(Obj).Caption);
@@ -5370,7 +5370,7 @@ begin
   end;
 end;
 
-procedure TListItem_SetCaption(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+procedure TListItem_SetCaption(Obj: Pointer; Value: PChar); BETH_CALL;
 begin
   try
     TListItem(Obj).Caption := Value;
@@ -5379,7 +5379,7 @@ begin
   end;
 end;
 
-function TListItem_GetChecked(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TListItem_GetChecked(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TListItem(Obj).Checked;
@@ -5389,7 +5389,7 @@ begin
   end;
 end;
 
-procedure TListItem_SetChecked(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TListItem_SetChecked(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TListItem(Obj).Checked := Value;
@@ -5398,7 +5398,7 @@ begin
   end;
 end;
 
-function TListItem_GetSelected(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TListItem_GetSelected(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TListItem(Obj).Selected;
@@ -5408,7 +5408,7 @@ begin
   end;
 end;
 
-procedure TListItem_SetSelected(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TListItem_SetSelected(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TListItem(Obj).Selected := Value;
@@ -5417,7 +5417,7 @@ begin
   end;
 end;
 
-function TListItem_GetFocused(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TListItem_GetFocused(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TListItem(Obj).Focused;
@@ -5427,7 +5427,7 @@ begin
   end;
 end;
 
-procedure TListItem_SetFocused(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TListItem_SetFocused(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TListItem(Obj).Focused := Value;
@@ -5436,7 +5436,7 @@ begin
   end;
 end;
 
-function TListItem_GetData(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TListItem_GetData(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := TListItem(Obj).Data;
@@ -5446,7 +5446,7 @@ begin
   end;
 end;
 
-procedure TListItem_SetData(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TListItem_SetData(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TListItem(Obj).Data := Value;
@@ -5455,7 +5455,7 @@ begin
   end;
 end;
 
-function TListItem_GetIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TListItem_GetIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TListItem(Obj).Index;
@@ -5465,7 +5465,7 @@ begin
   end;
 end;
 
-function TListItem_GetListView(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TListItem_GetListView(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TListItem(Obj).ListView);
@@ -5478,7 +5478,7 @@ end;
 { SubItems(2 列目以降の文字列)。 }
 
 { SubItems(TStrings)。LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがあるため、ハンドルは保存せず、使うたびに取得する(docs/adr/0027)。 }
-function TListItem_GetSubItems(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TListItem_GetSubItems(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TListItem(Obj).SubItems);
@@ -5489,7 +5489,7 @@ begin
 end;
 
 { この項目を削除する。OnDeletion と項目の破棄通知が呼ばれる。 }
-procedure TListItem_Delete(Obj: Pointer); NO_VCL_CALL;
+procedure TListItem_Delete(Obj: Pointer); BETH_CALL;
 begin
   try
     TListItem(Obj).Delete;
@@ -5498,7 +5498,7 @@ begin
   end;
 end;
 
-procedure TListItem_MakeVisible(Obj: Pointer; PartialOK: LongBool); NO_VCL_CALL;
+procedure TListItem_MakeVisible(Obj: Pointer; PartialOK: LongBool); BETH_CALL;
 begin
   try
     TListItem(Obj).MakeVisible(PartialOK);
@@ -5509,7 +5509,7 @@ end;
 
 { TListColumns / TListColumn }
 
-function TListColumns_Add(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TListColumns_Add(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TListColumns(Obj).Add);
@@ -5519,7 +5519,7 @@ begin
   end;
 end;
 
-function TListColumns_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
+function TListColumns_GetCount(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TListColumns(Obj).Count;
@@ -5529,7 +5529,7 @@ begin
   end;
 end;
 
-function TListColumns_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
+function TListColumns_GetItem(Obj: Pointer; Index: Integer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TListColumns(Obj).Items[Index]);
@@ -5539,7 +5539,7 @@ begin
   end;
 end;
 
-procedure TListColumns_Delete(Obj: Pointer; Index: Integer); NO_VCL_CALL;
+procedure TListColumns_Delete(Obj: Pointer; Index: Integer); BETH_CALL;
 begin
   try
     TListColumns(Obj).Delete(Index);
@@ -5548,7 +5548,7 @@ begin
   end;
 end;
 
-procedure TListColumns_Clear(Obj: Pointer); NO_VCL_CALL;
+procedure TListColumns_Clear(Obj: Pointer); BETH_CALL;
 begin
   try
     TListColumns(Obj).Clear;
@@ -5557,7 +5557,7 @@ begin
   end;
 end;
 
-function TListColumn_GetCaption(Obj: Pointer): PChar; NO_VCL_CALL;
+function TListColumn_GetCaption(Obj: Pointer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TListColumn(Obj).Caption);
@@ -5567,7 +5567,7 @@ begin
   end;
 end;
 
-procedure TListColumn_SetCaption(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+procedure TListColumn_SetCaption(Obj: Pointer; Value: PChar); BETH_CALL;
 begin
   try
     TListColumn(Obj).Caption := Value;
@@ -5576,7 +5576,7 @@ begin
   end;
 end;
 
-function TListColumn_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+function TListColumn_GetWidth(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TListColumn(Obj).Width;
@@ -5586,7 +5586,7 @@ begin
   end;
 end;
 
-procedure TListColumn_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TListColumn_SetWidth(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TListColumn(Obj).Width := Value;
@@ -5596,7 +5596,7 @@ begin
 end;
 
 { TAlignment の序数(taLeftJustify=0, taRightJustify, taCenter)。 }
-function TListColumn_GetAlignment(Obj: Pointer): Integer; NO_VCL_CALL;
+function TListColumn_GetAlignment(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TListColumn(Obj).Alignment);
@@ -5606,7 +5606,7 @@ begin
   end;
 end;
 
-procedure TListColumn_SetAlignment(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TListColumn_SetAlignment(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TListColumn(Obj).Alignment := TAlignment(Value);
@@ -5615,7 +5615,7 @@ begin
   end;
 end;
 
-function TListColumn_GetAutoSize(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TListColumn_GetAutoSize(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TListColumn(Obj).AutoSize;
@@ -5625,7 +5625,7 @@ begin
   end;
 end;
 
-procedure TListColumn_SetAutoSize(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TListColumn_SetAutoSize(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TListColumn(Obj).AutoSize := Value;
@@ -5634,7 +5634,7 @@ begin
   end;
 end;
 
-function TListColumn_GetVisible(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TListColumn_GetVisible(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TListColumn(Obj).Visible;
@@ -5644,7 +5644,7 @@ begin
   end;
 end;
 
-procedure TListColumn_SetVisible(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TListColumn_SetVisible(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TListColumn(Obj).Visible := Value;
@@ -5654,7 +5654,7 @@ begin
 end;
 
 { 列の並び順。書き換えると列が移動する。 }
-function TListColumn_GetIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TListColumn_GetIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TListColumn(Obj).Index;
@@ -5664,7 +5664,7 @@ begin
   end;
 end;
 
-procedure TListColumn_SetIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TListColumn_SetIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TListColumn(Obj).Index := Value;
@@ -5679,11 +5679,11 @@ end;
 
 type
   { OnSelection(Sender, ACol, ARow)・OnHeaderClick(Sender, IsColumn, Index)用。整数 2 つを渡す。 }
-  TNoVclCellCallback = procedure(Sender: Pointer; A, B: Integer; Data: Pointer); NO_VCL_CALL;
+  TBethCellCallback = procedure(Sender: Pointer; A, B: Integer; Data: Pointer); BETH_CALL;
 
   TCellCallbackBridge = class(TComponent)
   private
-    FCallback: TNoVclCellCallback;
+    FCallback: TBethCellCallback;
     FData: Pointer;
   public
     procedure DoSelection(Sender: TObject; aCol, aRow: Integer);
@@ -5691,22 +5691,22 @@ type
   end;
 
   { OnSelectCell(Sender, ACol, ARow, var CanSelect)用。CanSelect は書き換え可能(0 = False)。 }
-  TNoVclCellAllowCallback = procedure(Sender: Pointer; ACol, ARow: Integer; Allow: PInteger; Data: Pointer); NO_VCL_CALL;
+  TBethCellAllowCallback = procedure(Sender: Pointer; ACol, ARow: Integer; Allow: PInteger; Data: Pointer); BETH_CALL;
 
   TCellAllowCallbackBridge = class(TComponent)
   private
-    FCallback: TNoVclCellAllowCallback;
+    FCallback: TBethCellAllowCallback;
     FData: Pointer;
   public
     procedure DoSelectCell(Sender: TObject; aCol, aRow: Integer; var CanSelect: Boolean);
   end;
 
-  { OnDrawCell(Sender, ACol, ARow, Rect, State)用。State は TGridDrawState のビット集合(no_vcl_gd*)。 }
-  TNoVclDrawCellCallback = procedure(Sender: Pointer; ACol, ARow, Left, Top, Right, Bottom: Integer; State: LongWord; Data: Pointer); NO_VCL_CALL;
+  { OnDrawCell(Sender, ACol, ARow, Rect, State)用。State は TGridDrawState のビット集合(beth_gd*)。 }
+  TBethDrawCellCallback = procedure(Sender: Pointer; ACol, ARow, Left, Top, Right, Bottom: Integer; State: LongWord; Data: Pointer); BETH_CALL;
 
   TDrawCellCallbackBridge = class(TComponent)
   private
-    FCallback: TNoVclDrawCellCallback;
+    FCallback: TBethDrawCellCallback;
     FData: Pointer;
   public
     procedure DoDrawCell(Sender: TObject; aCol, aRow: Integer; aRect: TRect; aState: TGridDrawState);
@@ -5761,7 +5761,7 @@ begin
   CheckCallbackError;
 end;
 
-function CellBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclCellCallback; Data: Pointer): TCellCallbackBridge;
+function CellBridgeFor(Owner: TComponent; Current: Pointer; Cb: TBethCellCallback; Data: Pointer): TCellCallbackBridge;
 begin
   if (Current <> nil) and (TObject(Current) is TCellCallbackBridge) and (TCellCallbackBridge(Current).Owner = Owner) then
     Result := TCellCallbackBridge(Current)
@@ -5771,7 +5771,7 @@ begin
   Result.FData := Data;
 end;
 
-function CellAllowBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclCellAllowCallback; Data: Pointer): TCellAllowCallbackBridge;
+function CellAllowBridgeFor(Owner: TComponent; Current: Pointer; Cb: TBethCellAllowCallback; Data: Pointer): TCellAllowCallbackBridge;
 begin
   if (Current <> nil) and (TObject(Current) is TCellAllowCallbackBridge) and (TCellAllowCallbackBridge(Current).Owner = Owner) then
     Result := TCellAllowCallbackBridge(Current)
@@ -5781,7 +5781,7 @@ begin
   Result.FData := Data;
 end;
 
-function DrawCellBridgeFor(Owner: TComponent; Current: Pointer; Cb: TNoVclDrawCellCallback; Data: Pointer): TDrawCellCallbackBridge;
+function DrawCellBridgeFor(Owner: TComponent; Current: Pointer; Cb: TBethDrawCellCallback; Data: Pointer): TDrawCellCallbackBridge;
 begin
   if (Current <> nil) and (TObject(Current) is TDrawCellCallbackBridge) and (TDrawCellCallbackBridge(Current).Owner = Owner) then
     Result := TDrawCellCallbackBridge(Current)
@@ -5791,7 +5791,7 @@ begin
   Result.FData := Data;
 end;
 
-{ TGridOptions(集合型)と LongWord のビット集合(no_vcl_go* と対応。ビットの位置は TGridOption の序数)の変換。 }
+{ TGridOptions(集合型)と LongWord のビット集合(beth_go* と対応。ビットの位置は TGridOption の序数)の変換。 }
 function GridOptionsToInt(const O: TGridOptions): LongWord;
 var
   I: TGridOption;
@@ -5814,7 +5814,7 @@ end;
 
 { TDrawGrid / TStringGrid }
 
-function TDrawGrid_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TDrawGrid_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TDrawGrid.Create(TComponent(Owner)));
@@ -5824,7 +5824,7 @@ begin
   end;
 end;
 
-function TStringGrid_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TStringGrid_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TStringGrid.Create(TComponent(Owner)));
@@ -5836,7 +5836,7 @@ end;
 
 { TCustomGrid の public。 }
 
-procedure TCustomGrid_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
+procedure TCustomGrid_BeginUpdate(Obj: Pointer); BETH_CALL;
 begin
   try
     TCustomGrid(Obj).BeginUpdate;
@@ -5845,7 +5845,7 @@ begin
   end;
 end;
 
-procedure TCustomGrid_EndUpdate(Obj: Pointer); NO_VCL_CALL;
+procedure TCustomGrid_EndUpdate(Obj: Pointer); BETH_CALL;
 begin
   try
     TCustomGrid(Obj).EndUpdate;
@@ -5855,7 +5855,7 @@ begin
 end;
 
 { すべての行・列を削除する(ColCount・RowCount が 0 になる)。セルの文字列だけを消すのは TCustomStringGrid_Clean。 }
-procedure TCustomGrid_Clear(Obj: Pointer); NO_VCL_CALL;
+procedure TCustomGrid_Clear(Obj: Pointer); BETH_CALL;
 begin
   try
     TCustomGrid(Obj).Clear;
@@ -5865,7 +5865,7 @@ begin
 end;
 
 { セルのクライアント座標での矩形。 }
-procedure TCustomGrid_CellRect(Obj: Pointer; ACol, ARow: Integer; Left, Top, Right, Bottom: PInteger); NO_VCL_CALL;
+procedure TCustomGrid_CellRect(Obj: Pointer; ACol, ARow: Integer; Left, Top, Right, Bottom: PInteger); BETH_CALL;
 var
   R: TRect;
 begin
@@ -5881,7 +5881,7 @@ begin
 end;
 
 { クライアント座標 X, Y にあるセル。セルの外なら -1。 }
-procedure TCustomGrid_MouseToCell(Obj: Pointer; X, Y: Integer; ACol, ARow: PInteger); NO_VCL_CALL;
+procedure TCustomGrid_MouseToCell(Obj: Pointer; X, Y: Integer; ACol, ARow: PInteger); BETH_CALL;
 var
   C, R: Longint;
 begin
@@ -5896,7 +5896,7 @@ end;
 
 { TCustomDrawGrid の public(LCL では TCustomGrid の protected を公開したもの)。 }
 
-function TCustomDrawGrid_GetCanvas(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomDrawGrid_GetCanvas(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomDrawGrid(Obj).Canvas);
@@ -5906,7 +5906,7 @@ begin
   end;
 end;
 
-function TCustomDrawGrid_GetColCount(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomDrawGrid_GetColCount(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomDrawGrid(Obj).ColCount;
@@ -5916,7 +5916,7 @@ begin
   end;
 end;
 
-procedure TCustomDrawGrid_SetColCount(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomDrawGrid_SetColCount(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomDrawGrid(Obj).ColCount := Value;
@@ -5925,7 +5925,7 @@ begin
   end;
 end;
 
-function TCustomDrawGrid_GetRowCount(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomDrawGrid_GetRowCount(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomDrawGrid(Obj).RowCount;
@@ -5935,7 +5935,7 @@ begin
   end;
 end;
 
-procedure TCustomDrawGrid_SetRowCount(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomDrawGrid_SetRowCount(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomDrawGrid(Obj).RowCount := Value;
@@ -5944,7 +5944,7 @@ begin
   end;
 end;
 
-function TCustomDrawGrid_GetFixedCols(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomDrawGrid_GetFixedCols(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomDrawGrid(Obj).FixedCols;
@@ -5954,7 +5954,7 @@ begin
   end;
 end;
 
-procedure TCustomDrawGrid_SetFixedCols(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomDrawGrid_SetFixedCols(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomDrawGrid(Obj).FixedCols := Value;
@@ -5963,7 +5963,7 @@ begin
   end;
 end;
 
-function TCustomDrawGrid_GetFixedRows(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomDrawGrid_GetFixedRows(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomDrawGrid(Obj).FixedRows;
@@ -5973,7 +5973,7 @@ begin
   end;
 end;
 
-procedure TCustomDrawGrid_SetFixedRows(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomDrawGrid_SetFixedRows(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomDrawGrid(Obj).FixedRows := Value;
@@ -5983,7 +5983,7 @@ begin
 end;
 
 { 現在のセル(フォーカスのあるセル)の列・行。 }
-function TCustomDrawGrid_GetCol(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomDrawGrid_GetCol(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomDrawGrid(Obj).Col;
@@ -5993,7 +5993,7 @@ begin
   end;
 end;
 
-procedure TCustomDrawGrid_SetCol(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomDrawGrid_SetCol(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomDrawGrid(Obj).Col := Value;
@@ -6002,7 +6002,7 @@ begin
   end;
 end;
 
-function TCustomDrawGrid_GetRow(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomDrawGrid_GetRow(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomDrawGrid(Obj).Row;
@@ -6012,7 +6012,7 @@ begin
   end;
 end;
 
-procedure TCustomDrawGrid_SetRow(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomDrawGrid_SetRow(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomDrawGrid(Obj).Row := Value;
@@ -6021,7 +6021,7 @@ begin
   end;
 end;
 
-function TCustomDrawGrid_GetDefaultColWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomDrawGrid_GetDefaultColWidth(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomDrawGrid(Obj).DefaultColWidth;
@@ -6031,7 +6031,7 @@ begin
   end;
 end;
 
-procedure TCustomDrawGrid_SetDefaultColWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomDrawGrid_SetDefaultColWidth(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomDrawGrid(Obj).DefaultColWidth := Value;
@@ -6040,7 +6040,7 @@ begin
   end;
 end;
 
-function TCustomDrawGrid_GetDefaultRowHeight(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomDrawGrid_GetDefaultRowHeight(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomDrawGrid(Obj).DefaultRowHeight;
@@ -6050,7 +6050,7 @@ begin
   end;
 end;
 
-procedure TCustomDrawGrid_SetDefaultRowHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomDrawGrid_SetDefaultRowHeight(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomDrawGrid(Obj).DefaultRowHeight := Value;
@@ -6059,7 +6059,7 @@ begin
   end;
 end;
 
-function TCustomDrawGrid_GetColWidths(Obj: Pointer; ACol: Integer): Integer; NO_VCL_CALL;
+function TCustomDrawGrid_GetColWidths(Obj: Pointer; ACol: Integer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomDrawGrid(Obj).ColWidths[ACol];
@@ -6069,7 +6069,7 @@ begin
   end;
 end;
 
-procedure TCustomDrawGrid_SetColWidths(Obj: Pointer; ACol, Value: Integer); NO_VCL_CALL;
+procedure TCustomDrawGrid_SetColWidths(Obj: Pointer; ACol, Value: Integer); BETH_CALL;
 begin
   try
     TCustomDrawGrid(Obj).ColWidths[ACol] := Value;
@@ -6078,7 +6078,7 @@ begin
   end;
 end;
 
-function TCustomDrawGrid_GetRowHeights(Obj: Pointer; ARow: Integer): Integer; NO_VCL_CALL;
+function TCustomDrawGrid_GetRowHeights(Obj: Pointer; ARow: Integer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomDrawGrid(Obj).RowHeights[ARow];
@@ -6088,7 +6088,7 @@ begin
   end;
 end;
 
-procedure TCustomDrawGrid_SetRowHeights(Obj: Pointer; ARow, Value: Integer); NO_VCL_CALL;
+procedure TCustomDrawGrid_SetRowHeights(Obj: Pointer; ARow, Value: Integer); BETH_CALL;
 begin
   try
     TCustomDrawGrid(Obj).RowHeights[ARow] := Value;
@@ -6097,7 +6097,7 @@ begin
   end;
 end;
 
-function TCustomDrawGrid_GetOptions(Obj: Pointer): LongWord; NO_VCL_CALL;
+function TCustomDrawGrid_GetOptions(Obj: Pointer): LongWord; BETH_CALL;
 begin
   try
     Result := GridOptionsToInt(TCustomDrawGrid(Obj).Options);
@@ -6107,7 +6107,7 @@ begin
   end;
 end;
 
-procedure TCustomDrawGrid_SetOptions(Obj: Pointer; Value: LongWord); NO_VCL_CALL;
+procedure TCustomDrawGrid_SetOptions(Obj: Pointer; Value: LongWord); BETH_CALL;
 begin
   try
     TCustomDrawGrid(Obj).Options := IntToGridOptions(Value);
@@ -6117,7 +6117,7 @@ begin
 end;
 
 { 選択範囲(Left/Right が列、Top/Bottom が行。単一のセルなら Left = Right、Top = Bottom)。 }
-procedure TCustomDrawGrid_GetSelection(Obj: Pointer; Left, Top, Right, Bottom: PInteger); NO_VCL_CALL;
+procedure TCustomDrawGrid_GetSelection(Obj: Pointer; Left, Top, Right, Bottom: PInteger); BETH_CALL;
 var
   R: TGridRect;
 begin
@@ -6132,7 +6132,7 @@ begin
   end;
 end;
 
-procedure TCustomDrawGrid_SetSelection(Obj: Pointer; Left, Top, Right, Bottom: Integer); NO_VCL_CALL;
+procedure TCustomDrawGrid_SetSelection(Obj: Pointer; Left, Top, Right, Bottom: Integer); BETH_CALL;
 var
   R: TGridRect;
 begin
@@ -6148,7 +6148,7 @@ begin
   end;
 end;
 
-function TCustomDrawGrid_GetLeftCol(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomDrawGrid_GetLeftCol(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomDrawGrid(Obj).LeftCol;
@@ -6158,7 +6158,7 @@ begin
   end;
 end;
 
-procedure TCustomDrawGrid_SetLeftCol(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomDrawGrid_SetLeftCol(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomDrawGrid(Obj).LeftCol := Value;
@@ -6167,7 +6167,7 @@ begin
   end;
 end;
 
-function TCustomDrawGrid_GetTopRow(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomDrawGrid_GetTopRow(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomDrawGrid(Obj).TopRow;
@@ -6177,7 +6177,7 @@ begin
   end;
 end;
 
-procedure TCustomDrawGrid_SetTopRow(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomDrawGrid_SetTopRow(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomDrawGrid(Obj).TopRow := Value;
@@ -6186,7 +6186,7 @@ begin
   end;
 end;
 
-function TCustomDrawGrid_GetDefaultDrawing(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomDrawGrid_GetDefaultDrawing(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomDrawGrid(Obj).DefaultDrawing;
@@ -6196,7 +6196,7 @@ begin
   end;
 end;
 
-procedure TCustomDrawGrid_SetDefaultDrawing(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomDrawGrid_SetDefaultDrawing(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomDrawGrid(Obj).DefaultDrawing := Value;
@@ -6205,7 +6205,7 @@ begin
   end;
 end;
 
-function TCustomDrawGrid_GetFixedColor(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomDrawGrid_GetFixedColor(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomDrawGrid(Obj).FixedColor;
@@ -6215,7 +6215,7 @@ begin
   end;
 end;
 
-procedure TCustomDrawGrid_SetFixedColor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomDrawGrid_SetFixedColor(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomDrawGrid(Obj).FixedColor := TColor(Value);
@@ -6224,7 +6224,7 @@ begin
   end;
 end;
 
-function TCustomDrawGrid_GetEditorMode(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomDrawGrid_GetEditorMode(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomDrawGrid(Obj).EditorMode;
@@ -6234,7 +6234,7 @@ begin
   end;
 end;
 
-procedure TCustomDrawGrid_SetEditorMode(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomDrawGrid_SetEditorMode(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomDrawGrid(Obj).EditorMode := Value;
@@ -6243,7 +6243,7 @@ begin
   end;
 end;
 
-procedure TCustomDrawGrid_InsertColRow(Obj: Pointer; IsColumn: LongBool; Index: Integer); NO_VCL_CALL;
+procedure TCustomDrawGrid_InsertColRow(Obj: Pointer; IsColumn: LongBool; Index: Integer); BETH_CALL;
 begin
   try
     TCustomDrawGrid(Obj).InsertColRow(IsColumn, Index);
@@ -6252,7 +6252,7 @@ begin
   end;
 end;
 
-procedure TCustomDrawGrid_DeleteColRow(Obj: Pointer; IsColumn: LongBool; Index: Integer); NO_VCL_CALL;
+procedure TCustomDrawGrid_DeleteColRow(Obj: Pointer; IsColumn: LongBool; Index: Integer); BETH_CALL;
 begin
   try
     TCustomDrawGrid(Obj).DeleteColRow(IsColumn, Index);
@@ -6261,7 +6261,7 @@ begin
   end;
 end;
 
-procedure TCustomDrawGrid_MoveColRow(Obj: Pointer; IsColumn: LongBool; FromIndex, ToIndex: Integer); NO_VCL_CALL;
+procedure TCustomDrawGrid_MoveColRow(Obj: Pointer; IsColumn: LongBool; FromIndex, ToIndex: Integer); BETH_CALL;
 begin
   try
     TCustomDrawGrid(Obj).MoveColRow(IsColumn, FromIndex, ToIndex);
@@ -6271,7 +6271,7 @@ begin
 end;
 
 { IsColumn が True なら、列 Index の値で行を並べ替える(固定行は除く)。False なら行 Index の値で列を並べ替える。 }
-procedure TCustomDrawGrid_SortColRow(Obj: Pointer; IsColumn: LongBool; Index: Integer); NO_VCL_CALL;
+procedure TCustomDrawGrid_SortColRow(Obj: Pointer; IsColumn: LongBool; Index: Integer); BETH_CALL;
 begin
   try
     TCustomDrawGrid(Obj).SortColRow(IsColumn, Index);
@@ -6280,7 +6280,7 @@ begin
   end;
 end;
 
-procedure TCustomDrawGrid_SetOnDrawCell(Obj: Pointer; Cb: TNoVclDrawCellCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomDrawGrid_SetOnDrawCell(Obj: Pointer; Cb: TBethDrawCellCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCustomDrawGrid(Obj).OnDrawCell := @DrawCellBridgeFor(TCustomDrawGrid(Obj), TMethod(TCustomDrawGrid(Obj).OnDrawCell).Data, Cb, Data).DoDrawCell;
@@ -6289,7 +6289,7 @@ begin
   end;
 end;
 
-procedure TCustomDrawGrid_SetOnSelectCell(Obj: Pointer; Cb: TNoVclCellAllowCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomDrawGrid_SetOnSelectCell(Obj: Pointer; Cb: TBethCellAllowCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCustomDrawGrid(Obj).OnSelectCell := @CellAllowBridgeFor(TCustomDrawGrid(Obj), TMethod(TCustomDrawGrid(Obj).OnSelectCell).Data, Cb, Data).DoSelectCell;
@@ -6298,7 +6298,7 @@ begin
   end;
 end;
 
-procedure TCustomDrawGrid_SetOnSelection(Obj: Pointer; Cb: TNoVclCellCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomDrawGrid_SetOnSelection(Obj: Pointer; Cb: TBethCellCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCustomDrawGrid(Obj).OnSelection := @CellBridgeFor(TCustomDrawGrid(Obj), TMethod(TCustomDrawGrid(Obj).OnSelection).Data, Cb, Data).DoSelection;
@@ -6307,7 +6307,7 @@ begin
   end;
 end;
 
-procedure TCustomDrawGrid_SetOnHeaderClick(Obj: Pointer; Cb: TNoVclCellCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomDrawGrid_SetOnHeaderClick(Obj: Pointer; Cb: TBethCellCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCustomDrawGrid(Obj).OnHeaderClick := @CellBridgeFor(TCustomDrawGrid(Obj), TMethod(TCustomDrawGrid(Obj).OnHeaderClick).Data, Cb, Data).DoHeaderClick;
@@ -6318,7 +6318,7 @@ end;
 
 { TCustomStringGrid の public。 }
 
-function TCustomStringGrid_GetCells(Obj: Pointer; ACol, ARow: Integer): PChar; NO_VCL_CALL;
+function TCustomStringGrid_GetCells(Obj: Pointer; ACol, ARow: Integer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TCustomStringGrid(Obj).Cells[ACol, ARow]);
@@ -6328,7 +6328,7 @@ begin
   end;
 end;
 
-procedure TCustomStringGrid_SetCells(Obj: Pointer; ACol, ARow: Integer; Value: PChar); NO_VCL_CALL;
+procedure TCustomStringGrid_SetCells(Obj: Pointer; ACol, ARow: Integer; Value: PChar); BETH_CALL;
 begin
   try
     TCustomStringGrid(Obj).Cells[ACol, ARow] := Value;
@@ -6338,7 +6338,7 @@ begin
 end;
 
 { すべてのセルの文字列を消す(行・列の数は変わらない)。 }
-procedure TCustomStringGrid_Clean(Obj: Pointer); NO_VCL_CALL;
+procedure TCustomStringGrid_Clean(Obj: Pointer); BETH_CALL;
 begin
   try
     TCustomStringGrid(Obj).Clean;
@@ -6347,7 +6347,7 @@ begin
   end;
 end;
 
-procedure TCustomStringGrid_AutoSizeColumns(Obj: Pointer); NO_VCL_CALL;
+procedure TCustomStringGrid_AutoSizeColumns(Obj: Pointer); BETH_CALL;
 begin
   try
     TCustomStringGrid(Obj).AutoSizeColumns;
@@ -6356,7 +6356,7 @@ begin
   end;
 end;
 
-procedure TCustomStringGrid_AutoSizeColumn(Obj: Pointer; ACol: Integer); NO_VCL_CALL;
+procedure TCustomStringGrid_AutoSizeColumn(Obj: Pointer; ACol: Integer); BETH_CALL;
 begin
   try
     TCustomStringGrid(Obj).AutoSizeColumn(ACol);
@@ -6371,22 +6371,22 @@ end;
 
 type
   { OnSectionTrack(HeaderControl, Section, Width, State)用。State は TSectionTrackState の序数。 }
-  TNoVclSectionTrackCallback = procedure(Sender: Pointer; Section: Pointer; Width: Integer; State: Integer; Data: Pointer); NO_VCL_CALL;
+  TBethSectionTrackCallback = procedure(Sender: Pointer; Section: Pointer; Width: Integer; State: Integer; Data: Pointer); BETH_CALL;
 
   TSectionTrackCallbackBridge = class(TComponent)
   private
-    FCallback: TNoVclSectionTrackCallback;
+    FCallback: TBethSectionTrackCallback;
     FData: Pointer;
   public
     procedure DoTrack(HeaderControl: TCustomHeaderControl; Section: THeaderSection; Width: Integer; State: TSectionTrackState);
   end;
 
   { OnSectionDrag(Sender, FromSection, ToSection, var AllowDrag)用。Allow は書き換え可能(0 = False)。 }
-  TNoVclSectionDragCallback = procedure(Sender: Pointer; FromSection: Pointer; ToSection: Pointer; Allow: PInteger; Data: Pointer); NO_VCL_CALL;
+  TBethSectionDragCallback = procedure(Sender: Pointer; FromSection: Pointer; ToSection: Pointer; Allow: PInteger; Data: Pointer); BETH_CALL;
 
   TSectionDragCallbackBridge = class(TComponent)
   private
-    FCallback: TNoVclSectionDragCallback;
+    FCallback: TBethSectionDragCallback;
     FData: Pointer;
   public
     procedure DoDrag(Sender: TObject; FromSection, ToSection: THeaderSection; var AllowDrag: Boolean);
@@ -6414,7 +6414,7 @@ end;
 
 { THeaderControl / TCustomHeaderControl }
 
-function THeaderControl_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function THeaderControl_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(THeaderControl.Create(TComponent(Owner)));
@@ -6425,7 +6425,7 @@ begin
 end;
 
 { Sections(THeaderSections)は、ヘッダーコントロールが所有する非所有のハンドル(ヘッダーコントロールと寿命が一致する)。 }
-function TCustomHeaderControl_GetSections(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomHeaderControl_GetSections(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomHeaderControl(Obj).Sections);
@@ -6435,7 +6435,7 @@ begin
   end;
 end;
 
-function TCustomHeaderControl_GetDragReorder(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomHeaderControl_GetDragReorder(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomHeaderControl(Obj).DragReorder;
@@ -6445,7 +6445,7 @@ begin
   end;
 end;
 
-procedure TCustomHeaderControl_SetDragReorder(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomHeaderControl_SetDragReorder(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomHeaderControl(Obj).DragReorder := Value;
@@ -6455,7 +6455,7 @@ begin
 end;
 
 { Win32 では Windows ユニットの型名 Point(TPoint の別名)が Types.Point を隠すため、TPoint はフィールドで組み立てる。 }
-function TCustomHeaderControl_GetSectionAt(Obj: Pointer; X, Y: Integer): Integer; NO_VCL_CALL;
+function TCustomHeaderControl_GetSectionAt(Obj: Pointer; X, Y: Integer): Integer; BETH_CALL;
 var
   P: TPoint;
 begin
@@ -6469,7 +6469,7 @@ begin
   end;
 end;
 
-function TCustomHeaderControl_GetSectionFromOriginalIndex(Obj: Pointer; OriginalIndex: Integer): Pointer; NO_VCL_CALL;
+function TCustomHeaderControl_GetSectionFromOriginalIndex(Obj: Pointer; OriginalIndex: Integer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TCustomHeaderControl(Obj).SectionFromOriginalIndex[OriginalIndex]);
@@ -6479,7 +6479,7 @@ begin
   end;
 end;
 
-procedure TCustomHeaderControl_SetOnSectionClick(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomHeaderControl_SetOnSectionClick(Obj: Pointer; Cb: TBethItemCallback; Data: Pointer); BETH_CALL;
 begin
   try
     THeaderControl(Obj).OnSectionClick := @ItemBridgeFor(THeaderControl(Obj), TMethod(THeaderControl(Obj).OnSectionClick).Data, Cb, Data).DoSection;
@@ -6488,7 +6488,7 @@ begin
   end;
 end;
 
-procedure TCustomHeaderControl_SetOnSectionResize(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomHeaderControl_SetOnSectionResize(Obj: Pointer; Cb: TBethItemCallback; Data: Pointer); BETH_CALL;
 begin
   try
     THeaderControl(Obj).OnSectionResize := @ItemBridgeFor(THeaderControl(Obj), TMethod(THeaderControl(Obj).OnSectionResize).Data, Cb, Data).DoSection;
@@ -6497,7 +6497,7 @@ begin
   end;
 end;
 
-procedure TCustomHeaderControl_SetOnSectionSeparatorDblClick(Obj: Pointer; Cb: TNoVclItemCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomHeaderControl_SetOnSectionSeparatorDblClick(Obj: Pointer; Cb: TBethItemCallback; Data: Pointer); BETH_CALL;
 begin
   try
     THeaderControl(Obj).OnSectionSeparatorDblClick := @ItemBridgeFor(THeaderControl(Obj), TMethod(THeaderControl(Obj).OnSectionSeparatorDblClick).Data, Cb, Data).DoSection;
@@ -6506,7 +6506,7 @@ begin
   end;
 end;
 
-procedure TCustomHeaderControl_SetOnSectionTrack(Obj: Pointer; Cb: TNoVclSectionTrackCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomHeaderControl_SetOnSectionTrack(Obj: Pointer; Cb: TBethSectionTrackCallback; Data: Pointer); BETH_CALL;
 var
   HC: THeaderControl;
   Bridge: TSectionTrackCallbackBridge;
@@ -6526,7 +6526,7 @@ begin
   end;
 end;
 
-procedure TCustomHeaderControl_SetOnSectionDrag(Obj: Pointer; Cb: TNoVclSectionDragCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomHeaderControl_SetOnSectionDrag(Obj: Pointer; Cb: TBethSectionDragCallback; Data: Pointer); BETH_CALL;
 var
   HC: THeaderControl;
   Bridge: TSectionDragCallbackBridge;
@@ -6546,7 +6546,7 @@ begin
   end;
 end;
 
-procedure TCustomHeaderControl_SetOnSectionEndDrag(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomHeaderControl_SetOnSectionEndDrag(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     THeaderControl(Obj).OnSectionEndDrag := @BridgeFor(THeaderControl(Obj), MethodData(THeaderControl(Obj).OnSectionEndDrag), Cb, Data).DoClick;
@@ -6557,7 +6557,7 @@ end;
 
 { THeaderSections(TCollection)。セクションを返す関数は WatchItem してから返す。 }
 
-function THeaderSections_Add(Obj: Pointer): Pointer; NO_VCL_CALL;
+function THeaderSections_Add(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(THeaderSections(Obj).Add);
@@ -6567,7 +6567,7 @@ begin
   end;
 end;
 
-function THeaderSections_Insert(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
+function THeaderSections_Insert(Obj: Pointer; Index: Integer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(THeaderSections(Obj).Insert(Index));
@@ -6577,7 +6577,7 @@ begin
   end;
 end;
 
-procedure THeaderSections_Delete(Obj: Pointer; Index: Integer); NO_VCL_CALL;
+procedure THeaderSections_Delete(Obj: Pointer; Index: Integer); BETH_CALL;
 begin
   try
     THeaderSections(Obj).Delete(Index);
@@ -6586,7 +6586,7 @@ begin
   end;
 end;
 
-procedure THeaderSections_Clear(Obj: Pointer); NO_VCL_CALL;
+procedure THeaderSections_Clear(Obj: Pointer); BETH_CALL;
 begin
   try
     THeaderSections(Obj).Clear;
@@ -6595,7 +6595,7 @@ begin
   end;
 end;
 
-function THeaderSections_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
+function THeaderSections_GetCount(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := THeaderSections(Obj).Count;
@@ -6605,7 +6605,7 @@ begin
   end;
 end;
 
-function THeaderSections_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
+function THeaderSections_GetItem(Obj: Pointer; Index: Integer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(THeaderSections(Obj).Items[Index]);
@@ -6615,7 +6615,7 @@ begin
   end;
 end;
 
-procedure THeaderSections_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
+procedure THeaderSections_BeginUpdate(Obj: Pointer); BETH_CALL;
 begin
   try
     THeaderSections(Obj).BeginUpdate;
@@ -6624,7 +6624,7 @@ begin
   end;
 end;
 
-procedure THeaderSections_EndUpdate(Obj: Pointer); NO_VCL_CALL;
+procedure THeaderSections_EndUpdate(Obj: Pointer); BETH_CALL;
 begin
   try
     THeaderSections(Obj).EndUpdate;
@@ -6635,7 +6635,7 @@ end;
 
 { THeaderSection }
 
-function THeaderSection_GetText(Obj: Pointer): PChar; NO_VCL_CALL;
+function THeaderSection_GetText(Obj: Pointer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(THeaderSection(Obj).Text);
@@ -6645,7 +6645,7 @@ begin
   end;
 end;
 
-procedure THeaderSection_SetText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+procedure THeaderSection_SetText(Obj: Pointer; Value: PChar); BETH_CALL;
 begin
   try
     THeaderSection(Obj).Text := Value;
@@ -6654,7 +6654,7 @@ begin
   end;
 end;
 
-function THeaderSection_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+function THeaderSection_GetWidth(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := THeaderSection(Obj).Width;
@@ -6664,7 +6664,7 @@ begin
   end;
 end;
 
-procedure THeaderSection_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure THeaderSection_SetWidth(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     THeaderSection(Obj).Width := Value;
@@ -6673,7 +6673,7 @@ begin
   end;
 end;
 
-function THeaderSection_GetMinWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+function THeaderSection_GetMinWidth(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := THeaderSection(Obj).MinWidth;
@@ -6683,7 +6683,7 @@ begin
   end;
 end;
 
-procedure THeaderSection_SetMinWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure THeaderSection_SetMinWidth(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     THeaderSection(Obj).MinWidth := Value;
@@ -6692,7 +6692,7 @@ begin
   end;
 end;
 
-function THeaderSection_GetMaxWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+function THeaderSection_GetMaxWidth(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := THeaderSection(Obj).MaxWidth;
@@ -6702,7 +6702,7 @@ begin
   end;
 end;
 
-procedure THeaderSection_SetMaxWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure THeaderSection_SetMaxWidth(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     THeaderSection(Obj).MaxWidth := Value;
@@ -6712,7 +6712,7 @@ begin
 end;
 
 { TAlignment の序数(taLeftJustify = 0, taRightJustify, taCenter)。 }
-function THeaderSection_GetAlignment(Obj: Pointer): Integer; NO_VCL_CALL;
+function THeaderSection_GetAlignment(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(THeaderSection(Obj).Alignment);
@@ -6722,7 +6722,7 @@ begin
   end;
 end;
 
-procedure THeaderSection_SetAlignment(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure THeaderSection_SetAlignment(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     THeaderSection(Obj).Alignment := TAlignment(Value);
@@ -6731,7 +6731,7 @@ begin
   end;
 end;
 
-function THeaderSection_GetVisible(Obj: Pointer): LongBool; NO_VCL_CALL;
+function THeaderSection_GetVisible(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := THeaderSection(Obj).Visible;
@@ -6741,7 +6741,7 @@ begin
   end;
 end;
 
-procedure THeaderSection_SetVisible(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure THeaderSection_SetVisible(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     THeaderSection(Obj).Visible := Value;
@@ -6751,7 +6751,7 @@ begin
 end;
 
 { TCollectionItem.Index。書き換えるとセクションが移動する。 }
-function THeaderSection_GetIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function THeaderSection_GetIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := THeaderSection(Obj).Index;
@@ -6761,7 +6761,7 @@ begin
   end;
 end;
 
-procedure THeaderSection_SetIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure THeaderSection_SetIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     THeaderSection(Obj).Index := Value;
@@ -6770,7 +6770,7 @@ begin
   end;
 end;
 
-function THeaderSection_GetLeft(Obj: Pointer): Integer; NO_VCL_CALL;
+function THeaderSection_GetLeft(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := THeaderSection(Obj).Left;
@@ -6780,7 +6780,7 @@ begin
   end;
 end;
 
-function THeaderSection_GetRight(Obj: Pointer): Integer; NO_VCL_CALL;
+function THeaderSection_GetRight(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := THeaderSection(Obj).Right;
@@ -6790,7 +6790,7 @@ begin
   end;
 end;
 
-function THeaderSection_GetOriginalIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function THeaderSection_GetOriginalIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := THeaderSection(Obj).OriginalIndex;
@@ -6806,7 +6806,7 @@ end;
 
 { TToolWindow。EdgeBorders は TEdgeBorder の序数をビットの位置とするビット集合(ebLeft = 1, ebTop = 2, ...)。 }
 
-function TToolWindow_GetEdgeBorders(Obj: Pointer): LongWord; NO_VCL_CALL;
+function TToolWindow_GetEdgeBorders(Obj: Pointer): LongWord; BETH_CALL;
 var
   B: TEdgeBorder;
 begin
@@ -6821,7 +6821,7 @@ begin
   end;
 end;
 
-procedure TToolWindow_SetEdgeBorders(Obj: Pointer; Value: LongWord); NO_VCL_CALL;
+procedure TToolWindow_SetEdgeBorders(Obj: Pointer; Value: LongWord); BETH_CALL;
 var
   B: TEdgeBorder;
   S: TEdgeBorders;
@@ -6838,7 +6838,7 @@ begin
 end;
 
 { TEdgeStyle の序数(esNone = 0, esRaised, esLowered)。 }
-function TToolWindow_GetEdgeInner(Obj: Pointer): Integer; NO_VCL_CALL;
+function TToolWindow_GetEdgeInner(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TToolWindow(Obj).EdgeInner);
@@ -6848,7 +6848,7 @@ begin
   end;
 end;
 
-procedure TToolWindow_SetEdgeInner(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TToolWindow_SetEdgeInner(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TToolWindow(Obj).EdgeInner := TEdgeStyle(Value);
@@ -6857,7 +6857,7 @@ begin
   end;
 end;
 
-function TToolWindow_GetEdgeOuter(Obj: Pointer): Integer; NO_VCL_CALL;
+function TToolWindow_GetEdgeOuter(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TToolWindow(Obj).EdgeOuter);
@@ -6867,7 +6867,7 @@ begin
   end;
 end;
 
-procedure TToolWindow_SetEdgeOuter(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TToolWindow_SetEdgeOuter(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TToolWindow(Obj).EdgeOuter := TEdgeStyle(Value);
@@ -6876,7 +6876,7 @@ begin
   end;
 end;
 
-procedure TToolWindow_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
+procedure TToolWindow_BeginUpdate(Obj: Pointer); BETH_CALL;
 begin
   try
     TToolWindow(Obj).BeginUpdate;
@@ -6885,7 +6885,7 @@ begin
   end;
 end;
 
-procedure TToolWindow_EndUpdate(Obj: Pointer); NO_VCL_CALL;
+procedure TToolWindow_EndUpdate(Obj: Pointer); BETH_CALL;
 begin
   try
     TToolWindow(Obj).EndUpdate;
@@ -6896,7 +6896,7 @@ end;
 
 { TToolBar }
 
-function TToolBar_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TToolBar_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TToolBar.Create(TComponent(Owner)));
@@ -6906,7 +6906,7 @@ begin
   end;
 end;
 
-function TToolBar_GetButtonCount(Obj: Pointer): Integer; NO_VCL_CALL;
+function TToolBar_GetButtonCount(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TToolBar(Obj).ButtonCount;
@@ -6916,7 +6916,7 @@ begin
   end;
 end;
 
-function TToolBar_GetButton(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
+function TToolBar_GetButton(Obj: Pointer; Index: Integer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchOrNil(TToolBar(Obj).Buttons[Index]);
@@ -6926,7 +6926,7 @@ begin
   end;
 end;
 
-function TToolBar_GetRowCount(Obj: Pointer): Integer; NO_VCL_CALL;
+function TToolBar_GetRowCount(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TToolBar(Obj).RowCount;
@@ -6936,7 +6936,7 @@ begin
   end;
 end;
 
-function TToolBar_GetButtonHeight(Obj: Pointer): Integer; NO_VCL_CALL;
+function TToolBar_GetButtonHeight(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TToolBar(Obj).ButtonHeight;
@@ -6946,7 +6946,7 @@ begin
   end;
 end;
 
-procedure TToolBar_SetButtonHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TToolBar_SetButtonHeight(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TToolBar(Obj).ButtonHeight := Value;
@@ -6955,7 +6955,7 @@ begin
   end;
 end;
 
-function TToolBar_GetButtonWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+function TToolBar_GetButtonWidth(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TToolBar(Obj).ButtonWidth;
@@ -6965,7 +6965,7 @@ begin
   end;
 end;
 
-procedure TToolBar_SetButtonWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TToolBar_SetButtonWidth(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TToolBar(Obj).ButtonWidth := Value;
@@ -6974,7 +6974,7 @@ begin
   end;
 end;
 
-function TToolBar_GetDropDownWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+function TToolBar_GetDropDownWidth(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TToolBar(Obj).DropDownWidth;
@@ -6984,7 +6984,7 @@ begin
   end;
 end;
 
-procedure TToolBar_SetDropDownWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TToolBar_SetDropDownWidth(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TToolBar(Obj).DropDownWidth := Value;
@@ -6993,7 +6993,7 @@ begin
   end;
 end;
 
-function TToolBar_GetIndent(Obj: Pointer): Integer; NO_VCL_CALL;
+function TToolBar_GetIndent(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TToolBar(Obj).Indent;
@@ -7003,7 +7003,7 @@ begin
   end;
 end;
 
-procedure TToolBar_SetIndent(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TToolBar_SetIndent(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TToolBar(Obj).Indent := Value;
@@ -7012,7 +7012,7 @@ begin
   end;
 end;
 
-function TToolBar_GetFlat(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TToolBar_GetFlat(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TToolBar(Obj).Flat;
@@ -7022,7 +7022,7 @@ begin
   end;
 end;
 
-procedure TToolBar_SetFlat(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TToolBar_SetFlat(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TToolBar(Obj).Flat := Value;
@@ -7031,7 +7031,7 @@ begin
   end;
 end;
 
-function TToolBar_GetList(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TToolBar_GetList(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TToolBar(Obj).List;
@@ -7041,7 +7041,7 @@ begin
   end;
 end;
 
-procedure TToolBar_SetList(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TToolBar_SetList(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TToolBar(Obj).List := Value;
@@ -7050,7 +7050,7 @@ begin
   end;
 end;
 
-function TToolBar_GetShowCaptions(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TToolBar_GetShowCaptions(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TToolBar(Obj).ShowCaptions;
@@ -7060,7 +7060,7 @@ begin
   end;
 end;
 
-procedure TToolBar_SetShowCaptions(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TToolBar_SetShowCaptions(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TToolBar(Obj).ShowCaptions := Value;
@@ -7069,7 +7069,7 @@ begin
   end;
 end;
 
-function TToolBar_GetTransparent(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TToolBar_GetTransparent(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TToolBar(Obj).Transparent;
@@ -7079,7 +7079,7 @@ begin
   end;
 end;
 
-procedure TToolBar_SetTransparent(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TToolBar_SetTransparent(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TToolBar(Obj).Transparent := Value;
@@ -7088,7 +7088,7 @@ begin
   end;
 end;
 
-function TToolBar_GetWrapable(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TToolBar_GetWrapable(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TToolBar(Obj).Wrapable;
@@ -7098,7 +7098,7 @@ begin
   end;
 end;
 
-procedure TToolBar_SetWrapable(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TToolBar_SetWrapable(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TToolBar(Obj).Wrapable := Value;
@@ -7107,7 +7107,7 @@ begin
   end;
 end;
 
-procedure TToolBar_SetButtonSize(Obj: Pointer; NewButtonWidth, NewButtonHeight: Integer); NO_VCL_CALL;
+procedure TToolBar_SetButtonSize(Obj: Pointer; NewButtonWidth, NewButtonHeight: Integer); BETH_CALL;
 begin
   try
     TToolBar(Obj).SetButtonSize(NewButtonWidth, NewButtonHeight);
@@ -7118,7 +7118,7 @@ end;
 
 { TToolButton }
 
-function TToolButton_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TToolButton_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TToolButton.Create(TComponent(Owner)));
@@ -7128,7 +7128,7 @@ begin
   end;
 end;
 
-function TToolButton_GetAllowAllUp(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TToolButton_GetAllowAllUp(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TToolButton(Obj).AllowAllUp;
@@ -7138,7 +7138,7 @@ begin
   end;
 end;
 
-procedure TToolButton_SetAllowAllUp(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TToolButton_SetAllowAllUp(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TToolButton(Obj).AllowAllUp := Value;
@@ -7147,7 +7147,7 @@ begin
   end;
 end;
 
-function TToolButton_GetDown(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TToolButton_GetDown(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TToolButton(Obj).Down;
@@ -7157,7 +7157,7 @@ begin
   end;
 end;
 
-procedure TToolButton_SetDown(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TToolButton_SetDown(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TToolButton(Obj).Down := Value;
@@ -7166,7 +7166,7 @@ begin
   end;
 end;
 
-function TToolButton_GetGrouped(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TToolButton_GetGrouped(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TToolButton(Obj).Grouped;
@@ -7176,7 +7176,7 @@ begin
   end;
 end;
 
-procedure TToolButton_SetGrouped(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TToolButton_SetGrouped(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TToolButton(Obj).Grouped := Value;
@@ -7185,7 +7185,7 @@ begin
   end;
 end;
 
-function TToolButton_GetIndeterminate(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TToolButton_GetIndeterminate(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TToolButton(Obj).Indeterminate;
@@ -7195,7 +7195,7 @@ begin
   end;
 end;
 
-procedure TToolButton_SetIndeterminate(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TToolButton_SetIndeterminate(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TToolButton(Obj).Indeterminate := Value;
@@ -7204,7 +7204,7 @@ begin
   end;
 end;
 
-function TToolButton_GetMarked(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TToolButton_GetMarked(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TToolButton(Obj).Marked;
@@ -7214,7 +7214,7 @@ begin
   end;
 end;
 
-procedure TToolButton_SetMarked(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TToolButton_SetMarked(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TToolButton(Obj).Marked := Value;
@@ -7223,7 +7223,7 @@ begin
   end;
 end;
 
-function TToolButton_GetShowCaption(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TToolButton_GetShowCaption(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TToolButton(Obj).ShowCaption;
@@ -7233,7 +7233,7 @@ begin
   end;
 end;
 
-procedure TToolButton_SetShowCaption(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TToolButton_SetShowCaption(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TToolButton(Obj).ShowCaption := Value;
@@ -7242,7 +7242,7 @@ begin
   end;
 end;
 
-function TToolButton_GetWrap(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TToolButton_GetWrap(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TToolButton(Obj).Wrap;
@@ -7252,7 +7252,7 @@ begin
   end;
 end;
 
-procedure TToolButton_SetWrap(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TToolButton_SetWrap(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TToolButton(Obj).Wrap := Value;
@@ -7262,7 +7262,7 @@ begin
 end;
 
 { TToolButtonStyle の序数(tbsButton = 0, tbsCheck, tbsDropDown, tbsSeparator, tbsDivider, tbsButtonDrop)。 }
-function TToolButton_GetStyle(Obj: Pointer): Integer; NO_VCL_CALL;
+function TToolButton_GetStyle(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TToolButton(Obj).Style);
@@ -7272,7 +7272,7 @@ begin
   end;
 end;
 
-procedure TToolButton_SetStyle(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TToolButton_SetStyle(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TToolButton(Obj).Style := TToolButtonStyle(Value);
@@ -7281,7 +7281,7 @@ begin
   end;
 end;
 
-function TToolButton_GetDropdownMenu(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TToolButton_GetDropdownMenu(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchOrNil(TToolButton(Obj).DropdownMenu);
@@ -7291,7 +7291,7 @@ begin
   end;
 end;
 
-procedure TToolButton_SetDropdownMenu(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TToolButton_SetDropdownMenu(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TToolButton(Obj).DropdownMenu := TPopupMenu(Value);
@@ -7300,7 +7300,7 @@ begin
   end;
 end;
 
-function TToolButton_GetMenuItem(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TToolButton_GetMenuItem(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchOrNil(TToolButton(Obj).MenuItem);
@@ -7310,7 +7310,7 @@ begin
   end;
 end;
 
-procedure TToolButton_SetMenuItem(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TToolButton_SetMenuItem(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TToolButton(Obj).MenuItem := TMenuItem(Value);
@@ -7320,7 +7320,7 @@ begin
 end;
 
 { ツールバーの中での位置(ツールバーに置かれていなければ -1)。 }
-function TToolButton_GetIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TToolButton_GetIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TToolButton(Obj).Index;
@@ -7330,7 +7330,7 @@ begin
   end;
 end;
 
-procedure TToolButton_Click(Obj: Pointer); NO_VCL_CALL;
+procedure TToolButton_Click(Obj: Pointer); BETH_CALL;
 begin
   try
     TToolButton(Obj).Click;
@@ -7339,7 +7339,7 @@ begin
   end;
 end;
 
-procedure TToolButton_ArrowClick(Obj: Pointer); NO_VCL_CALL;
+procedure TToolButton_ArrowClick(Obj: Pointer); BETH_CALL;
 begin
   try
     TToolButton(Obj).ArrowClick;
@@ -7348,7 +7348,7 @@ begin
   end;
 end;
 
-function TToolButton_PointInArrow(Obj: Pointer; X, Y: Integer): LongBool; NO_VCL_CALL;
+function TToolButton_PointInArrow(Obj: Pointer; X, Y: Integer): LongBool; BETH_CALL;
 begin
   try
     Result := TToolButton(Obj).PointInArrow(X, Y);
@@ -7358,7 +7358,7 @@ begin
   end;
 end;
 
-procedure TToolButton_SetOnArrowClick(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TToolButton_SetOnArrowClick(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TToolButton(Obj).OnArrowClick := @BridgeFor(TToolButton(Obj), MethodData(TToolButton(Obj).OnArrowClick), Cb, Data).DoClick;
@@ -7374,7 +7374,7 @@ end;
 
 { TCoolBar / TCustomCoolBar。既定の Align は alTop。 }
 
-function TCoolBar_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TCoolBar_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TCoolBar.Create(TComponent(Owner)));
@@ -7385,7 +7385,7 @@ begin
 end;
 
 { Bands(TCoolBands)は、クールバーが所有する非所有のハンドル(クールバーと寿命が一致する)。 }
-function TCustomCoolBar_GetBands(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomCoolBar_GetBands(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomCoolBar(Obj).Bands);
@@ -7395,7 +7395,7 @@ begin
   end;
 end;
 
-procedure TCustomCoolBar_AutosizeBands(Obj: Pointer); NO_VCL_CALL;
+procedure TCustomCoolBar_AutosizeBands(Obj: Pointer); BETH_CALL;
 begin
   try
     TCustomCoolBar(Obj).AutosizeBands;
@@ -7404,7 +7404,7 @@ begin
   end;
 end;
 
-procedure TCustomCoolBar_MouseToBandPos(Obj: Pointer; X, Y: Integer; ABand: PInteger; AGrabber: PInteger); NO_VCL_CALL;
+procedure TCustomCoolBar_MouseToBandPos(Obj: Pointer; X, Y: Integer; ABand: PInteger; AGrabber: PInteger); BETH_CALL;
 var
   B: Integer;
   G: Boolean;
@@ -7418,7 +7418,7 @@ begin
   end;
 end;
 
-function TCustomCoolBar_GetFixedSize(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomCoolBar_GetFixedSize(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomCoolBar(Obj).FixedSize;
@@ -7428,7 +7428,7 @@ begin
   end;
 end;
 
-procedure TCustomCoolBar_SetFixedSize(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomCoolBar_SetFixedSize(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomCoolBar(Obj).FixedSize := Value;
@@ -7437,7 +7437,7 @@ begin
   end;
 end;
 
-function TCustomCoolBar_GetFixedOrder(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomCoolBar_GetFixedOrder(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomCoolBar(Obj).FixedOrder;
@@ -7447,7 +7447,7 @@ begin
   end;
 end;
 
-procedure TCustomCoolBar_SetFixedOrder(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomCoolBar_SetFixedOrder(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomCoolBar(Obj).FixedOrder := Value;
@@ -7457,7 +7457,7 @@ begin
 end;
 
 { TGrabStyle の序数(gsSimple = 0, gsDouble, gsHorLines, gsVerLines, gsGripper, gsButton)。 }
-function TCustomCoolBar_GetGrabStyle(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomCoolBar_GetGrabStyle(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TCustomCoolBar(Obj).GrabStyle);
@@ -7467,7 +7467,7 @@ begin
   end;
 end;
 
-procedure TCustomCoolBar_SetGrabStyle(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomCoolBar_SetGrabStyle(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomCoolBar(Obj).GrabStyle := TGrabStyle(Value);
@@ -7476,7 +7476,7 @@ begin
   end;
 end;
 
-function TCustomCoolBar_GetGrabWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomCoolBar_GetGrabWidth(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomCoolBar(Obj).GrabWidth;
@@ -7486,7 +7486,7 @@ begin
   end;
 end;
 
-procedure TCustomCoolBar_SetGrabWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomCoolBar_SetGrabWidth(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomCoolBar(Obj).GrabWidth := Value;
@@ -7495,7 +7495,7 @@ begin
   end;
 end;
 
-function TCustomCoolBar_GetHorizontalSpacing(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomCoolBar_GetHorizontalSpacing(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomCoolBar(Obj).HorizontalSpacing;
@@ -7505,7 +7505,7 @@ begin
   end;
 end;
 
-procedure TCustomCoolBar_SetHorizontalSpacing(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomCoolBar_SetHorizontalSpacing(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomCoolBar(Obj).HorizontalSpacing := Value;
@@ -7514,7 +7514,7 @@ begin
   end;
 end;
 
-function TCustomCoolBar_GetVerticalSpacing(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomCoolBar_GetVerticalSpacing(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomCoolBar(Obj).VerticalSpacing;
@@ -7524,7 +7524,7 @@ begin
   end;
 end;
 
-procedure TCustomCoolBar_SetVerticalSpacing(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomCoolBar_SetVerticalSpacing(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomCoolBar(Obj).VerticalSpacing := Value;
@@ -7533,7 +7533,7 @@ begin
   end;
 end;
 
-function TCustomCoolBar_GetShowText(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomCoolBar_GetShowText(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomCoolBar(Obj).ShowText;
@@ -7543,7 +7543,7 @@ begin
   end;
 end;
 
-procedure TCustomCoolBar_SetShowText(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomCoolBar_SetShowText(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomCoolBar(Obj).ShowText := Value;
@@ -7552,7 +7552,7 @@ begin
   end;
 end;
 
-function TCustomCoolBar_GetThemed(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomCoolBar_GetThemed(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomCoolBar(Obj).Themed;
@@ -7562,7 +7562,7 @@ begin
   end;
 end;
 
-procedure TCustomCoolBar_SetThemed(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomCoolBar_SetThemed(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomCoolBar(Obj).Themed := Value;
@@ -7571,7 +7571,7 @@ begin
   end;
 end;
 
-function TCustomCoolBar_GetVertical(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomCoolBar_GetVertical(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomCoolBar(Obj).Vertical;
@@ -7581,7 +7581,7 @@ begin
   end;
 end;
 
-procedure TCustomCoolBar_SetVertical(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomCoolBar_SetVertical(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomCoolBar(Obj).Vertical := Value;
@@ -7590,7 +7590,7 @@ begin
   end;
 end;
 
-procedure TCustomCoolBar_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomCoolBar_SetOnChange(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCustomCoolBar(Obj).OnChange := @BridgeFor(TCustomCoolBar(Obj), MethodData(TCustomCoolBar(Obj).OnChange), Cb, Data).DoClick;
@@ -7601,7 +7601,7 @@ end;
 
 { TCoolBands(TCollection)。バンドを返す関数は WatchItem してから返す。 }
 
-function TCoolBands_Add(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCoolBands_Add(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TCoolBands(Obj).Add);
@@ -7611,7 +7611,7 @@ begin
   end;
 end;
 
-function TCoolBands_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCoolBands_GetCount(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCoolBands(Obj).Count;
@@ -7621,7 +7621,7 @@ begin
   end;
 end;
 
-function TCoolBands_GetItem(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
+function TCoolBands_GetItem(Obj: Pointer; Index: Integer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TCoolBands(Obj).Items[Index]);
@@ -7631,7 +7631,7 @@ begin
   end;
 end;
 
-procedure TCoolBands_Delete(Obj: Pointer; Index: Integer); NO_VCL_CALL;
+procedure TCoolBands_Delete(Obj: Pointer; Index: Integer); BETH_CALL;
 begin
   try
     TCoolBands(Obj).Delete(Index);
@@ -7640,7 +7640,7 @@ begin
   end;
 end;
 
-procedure TCoolBands_Clear(Obj: Pointer); NO_VCL_CALL;
+procedure TCoolBands_Clear(Obj: Pointer); BETH_CALL;
 begin
   try
     TCoolBands(Obj).Clear;
@@ -7649,7 +7649,7 @@ begin
   end;
 end;
 
-procedure TCoolBands_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
+procedure TCoolBands_BeginUpdate(Obj: Pointer); BETH_CALL;
 begin
   try
     TCoolBands(Obj).BeginUpdate;
@@ -7658,7 +7658,7 @@ begin
   end;
 end;
 
-procedure TCoolBands_EndUpdate(Obj: Pointer); NO_VCL_CALL;
+procedure TCoolBands_EndUpdate(Obj: Pointer); BETH_CALL;
 begin
   try
     TCoolBands(Obj).EndUpdate;
@@ -7667,7 +7667,7 @@ begin
   end;
 end;
 
-function TCoolBands_FindBand(Obj: Pointer; AControl: Pointer): Pointer; NO_VCL_CALL;
+function TCoolBands_FindBand(Obj: Pointer; AControl: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchItem(TCoolBands(Obj).FindBand(TControl(AControl)));
@@ -7677,7 +7677,7 @@ begin
   end;
 end;
 
-function TCoolBands_FindBandIndex(Obj: Pointer; AControl: Pointer): Integer; NO_VCL_CALL;
+function TCoolBands_FindBandIndex(Obj: Pointer; AControl: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCoolBands(Obj).FindBandIndex(TControl(AControl));
@@ -7689,7 +7689,7 @@ end;
 
 { TCoolBand }
 
-function TCoolBand_GetText(Obj: Pointer): PChar; NO_VCL_CALL;
+function TCoolBand_GetText(Obj: Pointer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TCoolBand(Obj).Text);
@@ -7699,7 +7699,7 @@ begin
   end;
 end;
 
-procedure TCoolBand_SetText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+procedure TCoolBand_SetText(Obj: Pointer; Value: PChar); BETH_CALL;
 begin
   try
     TCoolBand(Obj).Text := Value;
@@ -7708,7 +7708,7 @@ begin
   end;
 end;
 
-function TCoolBand_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCoolBand_GetWidth(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCoolBand(Obj).Width;
@@ -7718,7 +7718,7 @@ begin
   end;
 end;
 
-procedure TCoolBand_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCoolBand_SetWidth(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCoolBand(Obj).Width := Value;
@@ -7727,7 +7727,7 @@ begin
   end;
 end;
 
-function TCoolBand_GetMinWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCoolBand_GetMinWidth(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCoolBand(Obj).MinWidth;
@@ -7737,7 +7737,7 @@ begin
   end;
 end;
 
-procedure TCoolBand_SetMinWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCoolBand_SetMinWidth(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCoolBand(Obj).MinWidth := Value;
@@ -7746,7 +7746,7 @@ begin
   end;
 end;
 
-function TCoolBand_GetMinHeight(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCoolBand_GetMinHeight(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCoolBand(Obj).MinHeight;
@@ -7756,7 +7756,7 @@ begin
   end;
 end;
 
-procedure TCoolBand_SetMinHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCoolBand_SetMinHeight(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCoolBand(Obj).MinHeight := Value;
@@ -7765,7 +7765,7 @@ begin
   end;
 end;
 
-function TCoolBand_GetBreak(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCoolBand_GetBreak(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCoolBand(Obj).Break;
@@ -7775,7 +7775,7 @@ begin
   end;
 end;
 
-procedure TCoolBand_SetBreak(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCoolBand_SetBreak(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCoolBand(Obj).Break := Value;
@@ -7784,7 +7784,7 @@ begin
   end;
 end;
 
-function TCoolBand_GetVisible(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCoolBand_GetVisible(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCoolBand(Obj).Visible;
@@ -7794,7 +7794,7 @@ begin
   end;
 end;
 
-procedure TCoolBand_SetVisible(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCoolBand_SetVisible(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCoolBand(Obj).Visible := Value;
@@ -7803,7 +7803,7 @@ begin
   end;
 end;
 
-function TCoolBand_GetFixedSize(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCoolBand_GetFixedSize(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCoolBand(Obj).FixedSize;
@@ -7813,7 +7813,7 @@ begin
   end;
 end;
 
-procedure TCoolBand_SetFixedSize(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCoolBand_SetFixedSize(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCoolBand(Obj).FixedSize := Value;
@@ -7822,7 +7822,7 @@ begin
   end;
 end;
 
-function TCoolBand_GetFixedBackground(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCoolBand_GetFixedBackground(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCoolBand(Obj).FixedBackground;
@@ -7832,7 +7832,7 @@ begin
   end;
 end;
 
-procedure TCoolBand_SetFixedBackground(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCoolBand_SetFixedBackground(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCoolBand(Obj).FixedBackground := Value;
@@ -7841,7 +7841,7 @@ begin
   end;
 end;
 
-function TCoolBand_GetHorizontalOnly(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCoolBand_GetHorizontalOnly(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCoolBand(Obj).HorizontalOnly;
@@ -7851,7 +7851,7 @@ begin
   end;
 end;
 
-procedure TCoolBand_SetHorizontalOnly(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCoolBand_SetHorizontalOnly(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCoolBand(Obj).HorizontalOnly := Value;
@@ -7860,7 +7860,7 @@ begin
   end;
 end;
 
-function TCoolBand_GetColor(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCoolBand_GetColor(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Integer(TCoolBand(Obj).Color);
@@ -7870,7 +7870,7 @@ begin
   end;
 end;
 
-procedure TCoolBand_SetColor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCoolBand_SetColor(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCoolBand(Obj).Color := TColor(Value);
@@ -7879,7 +7879,7 @@ begin
   end;
 end;
 
-function TCoolBand_GetParentColor(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCoolBand_GetParentColor(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCoolBand(Obj).ParentColor;
@@ -7889,7 +7889,7 @@ begin
   end;
 end;
 
-procedure TCoolBand_SetParentColor(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCoolBand_SetParentColor(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCoolBand(Obj).ParentColor := Value;
@@ -7899,7 +7899,7 @@ begin
 end;
 
 { TCollectionItem.Index。書き換えるとバンドが移動する。 }
-function TCoolBand_GetIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCoolBand_GetIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCoolBand(Obj).Index;
@@ -7909,7 +7909,7 @@ begin
   end;
 end;
 
-procedure TCoolBand_SetIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCoolBand_SetIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCoolBand(Obj).Index := Value;
@@ -7919,7 +7919,7 @@ begin
 end;
 
 { バンドに置くコントロール。設定するとそのコントロールの Parent がクールバーになり、Align は alNone になる。 }
-function TCoolBand_GetControl(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCoolBand_GetControl(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := WatchOrNil(TCoolBand(Obj).Control);
@@ -7929,7 +7929,7 @@ begin
   end;
 end;
 
-procedure TCoolBand_SetControl(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TCoolBand_SetControl(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TCoolBand(Obj).Control := TControl(Value);
@@ -7938,7 +7938,7 @@ begin
   end;
 end;
 
-function TCoolBand_GetLeft(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCoolBand_GetLeft(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCoolBand(Obj).Left;
@@ -7948,7 +7948,7 @@ begin
   end;
 end;
 
-function TCoolBand_GetTop(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCoolBand_GetTop(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCoolBand(Obj).Top;
@@ -7958,7 +7958,7 @@ begin
   end;
 end;
 
-function TCoolBand_GetRight(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCoolBand_GetRight(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCoolBand(Obj).Right;
@@ -7968,7 +7968,7 @@ begin
   end;
 end;
 
-function TCoolBand_GetHeight(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCoolBand_GetHeight(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCoolBand(Obj).Height;
@@ -7978,7 +7978,7 @@ begin
   end;
 end;
 
-procedure TCoolBand_AutosizeWidth(Obj: Pointer); NO_VCL_CALL;
+procedure TCoolBand_AutosizeWidth(Obj: Pointer); BETH_CALL;
 begin
   try
     TCoolBand(Obj).AutosizeWidth;
@@ -7990,7 +7990,7 @@ end;
 { TStrings(docs/adr/0027)。ハンドルはコントロールの Items・Lines・Tabs 等(TCustomListBox_GetItems 等)から得る。
   ハンドルは所有者の持ち物で、LCL がウィンドウの生成・破棄のときに差し替えることがあるため、呼び出し側は保存しない。 }
 
-function TStrings_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
+function TStrings_GetCount(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TStrings(Obj).Count;
@@ -8000,7 +8000,7 @@ begin
   end;
 end;
 
-function TStrings_GetStrings(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
+function TStrings_GetStrings(Obj: Pointer; Index: Integer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TStrings(Obj).Strings[Index]);
@@ -8010,7 +8010,7 @@ begin
   end;
 end;
 
-procedure TStrings_SetStrings(Obj: Pointer; Index: Integer; Value: PChar); NO_VCL_CALL;
+procedure TStrings_SetStrings(Obj: Pointer; Index: Integer; Value: PChar); BETH_CALL;
 begin
   try
     TStrings(Obj).Strings[Index] := Value;
@@ -8020,7 +8020,7 @@ begin
 end;
 
 { Objects[Index] は利用者データ(C 側のポインタ)として扱う。LCL は解釈しない(TStringList は所有しない)。 }
-function TStrings_GetObjects(Obj: Pointer; Index: Integer): Pointer; NO_VCL_CALL;
+function TStrings_GetObjects(Obj: Pointer; Index: Integer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TStrings(Obj).Objects[Index]);
@@ -8030,7 +8030,7 @@ begin
   end;
 end;
 
-procedure TStrings_SetObjects(Obj: Pointer; Index: Integer; Value: Pointer); NO_VCL_CALL;
+procedure TStrings_SetObjects(Obj: Pointer; Index: Integer; Value: Pointer); BETH_CALL;
 begin
   try
     TStrings(Obj).Objects[Index] := TObject(Value);
@@ -8039,7 +8039,7 @@ begin
   end;
 end;
 
-function TStrings_Add(Obj: Pointer; S: PChar): Integer; NO_VCL_CALL;
+function TStrings_Add(Obj: Pointer; S: PChar): Integer; BETH_CALL;
 begin
   try
     Result := TStrings(Obj).Add(S);
@@ -8049,7 +8049,7 @@ begin
   end;
 end;
 
-function TStrings_AddObject(Obj: Pointer; S: PChar; AObject: Pointer): Integer; NO_VCL_CALL;
+function TStrings_AddObject(Obj: Pointer; S: PChar; AObject: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TStrings(Obj).AddObject(S, TObject(AObject));
@@ -8059,7 +8059,7 @@ begin
   end;
 end;
 
-procedure TStrings_Insert(Obj: Pointer; Index: Integer; S: PChar); NO_VCL_CALL;
+procedure TStrings_Insert(Obj: Pointer; Index: Integer; S: PChar); BETH_CALL;
 begin
   try
     TStrings(Obj).Insert(Index, S);
@@ -8068,7 +8068,7 @@ begin
   end;
 end;
 
-procedure TStrings_Delete(Obj: Pointer; Index: Integer); NO_VCL_CALL;
+procedure TStrings_Delete(Obj: Pointer; Index: Integer); BETH_CALL;
 begin
   try
     TStrings(Obj).Delete(Index);
@@ -8077,7 +8077,7 @@ begin
   end;
 end;
 
-procedure TStrings_Clear(Obj: Pointer); NO_VCL_CALL;
+procedure TStrings_Clear(Obj: Pointer); BETH_CALL;
 begin
   try
     TStrings(Obj).Clear;
@@ -8086,7 +8086,7 @@ begin
   end;
 end;
 
-function TStrings_IndexOf(Obj: Pointer; S: PChar): Integer; NO_VCL_CALL;
+function TStrings_IndexOf(Obj: Pointer; S: PChar): Integer; BETH_CALL;
 begin
   try
     Result := TStrings(Obj).IndexOf(S);
@@ -8096,7 +8096,7 @@ begin
   end;
 end;
 
-procedure TStrings_Exchange(Obj: Pointer; Index1, Index2: Integer); NO_VCL_CALL;
+procedure TStrings_Exchange(Obj: Pointer; Index1, Index2: Integer); BETH_CALL;
 begin
   try
     TStrings(Obj).Exchange(Index1, Index2);
@@ -8105,7 +8105,7 @@ begin
   end;
 end;
 
-procedure TStrings_Move(Obj: Pointer; CurIndex, NewIndex: Integer); NO_VCL_CALL;
+procedure TStrings_Move(Obj: Pointer; CurIndex, NewIndex: Integer); BETH_CALL;
 begin
   try
     TStrings(Obj).Move(CurIndex, NewIndex);
@@ -8114,7 +8114,7 @@ begin
   end;
 end;
 
-procedure TStrings_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
+procedure TStrings_BeginUpdate(Obj: Pointer); BETH_CALL;
 begin
   try
     TStrings(Obj).BeginUpdate;
@@ -8123,7 +8123,7 @@ begin
   end;
 end;
 
-procedure TStrings_EndUpdate(Obj: Pointer); NO_VCL_CALL;
+procedure TStrings_EndUpdate(Obj: Pointer); BETH_CALL;
 begin
   try
     TStrings(Obj).EndUpdate;
@@ -8133,7 +8133,7 @@ begin
 end;
 
 { すべての行を改行でつないだ文字列。設定すると改行で分けて置き換える。 }
-function TStrings_GetText(Obj: Pointer): PChar; NO_VCL_CALL;
+function TStrings_GetText(Obj: Pointer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TStrings(Obj).Text);
@@ -8143,7 +8143,7 @@ begin
   end;
 end;
 
-procedure TStrings_SetText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+procedure TStrings_SetText(Obj: Pointer; Value: PChar); BETH_CALL;
 begin
   try
     TStrings(Obj).Text := Value;
@@ -8152,7 +8152,7 @@ begin
   end;
 end;
 
-function TStrings_GetCommaText(Obj: Pointer): PChar; NO_VCL_CALL;
+function TStrings_GetCommaText(Obj: Pointer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TStrings(Obj).CommaText);
@@ -8162,7 +8162,7 @@ begin
   end;
 end;
 
-procedure TStrings_SetCommaText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+procedure TStrings_SetCommaText(Obj: Pointer; Value: PChar); BETH_CALL;
 begin
   try
     TStrings(Obj).CommaText := Value;
@@ -8171,7 +8171,7 @@ begin
   end;
 end;
 
-procedure TStrings_Assign(Obj: Pointer; Source: Pointer); NO_VCL_CALL;
+procedure TStrings_Assign(Obj: Pointer; Source: Pointer); BETH_CALL;
 begin
   try
     TStrings(Obj).Assign(TStrings(Source));
@@ -8180,7 +8180,7 @@ begin
   end;
 end;
 
-procedure TStrings_AddStrings(Obj: Pointer; Source: Pointer); NO_VCL_CALL;
+procedure TStrings_AddStrings(Obj: Pointer; Source: Pointer); BETH_CALL;
 begin
   try
     TStrings(Obj).AddStrings(TStrings(Source));
@@ -8191,7 +8191,7 @@ end;
 
 { 名前=値 の形の行(Names・Values・ValueFromIndex・IndexOfName)。区切りは LCL の既定の '='。 }
 
-function TStrings_GetNames(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
+function TStrings_GetNames(Obj: Pointer; Index: Integer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TStrings(Obj).Names[Index]);
@@ -8201,7 +8201,7 @@ begin
   end;
 end;
 
-function TStrings_GetValues(Obj: Pointer; Name: PChar): PChar; NO_VCL_CALL;
+function TStrings_GetValues(Obj: Pointer; Name: PChar): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TStrings(Obj).Values[Name]);
@@ -8211,7 +8211,7 @@ begin
   end;
 end;
 
-procedure TStrings_SetValues(Obj: Pointer; Name: PChar; Value: PChar); NO_VCL_CALL;
+procedure TStrings_SetValues(Obj: Pointer; Name: PChar; Value: PChar); BETH_CALL;
 begin
   try
     TStrings(Obj).Values[Name] := Value;
@@ -8220,7 +8220,7 @@ begin
   end;
 end;
 
-function TStrings_GetValueFromIndex(Obj: Pointer; Index: Integer): PChar; NO_VCL_CALL;
+function TStrings_GetValueFromIndex(Obj: Pointer; Index: Integer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TStrings(Obj).ValueFromIndex[Index]);
@@ -8230,7 +8230,7 @@ begin
   end;
 end;
 
-procedure TStrings_SetValueFromIndex(Obj: Pointer; Index: Integer; Value: PChar); NO_VCL_CALL;
+procedure TStrings_SetValueFromIndex(Obj: Pointer; Index: Integer; Value: PChar); BETH_CALL;
 begin
   try
     TStrings(Obj).ValueFromIndex[Index] := Value;
@@ -8239,7 +8239,7 @@ begin
   end;
 end;
 
-function TStrings_IndexOfName(Obj: Pointer; Name: PChar): Integer; NO_VCL_CALL;
+function TStrings_IndexOfName(Obj: Pointer; Name: PChar): Integer; BETH_CALL;
 begin
   try
     Result := TStrings(Obj).IndexOfName(Name);
@@ -8251,7 +8251,7 @@ end;
 
 { 任意の区切り文字の文字列(Delimiter・StrictDelimiter・DelimitedText)。 }
 
-function TStrings_GetDelimiter(Obj: Pointer): AnsiChar; NO_VCL_CALL;
+function TStrings_GetDelimiter(Obj: Pointer): AnsiChar; BETH_CALL;
 begin
   try
     Result := TStrings(Obj).Delimiter;
@@ -8261,7 +8261,7 @@ begin
   end;
 end;
 
-procedure TStrings_SetDelimiter(Obj: Pointer; Value: AnsiChar); NO_VCL_CALL;
+procedure TStrings_SetDelimiter(Obj: Pointer; Value: AnsiChar); BETH_CALL;
 begin
   try
     TStrings(Obj).Delimiter := Value;
@@ -8270,7 +8270,7 @@ begin
   end;
 end;
 
-function TStrings_GetStrictDelimiter(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TStrings_GetStrictDelimiter(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TStrings(Obj).StrictDelimiter;
@@ -8280,7 +8280,7 @@ begin
   end;
 end;
 
-procedure TStrings_SetStrictDelimiter(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TStrings_SetStrictDelimiter(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TStrings(Obj).StrictDelimiter := Value;
@@ -8289,7 +8289,7 @@ begin
   end;
 end;
 
-function TStrings_GetDelimitedText(Obj: Pointer): PChar; NO_VCL_CALL;
+function TStrings_GetDelimitedText(Obj: Pointer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TStrings(Obj).DelimitedText);
@@ -8299,7 +8299,7 @@ begin
   end;
 end;
 
-procedure TStrings_SetDelimitedText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+procedure TStrings_SetDelimitedText(Obj: Pointer; Value: PChar); BETH_CALL;
 begin
   try
     TStrings(Obj).DelimitedText := Value;
@@ -8310,7 +8310,7 @@ end;
 
 { ファイル名・内容とも UTF-8 のまま扱う(LCL は文字列を UTF-8 として扱う)。 }
 
-procedure TStrings_LoadFromFile(Obj: Pointer; FileName: PChar); NO_VCL_CALL;
+procedure TStrings_LoadFromFile(Obj: Pointer; FileName: PChar); BETH_CALL;
 begin
   try
     TStrings(Obj).LoadFromFile(FileName);
@@ -8319,7 +8319,7 @@ begin
   end;
 end;
 
-procedure TStrings_SaveToFile(Obj: Pointer; FileName: PChar); NO_VCL_CALL;
+procedure TStrings_SaveToFile(Obj: Pointer; FileName: PChar); BETH_CALL;
 begin
   try
     TStrings(Obj).SaveToFile(FileName);
@@ -8331,7 +8331,7 @@ end;
 { TStringList(docs/adr/0028)。利用者が生成し、TStringList_Destroy で破棄する(TComponent ではなく、Owner も破棄通知も無い)。
   TStrings の操作は TStrings_* を使う。 }
 
-function TStringList_Create: Pointer; NO_VCL_CALL;
+function TStringList_Create: Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TStringList.Create);
@@ -8341,7 +8341,7 @@ begin
   end;
 end;
 
-procedure TStringList_Destroy(Obj: Pointer); NO_VCL_CALL;
+procedure TStringList_Destroy(Obj: Pointer); BETH_CALL;
 begin
   try
     TStringList(Obj).Free;
@@ -8350,7 +8350,7 @@ begin
   end;
 end;
 
-procedure TStringList_Sort(Obj: Pointer); NO_VCL_CALL;
+procedure TStringList_Sort(Obj: Pointer); BETH_CALL;
 begin
   try
     TStringList(Obj).Sort;
@@ -8361,7 +8361,7 @@ end;
 
 { ソートされた一覧から S を二分探索する。見つからなければ、S を挿入すべき位置を Index に入れて False を返す。
   Sorted でない一覧に使うと例外になる(LCL の仕様)。 }
-function TStringList_Find(Obj: Pointer; S: PChar; Index: PInteger): LongBool; NO_VCL_CALL;
+function TStringList_Find(Obj: Pointer; S: PChar; Index: PInteger): LongBool; BETH_CALL;
 var
   I: Integer;
 begin
@@ -8375,7 +8375,7 @@ begin
   end;
 end;
 
-function TStringList_GetSorted(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TStringList_GetSorted(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TStringList(Obj).Sorted;
@@ -8385,7 +8385,7 @@ begin
   end;
 end;
 
-procedure TStringList_SetSorted(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TStringList_SetSorted(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TStringList(Obj).Sorted := Value;
@@ -8394,7 +8394,7 @@ begin
   end;
 end;
 
-function TStringList_GetDuplicates(Obj: Pointer): Integer; NO_VCL_CALL;
+function TStringList_GetDuplicates(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TStringList(Obj).Duplicates);
@@ -8404,7 +8404,7 @@ begin
   end;
 end;
 
-procedure TStringList_SetDuplicates(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TStringList_SetDuplicates(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TStringList(Obj).Duplicates := TDuplicates(Value);
@@ -8413,7 +8413,7 @@ begin
   end;
 end;
 
-function TStringList_GetCaseSensitive(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TStringList_GetCaseSensitive(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TStringList(Obj).CaseSensitive;
@@ -8423,7 +8423,7 @@ begin
   end;
 end;
 
-procedure TStringList_SetCaseSensitive(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TStringList_SetCaseSensitive(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TStringList(Obj).CaseSensitive := Value;
@@ -8438,7 +8438,7 @@ end;
   TPicture.Graphic・TCustomBitBtn.Glyph 等が返すハンドルは所有者の持ち物で、LCL が差し替える
   (TPicture は LoadFromFile・Bitmap の参照・Graphic への代入のたびに中身のオブジェクトを作り直す)ため、保存してはならない。 }
 
-procedure TGraphic_Destroy(Obj: Pointer); NO_VCL_CALL;
+procedure TGraphic_Destroy(Obj: Pointer); BETH_CALL;
 begin
   try
     TGraphic(Obj).Free;
@@ -8447,7 +8447,7 @@ begin
   end;
 end;
 
-function TGraphic_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+function TGraphic_GetWidth(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TGraphic(Obj).Width;
@@ -8457,7 +8457,7 @@ begin
   end;
 end;
 
-procedure TGraphic_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TGraphic_SetWidth(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TGraphic(Obj).Width := Value;
@@ -8466,7 +8466,7 @@ begin
   end;
 end;
 
-function TGraphic_GetHeight(Obj: Pointer): Integer; NO_VCL_CALL;
+function TGraphic_GetHeight(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TGraphic(Obj).Height;
@@ -8476,7 +8476,7 @@ begin
   end;
 end;
 
-procedure TGraphic_SetHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TGraphic_SetHeight(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TGraphic(Obj).Height := Value;
@@ -8485,7 +8485,7 @@ begin
   end;
 end;
 
-function TGraphic_GetEmpty(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TGraphic_GetEmpty(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TGraphic(Obj).Empty;
@@ -8495,7 +8495,7 @@ begin
   end;
 end;
 
-function TGraphic_GetTransparent(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TGraphic_GetTransparent(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TGraphic(Obj).Transparent;
@@ -8505,7 +8505,7 @@ begin
   end;
 end;
 
-procedure TGraphic_SetTransparent(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TGraphic_SetTransparent(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TGraphic(Obj).Transparent := Value;
@@ -8516,7 +8516,7 @@ end;
 
 { ファイル名は UTF-8。形式はクラスで決まる(TBitmap に PNG のファイルを読むと例外になる)。
   拡張子から形式を選ぶのは TPicture_LoadFromFile のほう。 }
-procedure TGraphic_LoadFromFile(Obj: Pointer; FileName: PChar); NO_VCL_CALL;
+procedure TGraphic_LoadFromFile(Obj: Pointer; FileName: PChar); BETH_CALL;
 begin
   try
     TGraphic(Obj).LoadFromFile(FileName);
@@ -8525,7 +8525,7 @@ begin
   end;
 end;
 
-procedure TGraphic_SaveToFile(Obj: Pointer; FileName: PChar); NO_VCL_CALL;
+procedure TGraphic_SaveToFile(Obj: Pointer; FileName: PChar); BETH_CALL;
 begin
   try
     TGraphic(Obj).SaveToFile(FileName);
@@ -8535,7 +8535,7 @@ begin
 end;
 
 { Source はグラフィックか TPicture のハンドル。nil なら Clear と同じ。 }
-procedure TGraphic_Assign(Obj: Pointer; Source: Pointer); NO_VCL_CALL;
+procedure TGraphic_Assign(Obj: Pointer; Source: Pointer); BETH_CALL;
 begin
   try
     if Source = nil then
@@ -8547,7 +8547,7 @@ begin
   end;
 end;
 
-procedure TGraphic_Clear(Obj: Pointer); NO_VCL_CALL;
+procedure TGraphic_Clear(Obj: Pointer); BETH_CALL;
 begin
   try
     TGraphic(Obj).Clear;
@@ -8557,7 +8557,7 @@ begin
 end;
 
 { TRasterImage の public。Canvas はグラフィックが所有し、初めて参照したときに作られる。 }
-function TRasterImage_GetCanvas(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TRasterImage_GetCanvas(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TRasterImage(Obj).Canvas);
@@ -8568,7 +8568,7 @@ begin
 end;
 
 { TPixelFormat の序数(pfDevice=0, pf1bit, pf4bit, pf8bit, pf15bit, pf16bit, pf24bit, pf32bit, pfCustom)。 }
-function TRasterImage_GetPixelFormat(Obj: Pointer): Integer; NO_VCL_CALL;
+function TRasterImage_GetPixelFormat(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TRasterImage(Obj).PixelFormat);
@@ -8578,7 +8578,7 @@ begin
   end;
 end;
 
-procedure TRasterImage_SetPixelFormat(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TRasterImage_SetPixelFormat(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TRasterImage(Obj).PixelFormat := TPixelFormat(Value);
@@ -8587,7 +8587,7 @@ begin
   end;
 end;
 
-function TRasterImage_GetTransparentColor(Obj: Pointer): Integer; NO_VCL_CALL;
+function TRasterImage_GetTransparentColor(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Integer(TRasterImage(Obj).TransparentColor);
@@ -8597,7 +8597,7 @@ begin
   end;
 end;
 
-procedure TRasterImage_SetTransparentColor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TRasterImage_SetTransparentColor(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TRasterImage(Obj).TransparentColor := TColor(Value);
@@ -8607,7 +8607,7 @@ begin
 end;
 
 { TTransparentMode の序数(tmAuto=0, tmFixed)。 }
-function TRasterImage_GetTransparentMode(Obj: Pointer): Integer; NO_VCL_CALL;
+function TRasterImage_GetTransparentMode(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TRasterImage(Obj).TransparentMode);
@@ -8617,7 +8617,7 @@ begin
   end;
 end;
 
-procedure TRasterImage_SetTransparentMode(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TRasterImage_SetTransparentMode(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TRasterImage(Obj).TransparentMode := TTransparentMode(Value);
@@ -8626,7 +8626,7 @@ begin
   end;
 end;
 
-procedure TCustomBitmap_SetSize(Obj: Pointer; AWidth, AHeight: Integer); NO_VCL_CALL;
+procedure TCustomBitmap_SetSize(Obj: Pointer; AWidth, AHeight: Integer); BETH_CALL;
 begin
   try
     TCustomBitmap(Obj).SetSize(AWidth, AHeight);
@@ -8636,7 +8636,7 @@ begin
 end;
 
 { TBitmap は Win32 では Windows ユニットの構造体(BITMAP)に隠されるため、Graphics.TBitmap と書く。 }
-function TBitmap_Create: Pointer; NO_VCL_CALL;
+function TBitmap_Create: Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(Graphics.TBitmap.Create);
@@ -8646,7 +8646,7 @@ begin
   end;
 end;
 
-function TPortableNetworkGraphic_Create: Pointer; NO_VCL_CALL;
+function TPortableNetworkGraphic_Create: Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TPortableNetworkGraphic.Create);
@@ -8656,7 +8656,7 @@ begin
   end;
 end;
 
-function TJPEGImage_Create: Pointer; NO_VCL_CALL;
+function TJPEGImage_Create: Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TJPEGImage.Create);
@@ -8667,7 +8667,7 @@ begin
 end;
 
 { 保存するときの品質(1〜100。既定は 75)。 }
-function TJPEGImage_GetCompressionQuality(Obj: Pointer): Integer; NO_VCL_CALL;
+function TJPEGImage_GetCompressionQuality(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TJPEGImage(Obj).CompressionQuality;
@@ -8677,7 +8677,7 @@ begin
   end;
 end;
 
-procedure TJPEGImage_SetCompressionQuality(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TJPEGImage_SetCompressionQuality(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TJPEGImage(Obj).CompressionQuality := TJPEGQualityRange(Value);
@@ -8689,7 +8689,7 @@ end;
 { TPicture。TCustomImage.Picture は画像コントロールが所有する(生成時に作られ、差し替わらない)。
   TPicture_Create で生成したものは利用者の持ち物で、TPicture_Destroy で破棄する。 }
 
-function TPicture_Create: Pointer; NO_VCL_CALL;
+function TPicture_Create: Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TPicture.Create);
@@ -8699,7 +8699,7 @@ begin
   end;
 end;
 
-procedure TPicture_Destroy(Obj: Pointer); NO_VCL_CALL;
+procedure TPicture_Destroy(Obj: Pointer); BETH_CALL;
 begin
   try
     TPicture(Obj).Free;
@@ -8709,7 +8709,7 @@ begin
 end;
 
 { 空なら nil。 }
-function TPicture_GetGraphic(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TPicture_GetGraphic(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TPicture(Obj).Graphic);
@@ -8720,7 +8720,7 @@ begin
 end;
 
 { Value と同じクラスのグラフィックを作って内容を写す(Value はそのまま呼び出し側の持ち物)。nil なら空にする。 }
-procedure TPicture_SetGraphic(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TPicture_SetGraphic(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TPicture(Obj).Graphic := TGraphic(Value);
@@ -8730,7 +8730,7 @@ begin
 end;
 
 { 中身がそのクラスでなければ、そのクラスに変換する(中身のオブジェクトが作り直される。空なら空のものを作る)。 }
-function TPicture_GetBitmap(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TPicture_GetBitmap(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TPicture(Obj).Bitmap);
@@ -8740,7 +8740,7 @@ begin
   end;
 end;
 
-function TPicture_GetPNG(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TPicture_GetPNG(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TPicture(Obj).PNG);
@@ -8750,7 +8750,7 @@ begin
   end;
 end;
 
-function TPicture_GetJpeg(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TPicture_GetJpeg(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TPicture(Obj).Jpeg);
@@ -8760,7 +8760,7 @@ begin
   end;
 end;
 
-function TPicture_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+function TPicture_GetWidth(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TPicture(Obj).Width;
@@ -8770,7 +8770,7 @@ begin
   end;
 end;
 
-function TPicture_GetHeight(Obj: Pointer): Integer; NO_VCL_CALL;
+function TPicture_GetHeight(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TPicture(Obj).Height;
@@ -8781,7 +8781,7 @@ begin
 end;
 
 { 拡張子から形式(クラス)を選んで読み込む。ファイル名は UTF-8。 }
-procedure TPicture_LoadFromFile(Obj: Pointer; FileName: PChar); NO_VCL_CALL;
+procedure TPicture_LoadFromFile(Obj: Pointer; FileName: PChar); BETH_CALL;
 begin
   try
     TPicture(Obj).LoadFromFile(FileName);
@@ -8790,7 +8790,7 @@ begin
   end;
 end;
 
-procedure TPicture_SaveToFile(Obj: Pointer; FileName: PChar); NO_VCL_CALL;
+procedure TPicture_SaveToFile(Obj: Pointer; FileName: PChar); BETH_CALL;
 begin
   try
     TPicture(Obj).SaveToFile(FileName);
@@ -8800,7 +8800,7 @@ begin
 end;
 
 { Source は TPicture かグラフィックのハンドル。nil なら空にする。 }
-procedure TPicture_Assign(Obj: Pointer; Source: Pointer); NO_VCL_CALL;
+procedure TPicture_Assign(Obj: Pointer; Source: Pointer); BETH_CALL;
 begin
   try
     TPicture(Obj).Assign(TPersistent(Source));
@@ -8809,7 +8809,7 @@ begin
   end;
 end;
 
-procedure TPicture_Clear(Obj: Pointer); NO_VCL_CALL;
+procedure TPicture_Clear(Obj: Pointer); BETH_CALL;
 begin
   try
     TPicture(Obj).Clear;
@@ -8820,7 +8820,7 @@ end;
 
 { TImage(TCustomImage)。 }
 
-function TImage_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TImage_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TImage.Create(TComponent(Owner)));
@@ -8830,7 +8830,7 @@ begin
   end;
 end;
 
-function TCustomImage_GetPicture(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomImage_GetPicture(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomImage(Obj).Picture);
@@ -8841,7 +8841,7 @@ begin
 end;
 
 { Value(TPicture)の内容を写す。 }
-procedure TCustomImage_SetPicture(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TCustomImage_SetPicture(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TCustomImage(Obj).Picture := TPicture(Value);
@@ -8852,7 +8852,7 @@ end;
 
 { Picture が空なら、コントロールの大きさの TBitmap を作ってからその Canvas を返す。
   中身がビットマップの類でない(アイコン等)なら、コントロール自身の Canvas を返す。 }
-function TCustomImage_GetCanvas(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomImage_GetCanvas(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomImage(Obj).Canvas);
@@ -8862,7 +8862,7 @@ begin
   end;
 end;
 
-function TCustomImage_GetHasGraphic(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomImage_GetHasGraphic(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomImage(Obj).HasGraphic;
@@ -8872,7 +8872,7 @@ begin
   end;
 end;
 
-function TCustomImage_GetCenter(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomImage_GetCenter(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomImage(Obj).Center;
@@ -8882,7 +8882,7 @@ begin
   end;
 end;
 
-procedure TCustomImage_SetCenter(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomImage_SetCenter(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomImage(Obj).Center := Value;
@@ -8891,7 +8891,7 @@ begin
   end;
 end;
 
-function TCustomImage_GetStretch(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomImage_GetStretch(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomImage(Obj).Stretch;
@@ -8901,7 +8901,7 @@ begin
   end;
 end;
 
-procedure TCustomImage_SetStretch(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomImage_SetStretch(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomImage(Obj).Stretch := Value;
@@ -8910,7 +8910,7 @@ begin
   end;
 end;
 
-function TCustomImage_GetStretchOutEnabled(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomImage_GetStretchOutEnabled(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomImage(Obj).StretchOutEnabled;
@@ -8920,7 +8920,7 @@ begin
   end;
 end;
 
-procedure TCustomImage_SetStretchOutEnabled(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomImage_SetStretchOutEnabled(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomImage(Obj).StretchOutEnabled := Value;
@@ -8929,7 +8929,7 @@ begin
   end;
 end;
 
-function TCustomImage_GetStretchInEnabled(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomImage_GetStretchInEnabled(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomImage(Obj).StretchInEnabled;
@@ -8939,7 +8939,7 @@ begin
   end;
 end;
 
-procedure TCustomImage_SetStretchInEnabled(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomImage_SetStretchInEnabled(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomImage(Obj).StretchInEnabled := Value;
@@ -8948,7 +8948,7 @@ begin
   end;
 end;
 
-function TCustomImage_GetProportional(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomImage_GetProportional(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomImage(Obj).Proportional;
@@ -8958,7 +8958,7 @@ begin
   end;
 end;
 
-procedure TCustomImage_SetProportional(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomImage_SetProportional(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomImage(Obj).Proportional := Value;
@@ -8967,7 +8967,7 @@ begin
   end;
 end;
 
-function TCustomImage_GetTransparent(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomImage_GetTransparent(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomImage(Obj).Transparent;
@@ -8977,7 +8977,7 @@ begin
   end;
 end;
 
-procedure TCustomImage_SetTransparent(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomImage_SetTransparent(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomImage(Obj).Transparent := Value;
@@ -8987,7 +8987,7 @@ begin
 end;
 
 { Picture(またはその中身)が変わったときに呼ばれる。 }
-procedure TCustomImage_SetOnPictureChanged(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomImage_SetOnPictureChanged(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCustomImage(Obj).OnPictureChanged := @BridgeFor(TCustomImage(Obj), MethodData(TCustomImage(Obj).OnPictureChanged), Cb, Data).DoClick;
@@ -9001,7 +9001,7 @@ end;
   Layout は TButtonLayout の序数(blGlyphLeft=0, blGlyphRight, blGlyphTop, blGlyphBottom)。
   Margin は端から画像までの距離(-1 なら画像と文字列を中央に置く)、Spacing は画像と文字列の間隔。 }
 
-function TCustomBitBtn_GetGlyph(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomBitBtn_GetGlyph(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomBitBtn(Obj).Glyph);
@@ -9011,7 +9011,7 @@ begin
   end;
 end;
 
-procedure TCustomBitBtn_SetGlyph(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TCustomBitBtn_SetGlyph(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TCustomBitBtn(Obj).Glyph := Graphics.TBitmap(Value);
@@ -9020,7 +9020,7 @@ begin
   end;
 end;
 
-function TCustomBitBtn_GetNumGlyphs(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomBitBtn_GetNumGlyphs(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomBitBtn(Obj).NumGlyphs;
@@ -9030,7 +9030,7 @@ begin
   end;
 end;
 
-procedure TCustomBitBtn_SetNumGlyphs(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomBitBtn_SetNumGlyphs(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomBitBtn(Obj).NumGlyphs := Value;
@@ -9039,7 +9039,7 @@ begin
   end;
 end;
 
-function TCustomBitBtn_GetLayout(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomBitBtn_GetLayout(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TCustomBitBtn(Obj).Layout);
@@ -9049,7 +9049,7 @@ begin
   end;
 end;
 
-procedure TCustomBitBtn_SetLayout(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomBitBtn_SetLayout(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomBitBtn(Obj).Layout := TButtonLayout(Value);
@@ -9058,7 +9058,7 @@ begin
   end;
 end;
 
-function TCustomBitBtn_GetMargin(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomBitBtn_GetMargin(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomBitBtn(Obj).Margin;
@@ -9068,7 +9068,7 @@ begin
   end;
 end;
 
-procedure TCustomBitBtn_SetMargin(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomBitBtn_SetMargin(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomBitBtn(Obj).Margin := Value;
@@ -9077,7 +9077,7 @@ begin
   end;
 end;
 
-function TCustomBitBtn_GetSpacing(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomBitBtn_GetSpacing(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomBitBtn(Obj).Spacing;
@@ -9087,7 +9087,7 @@ begin
   end;
 end;
 
-procedure TCustomBitBtn_SetSpacing(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomBitBtn_SetSpacing(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomBitBtn(Obj).Spacing := Value;
@@ -9096,7 +9096,7 @@ begin
   end;
 end;
 
-function TCustomSpeedButton_GetGlyph(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomSpeedButton_GetGlyph(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomSpeedButton(Obj).Glyph);
@@ -9106,7 +9106,7 @@ begin
   end;
 end;
 
-procedure TCustomSpeedButton_SetGlyph(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TCustomSpeedButton_SetGlyph(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TCustomSpeedButton(Obj).Glyph := Graphics.TBitmap(Value);
@@ -9115,7 +9115,7 @@ begin
   end;
 end;
 
-function TCustomSpeedButton_GetNumGlyphs(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomSpeedButton_GetNumGlyphs(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomSpeedButton(Obj).NumGlyphs;
@@ -9125,7 +9125,7 @@ begin
   end;
 end;
 
-procedure TCustomSpeedButton_SetNumGlyphs(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomSpeedButton_SetNumGlyphs(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomSpeedButton(Obj).NumGlyphs := Value;
@@ -9134,7 +9134,7 @@ begin
   end;
 end;
 
-function TCustomSpeedButton_GetLayout(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomSpeedButton_GetLayout(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TCustomSpeedButton(Obj).Layout);
@@ -9144,7 +9144,7 @@ begin
   end;
 end;
 
-procedure TCustomSpeedButton_SetLayout(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomSpeedButton_SetLayout(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomSpeedButton(Obj).Layout := TButtonLayout(Value);
@@ -9153,7 +9153,7 @@ begin
   end;
 end;
 
-function TCustomSpeedButton_GetMargin(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomSpeedButton_GetMargin(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomSpeedButton(Obj).Margin;
@@ -9163,7 +9163,7 @@ begin
   end;
 end;
 
-procedure TCustomSpeedButton_SetMargin(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomSpeedButton_SetMargin(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomSpeedButton(Obj).Margin := Value;
@@ -9172,7 +9172,7 @@ begin
   end;
 end;
 
-function TCustomSpeedButton_GetSpacing(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomSpeedButton_GetSpacing(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomSpeedButton(Obj).Spacing;
@@ -9182,7 +9182,7 @@ begin
   end;
 end;
 
-procedure TCustomSpeedButton_SetSpacing(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomSpeedButton_SetSpacing(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomSpeedButton(Obj).Spacing := Value;
@@ -9197,7 +9197,7 @@ end;
   Add・Insert 等は、画像を Width・Height の大きさに伸縮して 1 つとして加える(VCL と違い、幅が Width の倍数でも分けない)。
   横に並んだ複数の画像を分けて加えるのは AddSliced。 }
 
-function TImageList_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TImageList_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TImageList.Create(TComponent(Owner)));
@@ -9207,7 +9207,7 @@ begin
   end;
 end;
 
-function TCustomImageList_GetWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomImageList_GetWidth(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomImageList(Obj).Width;
@@ -9217,7 +9217,7 @@ begin
   end;
 end;
 
-procedure TCustomImageList_SetWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomImageList_SetWidth(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomImageList(Obj).Width := Value;
@@ -9226,7 +9226,7 @@ begin
   end;
 end;
 
-function TCustomImageList_GetHeight(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomImageList_GetHeight(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomImageList(Obj).Height;
@@ -9236,7 +9236,7 @@ begin
   end;
 end;
 
-procedure TCustomImageList_SetHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomImageList_SetHeight(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomImageList(Obj).Height := Value;
@@ -9245,7 +9245,7 @@ begin
   end;
 end;
 
-function TCustomImageList_GetCount(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomImageList_GetCount(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomImageList(Obj).Count;
@@ -9255,7 +9255,7 @@ begin
   end;
 end;
 
-function TCustomImageList_GetMasked(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCustomImageList_GetMasked(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCustomImageList(Obj).Masked;
@@ -9265,7 +9265,7 @@ begin
   end;
 end;
 
-procedure TCustomImageList_SetMasked(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TCustomImageList_SetMasked(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TCustomImageList(Obj).Masked := Value;
@@ -9274,7 +9274,7 @@ begin
   end;
 end;
 
-function TCustomImageList_GetBkColor(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomImageList_GetBkColor(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Integer(TCustomImageList(Obj).BkColor);
@@ -9284,7 +9284,7 @@ begin
   end;
 end;
 
-procedure TCustomImageList_SetBkColor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomImageList_SetBkColor(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomImageList(Obj).BkColor := TColor(Value);
@@ -9294,7 +9294,7 @@ begin
 end;
 
 { TDrawingStyle の序数(dsFocus=0, dsSelected, dsNormal, dsTransparent)。 }
-function TCustomImageList_GetDrawingStyle(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomImageList_GetDrawingStyle(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Ord(TCustomImageList(Obj).DrawingStyle);
@@ -9304,7 +9304,7 @@ begin
   end;
 end;
 
-procedure TCustomImageList_SetDrawingStyle(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomImageList_SetDrawingStyle(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomImageList(Obj).DrawingStyle := TDrawingStyle(Value);
@@ -9315,7 +9315,7 @@ end;
 
 { Image・Mask は TCustomBitmap の派生(TBitmap・TPortableNetworkGraphic・TJPEGImage)のハンドル。Mask は nil でよい。
   加えた最初の画像の位置を返す。 }
-function TCustomImageList_Add(Obj: Pointer; Image, Mask: Pointer): Integer; NO_VCL_CALL;
+function TCustomImageList_Add(Obj: Pointer; Image, Mask: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomImageList(Obj).Add(TCustomBitmap(Image), TCustomBitmap(Mask));
@@ -9326,7 +9326,7 @@ begin
 end;
 
 { Image を横 AHorizontalCount・縦 AVerticalCount に分けて、それぞれを画像として加える。加えた最初の画像の位置を返す。 }
-function TCustomImageList_AddSliced(Obj: Pointer; Image: Pointer; AHorizontalCount, AVerticalCount: Integer): Integer; NO_VCL_CALL;
+function TCustomImageList_AddSliced(Obj: Pointer; Image: Pointer; AHorizontalCount, AVerticalCount: Integer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomImageList(Obj).AddSliced(TCustomBitmap(Image), AHorizontalCount, AVerticalCount);
@@ -9337,7 +9337,7 @@ begin
 end;
 
 { MaskColor の画素を透明として加える。Image は TBitmap のハンドル。 }
-function TCustomImageList_AddMasked(Obj: Pointer; Image: Pointer; MaskColor: Integer): Integer; NO_VCL_CALL;
+function TCustomImageList_AddMasked(Obj: Pointer; Image: Pointer; MaskColor: Integer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomImageList(Obj).AddMasked(Graphics.TBitmap(Image), TColor(MaskColor));
@@ -9347,7 +9347,7 @@ begin
   end;
 end;
 
-procedure TCustomImageList_Insert(Obj: Pointer; Index: Integer; Image, Mask: Pointer); NO_VCL_CALL;
+procedure TCustomImageList_Insert(Obj: Pointer; Index: Integer; Image, Mask: Pointer); BETH_CALL;
 begin
   try
     TCustomImageList(Obj).Insert(Index, TCustomBitmap(Image), TCustomBitmap(Mask));
@@ -9356,7 +9356,7 @@ begin
   end;
 end;
 
-procedure TCustomImageList_Replace(Obj: Pointer; Index: Integer; Image, Mask: Pointer); NO_VCL_CALL;
+procedure TCustomImageList_Replace(Obj: Pointer; Index: Integer; Image, Mask: Pointer); BETH_CALL;
 begin
   try
     TCustomImageList(Obj).Replace(Index, TCustomBitmap(Image), TCustomBitmap(Mask));
@@ -9365,7 +9365,7 @@ begin
   end;
 end;
 
-procedure TCustomImageList_Delete(Obj: Pointer; Index: Integer); NO_VCL_CALL;
+procedure TCustomImageList_Delete(Obj: Pointer; Index: Integer); BETH_CALL;
 begin
   try
     TCustomImageList(Obj).Delete(Index);
@@ -9374,7 +9374,7 @@ begin
   end;
 end;
 
-procedure TCustomImageList_Clear(Obj: Pointer); NO_VCL_CALL;
+procedure TCustomImageList_Clear(Obj: Pointer); BETH_CALL;
 begin
   try
     TCustomImageList(Obj).Clear;
@@ -9383,7 +9383,7 @@ begin
   end;
 end;
 
-procedure TCustomImageList_Move(Obj: Pointer; CurIndex, NewIndex: Integer); NO_VCL_CALL;
+procedure TCustomImageList_Move(Obj: Pointer; CurIndex, NewIndex: Integer); BETH_CALL;
 begin
   try
     TCustomImageList(Obj).Move(CurIndex, NewIndex);
@@ -9393,7 +9393,7 @@ begin
 end;
 
 { Index 番目の画像を Image(TCustomBitmap の派生)に写す。 }
-procedure TCustomImageList_GetBitmap(Obj: Pointer; Index: Integer; Image: Pointer); NO_VCL_CALL;
+procedure TCustomImageList_GetBitmap(Obj: Pointer; Index: Integer; Image: Pointer); BETH_CALL;
 begin
   try
     TCustomImageList(Obj).GetBitmap(Index, TCustomBitmap(Image));
@@ -9402,7 +9402,7 @@ begin
   end;
 end;
 
-procedure TCustomImageList_Draw(Obj: Pointer; Canvas: Pointer; X, Y, Index: Integer; Enabled: LongBool); NO_VCL_CALL;
+procedure TCustomImageList_Draw(Obj: Pointer; Canvas: Pointer; X, Y, Index: Integer; Enabled: LongBool); BETH_CALL;
 begin
   try
     TCustomImageList(Obj).Draw(TCanvas(Canvas), X, Y, Index, Boolean(Enabled));
@@ -9411,7 +9411,7 @@ begin
   end;
 end;
 
-procedure TCustomImageList_BeginUpdate(Obj: Pointer); NO_VCL_CALL;
+procedure TCustomImageList_BeginUpdate(Obj: Pointer); BETH_CALL;
 begin
   try
     TCustomImageList(Obj).BeginUpdate;
@@ -9420,7 +9420,7 @@ begin
   end;
 end;
 
-procedure TCustomImageList_EndUpdate(Obj: Pointer); NO_VCL_CALL;
+procedure TCustomImageList_EndUpdate(Obj: Pointer); BETH_CALL;
 begin
   try
     TCustomImageList(Obj).EndUpdate;
@@ -9430,7 +9430,7 @@ begin
 end;
 
 { Clear・Delete・Move・BkColor の変更で呼ばれる(LCL の仕様で、Add・Insert 等では呼ばれない。BeginUpdate の間は EndUpdate まで遅れる)。 }
-procedure TCustomImageList_SetOnChange(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCustomImageList_SetOnChange(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCustomImageList(Obj).OnChange := @BridgeFor(TCustomImageList(Obj), MethodData(TCustomImageList(Obj).OnChange), Cb, Data).DoClick;
@@ -9444,7 +9444,7 @@ end;
   コントロールの Images を nil に戻す。ImageIndex は画像リストでの位置(-1 なら無し)。
   Bitmap は所有者が持つ TBitmap(差し替わらない)を返し、Set は内容を写す。 }
 
-function TCustomImage_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomImage_GetImages(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomImage(Obj).Images);
@@ -9454,7 +9454,7 @@ begin
   end;
 end;
 
-procedure TCustomImage_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TCustomImage_SetImages(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TCustomImage(Obj).Images := TCustomImageList(Value);
@@ -9463,7 +9463,7 @@ begin
   end;
 end;
 
-function TCustomImage_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomImage_GetImageIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomImage(Obj).ImageIndex;
@@ -9473,7 +9473,7 @@ begin
   end;
 end;
 
-procedure TCustomImage_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomImage_SetImageIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomImage(Obj).ImageIndex := Value;
@@ -9482,7 +9482,7 @@ begin
   end;
 end;
 
-function TCustomBitBtn_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomBitBtn_GetImages(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomBitBtn(Obj).Images);
@@ -9492,7 +9492,7 @@ begin
   end;
 end;
 
-procedure TCustomBitBtn_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TCustomBitBtn_SetImages(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TCustomBitBtn(Obj).Images := TCustomImageList(Value);
@@ -9501,7 +9501,7 @@ begin
   end;
 end;
 
-function TCustomBitBtn_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomBitBtn_GetImageIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomBitBtn(Obj).ImageIndex;
@@ -9511,7 +9511,7 @@ begin
   end;
 end;
 
-procedure TCustomBitBtn_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomBitBtn_SetImageIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomBitBtn(Obj).ImageIndex := Value;
@@ -9520,7 +9520,7 @@ begin
   end;
 end;
 
-function TCustomSpeedButton_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomSpeedButton_GetImages(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomSpeedButton(Obj).Images);
@@ -9530,7 +9530,7 @@ begin
   end;
 end;
 
-procedure TCustomSpeedButton_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TCustomSpeedButton_SetImages(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TCustomSpeedButton(Obj).Images := TCustomImageList(Value);
@@ -9539,7 +9539,7 @@ begin
   end;
 end;
 
-function TCustomSpeedButton_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomSpeedButton_GetImageIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomSpeedButton(Obj).ImageIndex;
@@ -9549,7 +9549,7 @@ begin
   end;
 end;
 
-procedure TCustomSpeedButton_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomSpeedButton_SetImageIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomSpeedButton(Obj).ImageIndex := Value;
@@ -9558,7 +9558,7 @@ begin
   end;
 end;
 
-function TCustomTabControl_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomTabControl_GetImages(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomTabControl(Obj).Images);
@@ -9568,7 +9568,7 @@ begin
   end;
 end;
 
-procedure TCustomTabControl_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TCustomTabControl_SetImages(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TCustomTabControl(Obj).Images := TCustomImageList(Value);
@@ -9577,7 +9577,7 @@ begin
   end;
 end;
 
-function TCustomPage_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCustomPage_GetImageIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCustomPage(Obj).ImageIndex;
@@ -9587,7 +9587,7 @@ begin
   end;
 end;
 
-procedure TCustomPage_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCustomPage_SetImageIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCustomPage(Obj).ImageIndex := Value;
@@ -9596,7 +9596,7 @@ begin
   end;
 end;
 
-function TCustomTreeView_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomTreeView_GetImages(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomTreeView(Obj).Images);
@@ -9606,7 +9606,7 @@ begin
   end;
 end;
 
-procedure TCustomTreeView_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TCustomTreeView_SetImages(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TCustomTreeView(Obj).Images := TCustomImageList(Value);
@@ -9615,7 +9615,7 @@ begin
   end;
 end;
 
-function TCustomTreeView_GetStateImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomTreeView_GetStateImages(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomTreeView(Obj).StateImages);
@@ -9625,7 +9625,7 @@ begin
   end;
 end;
 
-procedure TCustomTreeView_SetStateImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TCustomTreeView_SetStateImages(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TCustomTreeView(Obj).StateImages := TCustomImageList(Value);
@@ -9634,7 +9634,7 @@ begin
   end;
 end;
 
-function TTreeNode_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TTreeNode_GetImageIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TTreeNode(Obj).ImageIndex;
@@ -9644,7 +9644,7 @@ begin
   end;
 end;
 
-procedure TTreeNode_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TTreeNode_SetImageIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TTreeNode(Obj).ImageIndex := Value;
@@ -9653,7 +9653,7 @@ begin
   end;
 end;
 
-function TTreeNode_GetSelectedIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TTreeNode_GetSelectedIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TTreeNode(Obj).SelectedIndex;
@@ -9663,7 +9663,7 @@ begin
   end;
 end;
 
-procedure TTreeNode_SetSelectedIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TTreeNode_SetSelectedIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TTreeNode(Obj).SelectedIndex := Value;
@@ -9672,7 +9672,7 @@ begin
   end;
 end;
 
-function TTreeNode_GetStateIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TTreeNode_GetStateIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TTreeNode(Obj).StateIndex;
@@ -9682,7 +9682,7 @@ begin
   end;
 end;
 
-procedure TTreeNode_SetStateIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TTreeNode_SetStateIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TTreeNode(Obj).StateIndex := Value;
@@ -9691,7 +9691,7 @@ begin
   end;
 end;
 
-function TTreeNode_GetOverlayIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TTreeNode_GetOverlayIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TTreeNode(Obj).OverlayIndex;
@@ -9701,7 +9701,7 @@ begin
   end;
 end;
 
-procedure TTreeNode_SetOverlayIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TTreeNode_SetOverlayIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TTreeNode(Obj).OverlayIndex := Value;
@@ -9710,7 +9710,7 @@ begin
   end;
 end;
 
-function TListView_GetLargeImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TListView_GetLargeImages(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TListView(Obj).LargeImages);
@@ -9720,7 +9720,7 @@ begin
   end;
 end;
 
-procedure TListView_SetLargeImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TListView_SetLargeImages(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TListView(Obj).LargeImages := TCustomImageList(Value);
@@ -9729,7 +9729,7 @@ begin
   end;
 end;
 
-function TListView_GetSmallImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TListView_GetSmallImages(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TListView(Obj).SmallImages);
@@ -9739,7 +9739,7 @@ begin
   end;
 end;
 
-procedure TListView_SetSmallImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TListView_SetSmallImages(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TListView(Obj).SmallImages := TCustomImageList(Value);
@@ -9748,7 +9748,7 @@ begin
   end;
 end;
 
-function TListView_GetStateImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TListView_GetStateImages(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TListView(Obj).StateImages);
@@ -9758,7 +9758,7 @@ begin
   end;
 end;
 
-procedure TListView_SetStateImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TListView_SetStateImages(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TListView(Obj).StateImages := TCustomImageList(Value);
@@ -9767,7 +9767,7 @@ begin
   end;
 end;
 
-function TListItem_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TListItem_GetImageIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TListItem(Obj).ImageIndex;
@@ -9777,7 +9777,7 @@ begin
   end;
 end;
 
-procedure TListItem_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TListItem_SetImageIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TListItem(Obj).ImageIndex := Value;
@@ -9786,7 +9786,7 @@ begin
   end;
 end;
 
-function TListItem_GetStateIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TListItem_GetStateIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TListItem(Obj).StateIndex;
@@ -9796,7 +9796,7 @@ begin
   end;
 end;
 
-procedure TListItem_SetStateIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TListItem_SetStateIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TListItem(Obj).StateIndex := Value;
@@ -9805,7 +9805,7 @@ begin
   end;
 end;
 
-function TListColumn_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TListColumn_GetImageIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TListColumn(Obj).ImageIndex;
@@ -9815,7 +9815,7 @@ begin
   end;
 end;
 
-procedure TListColumn_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TListColumn_SetImageIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TListColumn(Obj).ImageIndex := Value;
@@ -9824,7 +9824,7 @@ begin
   end;
 end;
 
-function TToolBar_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TToolBar_GetImages(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TToolBar(Obj).Images);
@@ -9834,7 +9834,7 @@ begin
   end;
 end;
 
-procedure TToolBar_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TToolBar_SetImages(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TToolBar(Obj).Images := TCustomImageList(Value);
@@ -9843,7 +9843,7 @@ begin
   end;
 end;
 
-function TToolBar_GetHotImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TToolBar_GetHotImages(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TToolBar(Obj).HotImages);
@@ -9853,7 +9853,7 @@ begin
   end;
 end;
 
-procedure TToolBar_SetHotImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TToolBar_SetHotImages(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TToolBar(Obj).HotImages := TCustomImageList(Value);
@@ -9862,7 +9862,7 @@ begin
   end;
 end;
 
-function TToolBar_GetDisabledImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TToolBar_GetDisabledImages(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TToolBar(Obj).DisabledImages);
@@ -9872,7 +9872,7 @@ begin
   end;
 end;
 
-procedure TToolBar_SetDisabledImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TToolBar_SetDisabledImages(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TToolBar(Obj).DisabledImages := TCustomImageList(Value);
@@ -9881,7 +9881,7 @@ begin
   end;
 end;
 
-function TToolButton_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TToolButton_GetImageIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TToolButton(Obj).ImageIndex;
@@ -9891,7 +9891,7 @@ begin
   end;
 end;
 
-procedure TToolButton_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TToolButton_SetImageIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TToolButton(Obj).ImageIndex := Value;
@@ -9900,7 +9900,7 @@ begin
   end;
 end;
 
-function TCustomHeaderControl_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomHeaderControl_GetImages(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomHeaderControl(Obj).Images);
@@ -9910,7 +9910,7 @@ begin
   end;
 end;
 
-procedure TCustomHeaderControl_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TCustomHeaderControl_SetImages(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TCustomHeaderControl(Obj).Images := TCustomImageList(Value);
@@ -9919,7 +9919,7 @@ begin
   end;
 end;
 
-function THeaderSection_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function THeaderSection_GetImageIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := THeaderSection(Obj).ImageIndex;
@@ -9929,7 +9929,7 @@ begin
   end;
 end;
 
-procedure THeaderSection_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure THeaderSection_SetImageIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     THeaderSection(Obj).ImageIndex := Value;
@@ -9938,7 +9938,7 @@ begin
   end;
 end;
 
-function TCustomCoolBar_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomCoolBar_GetImages(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomCoolBar(Obj).Images);
@@ -9948,7 +9948,7 @@ begin
   end;
 end;
 
-procedure TCustomCoolBar_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TCustomCoolBar_SetImages(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TCustomCoolBar(Obj).Images := TCustomImageList(Value);
@@ -9957,7 +9957,7 @@ begin
   end;
 end;
 
-function TCustomCoolBar_GetBitmap(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCustomCoolBar_GetBitmap(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCustomCoolBar(Obj).Bitmap);
@@ -9967,7 +9967,7 @@ begin
   end;
 end;
 
-procedure TCustomCoolBar_SetBitmap(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TCustomCoolBar_SetBitmap(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TCustomCoolBar(Obj).Bitmap := Graphics.TBitmap(Value);
@@ -9976,7 +9976,7 @@ begin
   end;
 end;
 
-function TCoolBand_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TCoolBand_GetImageIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TCoolBand(Obj).ImageIndex;
@@ -9986,7 +9986,7 @@ begin
   end;
 end;
 
-procedure TCoolBand_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TCoolBand_SetImageIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TCoolBand(Obj).ImageIndex := Value;
@@ -9995,7 +9995,7 @@ begin
   end;
 end;
 
-function TCoolBand_GetBitmap(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TCoolBand_GetBitmap(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TCoolBand(Obj).Bitmap);
@@ -10005,7 +10005,7 @@ begin
   end;
 end;
 
-procedure TCoolBand_SetBitmap(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TCoolBand_SetBitmap(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TCoolBand(Obj).Bitmap := Graphics.TBitmap(Value);
@@ -10014,7 +10014,7 @@ begin
   end;
 end;
 
-function TMenu_GetImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TMenu_GetImages(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TMenu(Obj).Images);
@@ -10024,7 +10024,7 @@ begin
   end;
 end;
 
-procedure TMenu_SetImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TMenu_SetImages(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TMenu(Obj).Images := TCustomImageList(Value);
@@ -10033,7 +10033,7 @@ begin
   end;
 end;
 
-function TMenuItem_GetImageIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TMenuItem_GetImageIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TMenuItem(Obj).ImageIndex;
@@ -10043,7 +10043,7 @@ begin
   end;
 end;
 
-procedure TMenuItem_SetImageIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TMenuItem_SetImageIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TMenuItem(Obj).ImageIndex := Value;
@@ -10052,7 +10052,7 @@ begin
   end;
 end;
 
-function TMenuItem_GetSubMenuImages(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TMenuItem_GetSubMenuImages(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TMenuItem(Obj).SubMenuImages);
@@ -10062,7 +10062,7 @@ begin
   end;
 end;
 
-procedure TMenuItem_SetSubMenuImages(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TMenuItem_SetSubMenuImages(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TMenuItem(Obj).SubMenuImages := TCustomImageList(Value);
@@ -10071,7 +10071,7 @@ begin
   end;
 end;
 
-function TMenuItem_GetBitmap(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TMenuItem_GetBitmap(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TMenuItem(Obj).Bitmap);
@@ -10081,7 +10081,7 @@ begin
   end;
 end;
 
-procedure TMenuItem_SetBitmap(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TMenuItem_SetBitmap(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     TMenuItem(Obj).Bitmap := Graphics.TBitmap(Value);
@@ -10092,7 +10092,7 @@ end;
 
 { TControl の Color・Font と TFont の Style・Assign(ダイアログの結果を適用する先。docs/adr/0033) }
 
-function TControl_GetColor(Obj: Pointer): Integer; NO_VCL_CALL;
+function TControl_GetColor(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Integer(TControl(Obj).Color);
@@ -10102,7 +10102,7 @@ begin
   end;
 end;
 
-procedure TControl_SetColor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TControl_SetColor(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TControl(Obj).Color := TColor(Value);
@@ -10112,7 +10112,7 @@ begin
 end;
 
 { コントロールが所有する TFont(コントロールと寿命が一致し、差し替わらない)。 }
-function TControl_GetFont(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TControl_GetFont(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TControl(Obj).Font);
@@ -10123,7 +10123,7 @@ begin
 end;
 
 { Value の内容を写す(LCL の SetFont と同じ)。nil なら何もしない。 }
-procedure TControl_SetFont(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TControl_SetFont(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     if Value <> nil then
@@ -10154,7 +10154,7 @@ begin
       Include(Result, I);
 end;
 
-function TFont_GetStyle(Obj: Pointer): LongWord; NO_VCL_CALL;
+function TFont_GetStyle(Obj: Pointer): LongWord; BETH_CALL;
 begin
   try
     Result := FontStylesToInt(TFont(Obj).Style);
@@ -10164,7 +10164,7 @@ begin
   end;
 end;
 
-procedure TFont_SetStyle(Obj: Pointer; Value: LongWord); NO_VCL_CALL;
+procedure TFont_SetStyle(Obj: Pointer; Value: LongWord); BETH_CALL;
 begin
   try
     TFont(Obj).Style := IntToFontStyles(Value);
@@ -10174,7 +10174,7 @@ begin
 end;
 
 { Source の内容(Name・Size・Color・Style 等)を写す。nil なら何もしない。 }
-procedure TFont_Assign(Obj: Pointer; Source: Pointer); NO_VCL_CALL;
+procedure TFont_Assign(Obj: Pointer; Source: Pointer); BETH_CALL;
 begin
   try
     if Source <> nil then
@@ -10187,7 +10187,7 @@ end;
 { TCommonDialog(docs/adr/0033) }
 
 { ダイアログを表示する。TFindDialog・TReplaceDialog 以外は閉じるまで戻らず、OK で閉じたら True を返す。 }
-function TCommonDialog_Execute(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TCommonDialog_Execute(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TCommonDialog(Obj).Execute;
@@ -10197,7 +10197,7 @@ begin
   end;
 end;
 
-function TCommonDialog_GetTitle(Obj: Pointer): PChar; NO_VCL_CALL;
+function TCommonDialog_GetTitle(Obj: Pointer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TCommonDialog(Obj).Title);
@@ -10207,7 +10207,7 @@ begin
   end;
 end;
 
-procedure TCommonDialog_SetTitle(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+procedure TCommonDialog_SetTitle(Obj: Pointer; Value: PChar); BETH_CALL;
 begin
   try
     TCommonDialog(Obj).Title := Value;
@@ -10216,7 +10216,7 @@ begin
   end;
 end;
 
-procedure TCommonDialog_SetOnShow(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCommonDialog_SetOnShow(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCommonDialog(Obj).OnShow := @BridgeFor(TCommonDialog(Obj), MethodData(TCommonDialog(Obj).OnShow), Cb, Data).DoClick;
@@ -10225,7 +10225,7 @@ begin
   end;
 end;
 
-procedure TCommonDialog_SetOnClose(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TCommonDialog_SetOnClose(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCommonDialog(Obj).OnClose := @BridgeFor(TCommonDialog(Obj), MethodData(TCommonDialog(Obj).OnClose), Cb, Data).DoClick;
@@ -10234,8 +10234,8 @@ begin
   end;
 end;
 
-{ OK で閉じようとしたとき(CanClose を False にすると閉じない)。Value は TNoVclVarCallback の CanClose と同じ。 }
-procedure TCommonDialog_SetOnCanClose(Obj: Pointer; Cb: TNoVclVarCallback; Data: Pointer); NO_VCL_CALL;
+{ OK で閉じようとしたとき(CanClose を False にすると閉じない)。Value は TBethVarCallback の CanClose と同じ。 }
+procedure TCommonDialog_SetOnCanClose(Obj: Pointer; Cb: TBethVarCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TCommonDialog(Obj).OnCanClose := @VarBridgeFor(TCommonDialog(Obj), MethodData(TCommonDialog(Obj).OnCanClose), Cb, Data).DoCloseQuery;
@@ -10246,7 +10246,7 @@ end;
 
 { TFileDialog }
 
-function TFileDialog_GetFileName(Obj: Pointer): PChar; NO_VCL_CALL;
+function TFileDialog_GetFileName(Obj: Pointer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TFileDialog(Obj).FileName);
@@ -10256,7 +10256,7 @@ begin
   end;
 end;
 
-procedure TFileDialog_SetFileName(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+procedure TFileDialog_SetFileName(Obj: Pointer; Value: PChar); BETH_CALL;
 begin
   try
     TFileDialog(Obj).FileName := Value;
@@ -10265,7 +10265,7 @@ begin
   end;
 end;
 
-function TFileDialog_GetFilter(Obj: Pointer): PChar; NO_VCL_CALL;
+function TFileDialog_GetFilter(Obj: Pointer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TFileDialog(Obj).Filter);
@@ -10275,7 +10275,7 @@ begin
   end;
 end;
 
-procedure TFileDialog_SetFilter(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+procedure TFileDialog_SetFilter(Obj: Pointer; Value: PChar); BETH_CALL;
 begin
   try
     TFileDialog(Obj).Filter := Value;
@@ -10284,7 +10284,7 @@ begin
   end;
 end;
 
-function TFileDialog_GetFilterIndex(Obj: Pointer): Integer; NO_VCL_CALL;
+function TFileDialog_GetFilterIndex(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TFileDialog(Obj).FilterIndex;
@@ -10294,7 +10294,7 @@ begin
   end;
 end;
 
-procedure TFileDialog_SetFilterIndex(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TFileDialog_SetFilterIndex(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TFileDialog(Obj).FilterIndex := Value;
@@ -10303,7 +10303,7 @@ begin
   end;
 end;
 
-function TFileDialog_GetInitialDir(Obj: Pointer): PChar; NO_VCL_CALL;
+function TFileDialog_GetInitialDir(Obj: Pointer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TFileDialog(Obj).InitialDir);
@@ -10313,7 +10313,7 @@ begin
   end;
 end;
 
-procedure TFileDialog_SetInitialDir(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+procedure TFileDialog_SetInitialDir(Obj: Pointer; Value: PChar); BETH_CALL;
 begin
   try
     TFileDialog(Obj).InitialDir := Value;
@@ -10322,7 +10322,7 @@ begin
   end;
 end;
 
-function TFileDialog_GetDefaultExt(Obj: Pointer): PChar; NO_VCL_CALL;
+function TFileDialog_GetDefaultExt(Obj: Pointer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TFileDialog(Obj).DefaultExt);
@@ -10332,7 +10332,7 @@ begin
   end;
 end;
 
-procedure TFileDialog_SetDefaultExt(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+procedure TFileDialog_SetDefaultExt(Obj: Pointer; Value: PChar); BETH_CALL;
 begin
   try
     TFileDialog(Obj).DefaultExt := Value;
@@ -10342,7 +10342,7 @@ begin
 end;
 
 { 選択したファイルの一覧(ofAllowMultiSelect のとき複数)。ダイアログが所有する TStrings で、差し替わらない。 }
-function TFileDialog_GetFiles(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TFileDialog_GetFiles(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TFileDialog(Obj).Files);
@@ -10374,7 +10374,7 @@ begin
       Include(Result, I);
 end;
 
-function TOpenDialog_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TOpenDialog_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TOpenDialog.Create(TComponent(Owner)));
@@ -10384,7 +10384,7 @@ begin
   end;
 end;
 
-function TOpenDialog_GetOptions(Obj: Pointer): LongWord; NO_VCL_CALL;
+function TOpenDialog_GetOptions(Obj: Pointer): LongWord; BETH_CALL;
 begin
   try
     Result := OpenOptionsToInt(TOpenDialog(Obj).Options);
@@ -10394,7 +10394,7 @@ begin
   end;
 end;
 
-procedure TOpenDialog_SetOptions(Obj: Pointer; Value: LongWord); NO_VCL_CALL;
+procedure TOpenDialog_SetOptions(Obj: Pointer; Value: LongWord); BETH_CALL;
 begin
   try
     TOpenDialog(Obj).Options := IntToOpenOptions(Value);
@@ -10403,7 +10403,7 @@ begin
   end;
 end;
 
-function TSaveDialog_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TSaveDialog_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TSaveDialog.Create(TComponent(Owner)));
@@ -10413,7 +10413,7 @@ begin
   end;
 end;
 
-function TSelectDirectoryDialog_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TSelectDirectoryDialog_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TSelectDirectoryDialog.Create(TComponent(Owner)));
@@ -10445,7 +10445,7 @@ begin
       Include(Result, I);
 end;
 
-function TColorDialog_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TColorDialog_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TColorDialog.Create(TComponent(Owner)));
@@ -10455,7 +10455,7 @@ begin
   end;
 end;
 
-function TColorDialog_GetColor(Obj: Pointer): Integer; NO_VCL_CALL;
+function TColorDialog_GetColor(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := Integer(TColorDialog(Obj).Color);
@@ -10465,7 +10465,7 @@ begin
   end;
 end;
 
-procedure TColorDialog_SetColor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TColorDialog_SetColor(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TColorDialog(Obj).Color := TColor(Value);
@@ -10475,7 +10475,7 @@ begin
 end;
 
 { 作成した色("ColorA=FFFFFF" のような 名前=値 の行)。ダイアログが所有する TStrings で、差し替わらない。 }
-function TColorDialog_GetCustomColors(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TColorDialog_GetCustomColors(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TColorDialog(Obj).CustomColors);
@@ -10485,7 +10485,7 @@ begin
   end;
 end;
 
-function TColorDialog_GetOptions(Obj: Pointer): LongWord; NO_VCL_CALL;
+function TColorDialog_GetOptions(Obj: Pointer): LongWord; BETH_CALL;
 begin
   try
     Result := ColorDialogOptionsToInt(TColorDialog(Obj).Options);
@@ -10495,7 +10495,7 @@ begin
   end;
 end;
 
-procedure TColorDialog_SetOptions(Obj: Pointer; Value: LongWord); NO_VCL_CALL;
+procedure TColorDialog_SetOptions(Obj: Pointer; Value: LongWord); BETH_CALL;
 begin
   try
     TColorDialog(Obj).Options := IntToColorDialogOptions(Value);
@@ -10526,7 +10526,7 @@ begin
       Include(Result, I);
 end;
 
-function TFontDialog_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TFontDialog_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TFontDialog.Create(TComponent(Owner)));
@@ -10537,7 +10537,7 @@ begin
 end;
 
 { ダイアログが所有する TFont(ダイアログと寿命が一致し、差し替わらない)。 }
-function TFontDialog_GetFont(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TFontDialog_GetFont(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TFontDialog(Obj).Font);
@@ -10548,7 +10548,7 @@ begin
 end;
 
 { Value の内容を写す(LCL の SetFont と同じ)。nil なら何もしない。 }
-procedure TFontDialog_SetFont(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TFontDialog_SetFont(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     if Value <> nil then
@@ -10558,7 +10558,7 @@ begin
   end;
 end;
 
-function TFontDialog_GetMinFontSize(Obj: Pointer): Integer; NO_VCL_CALL;
+function TFontDialog_GetMinFontSize(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TFontDialog(Obj).MinFontSize;
@@ -10568,7 +10568,7 @@ begin
   end;
 end;
 
-procedure TFontDialog_SetMinFontSize(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TFontDialog_SetMinFontSize(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TFontDialog(Obj).MinFontSize := Value;
@@ -10577,7 +10577,7 @@ begin
   end;
 end;
 
-function TFontDialog_GetMaxFontSize(Obj: Pointer): Integer; NO_VCL_CALL;
+function TFontDialog_GetMaxFontSize(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TFontDialog(Obj).MaxFontSize;
@@ -10587,7 +10587,7 @@ begin
   end;
 end;
 
-procedure TFontDialog_SetMaxFontSize(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TFontDialog_SetMaxFontSize(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TFontDialog(Obj).MaxFontSize := Value;
@@ -10596,7 +10596,7 @@ begin
   end;
 end;
 
-function TFontDialog_GetOptions(Obj: Pointer): LongWord; NO_VCL_CALL;
+function TFontDialog_GetOptions(Obj: Pointer): LongWord; BETH_CALL;
 begin
   try
     Result := FontDialogOptionsToInt(TFontDialog(Obj).Options);
@@ -10606,7 +10606,7 @@ begin
   end;
 end;
 
-procedure TFontDialog_SetOptions(Obj: Pointer; Value: LongWord); NO_VCL_CALL;
+procedure TFontDialog_SetOptions(Obj: Pointer; Value: LongWord); BETH_CALL;
 begin
   try
     TFontDialog(Obj).Options := IntToFontDialogOptions(Value);
@@ -10641,7 +10641,7 @@ begin
       Include(Result, I);
 end;
 
-function TFindDialog_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TFindDialog_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TFindDialog.Create(TComponent(Owner)));
@@ -10651,7 +10651,7 @@ begin
   end;
 end;
 
-function TReplaceDialog_Create(Owner: Pointer): Pointer; NO_VCL_CALL;
+function TReplaceDialog_Create(Owner: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Watch(TReplaceDialog.Create(TComponent(Owner)));
@@ -10661,7 +10661,7 @@ begin
   end;
 end;
 
-function TFindDialog_GetFindText(Obj: Pointer): PChar; NO_VCL_CALL;
+function TFindDialog_GetFindText(Obj: Pointer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TFindDialog(Obj).FindText);
@@ -10671,7 +10671,7 @@ begin
   end;
 end;
 
-procedure TFindDialog_SetFindText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+procedure TFindDialog_SetFindText(Obj: Pointer; Value: PChar); BETH_CALL;
 begin
   try
     TFindDialog(Obj).FindText := Value;
@@ -10680,7 +10680,7 @@ begin
   end;
 end;
 
-function TFindDialog_GetReplaceText(Obj: Pointer): PChar; NO_VCL_CALL;
+function TFindDialog_GetReplaceText(Obj: Pointer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TFindDialogAccess(Obj).ReplaceText);
@@ -10690,7 +10690,7 @@ begin
   end;
 end;
 
-procedure TFindDialog_SetReplaceText(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+procedure TFindDialog_SetReplaceText(Obj: Pointer; Value: PChar); BETH_CALL;
 begin
   try
     TFindDialogAccess(Obj).ReplaceText := Value;
@@ -10699,7 +10699,7 @@ begin
   end;
 end;
 
-function TFindDialog_GetOptions(Obj: Pointer): LongWord; NO_VCL_CALL;
+function TFindDialog_GetOptions(Obj: Pointer): LongWord; BETH_CALL;
 begin
   try
     Result := FindOptionsToInt(TFindDialog(Obj).Options);
@@ -10709,7 +10709,7 @@ begin
   end;
 end;
 
-procedure TFindDialog_SetOptions(Obj: Pointer; Value: LongWord); NO_VCL_CALL;
+procedure TFindDialog_SetOptions(Obj: Pointer; Value: LongWord); BETH_CALL;
 begin
   try
     TFindDialog(Obj).Options := IntToFindOptions(Value);
@@ -10718,7 +10718,7 @@ begin
   end;
 end;
 
-function TFindDialog_GetLeft(Obj: Pointer): Integer; NO_VCL_CALL;
+function TFindDialog_GetLeft(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TFindDialog(Obj).Left;
@@ -10728,7 +10728,7 @@ begin
   end;
 end;
 
-procedure TFindDialog_SetLeft(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TFindDialog_SetLeft(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TFindDialog(Obj).Left := Value;
@@ -10737,7 +10737,7 @@ begin
   end;
 end;
 
-function TFindDialog_GetTop(Obj: Pointer): Integer; NO_VCL_CALL;
+function TFindDialog_GetTop(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TFindDialog(Obj).Top;
@@ -10747,7 +10747,7 @@ begin
   end;
 end;
 
-procedure TFindDialog_SetTop(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TFindDialog_SetTop(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TFindDialog(Obj).Top := Value;
@@ -10757,7 +10757,7 @@ begin
 end;
 
 { 表示中のダイアログを閉じる。 }
-procedure TFindDialog_CloseDialog(Obj: Pointer); NO_VCL_CALL;
+procedure TFindDialog_CloseDialog(Obj: Pointer); BETH_CALL;
 begin
   try
     TFindDialog(Obj).CloseDialog;
@@ -10766,7 +10766,7 @@ begin
   end;
 end;
 
-procedure TFindDialog_SetOnFind(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TFindDialog_SetOnFind(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TFindDialog(Obj).OnFind := @BridgeFor(TFindDialog(Obj), MethodData(TFindDialog(Obj).OnFind), Cb, Data).DoClick;
@@ -10775,7 +10775,7 @@ begin
   end;
 end;
 
-procedure TFindDialog_SetOnReplace(Obj: Pointer; Cb: TNoVclCallback; Data: Pointer); NO_VCL_CALL;
+procedure TFindDialog_SetOnReplace(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
 begin
   try
     TFindDialogAccess(Obj).OnReplace := @BridgeFor(TFindDialog(Obj), MethodData(TFindDialogAccess(Obj).OnReplace), Cb, Data).DoClick;
@@ -10788,7 +10788,7 @@ end;
 
 { TComponent }
 
-function TComponent_GetTag(Obj: Pointer): PtrInt; NO_VCL_CALL;
+function TComponent_GetTag(Obj: Pointer): PtrInt; BETH_CALL;
 begin
   try
     Result := TComponent(Obj).Tag;
@@ -10798,7 +10798,7 @@ begin
   end;
 end;
 
-procedure TComponent_SetTag(Obj: Pointer; Value: PtrInt); NO_VCL_CALL;
+procedure TComponent_SetTag(Obj: Pointer; Value: PtrInt); BETH_CALL;
 begin
   try
     TComponent(Obj).Tag := Value;
@@ -10830,7 +10830,7 @@ begin
       Include(Result, I);
 end;
 
-function TControl_GetAnchors(Obj: Pointer): LongWord; NO_VCL_CALL;
+function TControl_GetAnchors(Obj: Pointer): LongWord; BETH_CALL;
 begin
   try
     Result := AnchorsToInt(TControl(Obj).Anchors);
@@ -10840,7 +10840,7 @@ begin
   end;
 end;
 
-procedure TControl_SetAnchors(Obj: Pointer; Value: LongWord); NO_VCL_CALL;
+procedure TControl_SetAnchors(Obj: Pointer; Value: LongWord); BETH_CALL;
 begin
   try
     TControl(Obj).Anchors := IntToAnchors(Value);
@@ -10850,7 +10850,7 @@ begin
 end;
 
 { コントロールが所有する TControlBorderSpacing(コントロールと寿命が一致し、差し替わらない)。 }
-function TControl_GetBorderSpacing(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TControl_GetBorderSpacing(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TControl(Obj).BorderSpacing);
@@ -10861,7 +10861,7 @@ begin
 end;
 
 { Value の内容を写す(LCL の SetBorderSpacing と同じ)。nil なら何もしない。 }
-procedure TControl_SetBorderSpacing(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TControl_SetBorderSpacing(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     if Value <> nil then
@@ -10872,7 +10872,7 @@ begin
 end;
 
 { コントロールが所有する TSizeConstraints(コントロールと寿命が一致し、差し替わらない)。 }
-function TControl_GetConstraints(Obj: Pointer): Pointer; NO_VCL_CALL;
+function TControl_GetConstraints(Obj: Pointer): Pointer; BETH_CALL;
 begin
   try
     Result := Pointer(TControl(Obj).Constraints);
@@ -10883,7 +10883,7 @@ begin
 end;
 
 { Value の内容を写す(LCL の SetConstraints と同じ)。nil なら何もしない。 }
-procedure TControl_SetConstraints(Obj: Pointer; Value: Pointer); NO_VCL_CALL;
+procedure TControl_SetConstraints(Obj: Pointer; Value: Pointer); BETH_CALL;
 begin
   try
     if Value <> nil then
@@ -10893,7 +10893,7 @@ begin
   end;
 end;
 
-function TControl_GetHint(Obj: Pointer): PChar; NO_VCL_CALL;
+function TControl_GetHint(Obj: Pointer): PChar; BETH_CALL;
 begin
   try
     Result := ReturnStr(TControl(Obj).Hint);
@@ -10903,7 +10903,7 @@ begin
   end;
 end;
 
-procedure TControl_SetHint(Obj: Pointer; Value: PChar); NO_VCL_CALL;
+procedure TControl_SetHint(Obj: Pointer; Value: PChar); BETH_CALL;
 begin
   try
     TControl(Obj).Hint := Value;
@@ -10912,7 +10912,7 @@ begin
   end;
 end;
 
-function TControl_GetShowHint(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TControl_GetShowHint(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TControl(Obj).ShowHint;
@@ -10922,7 +10922,7 @@ begin
   end;
 end;
 
-procedure TControl_SetShowHint(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TControl_SetShowHint(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TControl(Obj).ShowHint := Value;
@@ -10931,7 +10931,7 @@ begin
   end;
 end;
 
-function TControl_GetCursor(Obj: Pointer): Integer; NO_VCL_CALL;
+function TControl_GetCursor(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TControl(Obj).Cursor;
@@ -10941,7 +10941,7 @@ begin
   end;
 end;
 
-procedure TControl_SetCursor(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TControl_SetCursor(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TControl(Obj).Cursor := TCursor(Value);
@@ -10952,7 +10952,7 @@ end;
 
 { ParentColor・ParentFont・ParentShowHint は TControl の protected で、ほとんどの具象クラスが published にしている。 }
 
-function TControl_GetParentColor(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TControl_GetParentColor(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TControlAccess(Obj).ParentColor;
@@ -10962,7 +10962,7 @@ begin
   end;
 end;
 
-procedure TControl_SetParentColor(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TControl_SetParentColor(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TControlAccess(Obj).ParentColor := Value;
@@ -10971,7 +10971,7 @@ begin
   end;
 end;
 
-function TControl_GetParentFont(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TControl_GetParentFont(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TControlAccess(Obj).ParentFont;
@@ -10981,7 +10981,7 @@ begin
   end;
 end;
 
-procedure TControl_SetParentFont(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TControl_SetParentFont(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TControlAccess(Obj).ParentFont := Value;
@@ -10990,7 +10990,7 @@ begin
   end;
 end;
 
-function TControl_GetParentShowHint(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TControl_GetParentShowHint(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TControlAccess(Obj).ParentShowHint;
@@ -11000,7 +11000,7 @@ begin
   end;
 end;
 
-procedure TControl_SetParentShowHint(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TControl_SetParentShowHint(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TControlAccess(Obj).ParentShowHint := Value;
@@ -11011,7 +11011,7 @@ end;
 
 { TWinControl }
 
-function TWinControl_GetTabOrder(Obj: Pointer): Integer; NO_VCL_CALL;
+function TWinControl_GetTabOrder(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TWinControl(Obj).TabOrder;
@@ -11021,7 +11021,7 @@ begin
   end;
 end;
 
-procedure TWinControl_SetTabOrder(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TWinControl_SetTabOrder(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TWinControl(Obj).TabOrder := TTabOrder(Value);
@@ -11030,7 +11030,7 @@ begin
   end;
 end;
 
-function TWinControl_GetTabStop(Obj: Pointer): LongBool; NO_VCL_CALL;
+function TWinControl_GetTabStop(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
     Result := TWinControl(Obj).TabStop;
@@ -11040,7 +11040,7 @@ begin
   end;
 end;
 
-procedure TWinControl_SetTabStop(Obj: Pointer; Value: LongBool); NO_VCL_CALL;
+procedure TWinControl_SetTabStop(Obj: Pointer; Value: LongBool); BETH_CALL;
 begin
   try
     TWinControl(Obj).TabStop := Value;
@@ -11051,7 +11051,7 @@ end;
 
 { TSizeConstraints(0 は制限なし) }
 
-function TSizeConstraints_GetMinWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+function TSizeConstraints_GetMinWidth(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TSizeConstraints(Obj).MinWidth;
@@ -11061,7 +11061,7 @@ begin
   end;
 end;
 
-procedure TSizeConstraints_SetMinWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TSizeConstraints_SetMinWidth(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TSizeConstraints(Obj).MinWidth := Value;
@@ -11070,7 +11070,7 @@ begin
   end;
 end;
 
-function TSizeConstraints_GetMinHeight(Obj: Pointer): Integer; NO_VCL_CALL;
+function TSizeConstraints_GetMinHeight(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TSizeConstraints(Obj).MinHeight;
@@ -11080,7 +11080,7 @@ begin
   end;
 end;
 
-procedure TSizeConstraints_SetMinHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TSizeConstraints_SetMinHeight(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TSizeConstraints(Obj).MinHeight := Value;
@@ -11089,7 +11089,7 @@ begin
   end;
 end;
 
-function TSizeConstraints_GetMaxWidth(Obj: Pointer): Integer; NO_VCL_CALL;
+function TSizeConstraints_GetMaxWidth(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TSizeConstraints(Obj).MaxWidth;
@@ -11099,7 +11099,7 @@ begin
   end;
 end;
 
-procedure TSizeConstraints_SetMaxWidth(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TSizeConstraints_SetMaxWidth(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TSizeConstraints(Obj).MaxWidth := Value;
@@ -11108,7 +11108,7 @@ begin
   end;
 end;
 
-function TSizeConstraints_GetMaxHeight(Obj: Pointer): Integer; NO_VCL_CALL;
+function TSizeConstraints_GetMaxHeight(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TSizeConstraints(Obj).MaxHeight;
@@ -11118,7 +11118,7 @@ begin
   end;
 end;
 
-procedure TSizeConstraints_SetMaxHeight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TSizeConstraints_SetMaxHeight(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TSizeConstraints(Obj).MaxHeight := Value;
@@ -11129,7 +11129,7 @@ end;
 
 { TControlBorderSpacing }
 
-function TControlBorderSpacing_GetLeft(Obj: Pointer): Integer; NO_VCL_CALL;
+function TControlBorderSpacing_GetLeft(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TControlBorderSpacing(Obj).Left;
@@ -11139,7 +11139,7 @@ begin
   end;
 end;
 
-procedure TControlBorderSpacing_SetLeft(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TControlBorderSpacing_SetLeft(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TControlBorderSpacing(Obj).Left := Value;
@@ -11148,7 +11148,7 @@ begin
   end;
 end;
 
-function TControlBorderSpacing_GetTop(Obj: Pointer): Integer; NO_VCL_CALL;
+function TControlBorderSpacing_GetTop(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TControlBorderSpacing(Obj).Top;
@@ -11158,7 +11158,7 @@ begin
   end;
 end;
 
-procedure TControlBorderSpacing_SetTop(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TControlBorderSpacing_SetTop(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TControlBorderSpacing(Obj).Top := Value;
@@ -11167,7 +11167,7 @@ begin
   end;
 end;
 
-function TControlBorderSpacing_GetRight(Obj: Pointer): Integer; NO_VCL_CALL;
+function TControlBorderSpacing_GetRight(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TControlBorderSpacing(Obj).Right;
@@ -11177,7 +11177,7 @@ begin
   end;
 end;
 
-procedure TControlBorderSpacing_SetRight(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TControlBorderSpacing_SetRight(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TControlBorderSpacing(Obj).Right := Value;
@@ -11186,7 +11186,7 @@ begin
   end;
 end;
 
-function TControlBorderSpacing_GetBottom(Obj: Pointer): Integer; NO_VCL_CALL;
+function TControlBorderSpacing_GetBottom(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TControlBorderSpacing(Obj).Bottom;
@@ -11196,7 +11196,7 @@ begin
   end;
 end;
 
-procedure TControlBorderSpacing_SetBottom(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TControlBorderSpacing_SetBottom(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TControlBorderSpacing(Obj).Bottom := Value;
@@ -11205,7 +11205,7 @@ begin
   end;
 end;
 
-function TControlBorderSpacing_GetAround(Obj: Pointer): Integer; NO_VCL_CALL;
+function TControlBorderSpacing_GetAround(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TControlBorderSpacing(Obj).Around;
@@ -11215,7 +11215,7 @@ begin
   end;
 end;
 
-procedure TControlBorderSpacing_SetAround(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TControlBorderSpacing_SetAround(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TControlBorderSpacing(Obj).Around := Value;
@@ -11224,7 +11224,7 @@ begin
   end;
 end;
 
-function TControlBorderSpacing_GetInnerBorder(Obj: Pointer): Integer; NO_VCL_CALL;
+function TControlBorderSpacing_GetInnerBorder(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
     Result := TControlBorderSpacing(Obj).InnerBorder;
@@ -11234,7 +11234,7 @@ begin
   end;
 end;
 
-procedure TControlBorderSpacing_SetInnerBorder(Obj: Pointer; Value: Integer); NO_VCL_CALL;
+procedure TControlBorderSpacing_SetInnerBorder(Obj: Pointer; Value: Integer); BETH_CALL;
 begin
   try
     TControlBorderSpacing(Obj).InnerBorder := Value;

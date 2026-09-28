@@ -139,7 +139,7 @@ const PYTHON_KEYWORDS: ReadonlySet<string> = new Set([
 ]);
 
 /** 予約メソッドの接頭辞(docs/designer/codegen-design.md M6)。利用者の名前には使わせない */
-export const RESERVED_PREFIX = 'nvd_';
+export const RESERVED_PREFIX = 'beth_';
 
 const IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
@@ -190,7 +190,7 @@ let reservedNames: ReadonlySet<string> | undefined;
 
 /**
  * 生成するクラスの中で、メンバ名にすると生成したコードが壊れる名前:
- * TForm のメンバ(Caption・Show 等)と、生成したコードが使う no_vcl の名前(クラス・列挙型の要素・定数)。
+ * TForm のメンバ(Caption・Show 等)と、生成したコードが使う Bethany の名前(クラス・列挙型の要素・定数)。
  * C++ ではメンバ名がこれらを隠す(`TButton* TButton;` の後の `new TButton(this)` が壊れる)。
  */
 function isReservedName(name: string): boolean {
@@ -224,7 +224,7 @@ export function memberNameProblem(name: string): string | null {
   if (problem) return describeIdentifierProblem(problem);
   if (isReservedName(name))
     return l10n.t(
-      '"{0}" is a member of TForm or a name used by no_vcl, so it cannot be used',
+      '"{0}" is a member of TForm or a name used by Bethany, so it cannot be used',
       name,
     );
   return null;

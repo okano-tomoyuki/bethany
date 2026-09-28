@@ -1,16 +1,16 @@
 # コード生成の設計 — 草案
 
-フォームの定義ファイル([dsl-spec.md](dsl-spec.md))から、no_vcl の C++ と Python のコードを生成する方法。
+フォームの定義ファイル([dsl-spec.md](dsl-spec.md))から、Bethany の C++ と Python のコードを生成する方法。
 生成したコードと利用者のコードの共存には、tk-designer と同じマーカー区間の更新方式を使う(tk-designer ADR 0004。[ADR 0035](../adr/0035-designer-in-this-repository.md) で流用を決めた)。
 
 ## 1. 生成の流れ
 
 ```
-DSL (*.nvform.json)
+DSL (*.bfm.json)
   └─ 検証(Zod のスキーマ + カタログとの照合 + 意味の検証)
        └─ 中間表現(言語に依らない: 生成・プロパティの設定・親子・イベントの接続の並び)
-            ├─ C++ エミッタ(no_vcl.hpp)  → 区間ごとのコード片
-            └─ Python エミッタ(no_vcl.py) → 区間ごとのコード片
+            ├─ C++ エミッタ(beth.hpp)  → 区間ごとのコード片
+            └─ Python エミッタ(beth.py) → 区間ごとのコード片
                  └─ マージ: 既存のファイルが無ければ雛形を作り、あればマーカー区間だけを置き換える
 ```
 
@@ -22,7 +22,7 @@ DSL (*.nvform.json)
 | 区間 | 内容 | C++ の置き場所 | Python の置き場所 |
 |---|---|---|---|
 | ① 宣言 | コンポーネントのメンバ、**ハンドラの宣言**(C++Builder の `__published` に当たる。public に置く) | ヘッダ(クラス定義の中) | `__init__` の `super().__init__()` の後(型の注釈) |
-| ② 生成 | コンポーネントの生成・プロパティ・親子・イベントの接続 | ソース(`nvd_CreateComponents`) | クラスのメソッド(`nvd_CreateComponents`) |
+| ② 生成 | コンポーネントの生成・プロパティ・親子・イベントの接続 | ソース(`beth_CreateComponents`) | クラスのメソッド(`beth_CreateComponents`) |
 
 tk-designer は「生成」「配置」「イベント」の 3 つのメソッドに分けていたが、LCL には配置だけを後から行う段階(pack・grid の呼び出し)が無く、
 配置はプロパティ(Left・Align・Anchors 等)の設定そのものなので、1 つのメソッドにまとめる(§4 の順で書き出す)。
@@ -30,9 +30,9 @@ tk-designer は「生成」「配置」「イベント」の 3 つのメソッ�
 ### マーカーの書式
 
 ```
-// <no_vcl-designer:begin id="nvd_CreateComponents">
+// <bethany-designer:begin id="beth_CreateComponents">
 ...
-// <no_vcl-designer:end id="nvd_CreateComponents" hash="3f9a1c...">
+// <bethany-designer:end id="beth_CreateComponents" hash="3f9a1c...">
 ```
 
 Python では `#` を使う。`id` で区間を識別し、`hash` は区間の内容のハッシュ(手編集の検出。§5 M2)。
@@ -40,7 +40,7 @@ Python では `#` を使う。`id` で区間を識別し、`hash` は区間の�
 ## 3. 生成例
 
 [dsl-spec.md §2](dsl-spec.md#2-例) の例(抜粋)から生成するコード。実際の生成結果は
-[designer/packages/codegen/src/\_\_golden\_\_/](../../designer/packages/codegen/src/__golden__/)(見本 designer/samples/MainForm.nvform.json から生成したもの)を参照。
+[designer/packages/codegen/src/\_\_golden\_\_/](../../designer/packages/codegen/src/__golden__/)(見本 designer/samples/MainForm.bfm.json から生成したもの)を参照。
 コメントは `codegen.commentLocale`(既定は英語)で決まる。
 
 ### C++
@@ -50,39 +50,39 @@ Python では `#` を使う。`id` で区間を識別し、`hash` は区間の�
 ```cpp
 #pragma once
 
-#include "no_vcl.hpp"
+#include "beth.hpp"
 
-/** Form created with the no_vcl designer (MainForm.nvform.json). Regions enclosed in markers are overwritten when regenerated. */
-class TMainForm : public no_vcl::TForm
+/** Form created with the Bethany designer (MainForm.bfm.json). Regions enclosed in markers are overwritten when regenerated. */
+class TMainForm : public beth::TForm
 {
 public:
-    // <no_vcl-designer:begin id="declarations">
-    no_vcl::TEdit* NameEdit;
-    no_vcl::TButton* OkButton;
-    no_vcl::TMemo* Memo1;
-    no_vcl::TMainMenu* MainMenu1;
-    no_vcl::TMenuItem* FileMenu;
-    no_vcl::TMenuItem* FileOpenItem;
-    no_vcl::TMenuItem* N1;
-    no_vcl::TMenuItem* FileExitItem;
-    no_vcl::TPopupMenu* PopupMenu1;
-    no_vcl::TOpenDialog* OpenDialog1;
+    // <bethany-designer:begin id="declarations">
+    beth::TEdit* NameEdit;
+    beth::TButton* OkButton;
+    beth::TMemo* Memo1;
+    beth::TMainMenu* MainMenu1;
+    beth::TMenuItem* FileMenu;
+    beth::TMenuItem* FileOpenItem;
+    beth::TMenuItem* N1;
+    beth::TMenuItem* FileExitItem;
+    beth::TPopupMenu* PopupMenu1;
+    beth::TOpenDialog* OpenDialog1;
 
-    void FormCreate(no_vcl::TObject* Sender);
-    void FormCloseQuery(no_vcl::TObject* Sender, bool& CanClose);
-    void NameEditChange(no_vcl::TObject* Sender);
-    void OkButtonClick(no_vcl::TObject* Sender);
-    void FileOpenItemClick(no_vcl::TObject* Sender);
-    void FileExitItemClick(no_vcl::TObject* Sender);
-    // <no_vcl-designer:end id="declarations" hash="...">
+    void FormCreate(beth::TObject* Sender);
+    void FormCloseQuery(beth::TObject* Sender, bool& CanClose);
+    void NameEditChange(beth::TObject* Sender);
+    void OkButtonClick(beth::TObject* Sender);
+    void FileOpenItemClick(beth::TObject* Sender);
+    void FileExitItemClick(beth::TObject* Sender);
+    // <bethany-designer:end id="declarations" hash="...">
 
-    explicit TMainForm(no_vcl::TComponent* AOwner);
+    explicit TMainForm(beth::TComponent* AOwner);
 
 protected:
     ~TMainForm() override = default;
 
 private:
-    void nvd_CreateComponents();
+    void beth_CreateComponents();
 };
 
 extern TMainForm* MainForm;
@@ -93,19 +93,19 @@ extern TMainForm* MainForm;
 ```cpp
 #include "MainForm.hpp"
 
-using namespace no_vcl;
+using namespace beth;
 
 TMainForm* MainForm = nullptr;
 
 TMainForm::TMainForm(TComponent* AOwner)
     : TForm(AOwner)
 {
-    nvd_CreateComponents();
+    beth_CreateComponents();
 }
 
-// <no_vcl-designer:begin id="nvd_CreateComponents">
+// <bethany-designer:begin id="beth_CreateComponents">
 // Creates the components and sets their properties (generated).
-void TMainForm::nvd_CreateComponents()
+void TMainForm::beth_CreateComponents()
 {
     NameEdit = new TEdit(this);
     OkButton = new TButton(this);
@@ -157,9 +157,9 @@ void TMainForm::nvd_CreateComponents()
     OpenDialog1->Filter = "Text files|*.txt|All files|*.*";
     OpenDialog1->Options = ofEnableSizing | ofViewDetail | ofFileMustExist;
 }
-// <no_vcl-designer:end id="nvd_CreateComponents" hash="...">
+// <bethany-designer:end id="beth_CreateComponents" hash="...">
 
-// <no_vcl-designer:handler-stubs>
+// <bethany-designer:handler-stubs>
 void TMainForm::FormCreate(TObject* Sender)
 {
     // TODO: implement
@@ -179,9 +179,9 @@ void TMainForm::FormCloseQuery(TObject* Sender, bool& CanClose)
 
 int main()
 {
-    no_vcl::Application->Initialize();
-    no_vcl::Application->CreateForm(&MainForm);
-    no_vcl::Application->Run();
+    beth::Application->Initialize();
+    beth::Application->CreateForm(&MainForm);
+    beth::Application->Run();
 }
 ```
 
@@ -190,23 +190,23 @@ int main()
 `MainForm.py`
 
 ```python
-from no_vcl import *
+from beth import *
 
 
 class TMainForm(TForm):
-    """Form created with the no_vcl designer (MainForm.nvform.json). Regions enclosed in markers are overwritten when regenerated."""
+    """Form created with the Bethany designer (MainForm.bfm.json). Regions enclosed in markers are overwritten when regenerated."""
 
     def __init__(self, AOwner):
         super().__init__(AOwner)
-        # <no_vcl-designer:begin id="declarations">
+        # <bethany-designer:begin id="declarations">
         self.NameEdit: TEdit
         self.OkButton: TButton
         # ...
-        # <no_vcl-designer:end id="declarations" hash="...">
-        self.nvd_CreateComponents()
+        # <bethany-designer:end id="declarations" hash="...">
+        self.beth_CreateComponents()
 
-    # <no_vcl-designer:begin id="nvd_CreateComponents">
-    def nvd_CreateComponents(self):
+    # <bethany-designer:begin id="beth_CreateComponents">
+    def beth_CreateComponents(self):
         """Creates the components and sets their properties (generated)."""
         self.NameEdit = TEdit(self)
         # ...
@@ -220,9 +220,9 @@ class TMainForm(TForm):
         self.NameEdit.Anchors = {akTop, akLeft, akRight}
         self.NameEdit.OnChange = self.NameEditChange
         # ...(C++ と同じ並び。値の書き方は §6 N4)
-    # <no_vcl-designer:end id="nvd_CreateComponents" hash="...">
+    # <bethany-designer:end id="beth_CreateComponents" hash="...">
 
-    # <no_vcl-designer:handler-stubs>
+    # <bethany-designer:handler-stubs>
 
     def FormCreate(self, Sender):
         pass
@@ -231,14 +231,14 @@ class TMainForm(TForm):
         pass
 ```
 
-- 参照渡しの引数(`bool& CanClose`・`TCloseAction& Action` 等)は、py/no_vcl.py の規則どおり `Ref` で渡される(`CanClose.value = False`)。
+- 参照渡しの引数(`bool& CanClose`・`TCloseAction& Action` 等)は、py/beth.py の規則どおり `Ref` で渡される(`CanClose.value = False`)。
 - フォームのグローバル変数は生成しない(`MainForm = Application.CreateForm(TMainForm)` と書く。dsl-spec.md §10 Q3)。
 - Python の値の書き方: 集合型は `{akTop, akLeft}`(空なら `set()`)、ビット集合は `|` でつなぐ(空なら `TFontStyles(0)` のように型の 0)、
   TColor の `"#RRGGBB"` は `0x00BBGGRR  # #RRGGBB`、参照は `self.名前`。
 - 区間の外の参照の警告(M7)では、宣言の区間の型の注釈(`self.OkButton: TButton`)と、イベントに代入したハンドラを生成したメンバとする
   (`self.Caption = ...` のようなフォームのプロパティの設定は含めない)。
 
-## 4. `nvd_CreateComponents` の中の順序
+## 4. `beth_CreateComponents` の中の順序
 
 LCL ではプロパティを設定する順で結果が変わるものがあるため、次の順で書き出す。
 
@@ -264,20 +264,20 @@ tk-designer の codegen-design.md の決定を、名前だけ変えて引き継�
 
 | # | 論点 | 決定 |
 |---|---|---|
-| M1 | ハンドラの宣言・実装の置き場所 | 宣言は区間①に入れる。実装の雛形は `<no_vcl-designer:handler-stubs>` の後に追記するだけで、削除はしない(C++ では DSL から消えたハンドラの実装がコンパイルエラーになり、気づける) |
+| M1 | ハンドラの宣言・実装の置き場所 | 宣言は区間①に入れる。実装の雛形は `<bethany-designer:handler-stubs>` の後に追記するだけで、削除はしない(C++ では DSL から消えたハンドラの実装がコンパイルエラーになり、気づける) |
 | M2 | 区間の中の手編集の検出 | 終了マーカーに区間の内容のハッシュを持たせ、再生成の時に一致しなければ、上書きの前に警告・確認する |
 | M3 | フォーマッタとの共存 | ハッシュは空白(改行・字下げを含む)を取り除いてから計算する |
 | M4 | 異常系 | マーカーの欠落・重複・入れ子・対応の誤りがあれば、何も書き込まずにエラーにする |
-| M6 | 予約メソッド名 | 接頭辞 `nvd_` を付ける(`nvd_CreateComponents`)。VCL の命名(PascalCase)の利用者のメソッドと衝突しない |
+| M6 | 予約メソッド名 | 接頭辞 `beth_` を付ける(`beth_CreateComponents`)。VCL の命名(PascalCase)の利用者のメソッドと衝突しない |
 | M7 | 名前の変更 | 警告のみ。区間の外の参照は書き換えない(なくなった名前が区間の外で使われていれば警告する) |
 | M8 | VS Code 上での書き込み | WorkspaceEdit で書き込む。書き込む前に未保存の変更が無かったファイルは、書き込んだ後に保存する |
 
-## 6. no_vcl 固有の決定
+## 6. Bethany 固有の決定
 
 | # | 論点 | 案 |
 |---|---|---|
 | N1 | イベントの接続 | C++ は `[this](引数...) { ハンドラ(引数...); }` のラムダ(test/main.cpp と同じ書き方)。引数はカタログのイベントの型から作る。Python はバインドしたメソッドをそのまま代入する |
-| N2 | 名前空間 | ヘッダは `no_vcl::` で修飾し(ヘッダで `using namespace` しない)、ソースは `using namespace no_vcl;` とする。利用者が書くハンドラの実装は修飾しなくてよい |
+| N2 | 名前空間 | ヘッダは `beth::` で修飾し(ヘッダで `using namespace` しない)、ソースは `using namespace beth;` とする。利用者が書くハンドラの実装は修飾しなくてよい |
 | N3 | フォームのグローバル変数 | C++ は `extern TMainForm* MainForm;` と定義を生成する(dsl-spec.md §10 Q3) |
 | N4 | 値の書き出し | 列挙型は要素名、TAnchors は `TAnchors() << ...`、ビット集合は `\|` でつなぐ(空なら `0`)、TColor は定数名か `0x00BBGGRR /* #RRGGBB */`、TShortCut は `TextToShortCut("...")`(空なら `0`)、TStrings は `Add` の並び(既定の中身があるものは先に `Clear()`。Python も同じ形) |
 | N5 | 既定値の扱い | DSL に書いたプロパティだけを書き出す(既定値と同じ値が書かれていても、そのまま書き出す) |
@@ -286,8 +286,8 @@ tk-designer の codegen-design.md の決定を、名前だけ変えて引き継�
 ## 7. 検証
 
 - **ゴールデンファイル**: DSL → 生成コードの入出力を、codegen のテストで比較する(tk-designer と同じ)。
-- **ビルドと実行**: 見本の DSL(`designer/samples/`)から生成した C++ を、本リポジトリの no_vcl と一緒に CMake でビルドして実行し、次を確かめる。
-  Python も同じ内容を py/no_vcl.py で実行して確かめる。
+- **ビルドと実行**: 見本の DSL(`designer/samples/`)から生成した C++ を、本リポジトリの Bethany と一緒に CMake でビルドして実行し、次を確かめる。
+  Python も同じ内容を py/beth.py で実行して確かめる。
   1. 表示後の各コントロールの位置と大きさが、DSL に書いた値(デザイナーが計算した配置)と一致すること(Align・Anchors・BorderSpacing を含む)。
   2. イベントが接続されていること(ボタンの Click・メニューの Click でハンドラが呼ばれる)。
   3. 参照(Menu・PopupMenu・Images)・入れ子のオブジェクト(Font 等)・TStrings が設定されていること。

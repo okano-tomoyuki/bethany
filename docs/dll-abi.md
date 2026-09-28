@@ -1,11 +1,11 @@
 # DLL の関数の決まり
 
-no_vcl.dll(Linux は libno_vcl.so)が公開する関数の決まり。
-C++ ラッパー(no_vcl.hpp)の内部層(`internal/`)が従っているもので、別の言語(Python の ctypes・Rust 等)から
+beth.dll(Linux は libbeth.so)が公開する関数の決まり。
+C++ ラッパー(beth.hpp)の内部層(`internal/`)が従っているもので、別の言語(Python の ctypes・Rust 等)から
 DLL を直接呼ぶ層を作るときにも、これに従う([ADR 0032](adr/0032-internalize-c-api.md))。
 
-関数の一覧と引数の型は [internal/funcs.h](../internal/funcs.h)、実装は [no_vcl.pas](../no_vcl.pas)(`exports`)が正とする。
-関数ごとの意味は、no_vcl.hpp の対応するメンバのコメントと、[class-hierarchy.md](class-hierarchy.md) の対応表を参照する。
+関数の一覧と引数の型は [internal/funcs.h](../internal/funcs.h)、実装は [beth.pas](../beth.pas)(`exports`)が正とする。
+関数ごとの意味は、beth.hpp の対応するメンバのコメントと、[class-hierarchy.md](class-hierarchy.md) の対応表を参照する。
 
 ## 呼び出し規約・名前
 
@@ -24,13 +24,13 @@ DLL を直接呼ぶ層を作るときにも、これに従う([ADR 0032](adr/003
 |---|---|---|
 | `obj_t` | `Pointer` | LCL のオブジェクト(コンポーネント・項目・TStrings・Canvas 等)を指すハンドル |
 | `str_t` | `PChar` | UTF-8 の文字列(下の「文字列」を参照) |
-| `int_t` | `Integer` | 32 ビットの整数。列挙は LCL の序数(no_vcl.hpp の同名の列挙と同じ値)、色は TColor(`$00BBGGRR`) |
+| `int_t` | `Integer` | 32 ビットの整数。列挙は LCL の序数(beth.hpp の同名の列挙と同じ値)、色は TColor(`$00BBGGRR`) |
 | `uint_t` | `LongWord` | ビット集合(グリッド・ダイアログの Options、TFont の Style。グリッドの Options は 32 ビットすべてを使う) |
 | `bool_t` | `LongBool` | 4 バイトの真偽値。0 は偽、0 以外は真。DLL が返す真は -1 |
 | `real_t` | `Double` | 倍精度の実数 |
 | `iptr_t` | `PtrInt` | ポインタと同じ幅の符号付き整数(TComponent の Tag) |
 
-集合型(TShiftState 等)は、各要素をビットにした整数で受け渡す(ビットの値は no_vcl.hpp の `ssShift` 等と同じ)。
+集合型(TShiftState 等)は、各要素をビットにした整数で受け渡す(ビットの値は beth.hpp の `ssShift` 等と同じ)。
 
 ## 文字列
 

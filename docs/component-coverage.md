@@ -1,12 +1,12 @@
 # コントロールの網羅性(VCL 移行を見据えた棚卸し)
 
-no_vcl を「本格的に VCL から移行できるレベル」にするための、LCL の標準コントロール・非ビジュアルコンポーネントの
+Bethany を「本格的に VCL から移行できるレベル」にするための、LCL の標準コントロール・非ビジュアルコンポーネントの
 実装状況の棚卸し。2026-09-26 時点で LCL(`C:\tool\lazarus\lcl`)のソースを確認して作成した。
 VCL と LCL はクラス名・プロパティ名がほぼ一致するため、基本的に LCL のクラス名がそのまま VCL 移行時の対応クラス名になる
 (差異がある場合は備考に記載)。
 
 方針は [ADR 0007](adr/0007-lcl-faithful-hierarchy.md) と同じ:
-LCL の継承関係の部分列にする。実装するクラスの基底が no_vcl に無ければ、その基底から実装する。
+LCL の継承関係の部分列にする。実装するクラスの基底が Bethany に無ければ、その基底から実装する。
 
 ## 1. 実装済み(37 クラス)
 
@@ -101,7 +101,7 @@ VCL アプリらしい UI に必須だが、TMenuItem がツリー構造の TCom
 
 | クラス | LCL 宣言ユニット | LCL での基底 | 備考 |
 |---|---|---|---|
-| ✅ TMenuItem | menus.pp | TLCLComponent(no_vcl では TComponent 直下に置く) | Caption/Checked/Enabled/Visible/AutoCheck/RadioItem/GroupIndex/Default/ShortCut/Hint/OnClick と、子の項目の操作(Items[i]/Count/Add/Insert/Delete/Remove/Clear/IndexOf/AddSeparator)([ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md))。Bitmap/ImageIndex/SubMenuImages と TMenu.Images は Tier 3 の 2 バッチ目で追加(ADR 0030) |
+| ✅ TMenuItem | menus.pp | TLCLComponent(Bethany では TComponent 直下に置く) | Caption/Checked/Enabled/Visible/AutoCheck/RadioItem/GroupIndex/Default/ShortCut/Hint/OnClick と、子の項目の操作(Items[i]/Count/Add/Insert/Delete/Remove/Clear/IndexOf/AddSeparator)([ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md))。Bitmap/ImageIndex/SubMenuImages と TMenu.Images は Tier 3 の 2 バッチ目で追加(ADR 0030) |
 | ✅ TMainMenu | menus.pp(TMenu) | TLCLComponent → TComponent | フォームに割り当てる(TForm.Menu)。Items(ルート項目)は LCL が内部で生成するため、`WrapExisting` でラップする(ADR 0017)。Merge は未対応 |
 | ✅ TPopupMenu | menus.pp(TMenu) | TLCLComponent → TComponent | コントロールに割り当てる(TControl.PopupMenu)。AutoPopup/PopupComponent/OnPopup/OnClose/Popup(X, Y)(ADR 0017) |
 
@@ -137,7 +137,7 @@ Tier 1 の 1 バッチ目([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.m
   ([ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md))。ハンドルを返す DLL の関数の側で破棄通知に登録し、
   C++ 側は `TComponent::WrapExisting<T>` で初回アクセス時にラッパーを作る。TMenu.Items で初めて使った。
   以下は当初の記述。`TCustomLabeledEdit.EditLabel` のように、
-  コンポーネントが自分の子を Pascal 側だけで生成する場合、その子は no_vcl の `*_Create` を経由しないため
+  コンポーネントが自分の子を Pascal 側だけで生成する場合、その子は Bethany の `*_Create` を経由しないため
   C++ 側にラッパーが登録されない(`TComponent::FromHandle` が nullptr を返す)。この種のプロパティを
   公開するには、「既存のハンドルを受け取って、初回アクセス時に遅延でラッパーを生成する」ような仕組みが要る。
 - **LCL の Win32 実装には、DLL(`IsLibrary`)のとき `WidgetSet.AppHandle` が 0 であることを前提にしていない
@@ -145,7 +145,7 @@ Tier 1 の 1 バッチ目([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.m
   新しいコントロールを追加する際は、Run() 開始前にフォームを表示しても問題が無いか確認する
   ([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.md))。
 - ✅ **LCL が送出した例外は、呼び出し側(C/C++)で捕捉できない。** → 解決済み([ADR 0031](adr/0031-exceptions-across-dll.md))。
-  DLL の公開関数で例外を捕まえ、C はスレッドごとの直前のエラー(`no_vcl_HasLastError` 等)、C++ は `no_vcl::Exception` として受けられる。
+  DLL の公開関数で例外を捕まえ、C はスレッドごとの直前のエラー(`beth_HasLastError` 等)、C++ は `beth::Exception` として受けられる。
   イベントのハンドラから送出した例外も、DLL 側で送出し直す(メッセージループの中なら LCL が処理する)。
   以下は当初の記述。範囲外の添字、ソートされた TStringList への Insert
   ([ADR 0028](adr/0028-labelededit-and-stringlist.md))、読み込めない画像ファイル([ADR 0029](adr/0029-graphics-picture-image-glyph.md))等が、

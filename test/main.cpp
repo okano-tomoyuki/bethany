@@ -3,9 +3,9 @@
 #include <stdexcept>
 #include <string>
 
-#include "no_vcl.hpp"
+#include "beth.hpp"
 
-using namespace no_vcl;
+using namespace beth;
 
 namespace
 {
@@ -202,7 +202,7 @@ public:
     // C++Builder と同じく Owner を受け取り、TForm に渡す(Application->CreateForm が Application を渡す)。
     explicit TMainForm(TComponent* AOwner) : TForm(AOwner)
     {
-        Caption = "no_vcl C++ wrapper";
+        Caption = "Bethany C++ wrapper";
         Width = 640;
         Height = 930;
 
@@ -1661,7 +1661,7 @@ void TMainForm::OpenSubButtonClick(TObject*)
 int main()
 {
     Application->Initialize();
-    Application->Title = "no_vcl test";
+    Application->Title = "Bethany test";
     Application->CreateForm(&Form1);
 
     std::printf("Title: %s\n", std::string(Application->Title).c_str());
@@ -2182,7 +2182,7 @@ int main()
                     std::string(fields.Strings[2]).empty() ? "yes" : "no", (char)fields.Delimiter);
 
         // ファイルへの保存と読み込み。
-        const char* path = "no_vcl_stringlist_test.txt";
+        const char* path = "beth_stringlist_test.txt";
         fields.SaveToFile(path);
         TStringList loaded;
         loaded.LoadFromFile(path);
@@ -2191,7 +2191,7 @@ int main()
                     (int)loaded.Count, std::string(loaded.Strings[3]).c_str());
     }
 
-    // 例外(docs/adr/0031)。LCL が送出した例外は no_vcl::Exception として送出され、VCL と同じく catch (Exception& E) で受けられる。
+    // 例外(docs/adr/0031)。LCL が送出した例外は beth::Exception として送出され、VCL と同じく catch (Exception& E) で受けられる。
     {
         TStringList list;
         list.Add("only");
@@ -2210,7 +2210,7 @@ int main()
         try
         {
             TPicture picture;
-            picture.LoadFromFile("no_vcl_no_such_file.png");
+            picture.LoadFromFile("beth_no_such_file.png");
         }
         catch (Exception& E)
         {
@@ -2266,8 +2266,8 @@ int main()
                     canvas1 == canvas2 ? "yes" : "no");
 
         // 別の形式への変換(Assign)と保存。TPicture::LoadFromFile は拡張子から形式を選ぶ。
-        const char* pngPath = "no_vcl_graphic_test.png";
-        const char* jpgPath = "no_vcl_graphic_test.jpg";
+        const char* pngPath = "beth_graphic_test.png";
+        const char* jpgPath = "beth_graphic_test.jpg";
         TPortableNetworkGraphic png;
         png.Assign(bmp);
         png.SaveToFile(pngPath);

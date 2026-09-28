@@ -3,23 +3,23 @@
  * 見本を加えたら、ここにも加える。
  */
 import type { LayoutRecord } from './record.ts';
-import alignBasicText from './align-basic.nvform.json?raw';
+import alignBasicText from './align-basic.bfm.json?raw';
 import alignBasicRecord from './align-basic.lcl.json' with { type: 'json' };
-import alignOrderText from './align-order.nvform.json?raw';
+import alignOrderText from './align-order.bfm.json?raw';
 import alignOrderRecord from './align-order.lcl.json' with { type: 'json' };
-import alignOrderConsistentText from './align-order-consistent.nvform.json?raw';
+import alignOrderConsistentText from './align-order-consistent.bfm.json?raw';
 import alignOrderConsistentRecord from './align-order-consistent.lcl.json' with { type: 'json' };
-import anchorsText from './anchors.nvform.json?raw';
+import anchorsText from './anchors.bfm.json?raw';
 import anchorsRecord from './anchors.lcl.json' with { type: 'json' };
-import borderSpacingText from './border-spacing.nvform.json?raw';
+import borderSpacingText from './border-spacing.bfm.json?raw';
 import borderSpacingRecord from './border-spacing.lcl.json' with { type: 'json' };
-import constraintsText from './constraints.nvform.json?raw';
+import constraintsText from './constraints.bfm.json?raw';
 import constraintsRecord from './constraints.lcl.json' with { type: 'json' };
-import insetsText from './insets.nvform.json?raw';
+import insetsText from './insets.bfm.json?raw';
 import insetsRecord from './insets.lcl.json' with { type: 'json' };
-import invisibleText from './invisible.nvform.json?raw';
+import invisibleText from './invisible.bfm.json?raw';
 import invisibleRecord from './invisible.lcl.json' with { type: 'json' };
-import nestedText from './nested.nvform.json?raw';
+import nestedText from './nested.bfm.json?raw';
 import nestedRecord from './nested.lcl.json' with { type: 'json' };
 
 export const FIXTURES: readonly { name: string; text: string; record: LayoutRecord }[] = [

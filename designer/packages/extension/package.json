@@ -1,5 +1,5 @@
 {
-  "name": "no-vcl-designer",
+  "name": "bethany-designer",
   "displayName": "%displayName%",
   "description": "%description%",
   "version": "0.0.1",
@@ -19,11 +19,11 @@
   "contributes": {
     "customEditors": [
       {
-        "viewType": "noVclDesigner.designer",
+        "viewType": "bethanyDesigner.designer",
         "displayName": "%customEditor.displayName%",
         "selector": [
           {
-            "filenamePattern": "*.nvform.json"
+            "filenamePattern": "*.bfm.json"
           }
         ],
         "priority": "default"
@@ -31,71 +31,71 @@
     ],
     "commands": [
       {
-        "command": "noVclDesigner.newForm",
+        "command": "bethanyDesigner.newForm",
         "title": "%command.newForm.title%",
         "shortTitle": "%command.newForm.shortTitle%",
-        "category": "no_vcl Designer"
+        "category": "Bethany Designer"
       },
       {
-        "command": "noVclDesigner.generateCode",
+        "command": "bethanyDesigner.generateCode",
         "title": "%command.generateCode.title%",
-        "category": "no_vcl Designer",
+        "category": "Bethany Designer",
         "icon": "$(code)"
       }
     ],
     "menus": {
       "explorer/context": [
         {
-          "command": "noVclDesigner.newForm",
+          "command": "bethanyDesigner.newForm",
           "group": "navigation@10"
         }
       ],
       "file/newFile": [
         {
-          "command": "noVclDesigner.newForm"
+          "command": "bethanyDesigner.newForm"
         }
       ],
       "editor/title": [
         {
-          "command": "noVclDesigner.generateCode",
-          "when": "resourceFilename =~ /\\.nvform\\.json$/",
+          "command": "bethanyDesigner.generateCode",
+          "when": "resourceFilename =~ /\\.bfm\\.json$/",
           "group": "navigation"
         }
       ],
       "commandPalette": [
         {
-          "command": "noVclDesigner.generateCode",
-          "when": "resourceFilename =~ /\\.nvform\\.json$/"
+          "command": "bethanyDesigner.generateCode",
+          "when": "resourceFilename =~ /\\.bfm\\.json$/"
         }
       ]
     },
     "jsonValidation": [
       {
-        "fileMatch": "*.nvform.json",
-        "url": "./schema/nvform.schema.json"
+        "fileMatch": "*.bfm.json",
+        "url": "./schema/bfm.schema.json"
       }
     ],
     "configuration": {
-      "title": "no_vcl Designer",
+      "title": "Bethany Designer",
       "properties": {
-        "noVclDesigner.canvas.fontFamily": {
+        "bethanyDesigner.canvas.fontFamily": {
           "type": "string",
           "default": "",
           "markdownDescription": "%config.canvas.fontFamily%"
         },
-        "noVclDesigner.canvas.fontSize": {
+        "bethanyDesigner.canvas.fontSize": {
           "type": "number",
           "default": 0,
           "minimum": 0,
           "markdownDescription": "%config.canvas.fontSize%"
         },
-        "noVclDesigner.canvas.gridSize": {
+        "bethanyDesigner.canvas.gridSize": {
           "type": "number",
           "default": 8,
           "minimum": 0,
           "markdownDescription": "%config.canvas.gridSize%"
         },
-        "noVclDesigner.canvas.showGrid": {
+        "bethanyDesigner.canvas.showGrid": {
           "type": "boolean",
           "default": true,
           "markdownDescription": "%config.canvas.showGrid%"
@@ -112,8 +112,8 @@
     "watch": "esbuild src/extension.ts --bundle --platform=node --format=cjs --target=node20 --external:vscode --main-fields=module,main --sourcemap --outfile=dist/extension.cjs --watch=forever"
   },
   "dependencies": {
-    "@no-vcl-designer/codegen": "workspace:*",
-    "@no-vcl-designer/core": "workspace:*"
+    "@bethany-designer/codegen": "workspace:*",
+    "@bethany-designer/core": "workspace:*"
   },
   "devDependencies": {
     "@types/vscode": "~1.100.0",

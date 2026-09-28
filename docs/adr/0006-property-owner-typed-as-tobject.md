@@ -27,16 +27,16 @@
 これに伴い、`TPen`/`TBrush`/`TFont`/`TCanvas`(非所有ラッパー。[todo.md](../../todo.md) Phase 5 参照)も
 `TObject` を継承する形に変更した。
 
-- これらのクラスが持っていた独自の `no_vcl_obj_t handle_` メンバは削除し、
-  `TObject` から継承する `protected: no_vcl_obj_t handle_` を使うよう統一した。
+- これらのクラスが持っていた独自の `beth_obj_t handle_` メンバは削除し、
+  `TObject` から継承する `protected: beth_obj_t handle_` を使うよう統一した。
 - コンストラクタは `TObject(handle)`(既存の、派生クラスがハンドルを基底クラス初期化の時点で
   受け取るための第二コンストラクタ)に処理を委譲する形に変更した。
-- `TCanvas` が独自に持っていた `no_vcl_obj_t Handle() const { ... }` は
+- `TCanvas` が独自に持っていた `beth_obj_t Handle() const { ... }` は
   `TObject::Handle()` と完全に重複するため削除した。
 - `TCanvas` が明示的に宣言していたコピー禁止(`TCanvas(const TCanvas&) = delete;` 等)も、
   `TObject` の禁止が継承されるため削除した(重複の解消)。
 
-`TObject` は「`no_vcl_obj_t` のハンドルを保持し `Handle()` で公開する」という役割に過ぎず、
+`TObject` は「`beth_obj_t` のハンドルを保持し `Handle()` で公開する」という役割に過ぎず、
 「Create/Destroy を自前で行う(所有する)」ことを強制するものではない、という位置づけに整理した。
 所有するかどうかは各派生クラスの**デストラクタが Destroy を呼ぶかどうか**で決まる。
 

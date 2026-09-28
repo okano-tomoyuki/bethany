@@ -1,12 +1,12 @@
-"""no_vcl.hpp からデザイナーのコンポーネントカタログ(catalog.json)を作る(docs/designer/catalog.md)。
+"""beth.hpp からデザイナーのコンポーネントカタログ(catalog.json)を作る(docs/designer/catalog.md)。
 
-    python extract.py            静的な抽出 + 実測(no_vcl.dll が要る) + 補足(overlay.json)を重ねて catalog.json を書く
+    python extract.py            静的な抽出 + 実測(beth.dll が要る) + 補足(overlay.json)を重ねて catalog.json を書く
     python extract.py --no-runtime
                                  実測をせず、既定値は今の catalog.json のものを引き継ぐ(DLL が無くてよい)
     python extract.py --check    --no-runtime と同じ内容を作り、catalog.json と食い違っていればエラー(書き込まない)
 
-- 静的な抽出: py/gen_api.py の no_vcl.hpp の解析を使い、クラス・プロパティ・イベント・列挙型・定数を取り出す。
-- 実測: py/no_vcl.py(Python のバインディング)で、利用者が生成できる各クラスを生成して、プロパティの既定値を読む。
+- 静的な抽出: py/gen_api.py の beth.hpp の解析を使い、クラス・プロパティ・イベント・列挙型・定数を取り出す。
+- 実測: py/beth.py(Python のバインディング)で、利用者が生成できる各クラスを生成して、プロパティの既定値を読む。
   値は DSL の書き方(docs/designer/dsl-spec.md §5)で記録する。Windows(Win32)で実行したものを基準にする。
 - 補足: overlay.json(手書き)。デザイン時に設定できないプロパティ・パレットの分類・子を置けるか・親子の制約など。
 """
@@ -263,7 +263,7 @@ def apply_overlay(cat, overlay, chain):
 
 def measure(cat):
     """各クラスを生成して、デザイン時に設定できるプロパティの既定値を読む(DSL の書き方で)。"""
-    import no_vcl as nv
+    import beth
 
     colors = {v: k for k, v in cat["constants"]["TColor"].items()}
     cursors = {}
@@ -289,7 +289,7 @@ def measure(cat):
             if t["alias"] == "TCursor":
                 return cursors.get(v, v)
             if t["alias"] == "TShortCut":
-                return nv.ShortCutToText(v) if v else ""  # 0 は割り当てなし(LCL は "Unknown" を返す)
+                return beth.ShortCutToText(v) if v else ""  # 0 は割り当てなし(LCL は "Unknown" を返す)
             return v
         if k == "ref":
             return None if value is None else "?"
@@ -303,11 +303,11 @@ def measure(cat):
             return obj
         raise ValueError(k)
 
-    owner = nv.TForm(nv.Application)
+    owner = beth.TForm(beth.Application)
     failures = []
     for name, cls in cat["classes"].items():
         try:
-            obj = getattr(nv, name)(nv.Application if cls["kind"] == "form" else owner)
+            obj = getattr(nv, name)(beth.Application if cls["kind"] == "form" else owner)
         except Exception as e:  # noqa: BLE001
             failures.append(f"{name}: 生成できない ({e})")
             continue
@@ -342,7 +342,7 @@ def keep_defaults(cat, old):
 # ---------------- 書き出し ----------------
 
 def order(cat):
-    """決まった順に並べ直す(クラスは no_vcl.hpp の順、クラスの中のキーは固定の順)。
+    """決まった順に並べ直す(クラスは beth.hpp の順、クラスの中のキーは固定の順)。
     デザイン時に設定できないプロパティは書き出さない(デザイナーは使わないため)。"""
     key_order = ["ancestors", "kind", "palette", "acceptsControls", "childClasses", "parentClasses", "defaultSize", "properties", "events"]
     prop_order = ["type", "declaredIn", "default", "doc"]
@@ -374,7 +374,7 @@ def dump(cat):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--no-runtime", action="store_true", help="実測しない(既定値は今のカタログから引き継ぐ)")
-    ap.add_argument("--check", action="store_true", help="catalog.json が no_vcl.hpp・overlay.json と食い違っていないか調べる")
+    ap.add_argument("--check", action="store_true", help="catalog.json が beth.hpp・overlay.json と食い違っていないか調べる")
     args = ap.parse_args()
 
     ex = Extractor()
@@ -393,7 +393,7 @@ def main():
     if args.check:
         current = OUTPUT_FILE.read_text(encoding="utf-8") if OUTPUT_FILE.exists() else ""
         if current != text:
-            print("catalog.json が no_vcl.hpp・overlay.json と食い違っている。python designer/tools/catalog/extract.py で作り直す。")
+            print("catalog.json が beth.hpp・overlay.json と食い違っている。python designer/tools/catalog/extract.py で作り直す。")
             sys.exit(1)
         if problems:
             print("\n".join(problems))

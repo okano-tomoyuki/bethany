@@ -64,7 +64,7 @@ ParentColor・ParentFont・ParentShowHint の置き場所:
   - TAnchorKind の定義は、TControl より前に移した(TSplitter の ResizeAnchor と共有する)。
 - **ParentColor・ParentFont・ParentShowHint**: 選択肢B(TControl の public。class-hierarchy.md の OnDblClick 等と同じ扱い)。
 - **Python**: gen_api.py が `using X = Set<E>` を読み、Anchors を要素の frozenset として読み書きする(`Button1.Anchors = {akLeft, akTop}`・
-  `akRight in Button1.Anchors`)。`std::intptr_t` は整数。TComponent は手書き(no_vcl_core.py)なので、Tag はそこに足した。
+  `akRight in Button1.Anchors`)。`std::intptr_t` は整数。TComponent は手書き(beth_core.py)なので、Tag はそこに足した。
 - 見送ったもの: TControl.Name(LCL の Name はストリーミング・FindComponent 用で、生成コードはメンバ変数で参照するため当面は不要)、
   SetBounds、Constraints の OnChange・Options、BorderSpacing の CellAlign 系・Space[]、TabOrder の変更の通知。
 

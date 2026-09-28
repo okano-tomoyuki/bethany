@@ -4,7 +4,7 @@ import {
   parseDocument,
   serializeDocument,
   type EditCommand,
-} from '@no-vcl-designer/core';
+} from '@bethany-designer/core';
 import * as vscode from 'vscode';
 
 export type ApplyResult = { readonly ok: true } | { readonly ok: false; readonly error: string };

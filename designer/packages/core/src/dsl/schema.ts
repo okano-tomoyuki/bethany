@@ -1,5 +1,5 @@
 /**
- * フォームの定義ファイル(*.nvform.json)の構造のスキーマ(docs/designer/dsl-spec.md)。
+ * フォームの定義ファイル(*.bfm.json)の構造のスキーマ(docs/designer/dsl-spec.md)。
  * 実装後はこのスキーマを正とし、dsl-spec.md と食い違う場合は dsl-spec.md を直す。
  *
  * ここでは形だけを検証する。クラス・プロパティ・イベントがカタログにあるか、値が型に合うか、名前の重複・参照は
@@ -102,7 +102,7 @@ export const CodegenSettings = z.strictObject({
 });
 export type CodegenSettings = z.infer<typeof CodegenSettings>;
 
-export const NvformDocument = z.strictObject({
+export const BfmDocument = z.strictObject({
   $schema: z.string().optional(),
   formatVersion: z.literal(FORMAT_VERSION),
   codegen: CodegenSettings.optional(),
@@ -110,4 +110,4 @@ export const NvformDocument = z.strictObject({
   /** 画面に出ないコンポーネント(TTimer・ダイアログ・メニュー・TImageList) */
   components: z.array(ComponentNode).optional(),
 });
-export type NvformDocument = z.infer<typeof NvformDocument>;
+export type BfmDocument = z.infer<typeof BfmDocument>;

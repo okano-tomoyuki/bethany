@@ -13,11 +13,11 @@ import {
   propertyValue,
   type ControlNode,
   type NodeLocation,
-  type NvformDocument,
+  type BfmDocument,
   type PropertyInfo,
   type PropertyType,
   type PropertyValue,
-} from '@no-vcl-designer/core';
+} from '@bethany-designer/core';
 import { useState } from 'react';
 import { setProperty } from '../../editing.ts';
 import { useDocumentStore } from '../../store/stores.ts';
@@ -112,7 +112,7 @@ function PropertyRow({
   info,
   error,
 }: {
-  readonly document: NvformDocument;
+  readonly document: BfmDocument;
   readonly nodes: readonly NodeLocation[];
   readonly path: Path;
   readonly info: PropertyInfo;
@@ -218,7 +218,7 @@ function Expanded({
   value,
   commit,
 }: {
-  readonly document: NvformDocument;
+  readonly document: BfmDocument;
   readonly nodes: readonly NodeLocation[];
   readonly path: Path;
   readonly type: PropertyType;
@@ -324,7 +324,7 @@ function Editor({
   fallback,
   commit,
 }: {
-  readonly document: NvformDocument;
+  readonly document: BfmDocument;
   readonly type: PropertyType;
   readonly value: unknown;
   readonly mixed: boolean;
@@ -379,10 +379,10 @@ function Editor({
               value={value}
               mixed={mixed}
               fallback={fallback}
-              list="nvd-colors"
+              list="beth-colors"
               commit={commit}
             />
-            <datalist id="nvd-colors">
+            <datalist id="beth-colors">
               {Object.keys(catalog.constants.TColor ?? {}).map((c) => (
                 <option key={c} value={c} />
               ))}
@@ -397,10 +397,10 @@ function Editor({
               value={value}
               mixed={mixed}
               fallback={fallback}
-              list="nvd-shortcuts"
+              list="beth-shortcuts"
               commit={commit}
             />
-            <datalist id="nvd-shortcuts">
+            <datalist id="beth-shortcuts">
               {SHORTCUTS.map((s) => (
                 <option key={s} value={s} />
               ))}
@@ -466,7 +466,7 @@ function parseValue(type: PropertyType, text: string): PropertyValue | undefined
 }
 
 /** 参照の候補: 型が合うコンポーネント・コントロールの name */
-function* referenceCandidates(document: NvformDocument, className: string): Generator<string> {
+function* referenceCandidates(document: BfmDocument, className: string): Generator<string> {
   const walk = function* (
     controls: readonly ControlNode[] | undefined,
   ): Generator<{ name: string; class: string }> {

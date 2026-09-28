@@ -1,5 +1,5 @@
 {
-  "name": "@no-vcl-designer/webview",
+  "name": "@bethany-designer/webview",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -9,8 +9,8 @@
     "watch": "vite build --watch"
   },
   "dependencies": {
-    "@no-vcl-designer/codegen": "workspace:*",
-    "@no-vcl-designer/core": "workspace:*",
+    "@bethany-designer/codegen": "workspace:*",
+    "@bethany-designer/core": "workspace:*",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "zustand": "^5.0.15"

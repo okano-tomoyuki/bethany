@@ -7,7 +7,7 @@
 > [0007](0007-lcl-faithful-hierarchy.md) で Owner と Parent を分離し、[0008](0008-wrapper-lifetime-follows-lcl.md) で
 > コンポーネントのデストラクタを protected にしたため、`std::unique_ptr` メンバは使えなくなった。
 > 「宣言は順不同のポインタメンバ、生成はコンストラクタ本体」という本 ADR の考え方は維持しつつ、現在の書き方は
-> C++Builder と同じく生ポインタメンバで `Button1 = new no_vcl::TButton(this); Button1->Parent = this;` とし、
+> C++Builder と同じく生ポインタメンバで `Button1 = new beth::TButton(this); Button1->Parent = this;` とし、
 > 破棄は Owner に任せる。
 
 ## 背景
@@ -43,19 +43,19 @@ DSL が生成するコードは、コントロールを `std::unique_ptr<T>` の
 (所有権を明確にするため生ポインタではなく `unique_ptr` を推奨する)、コンストラクタ本体で生成する形とする。
 
 ```cpp
-class MainForm : public no_vcl::TForm
+class MainForm : public beth::TForm
 {
 public:
-    std::unique_ptr<no_vcl::TLabel>  label1;   // 宣言順は自由
-    std::unique_ptr<no_vcl::TButton> button1;
+    std::unique_ptr<beth::TLabel>  label1;   // 宣言順は自由
+    std::unique_ptr<beth::TButton> button1;
 
     MainForm()
     {
         // 生成順も宣言順と無関係に書ける(marker方式のコード生成と相性が良い)
-        button1.reset(new no_vcl::TButton(*this));
+        button1.reset(new beth::TButton(*this));
         button1->Caption = "Click me";
 
-        label1.reset(new no_vcl::TLabel(*this));
+        label1.reset(new beth::TLabel(*this));
         label1->Caption = "Hello";
     }
 };
@@ -69,7 +69,7 @@ DSL 生成コードでは `reset(new T(...))` または `std::unique_ptr<T>(new 
 
 ## 影響
 
-- **`no_vcl.hpp`/`no_vcl.cpp` への変更は不要**。0003 で懸念していた `TCanvas`/`Pen`/`Brush`/`Font` の
+- **`beth.hpp`/`beth.cpp` への変更は不要**。0003 で懸念していた `TCanvas`/`Pen`/`Brush`/`Font` の
   再束縛(`Bind`)対応も不要になった(これらは所有者(`TPaintBox`)の内部でしか使われず、
   consumer 側が `TPaintBox` 自体をポインタで持つかどうかとは独立した話のため)。
 - [todo.md](../../todo.md) の Phase 6 は「実装タスク」から「規約の周知」に縮小する。

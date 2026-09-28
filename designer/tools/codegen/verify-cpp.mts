@@ -1,20 +1,20 @@
 /**
- * 生成した C++ のコードを、本リポジトリの no_vcl と一緒にビルド・実行して確かめる(docs/designer/codegen-design.md §7)。
+ * 生成した C++ のコードを、本リポジトリの Bethany と一緒にビルド・実行して確かめる(docs/designer/codegen-design.md §7)。
  *
  *   node tools/codegen/verify-cpp.mts
  *
- * 見本(samples/*.nvform.json)ごとに、コードを生成して CMake でビルドし、フォームを表示した後に次を確かめる。
+ * 見本(samples/*.bfm.json)ごとに、コードを生成して CMake でビルドし、フォームを表示した後に次を確かめる。
  * 1. 各コントロールの位置と大きさが、DSL に書いた値(デザイナーが計算した配置)と一致すること。
  * 2. イベントが接続されていること(LCL を通して発生させたイベントで、ハンドラが呼ばれる)。
  * 3. 参照・入れ子のオブジェクト・TStrings・メニューが設定されていること。
  *
- * 必要なもの: C++ コンパイラ・CMake・Ninja と、ビルド済みの no_vcl の DLL(リポジトリ直下の no_vcl.dll / libno_vcl.so。
+ * 必要なもの: C++ コンパイラ・CMake・Ninja と、ビルド済みの Bethany の DLL(リポジトリ直下の beth.dll / libbeth.so。
  * build-windows.sh・build-linux.sh で作る)。ビルドの作業フォルダは .cache/verify-cpp(2 回目以降は差分ビルドになる)。
  */
 import { copyFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { walkNodes, type NvformDocument } from '../../packages/core/src/index.ts';
+import { walkNodes, type BfmDocument } from '../../packages/core/src/index.ts';
 import { generateCpp } from '../../packages/codegen/src/index.ts';
 import {
   checkReport,
@@ -29,7 +29,7 @@ import {
 const workDir = join(designerRoot, '.cache/verify-cpp');
 const buildDir = join(workDir, 'build');
 const isWindows = process.platform === 'win32';
-const dllName = isWindows ? 'no_vcl.dll' : 'libno_vcl.so';
+const dllName = isWindows ? 'beth.dll' : 'libbeth.so';
 
 // ---- コードの生成 --------------------------------------------------------------
 
@@ -45,10 +45,10 @@ writeIfChanged(join(workDir, 'CMakeLists.txt'), cmakeLists());
 
 // ---- ビルド ---------------------------------------------------------------------
 
-console.log(`ビルドしています(no_vcl: ${repoRoot})…`);
+console.log(`ビルドしています(Bethany: ${repoRoot})…`);
 execFileSync(
   'cmake',
-  ['-S', workDir, '-B', buildDir, '-G', 'Ninja', `-DNO_VCL_DIR=${repoRoot.replace(/\\/g, '/')}`],
+  ['-S', workDir, '-B', buildDir, '-G', 'Ninja', `-DBETH_DIR=${repoRoot.replace(/\\/g, '/')}`],
   { stdio: ['ignore', 'ignore', 'inherit'] },
 );
 try {
@@ -75,18 +75,18 @@ checkReport(doc, parseReport(output));
 /** ハンドラの雛形の中身を、呼ばれたことを記録する処理に置き換える */
 function recordHandlerCalls(source: string, className: string): string {
   const withDecl = source.replace(
-    'using namespace no_vcl;\n',
-    'using namespace no_vcl;\n\n#include <string>\n#include <vector>\nextern std::vector<std::string> nvd_calls;\n',
+    'using namespace beth;\n',
+    'using namespace beth;\n\n#include <string>\n#include <vector>\nextern std::vector<std::string> beth_calls;\n',
   );
   // className は識別子のため、正規表現の特殊文字を含まない
   return withDecl.replace(
     new RegExp(`void ${className}::(\\w+)\\(([^)]*)\\)\\n\\{\\n {4}// TODO: implement\\n\\}`, 'g'),
     (_, name: string, params: string) =>
-      `void ${className}::${name}(${params})\n{\n    nvd_calls.push_back("${name}");\n}`,
+      `void ${className}::${name}(${params})\n{\n    beth_calls.push_back("${name}");\n}`,
   );
 }
 
-function harness(document: NvformDocument): string {
+function harness(document: BfmDocument): string {
   const controls = [...walkNodes(document)].flatMap((n) =>
     n.kind === 'control' ? [n.node.name] : [],
   );
@@ -95,9 +95,9 @@ function harness(document: NvformDocument): string {
 #include <string>
 #include <vector>
 
-using namespace no_vcl;
+using namespace beth;
 
-std::vector<std::string> nvd_calls;
+std::vector<std::string> beth_calls;
 
 static std::string json(const std::string& s)
 {
@@ -166,7 +166,7 @@ ${controls
     for (int i = 0; i < 5; ++i) Application->ProcessMessages();
 
     std::printf("},\\"calls\\":[");
-    for (size_t i = 0; i < nvd_calls.size(); ++i) std::printf("%s%s", i ? "," : "", json(nvd_calls[i]).c_str());
+    for (size_t i = 0; i < beth_calls.size(); ++i) std::printf("%s%s", i ? "," : "", json(beth_calls[i]).c_str());
     std::printf("]}\\n");
     std::fflush(stdout);
     return 0;
@@ -176,18 +176,18 @@ ${controls
 
 function cmakeLists(): string {
   return `cmake_minimum_required(VERSION 3.15)
-project(nvd_verify_cpp CXX)
+project(beth_verify_cpp CXX)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_library(no_vcl STATIC \${NO_VCL_DIR}/no_vcl.cpp \${NO_VCL_DIR}/internal/api.cpp)
-target_include_directories(no_vcl PUBLIC \${NO_VCL_DIR})
-target_link_libraries(no_vcl PRIVATE \${CMAKE_DL_LIBS})
+add_library(beth STATIC \${BETH_DIR}/beth.cpp \${BETH_DIR}/internal/api.cpp)
+target_include_directories(beth PUBLIC \${BETH_DIR})
+target_link_libraries(beth PRIVATE \${CMAKE_DL_LIBS})
 
 add_executable(verify MainForm.cpp main.cpp)
 target_include_directories(verify PRIVATE \${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(verify PRIVATE no_vcl)
+target_link_libraries(verify PRIVATE beth)
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     # 生成したコードに警告が出ないこと(未使用の引数はハンドラの雛形なので除く)も確かめる
     target_compile_options(verify PRIVATE -Wall -Wextra -Wno-unused-parameter -Werror)

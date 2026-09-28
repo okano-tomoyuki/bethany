@@ -1,7 +1,7 @@
 /**
  * 選択に対してできる操作の一覧(docs/designer/editor-design.md §5.2・§5.3)。構造の木の上のボタンと、右クリックのメニューで共有する。
  */
-import { isSubclassOf, l10n, type NodeLocation } from '@no-vcl-designer/core';
+import { isSubclassOf, l10n, type NodeLocation } from '@bethany-designer/core';
 import {
   addMenuItem,
   addTab,

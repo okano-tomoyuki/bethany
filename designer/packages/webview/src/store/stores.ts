@@ -1,7 +1,7 @@
 /**
  * アプリ全体で使うストアのインスタンスと、React から購読するためのフック。
  */
-import { findNode, type NodeLocation } from '@no-vcl-designer/core';
+import { findNode, type NodeLocation } from '@bethany-designer/core';
 import { useStore } from 'zustand';
 import { useShallow } from 'zustand/shallow';
 import { postMessage } from '../vscode.ts';

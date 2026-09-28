@@ -1,13 +1,13 @@
-#ifndef NO_VCL_INTERNAL_FUNCS_H
-#define NO_VCL_INTERNAL_FUNCS_H
+#ifndef BETH_INTERNAL_FUNCS_H
+#define BETH_INTERNAL_FUNCS_H
 
-// DLL(no_vcl.dll / libno_vcl.so)の公開関数の一覧(戻り値型, 名前, 引数リスト, 呼び出し時の引数)。docs/adr/0032。
-// 型は no_vcl::internal の型(internal/api.h)で、この一覧は必ず namespace no_vcl::internal の中で展開する。
+// DLL(beth.dll / libbeth.so)の公開関数の一覧(戻り値型, 名前, 引数リスト, 呼び出し時の引数)。docs/adr/0032。
+// 型は beth::internal の型(internal/api.h)で、この一覧は必ず namespace beth::internal の中で展開する。
 // ここに 1 行追加すると、宣言(internal/api.h)と、関数ポインタ・読み込み・呼び出しの後にエラーを確かめて
 // Exception を送出する中継関数(internal/api.cpp)がまとめて生成される。
 // 名前は DLL の公開名(Pascal 側の exports)と同じ。DLL の関数の決まり(呼び出し規約・文字列・コールバック・例外)は
 // docs/dll-abi.md を参照。
-#define NO_VCL_FUNCS(X) \
+#define BETH_FUNCS(X) \
     X(void,          SetCallbackError,                      (str_t c, str_t m),                                            (c, m)) \
     X(void,          FreeNotify_SetCallback,                (callback_t cb, void* d),                                      (cb, d)) \
     X(void,          TComponent_Destroy,                    (obj_t o),                                                     (o)) \

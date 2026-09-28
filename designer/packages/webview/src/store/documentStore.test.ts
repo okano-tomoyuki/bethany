@@ -3,13 +3,13 @@ import {
   findNode,
   serializeDocument,
   type EditCommand,
-  type NvformDocument,
+  type BfmDocument,
   type WebviewToExtensionMessage,
-} from '@no-vcl-designer/core';
+} from '@bethany-designer/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createDocumentStore, type DocumentStore } from './documentStore.ts';
 
-const DOC: NvformDocument = {
+const DOC: BfmDocument = {
   formatVersion: 1,
   form: { name: 'MainForm', class: 'TForm' },
 };
@@ -21,7 +21,7 @@ let store: DocumentStore;
 beforeEach(() => {
   sent = [];
   store = createDocumentStore((message) => sent.push(message));
-  store.getState().receiveDocument(1, TEXT, 'MainForm.nvform.json');
+  store.getState().receiveDocument(1, TEXT, 'MainForm.bfm.json');
 });
 
 function addButton(name = 'Button1'): EditCommand {
@@ -60,7 +60,7 @@ describe('documentStore', () => {
     // 1 つ目の編集だけが反映された版が届く
     const result = applyCommand(DOC, first);
     if (!result.ok) throw new Error(result.error);
-    store.getState().receiveDocument(2, serializeDocument(result.document), 'MainForm.nvform.json');
+    store.getState().receiveDocument(2, serializeDocument(result.document), 'MainForm.bfm.json');
     store.getState().receiveEditResult(1, true);
 
     expect(has('Button2')).toBe(true);

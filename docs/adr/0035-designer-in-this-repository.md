@@ -1,4 +1,4 @@
-# 0035. デザイナーアプリは本リポジトリ内に no_vcl 専用として作り、tk-designer からは GUI に依存しない仕組みだけを流用する
+# 0035. デザイナーアプリは本リポジトリ内に Bethany 専用として作り、tk-designer からは GUI に依存しない仕組みだけを流用する
 
 - 状態: 承認
 - 日付: 2026-09-28
@@ -17,18 +17,18 @@
     画面に出ないコンポーネントもフォームが所有する。
   - イベント: LCL のイベントは型ごとに引数が決まっている(TNotifyEvent・TCloseEvent・TKeyEvent 等)。
   このため、tk-designer の DSL・カタログ・レイアウトの処理は、そのままでは使えない。
-- **デザイナーが扱う語彙の元は、本リポジトリの no_vcl.hpp にある。** py/gen_api.py は既に no_vcl.hpp を解析して、
+- **デザイナーが扱う語彙の元は、本リポジトリの beth.hpp にある。** py/gen_api.py は既に beth.hpp を解析して、
   クラス・プロパティ・イベント・列挙型を取り出している。既定値は Python のバインディングで各クラスを生成して読める。
 - **tk-designer は作り直しの途中**で、要件の多くが未実装のまま動いている。
 
 ## 検討した選択肢
 
 - 選択肢A: ADR 0001 のとおり別のリポジトリにし、tk-designer を複製して作り替える。
-  no_vcl の API の変更とデザイナーのカタログ・コード生成の更新が、別々のリポジトリのコミットになり、ずれが起きやすい。
+  Bethany の API の変更とデザイナーのカタログ・コード生成の更新が、別々のリポジトリのコミットになり、ずれが起きやすい。
 - 選択肢B: tk-designer を複数の GUI ライブラリに対応する汎用のデザイナーにする。
   Tk と LCL の違いが大きく、共通の DSL・レイアウトの抽象化のコストが大きい。作り直しの途中の tk-designer にも影響する。
-- 選択肢C: 本リポジトリ内に no_vcl 専用のデザイナーを作り、tk-designer からは GUI に依存しない仕組みだけを複製して流用する。
-  DSL・カタログ・コード生成を no_vcl の API に沿って設計でき、API の変更と同じコミットで更新・検証できる。
+- 選択肢C: 本リポジトリ内に Bethany 専用のデザイナーを作り、tk-designer からは GUI に依存しない仕組みだけを複製して流用する。
+  DSL・カタログ・コード生成を Bethany の API に沿って設計でき、API の変更と同じコミットで更新・検証できる。
 
 ## 決定
 
@@ -39,10 +39,10 @@
   (デザイナーを開発するときだけ Node.js・pnpm が要る)。
   - パッケージの分け方と依存の向きは tk-designer と同じにする: `core`(DSL・検証・カタログ・編集コマンド)・`codegen`・`cli`・
     `extension`・`webview`。core と codegen はファイル入出力を持たず、文字列の入出力だけでテストできるようにする。
-  - カタログの抽出は `designer/tools/catalog/` に Python で置き、py/gen_api.py の no_vcl.hpp の解析と、Python のバインディングでの
+  - カタログの抽出は `designer/tools/catalog/` に Python で置き、py/gen_api.py の beth.hpp の解析と、Python のバインディングでの
     既定値の読み取りを使う。抽出したカタログ(JSON)はコミットする。
 - **設計ドキュメント**: デザイナーの仕様(DSL・コード生成・カタログ等)は `docs/designer/` に置く。ADR は本リポジトリの `docs/adr/` の連番を続ける。
-- **tk-designer(2026-09-28 時点、`cc00e22`)から流用するもの**(複製して、no_vcl に合わせて直す):
+- **tk-designer(2026-09-28 時点、`cc00e22`)から流用するもの**(複製して、Bethany に合わせて直す):
   - マーカー区間の更新方式のコード生成([tk-designer ADR 0004](https://github.com/okano-tomoyuki/tk-designer))と、その実装
     (`packages/codegen/src` の region・hash・stale・comments とテスト)。
   - モノレポとツール類(pnpm・TypeScript strict・ESLint・Prettier・Vitest・esbuild・Vite。tk-designer ADR 0005)。
@@ -58,12 +58,12 @@
 - **進める順序**:
   1. DSL 仕様・コード生成・カタログの設計(`docs/designer/`)。
   2. カタログの抽出。
-  3. コード生成と CLI。**C++ を先に作り**(no_vcl の主な対象)、生成したコードを no_vcl でビルドして動くことを確かめてから Python に広げる。
+  3. コード生成と CLI。**C++ を先に作り**(Bethany の主な対象)、生成したコードを Bethany でビルドして動くことを確かめてから Python に広げる。
   4. VS Code 拡張とデザイナーの画面(tk-designer の拡張ホスト・Webview の骨組みを土台にする)。
 
 ## 影響
 
 - ADR 0001 は一部置換になる(別リポジトリの部分だけ)。
 - 本リポジトリに Node/TypeScript のコードが加わる。`designer/` の外のビルド手順(build-windows.sh・build-linux.sh)は変わらない。
-- no_vcl.hpp の変更は、カタログの再抽出を伴う。カタログが no_vcl.hpp と食い違っていないかを検査する仕組みを、カタログの抽出とあわせて用意する。
+- beth.hpp の変更は、カタログの再抽出を伴う。カタログが beth.hpp と食い違っていないかを検査する仕組みを、カタログの抽出とあわせて用意する。
 - tk-designer とはコードを共有しない(複製)。どちらかで直した仕組み(マーカー区間の更新等)は、必要に応じて手で反映する。

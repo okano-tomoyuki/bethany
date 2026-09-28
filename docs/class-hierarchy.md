@@ -1,6 +1,6 @@
 # クラス階層
 
-no_vcl のクラス階層と、各メンバをどの階層に置くかの対応表。
+Bethany のクラス階層と、各メンバをどの階層に置くかの対応表。
 方針の背景は [ADR 0007](adr/0007-lcl-faithful-hierarchy.md) を参照。
 
 ## 1. LCL の継承関係(ソースで確認済み)
@@ -66,7 +66,7 @@ TObject
 - ダイアログ(TCommonDialog の派生)は **TControl ではない**非ビジュアルコンポーネント。TSaveDialog・TSelectDirectoryDialog は
   **具象クラスの TOpenDialog の派生**、TReplaceDialog は TFindDialog の派生(2026-09-28 に `dialogs.pp` で確認。[ADR 0033](adr/0033-dialogs.md))。
 
-## 2. no_vcl の階層(実装済みのクラス)
+## 2. Bethany の階層(実装済みのクラス)
 
 LCL の継承関係の**部分列**にする(途中の階層を省くことはあっても、LCL に無い継承関係は作らない)。
 省くのは「LCL/FPC 固有で、C++Builder に存在せず、公開するメンバも持たないクラス」
@@ -124,11 +124,11 @@ LCL でそのメンバが **公開(public/published)される階層** に置く�
 LCL で protected のメンバを派生クラスが公開している場合は、C++ でも基底では protected にし、
 公開する派生クラスで `using` する(例: `TCheckBox` の `using TButtonControl::Checked;`)。
 
-DLL の関数名(内部層 `no_vcl::internal` の関数名も同じ。[ADR 0032](adr/0032-internalize-c-api.md))も同じ規則で、公開される階層のクラス名を使う。
+DLL の関数名(内部層 `beth::internal` の関数名も同じ。[ADR 0032](adr/0032-internalize-c-api.md))も同じ規則で、公開される階層のクラス名を使う。
 ただし兄弟クラスがそれぞれ公開していて関数が重複する場合は、宣言元の共通祖先の名前で 1 本にし、
 Pascal 側は protected hack(`TControlAccess = class(TControl)` のような同一ユニット内の派生クラス経由)でアクセスする。
 
-| メンバ | LCL の宣言元(公開範囲) | LCL で公開しているクラス | no_vcl C++ | DLL の関数 |
+| メンバ | LCL の宣言元(公開範囲) | LCL で公開しているクラス | Bethany C++ | DLL の関数 |
 |---|---|---|---|---|
 | Parent / Left / Top / Width / Height / Visible / Enabled / Caption | TControl(public/published) | TControl | TControl(public) | `TControl_*` |
 | Align | TControl(public。既定値は TStatusBar が alBottom、TCustomSplitter が alLeft に上書き) | TControl | TControl(public) | `TControl_GetAlign` / `SetAlign`([ADR 0016](adr/0016-control-align-and-splitter.md)) |
@@ -260,11 +260,11 @@ DLL のコールバックは CanClose へのポインタを受け取る([ADR 001
   ([ADR 0017](adr/0017-menus-and-wrapping-lcl-created-components.md))。
 - ツリービューのノード(`TTreeNode`。TComponent ではない)は、初めて取得したときにラッパーが作られ、ノードの削除
   (ツリービューの破棄に伴う削除も含む)の通知で delete される。Pascal 側は `TCustomTreeView.Delete` を上書きした
-  内部クラス(`TNoVclTreeView`)で、OnDeletion の後に通知する。`TTreeNodes` は TCanvas と同じくツリービューの値メンバ
+  内部クラス(`TBethTreeView`)で、OnDeletion の後に通知する。`TTreeNodes` は TCanvas と同じくツリービューの値メンバ
   ([ADR 0019](adr/0019-treeview-and-non-component-items.md))。
 - TComponent ではない項目(ツリービューのノード・リストビューの項目と列)のラッパーは `ItemRegistry` で共通に管理し、
-  DLL の項目の破棄通知(`no_vcl_ItemFree_SetCallback`)で delete される。リストビューの項目は `TCustomListView.DoDeletion` の上書き、
-  列は no_vcl の Delete・Clear とリストビューの破棄で通知される([ADR 0020](adr/0020-listview-and-shared-item-registry.md))。
+  DLL の項目の破棄通知(`beth_ItemFree_SetCallback`)で delete される。リストビューの項目は `TCustomListView.DoDeletion` の上書き、
+  列は Bethany の Delete・Clear とリストビューの破棄で通知される([ADR 0020](adr/0020-listview-and-shared-item-registry.md))。
 - ラッパーのレジストリは、atexit で登録した終了処理(`TApplication::Shutdown`)の中でも使われるため、関数内 static の値ではなく
   破棄しないオブジェクトにする(初回の構築が atexit 登録より後だと、Shutdown より先に破棄されてしまう。ADR 0019)。
 - Application が所有するフォームは、main から戻った後の C++ の終了処理でまとめて破棄される

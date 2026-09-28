@@ -1,11 +1,11 @@
 # このファイルは gen.py が internal/api.h と internal/funcs.h から生成する。直接編集しない。
-"""no_vcl.dll / libno_vcl.so の内部層(no_vcl::internal)の Python バインディング。
+"""beth.dll / libbeth.so の内部層(beth::internal)の Python バインディング。
 
-- lib.<DLL の関数名>(...) で呼ぶ。DLL の中で例外が起きると NoVclError を送出する(docs/adr/0031)。
+- lib.<DLL の関数名>(...) で呼ぶ。DLL の中で例外が起きると BethError を送出する(docs/adr/0031)。
 - コールバックの引数には Python の関数をそのまま渡せる。渡したコールバックは、同じ登録先
   (関数名と対象のオブジェクト)に次のコールバックを登録するまで保持する(GC で解放されないように)。
 - コールバックの中で起きた Python の例外は SetCallbackError で DLL へ知らせる。公開関数の中
-  (Show・Click 等)で起きたものは、その関数の呼び出し側で NoVclError(__cause__ が元の例外)になり、
+  (Show・Click 等)で起きたものは、その関数の呼び出し側で BethError(__cause__ が元の例外)になり、
   メッセージループの中で起きたものは LCL の Application.HandleException が処理する。
 - コールバックは DLL を呼んだスレッド(GUI の処理は TApplication_Run を呼んだスレッド)の上で呼ばれる。
 """
@@ -27,15 +27,15 @@ iptr_t = c_ssize_t  # ポインタと同じ幅の符号付き整数(Pascal の P
 # DLL の呼び出し規約は Windows では __stdcall(Win64 では cdecl と同じ)
 if platform.system() == "Windows":
     _FUNCTYPE = ctypes.WINFUNCTYPE
-    _dll = ctypes.WinDLL(os.path.join(os.path.dirname(os.path.abspath(__file__)), "no_vcl.dll"))
+    _dll = ctypes.WinDLL(os.path.join(os.path.dirname(os.path.abspath(__file__)), "beth.dll"))
 else:
     _FUNCTYPE = ctypes.CFUNCTYPE
-    _dll = ctypes.CDLL(os.path.join(os.path.dirname(os.path.abspath(__file__)), "libno_vcl.so"))
+    _dll = ctypes.CDLL(os.path.join(os.path.dirname(os.path.abspath(__file__)), "libbeth.so"))
 
 
-class NoVclError(Exception):
+class BethError(Exception):
     """DLL の中で起きた例外。class_name は Pascal の例外クラス名(コールバック由来なら元の例外のクラス名)。
-    C++ の no_vcl::Exception と同じ名前でも読める(E.Message・E.ClassName())。"""
+    C++ の beth::Exception と同じ名前でも読める(E.Message・E.ClassName())。"""
 
     def __init__(self, class_name, message):
         super().__init__(f"{class_name}: {message}")
@@ -73,7 +73,7 @@ def _errcheck(result, func, args):
     _state.error = None
     cause = getattr(_state, "callback_exception", None)
     _state.callback_exception = None
-    raise NoVclError(*error) from cause
+    raise BethError(*error) from cause
 
 
 def _guard(fn):
@@ -84,8 +84,8 @@ def _guard(fn):
             fn(*args)
         except BaseException as e:
             _state.callback_exception = e
-            if isinstance(e, NoVclError):
-                # DLL の例外・利用者が送出した NoVclError は、元のクラス名とメッセージのまま伝える
+            if isinstance(e, BethError):
+                # DLL の例外・利用者が送出した BethError は、元のクラス名とメッセージのまま伝える
                 class_name, message = e.class_name, e.message
             else:
                 class_name, message = type(e).__name__, str(e)

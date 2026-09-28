@@ -61,16 +61,16 @@ VCL と違う Add の扱い:
 ## 決定
 
 - **TImageList**: 選択肢B(TComponent)。
-  - C API: `no_vcl_TImageList_Create`、TCustomImageList の `Get/SetWidth`・`Get/SetHeight`・`GetCount`・`Get/SetMasked`・`Get/SetBkColor`・
+  - C API: `beth_TImageList_Create`、TCustomImageList の `Get/SetWidth`・`Get/SetHeight`・`GetCount`・`Get/SetMasked`・`Get/SetBkColor`・
     `Get/SetDrawingStyle`・`Add`・`AddSliced`・`AddMasked`・`Insert`・`Replace`・`Delete`・`Clear`・`Move`・`GetBitmap`・`Draw`・
-    `BeginUpdate`・`EndUpdate`・`SetOnChange`。列挙は `no_vcl_ds*`。
+    `BeginUpdate`・`EndUpdate`・`SetOnChange`。列挙は `beth_ds*`。
   - C++: `TCustomImageList`(TComponent)と `TImageList`。TDragImageList は公開するメンバが無いため省いた([ADR 0007](0007-lcl-faithful-hierarchy.md))。
     画像を受け取るメソッドは `const TCustomBitmap*`(AddMasked は LCL と同じく `const TBitmap*`)で、ADR 0029 のビュー(Picture->Bitmap 等)も渡せる。
     `Draw` は `TCanvas*` を受け取る(`ImageList1->Draw(Bmp->Canvas, x, y, i)`・`ImageList1->Draw(&PaintBox1->Canvas, ...)`)。
 - **Add**: 選択肢B。LCL の動き(伸縮して 1 つ)のまま公開し、`AddSliced` を足した。
 - **Images・ImageIndex・Bitmap**:
   - C API の関数名・C++ でメンバを置くクラスは、これまでどおり公開されるクラスに合わせた。
-    TCustomListView で protected の LargeImages 等は、TComboBox の OnChange と同じく、公開する TListView に置いた(`no_vcl_TListView_GetSmallImages` 等)。
+    TCustomListView で protected の LargeImages 等は、TComboBox の OnChange と同じく、公開する TListView に置いた(`beth_TListView_GetSmallImages` 等)。
   - C++ の Images は `Property<TCustomImageList*>`。PopupMenu と同じく、Getter は FromHandle でラッパーを引く
     (C++ のラッパーを介さずに作られた画像リストなら nullptr)。
   - 画像リストの Getter は TComponent の FromHandle を使うため、Images を持つのはコンポーネントのクラスだけになる。
@@ -96,7 +96,7 @@ VCL と違う Add の扱い:
 - **Images の解除**: TImage と TToolBar(HotImages)に設定した画像リストを Free() すると、C++ からも Images が nullptr になった。
 - **Bitmap**: メニュー項目・クールバーに 12x12 の TBitmap を代入すると、それぞれの Bitmap が 12x12 になった。`Bitmap = nullptr` で空になった。
 - **ImageIndex**: 設定したものは設定した値が、設定していないノードは -1(既定値)が返った。
-- 警告: `-Wall -Wextra` で no_vcl.cpp を確かめ、生成したメンバの宣言順と初期化順の食い違い(-Wreorder)が無いことを確認した
+- 警告: `-Wall -Wextra` で beth.cpp を確かめ、生成したメンバの宣言順と初期化順の食い違い(-Wreorder)が無いことを確認した
   (出たのは変更前からある TCustomCheckGroup の 1 件だけ)。
 - Linux/GTK2(WSL)でも、上記の出力はすべて Win32 と同じだった。
 

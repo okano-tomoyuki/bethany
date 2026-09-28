@@ -19,7 +19,7 @@ C から使う場合はグローバル変数で状態を持ち回るしかなか
 
 - イベントの型: `std::function<void(TObject*)>` / メンバ関数ポインタとオブジェクトを組にした独自のデリゲート型
 - 公開の形: `SetOnXxx()` メソッドのまま / プロパティ(`OnXxx = ...`)
-- Sender: LCL のハンドル(`no_vcl_obj_t`)のまま渡す / C++ ラッパー(`TObject*`)に変換して渡す
+- Sender: LCL のハンドル(`beth_obj_t`)のまま渡す / C++ ラッパー(`TObject*`)に変換して渡す
 - C API のコールバック: 現状のまま / 利用者データ(`void* data`)を追加する
 
 ## 決定
@@ -33,8 +33,8 @@ C から使う場合はグローバル変数で状態を持ち回るしかなか
    `nullptr` を代入するとハンドラを解除できる。
 3. **Sender は C++ ラッパーの `TObject*`。** Pascal から通知されたハンドルを共通レジストリでラッパーに変換して渡す。
    `TObject` は仮想デストラクタを持つため、本家と同じく `dynamic_cast<TButton*>(Sender)` も使える。
-4. **C API のコールバックは `void (*)(no_vcl_obj_t sender, void* data)`** とし、登録関数(`no_vcl_TControl_SetOnClick` 等、
-   `no_vcl_FreeNotify_SetCallback` も含む)に `data` 引数を追加する。`data` は登録時の値がそのまま返る。
+4. **C API のコールバックは `void (*)(beth_obj_t sender, void* data)`** とし、登録関数(`beth_TControl_SetOnClick` 等、
+   `beth_FreeNotify_SetCallback` も含む)に `data` 引数を追加する。`data` は登録時の値がそのまま返る。
    C++ ラッパーは共通レジストリを使うので `data` は使わない。
    戻り値や書き換え可能な引数を持つイベント(OnClose の Action 等)の C API での表し方は、
    C++ 側の実装を優先し、そのイベントを実装するときに決める。

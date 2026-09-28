@@ -7,12 +7,12 @@ import { isValidIdentifier, memberNameProblem } from '../identifier.ts';
 import { l10n } from '../l10n.ts';
 import { childProblem } from './constraints.ts';
 import type { Diagnostic, DiagnosticCode, JsonPath } from './diagnostics.ts';
-import type { NvformDocument, Properties } from './schema.ts';
+import type { BfmDocument, Properties } from './schema.ts';
 import { classOf, walkNodes, type NodeLocation } from './tree.ts';
 
 const COLOR_PATTERN = /^#[0-9A-Fa-f]{6}$/;
 
-export function validateDocument(doc: NvformDocument): Diagnostic[] {
+export function validateDocument(doc: BfmDocument): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   const error = (code: DiagnosticCode, message: string, path: JsonPath) =>
     diagnostics.push({ severity: 'error', code, message, path });
@@ -30,7 +30,7 @@ export function validateDocument(doc: NvformDocument): Diagnostic[] {
     else if (location.kind === 'form' && memberNameProblem(`T${name}`))
       error(
         'reserved-name',
-        l10n.t('The class name "T{0}" generated from the form name is used by no_vcl', name),
+        l10n.t('The class name "T{0}" generated from the form name is used by Bethany', name),
         path,
       );
     if (classByName.has(name)) error('duplicate-name', l10n.t('"{0}" is duplicated', name), path);

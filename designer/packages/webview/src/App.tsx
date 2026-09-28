@@ -1,4 +1,4 @@
-import { hasErrors, l10n } from '@no-vcl-designer/core';
+import { hasErrors, l10n } from '@bethany-designer/core';
 import { DesignCanvas } from './canvas/DesignCanvas.tsx';
 import { CodegenView } from './components/CodegenView.tsx';
 import { ContextMenu } from './components/ContextMenu.tsx';

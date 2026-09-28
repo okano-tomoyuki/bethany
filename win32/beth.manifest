@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<!-- no_vcl を使う exe に埋め込む manifest(CMakeLists.txt の NO_VCL_EMBED_MANIFEST)。
+<!-- Bethany を使う exe に埋め込む manifest(CMakeLists.txt の BETH_EMBED_MANIFEST)。
      LCL(Win32)は OS の標準コントロールを作るため、その外観(comctl32 のバージョン)は exe の manifest で決まる。
      Common-Controls 6.0 を宣言しないと、旧来の comctl32 v5(クラシックな外観)になる。 -->
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">

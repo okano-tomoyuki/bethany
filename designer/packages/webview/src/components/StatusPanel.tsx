@@ -3,8 +3,8 @@ import {
   l10n,
   walkNodes,
   type Diagnostic,
-  type NvformDocument,
-} from '@no-vcl-designer/core';
+  type BfmDocument,
+} from '@bethany-designer/core';
 import { select } from '../editing.ts';
 import { useDocumentStore } from '../store/stores.ts';
 
@@ -57,7 +57,7 @@ export function StatusPanel() {
 }
 
 /** 診断の位置にあるノードの name(いちばん深いもの) */
-function nodeOf(document: NvformDocument, diagnostic: Diagnostic): string | undefined {
+function nodeOf(document: BfmDocument, diagnostic: Diagnostic): string | undefined {
   let found: string | undefined;
   for (const location of walkNodes(document)) {
     const path = location.path;

@@ -22,17 +22,17 @@
 ## 決定
 
 1. **OnCloseQuery は `Property<TCloseQueryEvent>`**、`using TCloseQueryEvent = std::function<void(TObject* Sender, bool& CanClose)>;` とする。
-   C API のコールバックは OnClose と同じ形で、`void (*)(no_vcl_obj_t sender, no_vcl_bool_t* canClose, void* data)`(ポインタ先を書き換えさせる)。
+   C API のコールバックは OnClose と同じ形で、`void (*)(beth_obj_t sender, beth_bool_t* canClose, void* data)`(ポインタ先を書き換えさせる)。
    Pascal 側では OnClose と OnCloseQuery のブリッジを、書き換え可能な引数を 1 つ持つイベント用の 1 つのクラスにまとめた。
 2. **OnHide・OnActivate・OnDeactivate・OnDestroy は `Property<TNotifyEvent>`** とし、他のイベントと同じく最初に空でないハンドラが設定されたときにブリッジを登録する。
 3. **OnDestroy は LCL のとおり破棄の最初(BeforeDestruction)に呼ばれる。** 破棄通知(ラッパーの delete)はその後に来るため、
    ハンドラには生きている Sender が渡り、子コントロールにもアクセスできる。
    Application が所有するフォームの OnDestroy は、main から戻った後の C++ の終了処理(ADR 0010)の中で呼ばれる。
 4. **DLL の切り離し中は、Pascal 側のすべてのブリッジでイベントを送らない。** 切り離しフックでフラグを立て、
-   ブリッジはフラグが立っていれば呼び出し側を呼ばない。C から使う場合、終了前に `no_vcl_TComponent_DestroyComponents(app)` を呼ばなければ、
+   ブリッジはフラグが立っていれば呼び出し側を呼ばない。C から使う場合、終了前に `beth_TComponent_DestroyComponents(app)` を呼ばなければ、
    Application が所有するフォームの OnDestroy は呼ばれない(破棄通知と同じ扱い)。
 
-C++ 側では、フォームのイベントの Setter で共通の処理(ハンドラの保持と、初回のブリッジ登録)を no_vcl.cpp 内の関数テンプレートにまとめた。
+C++ 側では、フォームのイベントの Setter で共通の処理(ハンドラの保持と、初回のブリッジ登録)を beth.cpp 内の関数テンプレートにまとめた。
 
 ## 影響
 

@@ -2,8 +2,8 @@
  * コード生成(tk-designer ADR 0010。docs/designer/editor-design.md §7)。コマンド「コードを生成」と、デザイナーの画面から呼ばれる。
  * 生成する言語・クラス名・出力先は DSL の codegen に書く。
  */
-import { generateAll, resolveTargets, type OutputFile } from '@no-vcl-designer/codegen';
-import { hasErrors, parseDocument } from '@no-vcl-designer/core';
+import { generateAll, resolveTargets, type OutputFile } from '@bethany-designer/codegen';
+import { hasErrors, parseDocument } from '@bethany-designer/core';
 import * as vscode from 'vscode';
 
 const output = { channel: undefined as vscode.OutputChannel | undefined };
@@ -19,7 +19,7 @@ export async function generateCode(document: vscode.TextDocument): Promise<void>
     return;
   }
 
-  const fileName = document.uri.path.split('/').pop() ?? 'Form.nvform.json';
+  const fileName = document.uri.path.split('/').pop() ?? 'Form.bfm.json';
   const directory = vscode.Uri.joinPath(document.uri, '..');
   // 出力先の既存の内容を先に読んでおく(生成は同期的に行う)
   const targets = resolveTargets(parsed.document, fileName);
@@ -41,7 +41,7 @@ export async function generateCode(document: vscode.TextDocument): Promise<void>
     return;
   }
   if (generated.warnings.length > 0) {
-    const channel = (output.channel ??= vscode.window.createOutputChannel('no_vcl Designer'));
+    const channel = (output.channel ??= vscode.window.createOutputChannel('Bethany Designer'));
     for (const warning of generated.warnings) channel.appendLine(warning);
     const show = vscode.l10n.t('Show Details');
     void vscode.window

@@ -25,7 +25,7 @@ ADR 0021 では、この書き方を「インデックス付きプロパティ�
 
 選択肢C を採る。
 
-- **`IndexedProperty<T>`**(添字 1 つ)と **`IndexedProperty2<T>`**(添字 2 つ)を no_vcl.hpp の `Property<T>` の隣に追加した。
+- **`IndexedProperty<T>`**(添字 1 つ)と **`IndexedProperty2<T>`**(添字 2 つ)を beth.hpp の `Property<T>` の隣に追加した。
   - 所有者・Getter/Setter の持ち方は `Property<T>` と同じ(ヒープ確保なし、コピー・代入は禁止)。
   - `operator[]` は要素のプロキシ `Reference` を返す(`IndexedProperty2` は途中に `Slice` を挟む)。
   - `Reference` は代入で値を書き込み、`T` への変換で値を読み出し、ポインタ型なら `->` でメンバをたどれる。

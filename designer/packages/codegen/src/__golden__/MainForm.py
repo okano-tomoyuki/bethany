@@ -1,12 +1,12 @@
-from no_vcl import *
+from beth import *
 
 
 class TMainForm(TForm):
-    """Form created with the no_vcl designer (MainForm.nvform.json). Regions enclosed in markers are overwritten when regenerated."""
+    """Form created with the Bethany designer (MainForm.bfm.json). Regions enclosed in markers are overwritten when regenerated."""
 
     def __init__(self, AOwner):
         super().__init__(AOwner)
-        # <no_vcl-designer:begin id="declarations">
+        # <bethany-designer:begin id="declarations">
         self.NameEdit: TEdit
         self.OkButton: TButton
         self.PageControl1: TPageControl
@@ -26,11 +26,11 @@ class TMainForm(TForm):
         self.ClearItem: TMenuItem
         self.OpenDialog1: TOpenDialog
         self.Timer1: TTimer
-        # <no_vcl-designer:end id="declarations" hash="1f1fd0a6">
-        self.nvd_CreateComponents()
+        # <bethany-designer:end id="declarations" hash="1f1fd0a6">
+        self.beth_CreateComponents()
 
-    # <no_vcl-designer:begin id="nvd_CreateComponents">
-    def nvd_CreateComponents(self):
+    # <bethany-designer:begin id="beth_CreateComponents">
+    def beth_CreateComponents(self):
         """Creates the components and sets their properties (generated)."""
         self.NameEdit = TEdit(self)
         self.OkButton = TButton(self)
@@ -165,9 +165,9 @@ class TMainForm(TForm):
         self.Timer1.Interval = 500
         self.Timer1.Enabled = False
         self.Timer1.OnTimer = self.Timer1Timer
-    # <no_vcl-designer:end id="nvd_CreateComponents" hash="2a5b605d">
+    # <bethany-designer:end id="beth_CreateComponents" hash="826cc170">
 
-    # <no_vcl-designer:handler-stubs>
+    # <bethany-designer:handler-stubs>
 
     def FormCreate(self, Sender):
         pass

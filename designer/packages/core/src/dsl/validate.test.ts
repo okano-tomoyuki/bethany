@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import raw from '../../../../samples/MainForm.nvform.json' with { type: 'json' };
+import raw from '../../../../samples/MainForm.bfm.json' with { type: 'json' };
 import { parseDocument } from './parse.ts';
-import type { NvformDocument } from './schema.ts';
+import type { BfmDocument } from './schema.ts';
 import { validateDocument } from './validate.ts';
 
 const SAMPLE_TEXT = JSON.stringify(raw, null, 2);
 
-function sample(): NvformDocument {
+function sample(): BfmDocument {
   const { document } = parseDocument(SAMPLE_TEXT);
   if (!document) throw new Error('sample does not parse');
   return document;
@@ -47,7 +47,7 @@ describe('意味の検証', () => {
       diagnose((doc) => {
         doc.form.controls[0].name = 'OkButton';
         doc.form.controls[1].controls = undefined;
-        doc.components[3].name = 'nvd_Timer';
+        doc.components[3].name = 'beth_Timer';
         doc.components[2].name = 'Caption';
       }),
     ).toEqual([
@@ -57,7 +57,7 @@ describe('意味の検証', () => {
     ]);
   });
 
-  it('フォームの名前から作るクラス名が no_vcl の名前と衝突する', () => {
+  it('フォームの名前から作るクラス名が Bethany の名前と衝突する', () => {
     expect(diagnose((doc) => (doc.form.name = 'Form'))).toEqual([['reserved-name', 'form.name']]);
   });
 

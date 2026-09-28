@@ -5,16 +5,16 @@
  */
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { documentJsonSchema } from '@no-vcl-designer/core';
+import { documentJsonSchema } from '@bethany-designer/core';
 
-const outFile = new URL('../schema/nvform.schema.json', import.meta.url);
+const outFile = new URL('../schema/bfm.schema.json', import.meta.url);
 const generated = `${JSON.stringify(documentJsonSchema(), null, 2)}\n`;
 
 if (process.argv.includes('--check')) {
   const current = await readFile(outFile, 'utf8').catch(() => '');
   if (current.replace(/\r\n/g, '\n') !== generated) {
     console.error(
-      'schema/nvform.schema.json が最新ではありません。`pnpm generate:schema` を実行してください。',
+      'schema/bfm.schema.json が最新ではありません。`pnpm generate:schema` を実行してください。',
     );
     process.exitCode = 1;
   }

@@ -1,26 +1,26 @@
-import type { ControlNode, NvformDocument } from '@no-vcl-designer/core';
+import type { ControlNode, BfmDocument } from '@bethany-designer/core';
 import { describe, expect, it } from 'vitest';
 import { generateAll, generatePython } from '../index.ts';
 import { DSL_FILE, PYTHON_SAMPLE } from '../testing.ts';
 
-function generate(doc: NvformDocument = PYTHON_SAMPLE, existing?: string) {
+function generate(doc: BfmDocument = PYTHON_SAMPLE, existing?: string) {
   const result = generatePython(doc, DSL_FILE, existing);
   if (!result.ok) throw new Error(result.error);
   return result;
 }
 
-/** nvd_CreateComponents の中身の文(字下げを除く。docstring の後から) */
-function statements(doc: NvformDocument): string[] {
+/** beth_CreateComponents の中身の文(字下げを除く。docstring の後から) */
+function statements(doc: BfmDocument): string[] {
   const text = generate(doc).text;
-  const start = text.indexOf('"""', text.indexOf('def nvd_CreateComponents(self):'));
+  const start = text.indexOf('"""', text.indexOf('def beth_CreateComponents(self):'));
   const body = text.slice(
     text.indexOf('\n', start) + 1,
-    text.indexOf('\n    # <no_vcl-designer:end id="nvd_CreateComponents"'),
+    text.indexOf('\n    # <bethany-designer:end id="beth_CreateComponents"'),
   );
   return body.split('\n').map((l) => l.trim());
 }
 
-function form(props: NvformDocument['form']): NvformDocument {
+function form(props: BfmDocument['form']): BfmDocument {
   return { formatVersion: 1, codegen: { python: {} }, form: props };
 }
 
@@ -97,7 +97,7 @@ describe('generatePython', () => {
 
   it('commentLocale が ja なら日本語のコメント', () => {
     const text = generate({ ...PYTHON_SAMPLE, codegen: { commentLocale: 'ja', python: {} } }).text;
-    expect(text).toContain('"""no_vcl のデザイナーで作成したフォーム(MainForm.nvform.json)。');
+    expect(text).toContain('"""Bethany のデザイナーで作成したフォーム(MainForm.bfm.json)。');
   });
 });
 
@@ -112,11 +112,11 @@ describe('マーカー区間のマージ(Python)', () => {
     const edited = INITIAL.replace('self.Caption = "Sample"', 'self.Caption = "Edited"');
     const result = generate(PYTHON_SAMPLE, edited);
     expect(result.text).toBe(INITIAL);
-    expect(result.modifiedRegions).toEqual(['nvd_CreateComponents']);
+    expect(result.modifiedRegions).toEqual(['beth_CreateComponents']);
   });
 
   it('stubs マーカーが無ければ、if __name__ == "__main__": の手前に雛形を追記する', () => {
-    const withoutStub = INITIAL.replace('    # <no_vcl-designer:handler-stubs>\n', '')
+    const withoutStub = INITIAL.replace('    # <bethany-designer:handler-stubs>\n', '')
       .replace('\n    def Timer1Timer(self, Sender):\n        pass\n', '')
       .concat('\n\nif __name__ == "__main__":\n    Application.Initialize()\n');
     const result = generate(PYTHON_SAMPLE, withoutStub);
@@ -128,7 +128,7 @@ describe('マーカー区間のマージ(Python)', () => {
 });
 
 describe('DSL からなくなった名前の警告(Python)', () => {
-  const renameOk = (doc: NvformDocument): NvformDocument => ({
+  const renameOk = (doc: BfmDocument): BfmDocument => ({
     ...doc,
     form: {
       ...doc.form,
@@ -140,7 +140,7 @@ describe('DSL からなくなった名前の警告(Python)', () => {
     },
   });
 
-  function warnings(doc: NvformDocument, existing: string): string[] {
+  function warnings(doc: BfmDocument, existing: string): string[] {
     const result = generateAll(doc, DSL_FILE, () => existing);
     if ('error' in result) throw new Error(result.error);
     return [...result.warnings];

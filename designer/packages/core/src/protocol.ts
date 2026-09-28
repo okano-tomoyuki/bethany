@@ -4,7 +4,7 @@
  */
 import type { EditCommand } from './edit/commands.ts';
 
-/** キャンバスの設定(拡張の設定 noVclDesigner.canvas.*。editor-design.md §5.4) */
+/** キャンバスの設定(拡張の設定 bethanyDesigner.canvas.*。editor-design.md §5.4) */
 export interface CanvasSettings {
   /** LCL の default のフォントとして使う書体 */
   readonly fontFamily: string;

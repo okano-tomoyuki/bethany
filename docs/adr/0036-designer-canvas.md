@@ -13,7 +13,7 @@
   配置を自前で計算できなければならない。
 - LCL のフォームの Width・Height はクライアント領域の大きさで、コンテナ(TPanel・TGroupBox・TTabSheet 等)の子の座標も、
   親のクライアント領域が基準になる。クライアント領域の余白(枠・見出し・タブ)は、クラスと widgetset とフォントで変わる。
-- 見た目と大きさは widgetset(Windows は win32、Linux は GTK2)で違う。no_vcl の主な対象は Windows。
+- 見た目と大きさは widgetset(Windows は win32、Linux は GTK2)で違う。Bethany の主な対象は Windows。
 - tk-designer は Tk の pack・grid を TS に移植し、Windows の Tk で記録した値と照合している(tk-designer ADR 0008・0013)。
   この方式(アルゴリズムを移植し、実物で記録した値とテストで照合する)は、LCL にも当てはまる。
 
@@ -22,7 +22,7 @@
 - 選択肢A: Webview の HTML/CSS でコントロールの見た目を描き、配置は core の TS で計算する。
   拡張だけで動き、ドラッグ中の表示も即座に更新できる。見た目は近似で、配置の計算は LCL と食い違う可能性がある
   (実測との照合で抑える)。
-- 選択肢B: 実物の LCL でフォームを描かせ、画像を Webview に表示する(no_vcl の DLL を拡張から動かす)。
+- 選択肢B: 実物の LCL でフォームを描かせ、画像を Webview に表示する(Bethany の DLL を拡張から動かす)。
   見た目は正確だが、操作のたびに別のプロセスとの往復が要り、ドラッグ中の表示が遅れる。DLL のビルドと、拡張から
   ネイティブのプロセスを動かす仕組みが利用者の環境に要る。Linux・Windows の両方で同じように動かすのも難しい。
 - 選択肢C: 見た目は A、配置は B(実物の LCL に配置だけを計算させる)。

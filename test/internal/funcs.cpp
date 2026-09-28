@@ -1,30 +1,30 @@
-// DLL の関数を内部層(no_vcl::internal)から直接呼ぶテスト(docs/adr/0032)。no_vcl.hpp のクラスは使わず、
-// 定数と Exception だけを no_vcl.hpp から使う。C++ ラッパーのテストは test/main.cpp。
+// DLL の関数を内部層(beth::internal)から直接呼ぶテスト(docs/adr/0032)。beth.hpp のクラスは使わず、
+// 定数と Exception だけを beth.hpp から使う。C++ ラッパーのテストは test/main.cpp。
 #include <stdio.h>
 
-#include "no_vcl.hpp"
+#include "beth.hpp"
 
-using namespace no_vcl;
-using namespace no_vcl::internal;
+using namespace beth;
+using namespace beth::internal;
 
 /* コールバックの data には、登録時に渡したポインタがそのまま返ってくる。
    ここではカウンタやラベルのハンドルを渡し、グローバル変数を使わずに状態を持ち回る。 */
 
-static void NO_VCL_CALL OnComponentFreed(obj_t obj, void* data)
+static void BETH_CALL OnComponentFreed(obj_t obj, void* data)
 {
     (void)obj;
     ++*(int*)data;
 }
 
 /* コールバックの中で処理を失敗させる(docs/adr/0031)。TMenuItem_Click の中で呼ばれ、その関数が失敗する。 */
-static void NO_VCL_CALL OnFailingMenuClick(obj_t sender, void* data)
+static void BETH_CALL OnFailingMenuClick(obj_t sender, void* data)
 {
     (void)sender;
     (void)data;
     SetCallbackError("EMyError", "failed in the callback");
 }
 
-static void NO_VCL_CALL OnButtonClick(obj_t sender, void* data)
+static void BETH_CALL OnButtonClick(obj_t sender, void* data)
 {
     int* clickCount = (int*)data;
     (void)sender;
@@ -33,42 +33,42 @@ static void NO_VCL_CALL OnButtonClick(obj_t sender, void* data)
     fflush(stdout);
 }
 
-static void NO_VCL_CALL OnButtonMouseDown(obj_t sender, int_t button, int_t shift, int_t x, int_t y, void* data)
+static void BETH_CALL OnButtonMouseDown(obj_t sender, int_t button, int_t shift, int_t x, int_t y, void* data)
 {
     (void)sender; (void)data;
     printf("Button mouse down! button=%d shift=0x%x pos=(%d,%d)\n", (int)button, (unsigned)shift, (int)x, (int)y);
     fflush(stdout);
 }
 
-static void NO_VCL_CALL OnEditKeyDown(obj_t sender, int_t* key, int_t shift, void* data)
+static void BETH_CALL OnEditKeyDown(obj_t sender, int_t* key, int_t shift, void* data)
 {
     (void)sender; (void)data;
     printf("Edit key down! key=%d shift=0x%x\n", (int)*key, (unsigned)shift);
     fflush(stdout);
 }
 
-static void NO_VCL_CALL OnScrollBarChange(obj_t sender, void* data)
+static void BETH_CALL OnScrollBarChange(obj_t sender, void* data)
 {
     (void)data;
     printf("ScrollBar changed! Position=%d\n", TCustomScrollBar_GetPosition(sender));
     fflush(stdout);
 }
 
-static void NO_VCL_CALL OnTrackBarChange(obj_t sender, void* data)
+static void BETH_CALL OnTrackBarChange(obj_t sender, void* data)
 {
     (void)data;
     printf("TrackBar changed! Position=%d\n", TCustomTrackBar_GetPosition(sender));
     fflush(stdout);
 }
 
-static void NO_VCL_CALL OnRadioGroupClick(obj_t sender, void* data)
+static void BETH_CALL OnRadioGroupClick(obj_t sender, void* data)
 {
     (void)data;
     printf("RadioGroup clicked! ItemIndex=%d\n", TCustomRadioGroup_GetItemIndex(sender));
     fflush(stdout);
 }
 
-static void NO_VCL_CALL OnCheckListBoxClickCheck(obj_t sender, void* data)
+static void BETH_CALL OnCheckListBoxClickCheck(obj_t sender, void* data)
 {
     (void)data;
     printf("CheckListBox check clicked! Checked[0]/[1]/[2]=%d/%d/%d\n",
@@ -77,21 +77,21 @@ static void NO_VCL_CALL OnCheckListBoxClickCheck(obj_t sender, void* data)
     fflush(stdout);
 }
 
-static void NO_VCL_CALL OnSpeedButtonClick(obj_t sender, void* data)
+static void BETH_CALL OnSpeedButtonClick(obj_t sender, void* data)
 {
     (void)data;
     printf("SpeedButton clicked! Down=%d\n", TCustomSpeedButton_GetDown(sender));
     fflush(stdout);
 }
 
-static void NO_VCL_CALL OnTabControlChange(obj_t sender, void* data)
+static void BETH_CALL OnTabControlChange(obj_t sender, void* data)
 {
     (void)data;
     printf("TabControl changed! TabIndex=%d\n", TTabControl_GetTabIndex(sender));
     fflush(stdout);
 }
 
-static void NO_VCL_CALL OnCheckBoxClick(obj_t sender, void* data)
+static void BETH_CALL OnCheckBoxClick(obj_t sender, void* data)
 {
     (void)data;
     printf("CheckBox clicked! Checked=%d\n", TButtonControl_GetChecked(sender));
@@ -99,7 +99,7 @@ static void NO_VCL_CALL OnCheckBoxClick(obj_t sender, void* data)
 }
 
 /* 2つのラジオボタンで共有し、sender でどちらが押されたかを区別する。 */
-static void NO_VCL_CALL OnRadioButtonClick(obj_t sender, void* data)
+static void BETH_CALL OnRadioButtonClick(obj_t sender, void* data)
 {
     (void)data;
     printf("RadioButton clicked! %s Checked=%d\n",
@@ -107,14 +107,14 @@ static void NO_VCL_CALL OnRadioButtonClick(obj_t sender, void* data)
     fflush(stdout);
 }
 
-static void NO_VCL_CALL OnEditChange(obj_t sender, void* data)
+static void BETH_CALL OnEditChange(obj_t sender, void* data)
 {
     (void)data;
     printf("Edit changed! Text=%s\n", TControl_GetText(sender));
     fflush(stdout);
 }
 
-static void NO_VCL_CALL OnComboBoxChange(obj_t sender, void* data)
+static void BETH_CALL OnComboBoxChange(obj_t sender, void* data)
 {
     (void)data;
     printf("ComboBox changed! ItemIndex=%d Text=%s\n",
@@ -122,14 +122,14 @@ static void NO_VCL_CALL OnComboBoxChange(obj_t sender, void* data)
     fflush(stdout);
 }
 
-static void NO_VCL_CALL OnListBoxClick(obj_t sender, void* data)
+static void BETH_CALL OnListBoxClick(obj_t sender, void* data)
 {
     (void)data;
     printf("ListBox clicked! ItemIndex=%d\n", TCustomListBox_GetItemIndex(sender));
     fflush(stdout);
 }
 
-static void NO_VCL_CALL OnMemoChange(obj_t sender, void* data)
+static void BETH_CALL OnMemoChange(obj_t sender, void* data)
 {
     (void)data;
     printf("Memo changed! LineCount=%d\n", TStrings_GetCount(TCustomMemo_GetLines(sender)));
@@ -137,7 +137,7 @@ static void NO_VCL_CALL OnMemoChange(obj_t sender, void* data)
 }
 
 /* *action には既定の動作が入っている。1 回目は閉じるのを取りやめ、2 回目は既定の動作のままにする。 */
-static void NO_VCL_CALL OnFormClose(obj_t sender, int_t* action, void* data)
+static void BETH_CALL OnFormClose(obj_t sender, int_t* action, void* data)
 {
     int* attempts = (int*)data;
     (void)sender;
@@ -151,7 +151,7 @@ static void NO_VCL_CALL OnFormClose(obj_t sender, int_t* action, void* data)
     fflush(stdout);
 }
 
-static void NO_VCL_CALL OnFormCloseQuery(obj_t sender, bool_t* canClose, void* data)
+static void BETH_CALL OnFormCloseQuery(obj_t sender, bool_t* canClose, void* data)
 {
     (void)sender;
     (void)data;
@@ -160,7 +160,7 @@ static void NO_VCL_CALL OnFormCloseQuery(obj_t sender, bool_t* canClose, void* d
 }
 
 /* 破棄の最初に呼ばれる。子コントロールはまだ有効なので、data で渡したボタンの Caption を読める。 */
-static void NO_VCL_CALL OnFormDestroy(obj_t sender, void* data)
+static void BETH_CALL OnFormDestroy(obj_t sender, void* data)
 {
     (void)sender;
     printf("Form destroying: button caption=%s\n", TControl_GetCaption((obj_t)data));
@@ -183,7 +183,7 @@ static void PrintBounds(const char* name, obj_t control, const char* expected)
            TControl_GetWidth(control), TControl_GetHeight(control), expected);
 }
 
-static void NO_VCL_CALL OnFormShow(obj_t sender, void* data)
+static void BETH_CALL OnFormShow(obj_t sender, void* data)
 {
     AlignedControls* aligned = (AlignedControls*)data;
     (void)sender;
@@ -211,7 +211,7 @@ static void NO_VCL_CALL OnFormShow(obj_t sender, void* data)
 #define CL_BLUE   0xFF0000
 #define CL_YELLOW 0x00FFFF
 
-static void NO_VCL_CALL OnPaintBoxPaint(obj_t sender, void* data)
+static void BETH_CALL OnPaintBoxPaint(obj_t sender, void* data)
 {
     obj_t canvas = TPaintBox_GetCanvas(sender);
     obj_t pen = TCanvas_GetPen(canvas);
@@ -238,7 +238,7 @@ static void NO_VCL_CALL OnPaintBoxPaint(obj_t sender, void* data)
 }
 
 /* data にはカウントを表示するラベルのハンドルを渡す。 */
-static void NO_VCL_CALL OnTimerTick(obj_t sender, void* data)
+static void BETH_CALL OnTimerTick(obj_t sender, void* data)
 {
     static int tickCount = 0;
     char buf[64];
@@ -250,7 +250,7 @@ static void NO_VCL_CALL OnTimerTick(obj_t sender, void* data)
     fflush(stdout);
 }
 
-static void NO_VCL_CALL OnMenuItemClick(obj_t sender, void* data)
+static void BETH_CALL OnMenuItemClick(obj_t sender, void* data)
 {
     (void)data;
     printf("Menu item clicked! Caption=%s\n", TMenuItem_GetCaption(sender));
@@ -258,28 +258,28 @@ static void NO_VCL_CALL OnMenuItemClick(obj_t sender, void* data)
 }
 
 /* data は Application。 */
-static void NO_VCL_CALL OnExitItemClick(obj_t sender, void* data)
+static void BETH_CALL OnExitItemClick(obj_t sender, void* data)
 {
     (void)sender;
     TApplication_Terminate((obj_t)data);
 }
 
 /* data は PopupMenu を割り当てたパネル。 */
-static void NO_VCL_CALL OnPopupMenuPopup(obj_t sender, void* data)
+static void BETH_CALL OnPopupMenuPopup(obj_t sender, void* data)
 {
     printf("PopupMenu popup! PopupComponent is panel: %s\n",
            TPopupMenu_GetPopupComponent(sender) == data ? "yes" : "no");
     fflush(stdout);
 }
 
-static void NO_VCL_CALL OnPageControlChange(obj_t sender, void* data)
+static void BETH_CALL OnPageControlChange(obj_t sender, void* data)
 {
     (void)data;
     printf("PageControl changed! ActivePageIndex=%d\n", TPageControl_GetActivePageIndex(sender));
     fflush(stdout);
 }
 
-static void NO_VCL_CALL OnPageControlChanging(obj_t sender, bool_t* allowChange, void* data)
+static void BETH_CALL OnPageControlChanging(obj_t sender, bool_t* allowChange, void* data)
 {
     (void)sender; (void)data;
     printf("PageControl changing! allowChange=%d\n", *allowChange != 0);
@@ -287,34 +287,34 @@ static void NO_VCL_CALL OnPageControlChanging(obj_t sender, bool_t* allowChange,
 }
 
 /* 項目(ツリービューのノード・リストビューの項目と列)の破棄通知。data は破棄された項目の数。 */
-static void NO_VCL_CALL OnItemFreed(obj_t item, void* data)
+static void BETH_CALL OnItemFreed(obj_t item, void* data)
 {
     (void)item;
     ++*(int*)data;
 }
 
 /* data は削除された項目の数(OnDeletion の回数)。 */
-static void NO_VCL_CALL OnListViewDeletion(obj_t sender, obj_t item, void* data)
+static void BETH_CALL OnListViewDeletion(obj_t sender, obj_t item, void* data)
 {
     (void)sender; (void)item;
     ++*(int*)data;
 }
 
-static void NO_VCL_CALL OnGridSelection(obj_t sender, int_t col, int_t row, void* data)
+static void BETH_CALL OnGridSelection(obj_t sender, int_t col, int_t row, void* data)
 {
     (void)data;
     printf("Grid selection: (%d,%d) = %s\n", (int)col, (int)row, TCustomStringGrid_GetCells(sender, col, row));
     fflush(stdout);
 }
 
-static void NO_VCL_CALL OnListViewSelectItem(obj_t sender, obj_t item, int_t selected, void* data)
+static void BETH_CALL OnListViewSelectItem(obj_t sender, obj_t item, int_t selected, void* data)
 {
     (void)sender; (void)data;
     printf("ListView item %s: %s\n", selected ? "selected" : "unselected", TListItem_GetCaption(item));
     fflush(stdout);
 }
 
-static void NO_VCL_CALL OnTreeViewChange(obj_t sender, obj_t node, void* data)
+static void BETH_CALL OnTreeViewChange(obj_t sender, obj_t node, void* data)
 {
     (void)sender; (void)data;
     printf("TreeView changed! Selected=%s\n", node ? TTreeNode_GetText(node) : "(none)");
@@ -322,7 +322,7 @@ static void NO_VCL_CALL OnTreeViewChange(obj_t sender, obj_t node, void* data)
 }
 
 /* "Locked" という名前のノードは折りたためないようにする。 */
-static void NO_VCL_CALL OnTreeViewCollapsing(obj_t sender, obj_t node, bool_t* allow, void* data)
+static void BETH_CALL OnTreeViewCollapsing(obj_t sender, obj_t node, bool_t* allow, void* data)
 {
     const char* text = TTreeNode_GetText(node);
     (void)sender; (void)data;
@@ -331,7 +331,7 @@ static void NO_VCL_CALL OnTreeViewCollapsing(obj_t sender, obj_t node, bool_t* a
 }
 
 /* data は Splitter が幅を変える alLeft のパネル。 */
-static void NO_VCL_CALL OnSplitterMoved(obj_t sender, void* data)
+static void BETH_CALL OnSplitterMoved(obj_t sender, void* data)
 {
     printf("Splitter moved! SplitterPosition=%d, left pane Width=%d\n",
            TCustomSplitter_GetSplitterPosition(sender), TControl_GetWidth((obj_t)data));
@@ -433,7 +433,7 @@ int main(void)
     FreeNotify_SetCallback(OnComponentFreed, &freedCount);
 
     app = GetApplication();
-    TApplication_SetTitle(app, "no_vcl internal test");
+    TApplication_SetTitle(app, "Bethany internal test");
     printf("Title: %s\n", TApplication_GetTitle(app));
 
     /* 最初に CreateForm で生成したフォームが MainForm になる(Owner は Application)。 */
@@ -750,7 +750,7 @@ int main(void)
     /* グラフィックス(docs/adr/0029)。生成したグラフィック・TPicture は TGraphic_Destroy・TPicture_Destroy で破棄する。
        TPicture の中身(TPicture_GetGraphic 等)のハンドルは保存せず、使うたびに取得する。 */
     {
-        const char* path = "no_vcl_graphic_test_internal.png";
+        const char* path = "beth_graphic_test_internal.png";
         obj_t bmp = TBitmap_Create();
         obj_t png = TPortableNetworkGraphic_Create();
         obj_t pic = TPicture_Create();

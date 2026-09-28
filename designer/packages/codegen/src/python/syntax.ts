@@ -26,7 +26,7 @@ export const PYTHON_NAMES: NameRules = {
   memberNames: (text) =>
     [...text.matchAll(/^\s*self\.(\w+)\s*:/gm), ...text.matchAll(/=\s*self\.(\w+)\s*$/gm)]
       .map((m) => m[1] ?? '')
-      .filter((name) => !name.startsWith('nvd_')),
+      .filter((name) => !name.startsWith('beth_')),
   // 名前は識別子の検証を通っているため、正規表現の特殊文字を含まない
   uses: (line, name) =>
     new RegExp(`\\bself\\.${name}\\b`).test(line) ||

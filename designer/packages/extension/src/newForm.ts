@@ -1,16 +1,16 @@
 /**
- * 新しいフォーム(*.nvform.json)を作ってデザイナーで開く(docs/designer/editor-design.md §8)。
+ * 新しいフォーム(*.bfm.json)を作ってデザイナーで開く(docs/designer/editor-design.md §8)。
  */
 import {
   createDocument,
   formNameProblem,
   isJapanese,
   serializeDocument,
-} from '@no-vcl-designer/core';
+} from '@bethany-designer/core';
 import * as vscode from 'vscode';
 import { DesignerEditorProvider } from './designerEditorProvider.ts';
 
-const EXTENSION = '.nvform.json';
+const EXTENSION = '.bfm.json';
 
 /**
  * @param target エクスプローラーのコンテキストメニューから呼ばれた場合の、選ばれたフォルダまたはファイル

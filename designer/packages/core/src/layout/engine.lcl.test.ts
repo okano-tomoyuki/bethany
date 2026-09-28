@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { parseDocument } from '../dsl/parse.ts';
-import type { ControlNode, NvformDocument } from '../dsl/schema.ts';
+import type { ControlNode, BfmDocument } from '../dsl/schema.ts';
 import { walkNodes } from '../dsl/tree.ts';
 import { computeLayout, type Rect } from './engine.ts';
 import { FIXTURES } from './fixtures/index.ts';
@@ -25,10 +25,10 @@ const fixtures = FIXTURES.map(({ name, text, record }) => {
 
 /** コントロールの位置と大きさを書き換えたドキュメント */
 function withBounds(
-  doc: NvformDocument,
+  doc: BfmDocument,
   bounds: ReadonlyMap<string, Rect>,
   form?: { width: number; height: number },
-): NvformDocument {
+): BfmDocument {
   const rewrite = (c: ControlNode): ControlNode => {
     const r = c.class === 'TTabSheet' ? undefined : bounds.get(c.name);
     return {
@@ -61,10 +61,7 @@ function toRects(record: Readonly<Record<string, readonly number[]>>): Map<strin
 }
 
 /** 計算した後の、各コントロールの [Left, Top, Width, Height](TTabSheet は書かないので除く) */
-function laidOut(
-  before: NvformDocument | undefined,
-  after: NvformDocument,
-): Record<string, number[]> {
+function laidOut(before: BfmDocument | undefined, after: BfmDocument): Record<string, number[]> {
   const changes = computeLayout(before, after);
   const result: Record<string, number[]> = {};
   for (const location of walkNodes(withBounds(after, changes))) {
@@ -79,7 +76,7 @@ function laidOut(
 
 function expected(
   record: Readonly<Record<string, readonly number[]>>,
-  doc: NvformDocument,
+  doc: BfmDocument,
 ): Record<string, number[]> {
   const sheets = new Set(
     [...walkNodes(doc)]
@@ -93,7 +90,7 @@ function expected(
   );
 }
 
-function formSize(doc: NvformDocument) {
+function formSize(doc: BfmDocument) {
   const p = doc.form.properties ?? {};
   return { width: Number(p.Width), height: Number(p.Height) };
 }

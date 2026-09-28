@@ -12,7 +12,7 @@
     {
       "label": "watch:extension",
       "type": "shell",
-      "command": "pnpm --filter no-vcl-designer run watch",
+      "command": "pnpm --filter bethany-designer run watch",
       "isBackground": true,
       // 公式テンプレートの $esbuild-watch(connor4312.esbuild-problem-matchers 拡張機能)と同じ内容を、
       // 拡張機能のインストールなしで使えるようここに書く
@@ -35,7 +35,7 @@
     {
       "label": "watch:webview",
       "type": "shell",
-      "command": "pnpm --filter @no-vcl-designer/webview run watch",
+      "command": "pnpm --filter @bethany-designer/webview run watch",
       "isBackground": true,
       "problemMatcher": {
         "owner": "vite",

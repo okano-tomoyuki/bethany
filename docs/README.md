@@ -1,4 +1,4 @@
-# no_vcl ドキュメント
+# Bethany ドキュメント
 
 FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder ライクなライブラリの設計ドキュメント群。
 
@@ -7,7 +7,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | ドキュメント | 内容 | 状態 |
 |---|---|---|
 | [vision.md](vision.md) | 目的・市場調査・想定ユーザー・スコープ | 初版 |
-| [class-hierarchy.md](class-hierarchy.md) | LCL の継承関係(ソースで確認済み)・no_vcl の階層・メンバの配置 | 初版 |
+| [class-hierarchy.md](class-hierarchy.md) | LCL の継承関係(ソースで確認済み)・Bethany の階層・メンバの配置 | 初版 |
 | [component-coverage.md](component-coverage.md) | VCL 移行を見据えたコントロールの棚卸し(未実装クラスの一覧と優先度) | 初版 |
 | [designer/](designer/README.md) | デザイナーアプリ(VS Code 拡張)の設計: DSL・コード生成・カタログ([ADR 0035](adr/0035-designer-in-this-repository.md)) | 草案 |
 | [adr/](adr/) | 設計判断の記録（1判断1ファイル） | 随時追加 |
@@ -51,11 +51,12 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0029](adr/0029-graphics-picture-image-glyph.md) | Tier 3 の 1 バッチ目として、グラフィックス基盤(TBitmap・TPicture)と TImage・Glyph を追加する | 承認 |
 | [0030](adr/0030-imagelist-and-images.md) | Tier 3 の 2 バッチ目として、TImageList と各コントロールの Images・ImageIndex を追加する | 承認 |
 | [0031](adr/0031-exceptions-across-dll.md) | DLL の境界で例外を受け渡し、C は直前のエラー、C++ は Exception として扱う | 承認(一部置換→0032) |
-| [0032](adr/0032-internalize-c-api.md) | C API の提供を終了し、DLL の呼び出し層を内部層(no_vcl::internal)にする | 承認 |
+| [0032](adr/0032-internalize-c-api.md) | C API の提供を終了し、DLL の呼び出し層を内部層(beth::internal)にする | 承認 |
 | [0033](adr/0033-dialogs.md) | Tier 4 としてダイアログを追加し、結果を適用する先の TControl.Color・Font を追加する | 承認 |
 | [0034](adr/0034-designer-common-properties.md) | デザイナーで設定する共通のプロパティ(Anchors・BorderSpacing・Constraints・TabOrder 等)を追加し、集合型を Set<E> で表す | 承認 |
-| [0035](adr/0035-designer-in-this-repository.md) | デザイナーアプリは本リポジトリ内に no_vcl 専用として作り、tk-designer からは GUI に依存しない仕組みだけを流用する | 承認 |
+| [0035](adr/0035-designer-in-this-repository.md) | デザイナーアプリは本リポジトリ内に Bethany 専用として作り、tk-designer からは GUI に依存しない仕組みだけを流用する | 承認 |
 | [0036](adr/0036-designer-canvas.md) | デザイナーのキャンバスは Windows の LCL の見た目を HTML で再現し、Align・Anchors の配置は core で計算して LCL の実測と照合する | 承認 |
+| [0037](adr/0037-rename-to-bethany.md) | ライブラリの名前を no_vcl から Bethany(略称 beth)に変える | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。

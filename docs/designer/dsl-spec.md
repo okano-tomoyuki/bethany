@@ -1,19 +1,19 @@
 # DSL 仕様(formatVersion 1)
 
-フォームの定義ファイル `*.nvform.json` の仕様。§10 の Q1〜Q4・Q9 は決定済み。残りの論点は MVP の後か、実装しながら決める。
+フォームの定義ファイル `*.bfm.json` の仕様。§10 の Q1〜Q4・Q9 は決定済み。残りの論点は MVP の後か、実装しながら決める。
 構造は Zod のスキーマ([designer/packages/core/src/dsl/schema.ts](../../designer/packages/core/src/dsl/schema.ts))、意味の検証は
 [validate.ts](../../designer/packages/core/src/dsl/validate.ts) を正とし、本書と食い違う場合は本書を直す(tk-designer ADR 0009 と同じ)。
-見本は [designer/samples/MainForm.nvform.json](../../designer/samples/MainForm.nvform.json)。
+見本は [designer/samples/MainForm.bfm.json](../../designer/samples/MainForm.bfm.json)。
 
 ## 1. 基本方針
 
-- **no_vcl の公開 API(no_vcl.hpp)の語彙をそのまま使う。** クラス名・プロパティ名・イベント名・列挙型の要素名は C++ と同じ
+- **Bethany の公開 API(beth.hpp)の語彙をそのまま使う。** クラス名・プロパティ名・イベント名・列挙型の要素名は C++ と同じ
   (`TButton`・`Caption`・`OnClick`・`alClient`)。C++ / Python 固有の表現は含めない。
 - **Delphi・C++Builder のフォームファイル(.dfm)と同じ考え方にする。** フォームが所有するコンポーネントを名前つきで並べ、
   設定したプロパティ(既定値から変えたもの)だけを書き、イベントにはハンドラのメソッド名を書く。
   .dfm を知っている利用者が、そのまま読めることを目指す(ADR 0002)。
 - **1 ファイル = 1 フォーム = 生成される 1 クラス**(TForm の派生。tk-designer ADR 0011 と同じ)。
-- **Owner と Parent を分けて表す。** 生成するコンポーネントはすべてフォームが所有する(Owner = フォーム。寿命は no_vcl の既存の仕組み)。
+- **Owner と Parent を分けて表す。** 生成するコンポーネントはすべてフォームが所有する(Owner = フォーム。寿命は Bethany の既存の仕組み)。
   画面上の親子関係(Parent)は `controls` の入れ子で表し、画面に出ないコンポーネント(TTimer・ダイアログ・メニュー・TImageList)は
   `components` に並べる。
 - JSON で書く。拡張が保存するときは決まった形(キーの順・インデント)で書き出す(差分を最小にするため。tk-designer ADR 0006)。
@@ -106,15 +106,15 @@
 ## 4. ノード
 
 どのノードも `name` を持ち、生成するクラスのメンバ名(C++ はポインタのメンバ、Python は属性)になる。
-`name` はフォームの中で重複できず、C++ と Python の識別子として正しく(ASCII のみ)、予約語・接頭辞 `nvd_`・TForm のメンバ名(カタログの
-`formMembers`)・生成したコードが使う no_vcl の名前(クラス・列挙型の要素・定数。C++ ではメンバ名がこれらを隠すため)と衝突してはならない。
+`name` はフォームの中で重複できず、C++ と Python の識別子として正しく(ASCII のみ)、予約語・接頭辞 `beth_`・TForm のメンバ名(カタログの
+`formMembers`)・生成したコードが使う Bethany の名前(クラス・列挙型の要素・定数。C++ ではメンバ名がこれらを隠すため)と衝突してはならない。
 
 ### 4.1 フォームノード
 
 | キー | 必須 | 型 | 説明 |
 |---|---|---|---|
-| `name` | ○ | 識別子 | フォームの名前(C++Builder の `Form1`)。生成するクラス名の既定値(`T` + name)と、グローバル変数の名前(§10 Q3)になる。`T` + name が no_vcl の名前(`Form` → `TForm`)と衝突してはならない |
-| `class` | ○ | `"TForm"` | 生成するクラスの基底クラス。今は TForm だけ(TFrame は no_vcl に無い) |
+| `name` | ○ | 識別子 | フォームの名前(C++Builder の `Form1`)。生成するクラス名の既定値(`T` + name)と、グローバル変数の名前(§10 Q3)になる。`T` + name が Bethany の名前(`Form` → `TForm`)と衝突してはならない |
+| `class` | ○ | `"TForm"` | 生成するクラスの基底クラス。今は TForm だけ(TFrame は Bethany に無い) |
 | `properties` | | 名前 → 値 | §5。フォーム自身のプロパティ(生成したクラスのコンストラクタの中で設定する) |
 | `events` | | 名前 → ハンドラ名 | §6 |
 | `controls` | | コントロールノードの配列 | Parent がフォームのコントロール |
@@ -162,11 +162,11 @@
 
 ## 5. プロパティ
 
-`properties` のキーは no_vcl のプロパティ名、値の書き方はプロパティの型(カタログ)で決まる。
+`properties` のキーは Bethany のプロパティ名、値の書き方はプロパティの型(カタログ)で決まる。
 **書いたプロパティだけを生成する**(既定値のままのものは書かない)。どのクラスにどのプロパティがあるか、どれがデザイン時に設定できるかは
 カタログ([catalog.md](catalog.md))で決まる。
 
-| 型(no_vcl) | 書き方 | 例 |
+| 型(Bethany) | 書き方 | 例 |
 |---|---|---|
 | `int`・`double` | 数値 | `75`、`2.5` |
 | `bool` | 真偽 | `true` |
@@ -191,7 +191,7 @@
 
 ## 6. イベント
 
-`events` のキーは no_vcl のイベント名(`OnClick` 等)、値はハンドラのメソッド名(識別子)。
+`events` のキーは Bethany のイベント名(`OnClick` 等)、値はハンドラのメソッド名(識別子)。
 
 - ハンドラの引数はイベントの型(カタログ)で決まる。TNotifyEvent なら C++ は `void Button1Click(TObject* Sender)`、Python は `def Button1Click(self, Sender)`。
 - 同じハンドラを複数のイベントに書ける(C++Builder と同じ)。ただし、イベントの型が同じでなければならない。
@@ -217,7 +217,7 @@
 - `properties` とノードは 1 行に 1 つのキー(1 つのプロパティの変更が 1 行の差分になる)。それ以外で、値が単純なもの
   (文字列・数値・真偽とその配列)だけのオブジェクト・配列は、1 行(100 文字)に収まれば 1 行で書く(`events`・`Anchors`・`Font` 等)。
 - インデントは 2 文字、改行は LF、末尾に改行。
-- 実装は [serialize.ts](../../designer/packages/core/src/dsl/serialize.ts)。`*.nvform.json` は Prettier の対象から外している。
+- 実装は [serialize.ts](../../designer/packages/core/src/dsl/serialize.ts)。`*.bfm.json` は Prettier の対象から外している。
 
 ## 9. コード生成の設定(`codegen`)
 
@@ -225,7 +225,7 @@
 クラス名の既定値はフォームの `name` から、ファイル名の既定値は DSL のファイル名から決める
 (C++Builder の Unit1.cpp・Unit1.h と Form1 のように、ファイル名とフォームの名前は別のもの)。
 
-| キー | 内容 | 既定値(`form.name` が `MainForm`、ファイルが `MainForm.nvform.json` の場合) |
+| キー | 内容 | 既定値(`form.name` が `MainForm`、ファイルが `MainForm.bfm.json` の場合) |
 |---|---|---|
 | `commentLocale` | 生成するコメントの言語(`"en"` / `"ja"`) | `"en"` |
 | `cpp.className` / `cpp.header` / `cpp.source` | C++ のクラス名・ヘッダ・ソース | `TMainForm` / `MainForm.hpp` / `MainForm.cpp` |
@@ -235,12 +235,12 @@
 
 | # | 論点 | 案 |
 |---|---|---|
-| Q1 | ファイルの拡張子 | **決定(2026-09-28)**: `*.nvform.json`(no_vcl のフォーム。JSON であることが分かり、`jsonValidation` で関連付けられる) |
+| Q1 | ファイルの拡張子 | **決定(2026-09-28)**: `*.bfm.json`(Bethany のフォーム。JSON であることが分かり、`jsonValidation` で関連付けられる) |
 | Q2 | 生成するクラス名の既定値 | **決定(2026-09-28)**: フォームの `name` から(`MainForm` → `TMainForm`)。C++Builder の `Form1` → `TForm1` と同じ。tk-designer はファイル名から決めていた |
 | Q3 | フォームのグローバル変数 | **決定(2026-09-28)**: C++Builder と同じく、C++ は `extern TMainForm* MainForm;`(ヘッダ)と定義(ソース)を生成し、`Application->CreateForm(&MainForm)` で使えるようにする。Python は生成しない(`MainForm = Application.CreateForm(TMainForm)` と書く) |
 | Q4 | 非ビジュアルコンポーネントを `components` に分けるか | **決定(2026-09-28)**: 分ける(案のとおり)。.dfm は 1 つの木に混ぜるが、Parent を持たないものを `controls` に混ぜると、親子の制約の検証が複雑になる |
 | Q5 | Owner がフォーム以外のコンポーネント | 扱わない(すべてフォームが所有)。C++Builder のデザイナーも同じ |
 | Q6 | コレクション(TListView の Columns、THeaderControl の Sections、TCoolBar の Bands、TTreeView の Items、TStatusBar は SimpleText のみ) | MVP の後。`items` と同じく配列のプロパティとして足す(形は個別に決める) |
 | Q7 | 画像(Glyph・Picture・TImageList の画像) | MVP の後。.dfm のように埋め込むか、ファイルのパスを書いて生成コードで読み込むか(実行時のパスの扱い)を決める |
-| Q8 | TColor の書き方 | 定数名(`clRed`・`clDefault` 等)と `"#RRGGBB"`。no_vcl の TColor は `$00BBGGRR` なので、生成時に変換する。システム色(clBtnFace 等)は no_vcl に定数が無いので、足すかどうかも決める |
+| Q8 | TColor の書き方 | 定数名(`clRed`・`clDefault` 等)と `"#RRGGBB"`。Bethany の TColor は `$00BBGGRR` なので、生成時に変換する。システム色(clBtnFace 等)は Bethany に定数が無いので、足すかどうかも決める |
 | Q9 | フォームの大きさ | **決定(2026-09-28、実測)**: Width・Height で書く。LCL の TForm の Width・Height は**クライアント領域の大きさ**(枠・タイトルバー・メニューを含まない。Delphi と違う。codegen-design.md §7.1)なので、キャンバスではこの大きさをそのままクライアント領域として描き、枠・タイトルバー・メニューはその外に描く |

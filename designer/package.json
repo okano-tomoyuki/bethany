@@ -1,5 +1,5 @@
 {
-  "name": "no-vcl-designer-monorepo",
+  "name": "bethany-designer-monorepo",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@12.6.0",
@@ -7,15 +7,15 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "pnpm -r --filter=@no-vcl-designer/webview --filter=no-vcl-designer --filter=@no-vcl-designer/cli run build",
+    "build": "pnpm -r --filter=@bethany-designer/webview --filter=bethany-designer --filter=@bethany-designer/cli run build",
     "typecheck": "pnpm -r run typecheck && tsc -p tools",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm catalog:check && pnpm --filter no-vcl-designer check:schema && pnpm l10n:check && pnpm test",
-    "generate:schema": "pnpm --filter no-vcl-designer generate:schema",
+    "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm catalog:check && pnpm --filter bethany-designer check:schema && pnpm l10n:check && pnpm test",
+    "generate:schema": "pnpm --filter bethany-designer generate:schema",
     "catalog:extract": "python tools/catalog/extract.py",
     "catalog:check": "python tools/catalog/extract.py --check",
     "l10n:check": "node tools/l10n/check.mts",

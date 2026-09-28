@@ -199,10 +199,10 @@ importers:
 
   packages/cli:
     dependencies:
-      '@no-vcl-designer/codegen':
+      '@bethany-designer/codegen':
         specifier: workspace:*
         version: link:../codegen
-      '@no-vcl-designer/core':
+      '@bethany-designer/core':
         specifier: workspace:*
         version: link:../core
     devDependencies:
@@ -212,7 +212,7 @@ importers:
 
   packages/codegen:
     dependencies:
-      '@no-vcl-designer/core':
+      '@bethany-designer/core':
         specifier: workspace:*
         version: link:../core
 
@@ -233,10 +233,10 @@ importers:
 
   packages/extension:
     dependencies:
-      '@no-vcl-designer/codegen':
+      '@bethany-designer/codegen':
         specifier: workspace:*
         version: link:../codegen
-      '@no-vcl-designer/core':
+      '@bethany-designer/core':
         specifier: workspace:*
         version: link:../core
     devDependencies:
@@ -252,10 +252,10 @@ importers:
 
   packages/webview:
     dependencies:
-      '@no-vcl-designer/codegen':
+      '@bethany-designer/codegen':
         specifier: workspace:*
         version: link:../codegen
-      '@no-vcl-designer/core':
+      '@bethany-designer/core':
         specifier: workspace:*
         version: link:../core
       react:

@@ -28,12 +28,12 @@ LCL のソース(`grids.pas`)で確認したこと:
 選択肢A を採る(インデックス付きプロパティの表し方をライブラリ全体で揃える)。`ColWidths[ACol]`・`RowHeights[ARow]` も `GetColWidths` / `SetColWidths` 等にする。
 添字演算子で書けるプロキシは、インデックス付きプロパティ全般の共通の仕組み(`IndexedProperty` のようなもの)として、別途まとめて検討する。
 
-- C API: 主なメンバは公開しているクラスの名前で `no_vcl_TCustomDrawGrid_*`(TDrawGrid・TStringGrid の両方に使える)。
-  TCustomGrid の public は `no_vcl_TCustomGrid_*`、文字列は `no_vcl_TCustomStringGrid_*`。
+- C API: 主なメンバは公開しているクラスの名前で `beth_TCustomDrawGrid_*`(TDrawGrid・TStringGrid の両方に使える)。
+  TCustomGrid の public は `beth_TCustomGrid_*`、文字列は `beth_TCustomStringGrid_*`。
 - C++: `TCustomGrid`(public のメソッドのみ)→ `TCustomDrawGrid`(プロパティ・イベント・`TCanvas Canvas`)→ `TDrawGrid`、
   `TCustomDrawGrid` → `TCustomStringGrid`(Cells 等)→ `TStringGrid`。Canvas は TPaintBox と同じく非所有の値メンバ。
 - **Options** は TShiftState と同じくビット集合(ビットの位置は TGridOption の序数)。32 ビットすべてを使う(最上位が goRowHighlight)ため、
-  C API は新しい `no_vcl_uint_t`(unsigned int)で受け渡し、定数は `#define no_vcl_go*`(符号なし)にした(C の enum は int の範囲に限られるため)。
+  C API は新しい `beth_uint_t`(unsigned int)で受け渡し、定数は `#define beth_go*`(符号なし)にした(C の enum は int の範囲に限られるため)。
   C++ は `using TGridOptions = unsigned int` と `go*` 定数。
 - **TRect / TGridRect**: C++ に VCL と同じ `struct TRect { Left, Top, Right, Bottom }` を追加し、`TGridRect` はその別名(LCL も `TGridRect = TRect`)。
   C API は 4 つの整数(取得はポインタ 4 つ)で受け渡す。

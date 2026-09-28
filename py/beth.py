@@ -1,7 +1,7 @@
-# このファイルは gen_api.py が no_vcl.hpp から生成する。直接編集しない。
-"""no_vcl の Python の公開 API。C++ の公開 API(no_vcl.hpp)と同じクラス・メンバを持つ。
+# このファイルは gen_api.py が beth.hpp から生成する。直接編集しない。
+"""Bethany の Python の公開 API。C++ の公開 API(beth.hpp)と同じクラス・メンバを持つ。
 
-    from no_vcl import *
+    from beth import *
 
     class TForm1(TForm):
         def __init__(self, AOwner):
@@ -19,19 +19,19 @@
     Form1 = Application.CreateForm(TForm1)
     Application.Run()
 
-C++ との違い(詳しくは no_vcl_core.py):
+C++ との違い(詳しくは beth_core.py):
 - 参照渡しの引数(int& Key・bool& CanClose・TCloseAction& Action 等)・メソッドの出力引数は Ref(.value を読み書きする)。
 - Application->CreateForm(&Form1) は Form1 = Application.CreateForm(TForm1)。
 - 利用者が生成するもの(TStringList・TBitmap・TPicture 等)の delete は Free()(参照が無くなったときにも破棄される)。
 - LCL オブジェクトが破棄された後にラッパーへ触ると ReferenceError(C++ では未定義動作)。
-- C++ の Exception は NoVclError(E.Message・E.ClassName())。
+- C++ の Exception は BethError(E.Message・E.ClassName())。
 """
 import ctypes
 import enum
 
-from no_vcl_core import (NoVclError, Ref, TRect, TPoint, TObject, TPersistent, TComponent,
+from beth_core import (BethError, Ref, TRect, TPoint, TObject, TPersistent, TComponent,
                          ShortCut, TextToShortCut, ShortCutToText)
-from no_vcl_core import (lib, _mixins, _register, _event_types, _ItemMixin, _Prop, _Indexed, _Event,
+from beth_core import (lib, _mixins, _register, _event_types, _ItemMixin, _Prop, _Indexed, _Event,
                          _int, _float, _bool, _str, _char, _ptr, _rect_conv, _enum, _set, _comp, _existing, _item, _obj, _view,
                          _str_key, _enc, _dec, _h, _b, _rect, _point, _to_enum, _to_comp, _to_existing, _to_item, _to_obj,
                          _a_int, _a_bool, _a_rect, _a_enum, _a_comp, _a_item, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_enum)
@@ -2477,7 +2477,7 @@ _register(globals())
 Application = TApplication._global()
 
 __all__ = [
-    "NoVclError", "Ref", "TRect", "TPoint", "TObject", "TPersistent", "TComponent", "ShortCut", "TextToShortCut",
+    "BethError", "Ref", "TRect", "TPoint", "TObject", "TPersistent", "TComponent", "ShortCut", "TextToShortCut",
     "ShortCutToText", "Application", "TCloseAction", "caNone", "caHide", "caFree", "caMinimize", "TMouseButton",
     "mbLeft", "mbRight", "mbMiddle", "mbExtra1", "mbExtra2", "TDuplicates", "dupIgnore", "dupAccept", "dupError",
     "TPixelFormat", "pfDevice", "pf1bit", "pf4bit", "pf8bit", "pf15bit", "pf16bit", "pf24bit", "pf32bit",
