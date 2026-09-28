@@ -18,6 +18,11 @@ export interface Region {
   readonly content: string;
   /** マーカー行の字下げの深さ */
   readonly indent: number;
+  /**
+   * 既存のファイルに無ければ、エラーにせず末尾に加える(後の版で加えた区間。既存のファイルをそのまま再生成できるように)。
+   * ファイルの末尾に置く区間にだけ使う。
+   */
+  readonly appendIfMissing?: boolean;
 }
 
 export interface HandlerStub {
@@ -155,7 +160,8 @@ export function mergeFile(
       error: l10n.t('Nothing was written because the markers are broken: {0}', parsed),
     };
 
-  const missing = generated.regions.filter((r) => !parsed.some((p) => p.id === r.id));
+  const absent = generated.regions.filter((r) => !parsed.some((p) => p.id === r.id));
+  const missing = absent.filter((r) => !r.appendIfMissing);
   if (missing.length > 0) {
     return {
       ok: false,
@@ -177,6 +183,13 @@ export function mergeFile(
     const region = generated.regions.find((r) => r.id === p.id);
     if (!region) continue; // 未知の区間(新しいバージョンの生成物など)はそのまま残す
     output.splice(p.begin, p.end - p.begin + 1, ...renderRegion(region, syntax).split('\n'));
+  }
+
+  // 後の版で加えた区間を末尾に加える(末尾の空行の前)
+  const appended = absent.filter((r) => r.appendIfMissing);
+  if (appended.length > 0) {
+    while (output.length > 0 && output[output.length - 1]?.trim() === '') output.pop();
+    output.push(...appended.flatMap((r) => ['', '', ...renderRegion(r, syntax).split('\n')]), '');
   }
 
   // まだ定義されていないハンドラの雛形を追記する(削除はしない)

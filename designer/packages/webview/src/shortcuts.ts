@@ -19,7 +19,6 @@ export function installShortcuts(): () => void {
   const handler = (e: KeyboardEvent) => {
     const target = e.target as HTMLElement | null;
     if (target?.closest('input, select, textarea, [contenteditable="true"]')) return;
-    if (uiStore.getState().view !== 'design') return;
     const arrow = ARROWS[e.key];
     if (arrow) {
       // 構造の木の上では、矢印は木の操作に使う

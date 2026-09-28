@@ -1,21 +1,41 @@
 /**
  * コード生成 CLI(docs/designer/codegen-design.md。tk-designer の tkd から流用)。
  *
- *   beth generate <file.bfm.json> [--force] [--check] [--locale <ja|en>]
+ *   beth generate <file.bfm.json | file.bfproj.json> [--force] [--check] [--locale <ja|en>]
  *
- * - DSL の codegen に書かれたターゲット(C++ / Python)のコードを生成する。既存のファイルはマーカー区間だけを更新する。
+ * - フォームのコードを生成する。言語とコメントの言語は、フォームを含むプロジェクトファイル(フォームのフォルダから上へたどって探す)の
+ *   codegen から決める。プロジェクトに属さなければ C++ と Python の両方。既存のファイルはマーカー区間だけを更新する。
+ * - プロジェクトファイル(*.bfproj.json)なら、起動部分(Project1.cpp・Project1.py)を生成する(docs/designer/project-spec.md §5)。
  * - 手で編集された区間があれば書き込まずに失敗する(--force で上書き)。
  * - --check は書き込まず、生成結果が既存のファイルと一致するか(最新か)だけを調べる(CI 向け)。
  * - メッセージの言語は --locale、なければ環境変数(LC_ALL・LC_MESSAGES・LANG)、なければ OS の設定で決まる(tk-designer ADR 0014 と同じ)。
  */
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { generateAll } from '@bethany-designer/codegen';
-import { configureL10n, isJapanese, l10n, parseDocument } from '@bethany-designer/core';
+import {
+  formCodegenSettings,
+  generateAll,
+  generateProject,
+  isProjectFileName,
+  type GenerateAllResult,
+  type FormSource,
+} from '@bethany-designer/codegen';
+import {
+  autoCreateForms,
+  configureL10n,
+  isJapanese,
+  l10n,
+  parseDocument,
+  parseProject,
+  PROJECT_EXTENSION,
+  type BfprojDocument,
+  type Diagnostic,
+} from '@bethany-designer/core';
 import ja from '../../extension/l10n/bundle.l10n.ja.json' with { type: 'json' };
 
-const USAGE = 'Usage: beth generate <file.bfm.json> [--force] [--check] [--locale <ja|en>]';
+const USAGE =
+  'Usage: beth generate <file.bfm.json | file.bfproj.json> [--force] [--check] [--locale <ja|en>]';
 
 /** メッセージの言語(--locale、環境変数、OS の設定の順) */
 function detectLanguage(option: string | undefined): string {
@@ -46,14 +66,11 @@ function main(argv: readonly string[]): number {
   }
 
   const dslPath = resolve(file);
-  const { document, diagnostics } = parseDocument(readFileSync(dslPath, 'utf8'));
-  for (const d of diagnostics) {
-    console.error(`${file}: ${d.severity}: ${d.path.join('.') || '(root)'}: ${d.message}`);
-  }
-  if (!document || diagnostics.some((d) => d.severity === 'error')) return 1;
-
   const outPath = (path: string) => resolve(dirname(dslPath), path);
-  const generated = generateAll(document, basename(dslPath), (path) => readIfExists(outPath(path)));
+  const generated = isProjectFileName(dslPath)
+    ? generateProjectFile(file, dslPath, outPath)
+    : generateFormFile(file, dslPath, outPath);
+  if (!generated) return 1;
   if ('error' in generated) {
     console.error(`${file}: ${generated.error}`);
     return 1;
@@ -113,6 +130,72 @@ function main(argv: readonly string[]): number {
     );
   }
   return 0;
+}
+
+/** フォームのコードを生成する。検証のエラーがあれば undefined */
+function generateFormFile(
+  file: string,
+  dslPath: string,
+  outPath: (path: string) => string,
+): GenerateAllResult | { readonly error: string } | undefined {
+  const { document, diagnostics } = parseDocument(readFileSync(dslPath, 'utf8'));
+  report(file, diagnostics);
+  if (!document || diagnostics.some((d) => d.severity === 'error')) return undefined;
+  const settings = formCodegenSettings(projectsContaining(dslPath));
+  return generateAll(document, basename(dslPath), settings, (path) => readIfExists(outPath(path)));
+}
+
+/** フォームのフォルダから上へたどり、そのフォームを forms に含むプロジェクトファイルを集める */
+function projectsContaining(formPath: string): BfprojDocument[] {
+  const key = (path: string) => (process.platform === 'win32' ? path.toLowerCase() : path);
+  const projects: BfprojDocument[] = [];
+  for (let dir = dirname(formPath); ; dir = dirname(dir)) {
+    let names: string[] = [];
+    try {
+      names = readdirSync(dir).filter((name) => name.endsWith(PROJECT_EXTENSION));
+    } catch {
+      // 読めないフォルダは飛ばす
+    }
+    for (const name of names) {
+      const text = readIfExists(resolve(dir, name));
+      const project = text === undefined ? undefined : parseProject(text).project;
+      if (project?.forms?.some((form) => key(resolve(dir, form)) === key(formPath)))
+        projects.push(project);
+    }
+    if (dirname(dir) === dir) return projects;
+  }
+}
+
+/** プロジェクトの起動部分を生成する。プロジェクトかメインフォームに検証のエラーがあれば undefined */
+function generateProjectFile(
+  file: string,
+  projectPath: string,
+  outPath: (path: string) => string,
+): GenerateAllResult | { readonly error: string } | undefined {
+  const { project, diagnostics } = parseProject(readFileSync(projectPath, 'utf8'));
+  report(file, diagnostics);
+  if (!project || diagnostics.some((d) => d.severity === 'error')) return undefined;
+  // 起動時に作るフォーム(メインフォームが先頭)
+  const forms: FormSource[] = [];
+  for (const path of autoCreateForms(project)) {
+    const text = readIfExists(outPath(path));
+    if (text === undefined) {
+      console.error(`${file}: ${l10n.t('"{0}" not found', path)}`);
+      return undefined;
+    }
+    const form = parseDocument(text);
+    report(path, form.diagnostics);
+    if (!form.document || form.diagnostics.some((d) => d.severity === 'error')) return undefined;
+    forms.push({ doc: form.document, path });
+  }
+  return generateProject(project, basename(projectPath), forms, (path) =>
+    readIfExists(outPath(path)),
+  );
+}
+
+function report(file: string, diagnostics: readonly Diagnostic[]): void {
+  for (const d of diagnostics)
+    console.error(`${file}: ${d.severity}: ${d.path.join('.') || '(root)'}: ${d.message}`);
 }
 
 function readIfExists(path: string): string | undefined {

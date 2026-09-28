@@ -25,7 +25,9 @@ export function activate(context: vscode.ExtensionContext): void {
             ? target
             : target?.kind === 'form'
               ? target.uri
-              : activeDslUri();
+              : target?.kind === 'project'
+                ? target.project.uri
+                : activeDslUri();
         if (!uri) return;
         await generateCode(await vscode.workspace.openTextDocument(uri));
       },

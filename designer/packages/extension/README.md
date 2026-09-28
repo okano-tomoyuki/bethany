@@ -17,7 +17,9 @@ The form is stored in a JSON file (`*.bfm.json`) that you can also edit as text.
 - **Code generation**: the _Generate Code_ command writes a form class (`class TMainForm : public TForm`) to your source files.
   Only the regions between the designer's markers are replaced, so your own code, including event handlers, is kept.
 - **Forms view**: the Bethany Designer icon in the Activity Bar lists the forms in your workspace. Open a form with a click, create one with the **+** button, or generate code from the list.
-- **Projects**: a project file (`*.bfproj.json`) lists the forms of an application and its main form. With projects, the Forms view groups the forms by project and marks the main form with a star. Renaming, moving or deleting a form in VS Code updates the projects that contain it.
+- **Projects**: a project file (`*.bfproj.json`) lists the forms of an application and its main form, and sets the languages to generate (`"codegen": { "cpp": {}, "python": {} }`). With projects, the Forms view groups the forms by project and marks the main form with a star. Renaming, moving or deleting a form in VS Code updates the projects that contain it.
+- **Application startup code**: _Generate Code_ on a project writes `Project1.cpp` / `Project1.py`, which initializes the application,
+  creates the forms (the main form first, then the others as in C++Builder; _Don't Create at Startup_ excludes a form) and runs it.
 - **Validation**: problems in `*.bfm.json` are shown in the Problems panel, and a JSON Schema is provided for text editing.
 - English and Japanese.
 
@@ -28,6 +30,37 @@ The form is stored in a JSON file (`*.bfm.json`) that you can also edit as text.
 2. Design the form, then run **Generate Code** from the editor title bar.
 3. Build the generated code with Bethany. For C++, see the C++ section of the
    [Bethany README](https://github.com/okano-tomoyuki/bethany#readme).
+
+## Using other forms
+
+As in C++Builder, a form created at startup can be used from other forms through its variable.
+
+```cpp
+// MainForm.cpp
+#include "Form2.hpp"
+
+void TMainForm::OpenButtonClick(TObject* Sender)
+{
+    Form2->ShowModal();
+}
+```
+
+```python
+# MainForm.py
+import Form2
+
+class TMainForm(TForm):
+    ...
+    def OpenButtonClick(self, Sender):
+        Form2.Form2.ShowModal()
+```
+
+In Python, forms may import each other (MainForm imports Form2 and Form2 imports MainForm). Follow these rules:
+
+- Write `import Form2` and use `Form2.Form2`. Do not write `from Form2 import Form2`: it copies the value at import time (`None`),
+  and fails with a circular import error when the forms import each other.
+- Use other forms only inside methods (event handlers, `FormCreate`), not at module level or in a class definition.
+- Start the application from `Project1.py`. Running a form's `.py` directly loads it twice (as `__main__` and as the module).
 
 ## Settings
 
@@ -49,6 +82,7 @@ The form is stored in a JSON file (`*.bfm.json`) that you can also edit as text.
 Bethany(Lazarus の LCL を C++Builder に似た API で C++・Python から使うライブラリ)のフォームデザイナーです。
 キャンバスでフォームを設計し、C++ または Python のコードを生成します。フォームは `*.bfm.json` に保存され、テキストとしても編集できます。
 生成するのはマーカーで囲まれた区間だけで、イベントハンドラなど利用者が書いたコードは残ります。
+Python でほかのフォームを使うときは、`import Form2` と書いて `Form2.Form2` で使います(`from Form2 import Form2` は使いません)。
 設計の資料は [docs/designer](https://github.com/okano-tomoyuki/bethany/tree/master/docs/designer) にあります。
 
 ## License

@@ -1,20 +1,17 @@
 import { hasErrors, l10n } from '@bethany-designer/core';
 import { DesignCanvas } from './canvas/DesignCanvas.tsx';
-import { CodegenView } from './components/CodegenView.tsx';
 import { ContextMenu } from './components/ContextMenu.tsx';
 import { Inspector } from './components/inspector/Inspector.tsx';
 import { Palette } from './components/Palette.tsx';
 import { StatusPanel } from './components/StatusPanel.tsx';
 import { StructureTree } from './components/StructureTree.tsx';
 import { generateCode } from './editing.ts';
-import { useDocumentStore, useUiStore } from './store/stores.ts';
+import { useDocumentStore } from './store/stores.ts';
 
 export function App() {
   const status = useDocumentStore((s) => s.status);
   const hasDocument = useDocumentStore((s) => s.document !== undefined);
   const blocked = useDocumentStore((s) => hasErrors(s.diagnostics));
-  const view = useUiStore((s) => s.view);
-  const setView = useUiStore((s) => s.setView);
 
   if (status === 'loading') return <p>{l10n.t('Loading…')}</p>;
   if (!hasDocument) {
@@ -29,18 +26,9 @@ export function App() {
       </main>
     );
   }
-  if (view === 'codegen') return <CodegenView />;
   return (
     <main className="layout">
       <header className="topbar">
-        <button
-          type="button"
-          onClick={() => {
-            setView('codegen');
-          }}
-        >
-          {l10n.t('Code Generation Settings…')}
-        </button>
         <button
           type="button"
           className="primary"

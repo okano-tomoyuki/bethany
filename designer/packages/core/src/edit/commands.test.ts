@@ -340,13 +340,9 @@ describe('イベント', () => {
 });
 
 describe('その他', () => {
-  it('setDesignPosition・setCodegen', () => {
-    let doc = apply({ type: 'setDesignPosition', name: 'Timer1', left: 10, top: 20 });
+  it('setDesignPosition', () => {
+    const doc = apply({ type: 'setDesignPosition', name: 'Timer1', left: 10, top: 20 });
     expect(node(doc, 'Timer1').node).toHaveProperty('design', { left: 10, top: 20 });
-    doc = apply({ type: 'setCodegen', codegen: { cpp: {}, commentLocale: undefined } }, doc);
-    expect(doc.codegen).toEqual({ cpp: {} });
-    doc = apply({ type: 'setCodegen', codegen: {} }, doc);
-    expect(doc).not.toHaveProperty('codegen');
     expect(reject({ type: 'setDesignPosition', name: 'OkButton', left: 0, top: 0 })).toContain(
       'non-visual',
     );

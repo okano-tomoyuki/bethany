@@ -124,6 +124,16 @@
         "title": "%command.openProjectFile.title%",
         "category": "Bethany Designer",
         "icon": "$(go-to-file)"
+      },
+      {
+        "command": "bethanyDesigner.createAtStartup",
+        "title": "%command.createAtStartup.title%",
+        "category": "Bethany Designer"
+      },
+      {
+        "command": "bethanyDesigner.dontCreateAtStartup",
+        "title": "%command.dontCreateAtStartup.title%",
+        "category": "Bethany Designer"
       }
     ],
     "menus": {
@@ -141,7 +151,7 @@
       "editor/title": [
         {
           "command": "bethanyDesigner.generateCode",
-          "when": "resourceFilename =~ /\\.bfm\\.json$/",
+          "when": "resourceFilename =~ /\\.(bfm|bfproj)\\.json$/",
           "group": "navigation"
         }
       ],
@@ -170,12 +180,12 @@
         },
         {
           "command": "bethanyDesigner.generateCode",
-          "when": "view == bethanyDesigner.forms && viewItem =~ /^(form|projectForm|projectMainForm)$/",
+          "when": "view == bethanyDesigner.forms && viewItem =~ /^(form|projectForm|projectFormManual|projectMainForm|project)$/",
           "group": "inline"
         },
         {
           "command": "bethanyDesigner.generateCode",
-          "when": "view == bethanyDesigner.forms && viewItem =~ /^(form|projectForm|projectMainForm)$/",
+          "when": "view == bethanyDesigner.forms && viewItem =~ /^(form|projectForm|projectFormManual|projectMainForm|project)$/",
           "group": "navigation@1"
         },
         {
@@ -190,24 +200,34 @@
         },
         {
           "command": "bethanyDesigner.setMainForm",
-          "when": "view == bethanyDesigner.forms && viewItem =~ /^(form|projectForm)$/",
+          "when": "view == bethanyDesigner.forms && viewItem =~ /^(form|projectForm|projectFormManual)$/",
           "group": "2_project@1"
         },
         {
           "command": "bethanyDesigner.addToProject",
-          "when": "view == bethanyDesigner.forms && viewItem =~ /^(form|projectForm|projectMainForm)$/",
+          "when": "view == bethanyDesigner.forms && viewItem =~ /^(form|projectForm|projectFormManual|projectMainForm)$/",
           "group": "2_project@2"
         },
         {
           "command": "bethanyDesigner.removeFromProject",
-          "when": "view == bethanyDesigner.forms && viewItem =~ /^project(Main|Missing)?Form$/",
+          "when": "view == bethanyDesigner.forms && viewItem =~ /^project(Main|Missing)?Form(Manual)?$/",
           "group": "2_project@3"
+        },
+        {
+          "command": "bethanyDesigner.dontCreateAtStartup",
+          "when": "view == bethanyDesigner.forms && viewItem == projectForm",
+          "group": "2_project@4"
+        },
+        {
+          "command": "bethanyDesigner.createAtStartup",
+          "when": "view == bethanyDesigner.forms && viewItem == projectFormManual",
+          "group": "2_project@4"
         }
       ],
       "commandPalette": [
         {
           "command": "bethanyDesigner.generateCode",
-          "when": "resourceFilename =~ /\\.bfm\\.json$/"
+          "when": "resourceFilename =~ /\\.(bfm|bfproj)\\.json$/"
         },
         {
           "command": "bethanyDesigner.refreshForms",
@@ -227,6 +247,14 @@
         },
         {
           "command": "bethanyDesigner.openProjectFile",
+          "when": "false"
+        },
+        {
+          "command": "bethanyDesigner.createAtStartup",
+          "when": "false"
+        },
+        {
+          "command": "bethanyDesigner.dontCreateAtStartup",
           "when": "false"
         }
       ]

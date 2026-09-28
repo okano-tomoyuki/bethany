@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   addForm,
+  autoCreateForms,
   createProject,
+  isAutoCreated,
   mapFormPaths,
   removeForm,
   serializeProject,
+  setAutoCreate,
   setMainForm,
 } from './edit.ts';
 import { parseProject } from './parse.ts';
@@ -98,6 +101,7 @@ describe('編集', () => {
     expect(removeForm(project, 'A.bfm.json').mainForm).toBe('B.bfm.json');
     expect(removeForm(createProject(['A.bfm.json']), 'A.bfm.json')).toEqual({
       formatVersion: 1,
+      codegen: { cpp: {}, python: {} },
       forms: [],
     });
   });
@@ -111,10 +115,64 @@ describe('編集', () => {
     expect(mapFormPaths(noMain, (f) => f)).toEqual(noMain);
   });
 
+  it('autoCreate が無ければすべてのフォームを forms の順に作り、メインフォームは常に最初', () => {
+    const project = setMainForm(
+      createProject(['A.bfm.json', 'B.bfm.json', 'C.bfm.json']),
+      'B.bfm.json',
+    );
+    expect(autoCreateForms(project)).toEqual(['B.bfm.json', 'A.bfm.json', 'C.bfm.json']);
+    const manual = setAutoCreate(project, 'A.bfm.json', false);
+    expect(manual.autoCreate).toEqual(['B.bfm.json', 'C.bfm.json']);
+    expect(isAutoCreated(manual, 'A.bfm.json')).toBe(false);
+    expect(autoCreateForms(addForm(manual, 'D.bfm.json'))).toEqual([
+      'B.bfm.json',
+      'C.bfm.json',
+      'D.bfm.json',
+    ]);
+    expect(autoCreateForms(setAutoCreate(manual, 'A.bfm.json', true))).toEqual([
+      'B.bfm.json',
+      'C.bfm.json',
+      'A.bfm.json',
+    ]);
+  });
+
+  it('mapFormPaths・removeForm は autoCreate も書き換える', () => {
+    const manual = setAutoCreate(createProject(['A.bfm.json', 'B.bfm.json']), 'B.bfm.json', true);
+    expect(removeForm(manual, 'B.bfm.json').autoCreate).toEqual(['A.bfm.json']);
+    expect(mapFormPaths(manual, (f) => `sub/${f}`).autoCreate).toEqual([
+      'sub/A.bfm.json',
+      'sub/B.bfm.json',
+    ]);
+  });
+
+  it('autoCreate の forms に無いフォーム・重複を知らせる', () => {
+    const result = parseProject(
+      JSON.stringify({
+        formatVersion: 1,
+        forms: ['A.bfm.json'],
+        autoCreate: ['A.bfm.json', 'A.bfm.json', 'X.bfm.json'],
+      }),
+    );
+    expect(result.diagnostics.map((d) => [d.code, d.path])).toEqual([
+      ['duplicate-form', ['autoCreate', 1]],
+      ['unknown-auto-create', ['autoCreate', 2]],
+    ]);
+  });
+
   it('serializeProject は決まった順で、forms を 1 行に 1 つ書く', () => {
-    expect(serializeProject({ forms: ['A.bfm.json'], formatVersion: 1, mainForm: 'A.bfm.json' }))
-      .toBe(`{
+    expect(
+      serializeProject({
+        forms: ['A.bfm.json'],
+        mainForm: 'A.bfm.json',
+        codegen: { python: {}, commentLocale: 'ja' },
+        formatVersion: 1,
+      }),
+    ).toBe(`{
   "formatVersion": 1,
+  "codegen": {
+    "commentLocale": "ja",
+    "python": {}
+  },
   "mainForm": "A.bfm.json",
   "forms": [
     "A.bfm.json"

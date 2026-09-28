@@ -94,6 +94,16 @@ export function validateDocument(doc: BfmDocument): Diagnostic[] {
         );
     }
   }
+  // コード生成の設定はプロジェクトファイルに移した(docs/designer/project-spec.md §5)。読み込めるように残し、使わない
+  if (doc.codegen)
+    diagnostics.push({
+      severity: 'warning',
+      code: 'legacy-codegen',
+      message: l10n.t(
+        '"codegen" in a form file is no longer used. Set the languages in the project file (*.bfproj.json) and remove it',
+      ),
+      path: ['codegen'],
+    });
   return diagnostics;
 
   function checkProperties(

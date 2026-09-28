@@ -24,6 +24,8 @@ export type ViewNode =
       readonly project?: ProjectInfo;
       readonly main?: boolean;
       readonly missing?: boolean;
+      /** 起動時に作らない(プロジェクトの autoCreate に無い) */
+      readonly manual?: boolean;
     }
   | { readonly kind: 'unassigned'; readonly forms: readonly vscode.Uri[] };
 
@@ -86,6 +88,7 @@ class FormsProvider implements vscode.TreeDataProvider<ViewNode>, vscode.Disposa
           project,
           main: project.mainForm !== undefined && samePath(uri, project.mainForm),
           missing: !(await exists(uri)),
+          manual: !project.autoCreate.some((f) => samePath(f, uri)),
         })),
       );
     }
@@ -168,9 +171,17 @@ function formItem(node: FormNode): vscode.TreeItem {
     item.description = [vscode.l10n.t('Main form'), folder].filter(Boolean).join(' · ');
   } else {
     item.iconPath = new vscode.ThemeIcon('window');
-    item.description = folder;
+    item.description = [node.manual ? vscode.l10n.t('Not created at startup') : '', folder]
+      .filter(Boolean)
+      .join(' · ');
   }
-  item.contextValue = node.project ? (node.main ? 'projectMainForm' : 'projectForm') : 'form';
+  item.contextValue = !node.project
+    ? 'form'
+    : node.main
+      ? 'projectMainForm'
+      : node.manual
+        ? 'projectFormManual'
+        : 'projectForm';
   item.command = {
     title: vscode.l10n.t('Open in Designer'),
     command: 'vscode.openWith',

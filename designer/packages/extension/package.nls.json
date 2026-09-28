@@ -17,5 +17,7 @@
   "command.setMainForm.title": "Set as Main Form",
   "command.addToProject.title": "Add to Project...",
   "command.removeFromProject.title": "Remove from Project",
-  "command.openProjectFile.title": "Open Project File"
+  "command.openProjectFile.title": "Open Project File",
+  "command.createAtStartup.title": "Create at Startup",
+  "command.dontCreateAtStartup.title": "Don't Create at Startup"
 }

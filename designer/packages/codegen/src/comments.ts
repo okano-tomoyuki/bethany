@@ -11,6 +11,10 @@ export interface GeneratedComments {
   readonly createComponents: string;
   /** ハンドラの雛形(C++。Python は pass) */
   readonly todo: string;
+  /** 起動部分(プロジェクトの main)の説明 */
+  readonly projectDoc: (sourceName: string) => string;
+  /** Python のフォームの変数(C++Builder のフォームのグローバル変数に当たる)の説明 */
+  readonly formVariable: (formName: string) => readonly string[];
 }
 
 const COMMENTS: Readonly<Record<CommentLocale, GeneratedComments>> = {
@@ -19,6 +23,12 @@ const COMMENTS: Readonly<Record<CommentLocale, GeneratedComments>> = {
       `Form created with the Bethany designer (${sourceName}). Regions enclosed in markers are overwritten when regenerated.`,
     createComponents: 'Creates the components and sets their properties (generated).',
     todo: 'TODO: implement',
+    projectDoc: (sourceName) =>
+      `Application created with the Bethany designer (${sourceName}). Regions enclosed in markers are overwritten when regenerated.`,
+    formVariable: (formName) => [
+      'The form created at startup by Application.CreateForm in the project (the global variable of the form in C++Builder).',
+      `Other forms use it as "import ${formName}" and "${formName}.${formName}" ("from ${formName} import ${formName}" copies None).`,
+    ],
   },
   // l10n-ignore(生成するコードのコメントの定型文)
   ja: {
@@ -29,6 +39,15 @@ const COMMENTS: Readonly<Record<CommentLocale, GeneratedComments>> = {
     createComponents: 'コンポーネントを生成し、プロパティを設定する(生成したコード)。',
     // l10n-ignore
     todo: 'TODO: 実装',
+    projectDoc: (sourceName) =>
+      // l10n-ignore
+      `Bethany のデザイナーで作成したアプリケーション(${sourceName})。マーカーで囲まれた区間は再生成で上書きされる。`,
+    formVariable: (formName) => [
+      // l10n-ignore
+      'プロジェクトの Application.CreateForm で起動時に作られるフォーム(C++Builder のフォームのグローバル変数に当たる)。',
+      // l10n-ignore
+      `ほかのフォームからは "import ${formName}" の後に "${formName}.${formName}" で使う("from ${formName} import ${formName}" は None を写す)。`,
+    ],
   },
 };
 

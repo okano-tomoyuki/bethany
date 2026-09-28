@@ -23,10 +23,6 @@
 ```json
 {
   "formatVersion": 1,
-  "codegen": {
-    "cpp": { "header": "MainForm.hpp", "source": "MainForm.cpp" },
-    "python": { "file": "main_form.py" }
-  },
   "form": {
     "name": "MainForm",
     "class": "TForm",
@@ -98,7 +94,7 @@
 | キー | 必須 | 型 | 説明 |
 |---|---|---|---|
 | `formatVersion` | ○ | `1` | フォーマットのバージョン。形式を変えたときに上げ、旧形式からの移行に使う |
-| `codegen` | | オブジェクト | コード生成の設定(§9)。書いたターゲットだけを生成する(tk-designer ADR 0010) |
+| `codegen` | | オブジェクト | **使わない**(§9)。以前のコード生成の設定。読み込めるが、警告を出す |
 | `form` | ○ | フォームノード | §4.1 |
 | `components` | | 非ビジュアルコンポーネントの配列 | §4.3 |
 | `$schema` | | 文字列 | エディタ向け。内容には影響しない |
@@ -211,7 +207,7 @@
 
 ## 8. 決まった形での書き出し
 
-- キーの順: ドキュメントは `formatVersion`・`codegen`・`form`・`components`。ノードは `name`・`class`・`design`・`properties`・`events`・`controls`/`items`。
+- キーの順: ドキュメントは `formatVersion`・`codegen`(残っていれば)・`form`・`components`。ノードは `name`・`class`・`design`・`properties`・`events`・`controls`/`items`。
   `properties` はカタログの順(Left・Top・Width・Height を先頭に)。
   `events` と入れ子のオブジェクト(Font 等)の中もカタログの順。カタログに無いキーは元の順のまま後ろに置く。
 - `properties` とノードは 1 行に 1 つのキー(1 つのプロパティの変更が 1 行の差分になる)。それ以外で、値が単純なもの
@@ -219,17 +215,19 @@
 - インデントは 2 文字、改行は LF、末尾に改行。
 - 実装は [serialize.ts](../../designer/packages/core/src/dsl/serialize.ts)。`*.bfm.json` は Prettier の対象から外している。
 
-## 9. コード生成の設定(`codegen`)
+## 9. コード生成の設定
 
-パスは DSL ファイルのあるフォルダからの相対パス。省略した項目は既定値。
-クラス名の既定値はフォームの `name` から、ファイル名の既定値は DSL のファイル名から決める
-(C++Builder の Unit1.cpp・Unit1.h と Form1 のように、ファイル名とフォームの名前は別のもの)。
+**フォームのファイルは、画面の設計だけを持つ。** 生成する言語とコメントの言語は、フォームが属するプロジェクトファイルの
+`codegen` で決める([project-spec.md](project-spec.md) §5)。出力先とクラス名は決まった規則で決まり、設定はできない。
 
-| キー | 内容 | 既定値(`form.name` が `MainForm`、ファイルが `MainForm.bfm.json` の場合) |
-|---|---|---|
-| `commentLocale` | 生成するコメントの言語(`"en"` / `"ja"`) | `"en"` |
-| `cpp.className` / `cpp.header` / `cpp.source` | C++ のクラス名・ヘッダ・ソース | `TMainForm` / `MainForm.hpp` / `MainForm.cpp` |
-| `python.className` / `python.file` | Python のクラス名・出力先 | `TMainForm` / `MainForm.py` |
+| 生成するもの | 決まり方(`form.name` が `MainForm`、ファイルが `MainForm.bfm.json` の場合) |
+|---|---|
+| クラス名 | `T` + フォームの名前(`TMainForm`) |
+| C++ のヘッダ・ソース | DSL と同じフォルダの `MainForm.hpp`・`MainForm.cpp` |
+| Python のファイル | DSL と同じフォルダの `MainForm.py` |
+
+以前は `codegen`(`commentLocale`・`cpp.className`・`cpp.header` 等)をフォームのファイルに書いていた。
+formatVersion は 1 のまま読み込めるが使わず、「プロジェクトファイルに移して削除する」よう警告を出す(0.2.0 で変更。利用者が少ないうちに変えた)。
 
 ## 10. 未決の論点
 
@@ -237,7 +235,7 @@
 |---|---|---|
 | Q1 | ファイルの拡張子 | **決定(2026-09-28)**: `*.bfm.json`(Bethany のフォーム。JSON であることが分かり、`jsonValidation` で関連付けられる) |
 | Q2 | 生成するクラス名の既定値 | **決定(2026-09-28)**: フォームの `name` から(`MainForm` → `TMainForm`)。C++Builder の `Form1` → `TForm1` と同じ。tk-designer はファイル名から決めていた |
-| Q3 | フォームのグローバル変数 | **決定(2026-09-28)**: C++Builder と同じく、C++ は `extern TMainForm* MainForm;`(ヘッダ)と定義(ソース)を生成し、`Application->CreateForm(&MainForm)` で使えるようにする。Python は生成しない(`MainForm = Application.CreateForm(TMainForm)` と書く) |
+| Q3 | フォームのグローバル変数 | **決定(2026-09-28、2026-09-28 に Python を見直し)**: C++Builder と同じく、C++ は `extern TMainForm* MainForm;`(ヘッダ)と定義(ソース)を生成し、`Application->CreateForm(&MainForm)` で使えるようにする。Python もフォームのモジュールの末尾に `MainForm = None` を生成し、プロジェクトの起動部分が `MainForm.MainForm = Application.CreateForm(MainForm.TMainForm)` で代入する(C++Builder の使用感をそろえるため。当初は生成しない決定だった。[project-spec.md](project-spec.md) §5) |
 | Q4 | 非ビジュアルコンポーネントを `components` に分けるか | **決定(2026-09-28)**: 分ける(案のとおり)。.dfm は 1 つの木に混ぜるが、Parent を持たないものを `controls` に混ぜると、親子の制約の検証が複雑になる |
 | Q5 | Owner がフォーム以外のコンポーネント | 扱わない(すべてフォームが所有)。C++Builder のデザイナーも同じ |
 | Q6 | コレクション(TListView の Columns、THeaderControl の Sections、TCoolBar の Bands、TTreeView の Items、TStatusBar は SimpleText のみ) | MVP の後。`items` と同じく配列のプロパティとして足す(形は個別に決める) |

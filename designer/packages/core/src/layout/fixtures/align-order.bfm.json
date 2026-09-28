@@ -1,6 +1,5 @@
 {
   "formatVersion": 1,
-  "codegen": { "python": {} },
   "form": {
     "name": "AlignOrder",
     "class": "TForm",

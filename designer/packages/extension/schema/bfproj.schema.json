@@ -9,10 +9,47 @@
       "type": "number",
       "const": 1
     },
+    "codegen": {
+      "type": "object",
+      "properties": {
+        "commentLocale": {
+          "type": "string",
+          "enum": [
+            "en",
+            "ja"
+          ]
+        },
+        "cpp": {
+          "type": "object",
+          "properties": {
+            "main": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "python": {
+          "type": "object",
+          "properties": {
+            "main": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
     "mainForm": {
       "type": "string"
     },
     "forms": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "autoCreate": {
       "type": "array",
       "items": {
         "type": "string"

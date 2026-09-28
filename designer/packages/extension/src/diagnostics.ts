@@ -11,7 +11,7 @@ import {
   type Diagnostic,
 } from '@bethany-designer/core';
 import * as vscode from 'vscode';
-import { formUri } from './projects.ts';
+import { findProjects, formUri, PROJECT_PATTERN, samePath } from './projects.ts';
 import { exists } from './workspaceFiles.ts';
 
 const SOURCE = 'Bethany Designer';
@@ -48,11 +48,17 @@ export function registerDiagnostics(): vscode.Disposable {
     true,
     false,
   );
+  // ほかのプロジェクトファイルが変わったら、コメントの言語の食い違いを確かめ直す
+  const projectWatcher = vscode.workspace.createFileSystemWatcher(PROJECT_PATTERN);
   return vscode.Disposable.from(
     collection,
     formWatcher,
+    projectWatcher,
     formWatcher.onDidCreate(updateProjects),
     formWatcher.onDidDelete(updateProjects),
+    projectWatcher.onDidCreate(updateProjects),
+    projectWatcher.onDidChange(updateProjects),
+    projectWatcher.onDidDelete(updateProjects),
     vscode.workspace.onDidOpenTextDocument((document) => void update(document)),
     vscode.workspace.onDidChangeTextDocument((e) => void update(e.document)),
     vscode.workspace.onDidCloseTextDocument((document) => {
@@ -61,7 +67,10 @@ export function registerDiagnostics(): vscode.Disposable {
   );
 }
 
-/** 構造と意味の検証に加えて、forms のファイルがあるかを調べる */
+/**
+ * 構造と意味の検証に加えて、forms のファイルがあるかと、フォームを共有するほかのプロジェクトとコメントの言語が
+ * 食い違っていないか(フォームのコメントの言語が決まらない。project-spec.md §5)を調べる。
+ */
 async function projectDiagnostics(uri: vscode.Uri, text: string): Promise<Diagnostic[]> {
   const { project, diagnostics } = parseProject(text);
   const result = [...diagnostics];
@@ -76,6 +85,26 @@ async function projectDiagnostics(uri: vscode.Uri, text: string): Promise<Diagno
       path: ['forms', index],
     });
   });
+  if (project) {
+    const locale = project.codegen?.commentLocale ?? 'en';
+    const formUris = (project.forms ?? []).map((form) => formUri(uri, form));
+    for (const other of await findProjects()) {
+      if (samePath(other.uri, uri) || !other.doc) continue;
+      const otherLocale = other.doc.codegen?.commentLocale ?? 'en';
+      if (otherLocale === locale || !other.forms.some((f) => formUris.some((g) => samePath(f, g))))
+        continue;
+      result.push({
+        severity: 'warning',
+        code: 'comment-locale-conflict',
+        message: vscode.l10n.t(
+          '{0} shares forms with this project but uses a different commentLocale ({1})',
+          other.name,
+          otherLocale,
+        ),
+        path: ['codegen', 'commentLocale'],
+      });
+    }
+  }
   return result;
 }
 

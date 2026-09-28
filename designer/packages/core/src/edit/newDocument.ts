@@ -3,19 +3,18 @@
  */
 import { memberNameProblem } from '../identifier.ts';
 import { l10n } from '../l10n.ts';
-import { FORMAT_VERSION, type CommentLocale, type BfmDocument } from '../dsl/schema.ts';
+import { FORMAT_VERSION, type BfmDocument } from '../dsl/schema.ts';
 
 /** 新しいフォームの大きさ(クライアント領域。dsl-spec.md §10 Q9) */
 export const NEW_FORM_SIZE = { width: 320, height: 240 } as const;
 
 /**
- * @param name フォームの名前(生成するクラス名の既定値は T + name)。Caption にも使う
- * @param commentLocale 生成するコードのコメントの言語(作成する人の表示言語。tk-designer ADR 0014)
+ * コード生成の設定は持たない(プロジェクトファイルに書く。project-spec.md §5)。
+ * @param name フォームの名前(生成するクラス名は T + name)。Caption にも使う
  */
-export function createDocument(name: string, commentLocale?: CommentLocale): BfmDocument {
+export function createDocument(name: string): BfmDocument {
   return {
     formatVersion: FORMAT_VERSION,
-    codegen: { ...(commentLocale && { commentLocale }), cpp: {}, python: {} },
     form: {
       name,
       class: 'TForm',

@@ -1,11 +1,10 @@
 import type { BfmDocument } from '@bethany-designer/core';
 import { describe, expect, it } from 'vitest';
-import { generateAll, generateCpp } from '../index.ts';
-import { CPP_SAMPLE, DSL_FILE, SAMPLE } from '../testing.ts';
+import { DEFAULT_FORM_CODEGEN, generateAll, generateCpp } from '../index.ts';
+import { DSL_FILE, SAMPLE } from '../testing.ts';
 
-function generate(doc: BfmDocument = CPP_SAMPLE, dslFile = DSL_FILE) {
-  const result = generateCpp(doc, dslFile, undefined, undefined);
-  if ('error' in result) throw new Error(result.error);
+function generate(doc: BfmDocument = SAMPLE, dslFile = DSL_FILE, commentLocale?: 'ja') {
+  const result = generateCpp(doc, dslFile, undefined, undefined, commentLocale);
   if (!result.header.ok) throw new Error(result.header.error);
   if (!result.source.ok) throw new Error(result.source.error);
   return { header: result.header, source: result.source };
@@ -22,7 +21,7 @@ function statements(doc: BfmDocument): string[] {
 }
 
 function form(props: BfmDocument['form']): BfmDocument {
-  return { formatVersion: 1, codegen: { cpp: {} }, form: props };
+  return { formatVersion: 1, form: props };
 }
 
 describe('generateCpp', () => {
@@ -35,24 +34,13 @@ describe('generateCpp', () => {
 
   it('クラス名はフォームの名前から、ファイル名は DSL のファイル名から決める', () => {
     const { header, source } = generate(
-      { ...CPP_SAMPLE, form: { ...CPP_SAMPLE.form, name: 'Form1' } },
+      { ...SAMPLE, form: { ...SAMPLE.form, name: 'Form1' } },
       'forms/Unit1.bfm.json',
     );
     expect([header.path, source.path]).toEqual(['Unit1.hpp', 'Unit1.cpp']);
     expect(header.text).toContain('class TForm1 : public beth::TForm');
     expect(header.text).toContain('extern TForm1* Form1;');
     expect(source.text).toContain('TForm1* Form1 = nullptr;');
-  });
-
-  it('codegen.cpp の指定(クラス名・出力先)に従い、ソースからヘッダへの相対パスで include する', () => {
-    const doc = {
-      ...CPP_SAMPLE,
-      codegen: { cpp: { className: 'TMyForm', header: 'include/my.h', source: 'src/my.cpp' } },
-    };
-    const { header, source } = generate(doc);
-    expect([header.path, source.path]).toEqual(['include/my.h', 'src/my.cpp']);
-    expect(source.text).toContain('#include "../include/my.h"');
-    expect(source.text).toContain('TMyForm::TMyForm(TComponent* AOwner)');
   });
 
   it('値の書き方', () => {
@@ -136,7 +124,7 @@ describe('generateCpp', () => {
   });
 
   it('コントロールへの参照は、すべてのコントロールの親が決まった後に設定する', () => {
-    const lines = statements(CPP_SAMPLE);
+    const lines = statements(SAMPLE);
     expect(lines.indexOf('PageControl1->ActivePage = MemoSheet;')).toBeGreaterThan(
       lines.indexOf('MemoSheet->PageControl = PageControl1;'),
     );
@@ -146,10 +134,7 @@ describe('generateCpp', () => {
   });
 
   it('commentLocale が ja なら日本語のコメント', () => {
-    const { header, source } = generate({
-      ...CPP_SAMPLE,
-      codegen: { commentLocale: 'ja', cpp: {} },
-    });
+    const { header, source } = generate(SAMPLE, DSL_FILE, 'ja');
     expect(header.text).toContain(
       '/** Bethany のデザイナーで作成したフォーム(MainForm.bfm.json)。',
     );
@@ -158,8 +143,8 @@ describe('generateCpp', () => {
 });
 
 describe('generateAll', () => {
-  it('codegen に書かれたすべてのターゲットを生成する', () => {
-    const result = generateAll(SAMPLE, DSL_FILE, () => undefined);
+  it('settings で有効なすべての言語を生成する', () => {
+    const result = generateAll(SAMPLE, DSL_FILE, DEFAULT_FORM_CODEGEN, () => undefined);
     if ('error' in result) throw new Error(result.error);
     expect(result.files.map((f) => f.path)).toEqual([
       'MainForm.hpp',
@@ -169,8 +154,8 @@ describe('generateAll', () => {
     expect(result.warnings).toEqual([]);
   });
 
-  it('codegen が無ければエラー', () => {
-    const result = generateAll({ ...SAMPLE, codegen: undefined }, DSL_FILE, () => undefined);
+  it('生成する言語が無ければエラー', () => {
+    const result = generateAll(SAMPLE, DSL_FILE, { cpp: false, python: false }, () => undefined);
     expect('error' in result).toBe(true);
   });
 });

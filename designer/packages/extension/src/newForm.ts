@@ -1,12 +1,7 @@
 /**
  * 新しいフォーム(*.bfm.json)を作ってデザイナーで開く(docs/designer/editor-design.md §8)。
  */
-import {
-  createDocument,
-  formNameProblem,
-  isJapanese,
-  serializeDocument,
-} from '@bethany-designer/core';
+import { createDocument, formNameProblem, serializeDocument } from '@bethany-designer/core';
 import * as vscode from 'vscode';
 import { DesignerEditorProvider } from './designerEditorProvider.ts';
 import { exists } from './workspaceFiles.ts';
@@ -25,9 +20,7 @@ export async function newForm(target: vscode.Uri | undefined): Promise<vscode.Ur
   if (!answer) return undefined;
   const uri = fileUri(answer.folder, answer.name);
 
-  // 生成するコードのコメントの言語は、作成した人の表示言語を初期値にする(tk-designer ADR 0014)
-  const commentLocale = isJapanese(vscode.env.language) ? 'ja' : 'en';
-  const text = serializeDocument(createDocument(answer.name, commentLocale));
+  const text = serializeDocument(createDocument(answer.name));
   await vscode.workspace.fs.writeFile(uri, new TextEncoder().encode(text));
   await vscode.commands.executeCommand('vscode.openWith', uri, DesignerEditorProvider.viewType);
   return uri;

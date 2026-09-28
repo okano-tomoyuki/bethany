@@ -5,9 +5,6 @@
 import type { CanvasSettings } from '@bethany-designer/core';
 import { createStore } from 'zustand/vanilla';
 
-/** 表示中の画面。デザイナー(キャンバス)とコード生成の設定 */
-export type View = 'design' | 'codegen';
-
 export type InspectorTab = 'properties' | 'events';
 
 export const ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
@@ -20,7 +17,6 @@ export function stepZoom(zoom: number, step: 1 | -1): number {
 }
 
 export interface UiState {
-  readonly view: View;
   /**
    * 選択中のノードの name(複数選択では同じ親の兄弟)。先頭がインスペクタの基準。
    * 削除・改名で存在しなくなったものは、参照側で除いて扱う
@@ -38,7 +34,6 @@ export interface UiState {
 }
 
 export interface UiActions {
-  readonly setView: (view: View) => void;
   readonly select: (names: readonly string[]) => void;
   readonly setInspectorTab: (tab: InspectorTab) => void;
   readonly setTool: (tool: string | undefined) => void;
@@ -52,7 +47,6 @@ export type UiStore = ReturnType<typeof createUiStore>;
 
 export function createUiStore() {
   return createStore<UiState & UiActions>()((set, get) => ({
-    view: 'design',
     selection: [],
     inspectorTab: 'properties',
     tool: undefined,
@@ -60,9 +54,6 @@ export function createUiStore() {
     settings: { fontFamily: 'Segoe UI', fontSize: 9, gridSize: 8, showGrid: true },
     shownPages: {},
     contextMenu: undefined,
-    setView(view) {
-      set({ view });
-    },
     select(names) {
       set({ selection: [...new Set(names)] });
     },

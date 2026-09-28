@@ -17,5 +17,7 @@
   "command.setMainForm.title": "メインフォームに設定",
   "command.addToProject.title": "プロジェクトに追加...",
   "command.removeFromProject.title": "プロジェクトから外す",
-  "command.openProjectFile.title": "プロジェクトファイルを開く"
+  "command.openProjectFile.title": "プロジェクトファイルを開く",
+  "command.createAtStartup.title": "起動時に作成する",
+  "command.dontCreateAtStartup.title": "起動時に作成しない"
 }

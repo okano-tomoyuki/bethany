@@ -1,6 +1,5 @@
 {
   "formatVersion": 1,
-  "codegen": { "python": {} },
   "form": {
     "name": "AnchorsForm",
     "class": "TForm",

@@ -36,7 +36,6 @@ const dllName = isWindows ? 'beth.dll' : 'libbeth.so';
 mkdirSync(workDir, { recursive: true });
 const doc = loadSample();
 const result = generateCpp(doc, SAMPLE_FILE, undefined, undefined);
-if ('error' in result) throw new Error(result.error);
 if (!result.header.ok || !result.source.ok) throw new Error('生成に失敗しました');
 writeIfChanged(join(workDir, 'MainForm.hpp'), result.header.text);
 writeIfChanged(join(workDir, 'MainForm.cpp'), recordHandlerCalls(result.source.text, 'TMainForm'));

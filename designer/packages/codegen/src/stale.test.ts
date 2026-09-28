@@ -1,12 +1,12 @@
 import type { ControlNode, BfmDocument } from '@bethany-designer/core';
 import { describe, expect, it } from 'vitest';
 import { generateAll } from './index.ts';
-import { CPP_SAMPLE, DSL_FILE } from './testing.ts';
+import { CPP_ONLY, DSL_FILE, SAMPLE } from './testing.ts';
 
 type Files = Record<string, string>;
 
 function generate(doc: BfmDocument, existing: Files): { files: Files; warnings: string[] } {
-  const result = generateAll(doc, DSL_FILE, (path) => existing[path]);
+  const result = generateAll(doc, DSL_FILE, CPP_ONLY, (path) => existing[path]);
   if ('error' in result) throw new Error(result.error);
   const files: Files = {};
   for (const f of result.files) {
@@ -39,7 +39,7 @@ function lineOf(text: string, needle: string): number {
 
 describe('DSL からなくなった名前の警告(M1 / M7)', () => {
   it('改名したコンポーネントの参照と、使われなくなったハンドラを知らせる', () => {
-    const first = generate(CPP_SAMPLE, {}).files;
+    const first = generate(SAMPLE, {}).files;
     const edited = {
       ...first,
       'MainForm.cpp': (first['MainForm.cpp'] ?? '').replace(
@@ -47,7 +47,7 @@ describe('DSL からなくなった名前の警告(M1 / M7)', () => {
         'void TMainForm::FormCreate(TObject* Sender)\n{\n    OkButton->Enabled = false;\n}',
       ),
     };
-    const { files, warnings } = generate(renameOk(CPP_SAMPLE), edited);
+    const { files, warnings } = generate(renameOk(SAMPLE), edited);
     const source = files['MainForm.cpp'] ?? '';
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toContain(
@@ -61,18 +61,18 @@ describe('DSL からなくなった名前の警告(M1 / M7)', () => {
   });
 
   it('名前が変わらなければ警告しない', () => {
-    const first = generate(CPP_SAMPLE, {}).files;
-    expect(generate(CPP_SAMPLE, first).warnings).toEqual([]);
+    const first = generate(SAMPLE, {}).files;
+    expect(generate(SAMPLE, first).warnings).toEqual([]);
   });
 
   it('区間の外で使われていなければ警告しない', () => {
-    const doc = editControl(CPP_SAMPLE, 'NameEdit', (node) => ({ ...node, name: 'UserEdit' }));
-    const first = generate(CPP_SAMPLE, {}).files;
+    const doc = editControl(SAMPLE, 'NameEdit', (node) => ({ ...node, name: 'UserEdit' }));
+    const first = generate(SAMPLE, {}).files;
     expect(generate(doc, first).warnings).toEqual([]);
   });
 
   it('他のオブジェクトのメンバ(x->OkButton)は使っているとみなさない', () => {
-    const first = generate(CPP_SAMPLE, {}).files;
+    const first = generate(SAMPLE, {}).files;
     const edited = {
       ...first,
       'MainForm.cpp': (first['MainForm.cpp'] ?? '').replace(
@@ -80,7 +80,7 @@ describe('DSL からなくなった名前の警告(M1 / M7)', () => {
         'void TMainForm::FormCreate(TObject* Sender)\n{\n    MainForm->OkButton->Enabled = false;\n}',
       ),
     };
-    const { warnings } = generate(renameOk(CPP_SAMPLE), edited);
+    const { warnings } = generate(renameOk(SAMPLE), edited);
     expect(warnings[0]).not.toContain('OkButton (');
   });
 });

@@ -1,6 +1,5 @@
 {
   "formatVersion": 1,
-  "codegen": { "cpp": {}, "python": {} },
   "form": {
     "name": "MainForm",
     "class": "TForm",

@@ -7,7 +7,7 @@ import { produce } from 'immer';
 import { findClass, getCatalog, isSubclassOf } from '../catalog/catalog.ts';
 import type { PropertyInfo } from '../catalog/types.ts';
 import { childProblem } from '../dsl/constraints.ts';
-import type { CodegenSettings, BfmDocument, PropertyValue } from '../dsl/schema.ts';
+import type { BfmDocument, PropertyValue } from '../dsl/schema.ts';
 import { memberNameProblem } from '../identifier.ts';
 import { l10n } from '../l10n.ts';
 import { computeLayout } from '../layout/engine.ts';
@@ -95,8 +95,6 @@ export type EditCommand =
       readonly left: number;
       readonly top: number;
     }
-  /** 空なら codegen ごと削除する */
-  | { readonly type: 'setCodegen'; readonly codegen: CodegenSettings }
   /** 複数のコマンドを 1 つの変更としてまとめて適用する(途中で失敗したら何も変えない。Undo も 1 回) */
   | { readonly type: 'batch'; readonly commands: readonly EditCommand[] };
 
@@ -120,7 +118,6 @@ interface Node {
 }
 
 interface Doc {
-  codegen?: CodegenSettings;
   form: Node;
   components?: Node[];
 }
@@ -330,13 +327,6 @@ function apply(doc: Doc, command: EditCommand): void {
       if (found.kind !== 'component')
         throw new CommandError(l10n.t('"{0}" is not a non-visual component', command.name));
       found.node.design = { left: command.left, top: command.top };
-      return;
-    }
-
-    case 'setCodegen': {
-      const codegen = withoutUndefined(command.codegen);
-      if (Object.keys(codegen).length === 0) delete doc.codegen;
-      else doc.codegen = codegen;
       return;
     }
 
@@ -570,8 +560,4 @@ function deleteKey(record: Record<string, unknown>, key: string): void {
 
 function nonEmpty<K extends string, V extends object>(key: K, value: V): Partial<Record<K, V>> {
   return Object.keys(value).length > 0 ? ({ [key]: value } as Record<K, V>) : {};
-}
-
-function withoutUndefined<T extends object>(value: T): T {
-  return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined)) as T;
 }

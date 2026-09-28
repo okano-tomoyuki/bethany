@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { generateCpp } from './index.ts';
-import { CPP_SAMPLE, DSL_FILE } from './testing.ts';
+import { DSL_FILE, SAMPLE } from './testing.ts';
 
 function generate(existing?: string) {
-  const result = generateCpp(CPP_SAMPLE, DSL_FILE, undefined, existing);
-  if ('error' in result) throw new Error(result.error);
+  const result = generateCpp(SAMPLE, DSL_FILE, undefined, existing);
   if (!result.source.ok) throw new Error(result.source.error);
   return result.source;
 }
@@ -81,8 +80,7 @@ describe('マーカー区間のマージ', () => {
   ];
 
   it.each(corruptions)('マーカーが壊れていれば何も書き込まない: %s', (_, corrupt, message) => {
-    const result = generateCpp(CPP_SAMPLE, DSL_FILE, undefined, corrupt(INITIAL));
-    if ('error' in result) throw new Error(result.error);
+    const result = generateCpp(SAMPLE, DSL_FILE, undefined, corrupt(INITIAL));
     expect(result.source.ok).toBe(false);
     expect(!result.source.ok && result.source.error).toContain(message);
   });

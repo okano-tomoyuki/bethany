@@ -83,7 +83,9 @@ export type FormNode = z.infer<typeof FormNode>;
 export const CommentLocale = z.enum(['en', 'ja']);
 export type CommentLocale = z.infer<typeof CommentLocale>;
 
-/** コード生成の設定(dsl-spec.md §9)。書いたターゲットだけを生成する */
+/**
+ * 以前のコード生成の設定(dsl-spec.md §9)。プロジェクトファイルに移したため使わない(読み込めるように残し、警告を出す)。
+ */
 export const CodegenSettings = z.strictObject({
   commentLocale: CommentLocale.optional(),
   cpp: z

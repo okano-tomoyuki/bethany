@@ -5,8 +5,8 @@ import raw from '../../../samples/MainForm.bfm.json' with { type: 'json' };
 export const SAMPLE: BfmDocument = BfmDocument.parse(raw);
 export const DSL_FILE = 'MainForm.bfm.json';
 
-/** C++ だけを生成する見本 */
-export const CPP_SAMPLE: BfmDocument = { ...SAMPLE, codegen: { cpp: {} } };
+/** C++ だけを生成する設定 */
+export const CPP_ONLY = { cpp: true, python: false } as const;
 
-/** Python だけを生成する見本 */
-export const PYTHON_SAMPLE: BfmDocument = { ...SAMPLE, codegen: { python: {} } };
+/** Python だけを生成する設定 */
+export const PYTHON_ONLY = { cpp: false, python: true } as const;

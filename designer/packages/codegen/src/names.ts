@@ -1,4 +1,4 @@
-import type { BfmDocument } from '@bethany-designer/core';
+import type { BfmDocument, BfprojDocument, CommentLocale } from '@bethany-designer/core';
 
 /** パスを区切りで分割する(Windows と POSIX の両方の区切りに対応する) */
 function pathSegments(path: string): string[] {
@@ -34,29 +34,47 @@ export interface ResolvedTargets {
   readonly python?: PythonTarget;
 }
 
+/** フォームのコード生成の設定(docs/designer/project-spec.md §5)。フォームが属するプロジェクトの codegen から決める */
+export interface FormCodegenSettings {
+  readonly cpp: boolean;
+  readonly python: boolean;
+  readonly commentLocale?: CommentLocale | undefined;
+}
+
+/** プロジェクトに属さないフォームの設定: C++ と Python の両方、コメントは英語 */
+export const DEFAULT_FORM_CODEGEN: FormCodegenSettings = { cpp: true, python: true };
+
 /**
- * codegen の設定に既定値を補う(dsl-spec.md §9)。書かれたターゲットだけを返す。
- * クラス名はフォームの名前から(MainForm → TMainForm。§10 Q2)、ファイル名は DSL のファイル名から決める
- * (C++Builder の Unit1.cpp・Unit1.h と Form1 のように、ファイル名とフォームの名前は別のもの)。
+ * フォームが属するプロジェクト(複数可)の codegen から、フォームのコード生成の設定を決める。
+ * 言語はすべてのプロジェクトの和集合、コメントの言語は最初に書かれているもの(食い違いは拡張がプロジェクトファイルに警告を出す)。
+ * プロジェクトに属さなければ DEFAULT_FORM_CODEGEN。
  */
-export function resolveTargets(doc: BfmDocument, dslFileName: string): ResolvedTargets {
-  const settings = doc.codegen ?? {};
+export function formCodegenSettings(projects: readonly BfprojDocument[]): FormCodegenSettings {
+  if (projects.length === 0) return DEFAULT_FORM_CODEGEN;
+  return {
+    cpp: projects.some((p) => p.codegen?.cpp !== undefined),
+    python: projects.some((p) => p.codegen?.python !== undefined),
+    commentLocale: projects.find((p) => p.codegen?.commentLocale)?.codegen?.commentLocale,
+  };
+}
+
+/**
+ * 生成するターゲットの出力先とクラス名。settings で有効な言語だけを返す。
+ * クラス名はフォームの名前から(MainForm → TMainForm。dsl-spec.md §10 Q2)、ファイル名は DSL のファイル名から決め、
+ * DSL と同じフォルダに置く(C++Builder の Unit1.cpp・Unit1.h と Form1 のように、ファイル名とフォームの名前は別のもの)。
+ */
+export function resolveTargets(
+  doc: BfmDocument,
+  dslFileName: string,
+  settings: FormCodegenSettings = DEFAULT_FORM_CODEGEN,
+): ResolvedTargets {
   const base = baseName(dslFileName);
   const className = `T${doc.form.name}`;
   return {
     ...(settings.cpp && {
-      cpp: {
-        className: settings.cpp.className ?? className,
-        header: settings.cpp.header ?? `${base}.hpp`,
-        source: settings.cpp.source ?? `${base}.cpp`,
-      },
+      cpp: { className, header: `${base}.hpp`, source: `${base}.cpp` },
     }),
-    ...(settings.python && {
-      python: {
-        className: settings.python.className ?? className,
-        file: settings.python.file ?? `${base}.py`,
-      },
-    }),
+    ...(settings.python && { python: { className, file: `${base}.py` } }),
   };
 }
 

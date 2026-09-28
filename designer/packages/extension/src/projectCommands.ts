@@ -2,7 +2,7 @@
  * フォームのビューから使うプロジェクトのコマンド(docs/designer/project-spec.md §4)。
  * メインフォームに設定・プロジェクトに追加・プロジェクトから外す・新しいプロジェクト・新しいフォーム(作った後にプロジェクトへ加える)。
  */
-import { addForm, removeForm, setMainForm } from '@bethany-designer/core';
+import { addForm, removeForm, setAutoCreate, setMainForm } from '@bethany-designer/core';
 import * as vscode from 'vscode';
 import type { FormNode, ProjectNode, ViewNode } from './formsView.ts';
 import { newForm } from './newForm.ts';
@@ -45,6 +45,12 @@ export function registerProjectCommands(): vscode.Disposable {
         await editProject(project.uri, (doc) => addForm(doc, formPathIn(project.uri, node.uri)));
       refreshView();
     }),
+    vscode.commands.registerCommand('bethanyDesigner.createAtStartup', (node: FormNode) =>
+      toggleAutoCreate(node, true),
+    ),
+    vscode.commands.registerCommand('bethanyDesigner.dontCreateAtStartup', (node: FormNode) =>
+      toggleAutoCreate(node, false),
+    ),
     vscode.commands.registerCommand('bethanyDesigner.removeFromProject', async (node: FormNode) => {
       const { project } = node;
       if (!project) return;
@@ -73,6 +79,16 @@ async function newFormAndAdd(target?: vscode.Uri | ViewNode): Promise<void> {
   const destination = project ?? (await chooseProject(form, { allowNone: true }));
   if (destination && destination !== 'new')
     await editProject(destination.uri, (doc) => addForm(doc, formPathIn(destination.uri, form)));
+  refreshView();
+}
+
+/** 起動時に作るか(プロジェクトの autoCreate)を切り替える */
+async function toggleAutoCreate(node: FormNode, on: boolean): Promise<void> {
+  const { project } = node;
+  if (!project) return;
+  await editProject(project.uri, (doc) =>
+    setAutoCreate(doc, formPathIn(project.uri, node.uri), on),
+  );
   refreshView();
 }
 

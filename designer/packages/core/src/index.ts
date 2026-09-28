@@ -75,17 +75,24 @@ export {
 } from './layout/insets.ts';
 export { computeLayout, type Rect } from './layout/engine.ts';
 
-export { BfprojDocument, PROJECT_FORMAT_VERSION } from './project/schema.ts';
+export {
+  BfprojDocument,
+  PROJECT_FORMAT_VERSION,
+  ProjectCodegenSettings,
+} from './project/schema.ts';
 export { parseProject, type ProjectParseResult } from './project/parse.ts';
 export {
   addForm,
+  autoCreateForms,
   containsForm,
   createProject,
+  isAutoCreated,
   isMainForm,
   mapFormPaths,
   projectJsonSchema,
   removeForm,
   serializeProject,
+  setAutoCreate,
   setMainForm,
 } from './project/edit.ts';
 export {

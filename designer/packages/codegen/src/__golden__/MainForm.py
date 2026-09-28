@@ -195,3 +195,10 @@ class TMainForm(TForm):
 
     def Timer1Timer(self, Sender):
         pass
+
+
+# <bethany-designer:begin id="beth_FormVariable">
+# The form created at startup by Application.CreateForm in the project (the global variable of the form in C++Builder).
+# Other forms use it as "import MainForm" and "MainForm.MainForm" ("from MainForm import MainForm" copies None).
+MainForm: "TMainForm" = None
+# <bethany-designer:end id="beth_FormVariable" hash="3fa89a04">

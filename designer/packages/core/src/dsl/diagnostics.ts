@@ -27,11 +27,15 @@ export type DiagnosticCode =
   | 'invalid-child-class'
   | 'invalid-parent-class'
   | 'items-not-allowed'
+  // 使わなくなった設定
+  | 'legacy-codegen'
   // プロジェクトファイル(docs/designer/project-spec.md)
   | 'invalid-form-path'
   | 'duplicate-form'
   | 'unknown-main-form'
-  | 'missing-form-file';
+  | 'missing-form-file'
+  | 'comment-locale-conflict'
+  | 'unknown-auto-create';
 
 export interface Diagnostic {
   readonly severity: Severity;

@@ -2,26 +2,43 @@
  * コード生成(docs/designer/codegen-design.md)。
  * 文字列を受け取り文字列を返すだけで、ファイルの入出力は呼び出し側(拡張機能・CLI)が行う。
  */
-import { l10n, type BfmDocument } from '@bethany-designer/core';
+import { l10n, type BfmDocument, type CommentLocale } from '@bethany-designer/core';
 import { emitCpp } from './cpp/emit.ts';
 import { CPP_NAMES, cppSyntax } from './cpp/syntax.ts';
 import { buildModel } from './model.ts';
 import { emitPython } from './python/emit.ts';
 import { PYTHON_NAMES, PYTHON_SYNTAX } from './python/syntax.ts';
-import { fileNameOf, relativePath, resolveTargets } from './names.ts';
+import {
+  fileNameOf,
+  relativePath,
+  resolveTargets,
+  type CppTarget,
+  type FormCodegenSettings,
+  type PythonTarget,
+} from './names.ts';
 import { createFile, mergeFile, type GeneratedCode, type MergeResult } from './region.ts';
 import { findStaleNames, staleNamesWarning, type StaleCheck } from './stale.ts';
 
 export { regionHash } from './hash.ts';
 export {
   baseName,
+  DEFAULT_FORM_CODEGEN,
+  formCodegenSettings,
   resolveTargets,
+  type FormCodegenSettings,
   type CppTarget,
   type PythonTarget,
   type ResolvedTargets,
 } from './names.ts';
 export type { MergeResult } from './region.ts';
 export { buildModel, type FormModel, type Statement, type Value } from './model.ts';
+export {
+  generateProject,
+  isProjectFileName,
+  resolveProjectTargets,
+  type FormSource,
+  type ProjectTargets,
+} from './project.ts';
 
 export type GenerateResult = MergeResult & {
   /** 出力先(DSL ファイルのあるフォルダからの相対パス) */
@@ -36,51 +53,49 @@ export interface CppGenerateResult {
 /**
  * Python のコードを生成する。existing があればマーカー区間だけを置き換え、なければ新規ファイルを作る。
  * @param doc 検証を通過したドキュメント
- * @param dslFileName DSL のファイル名(出力先の既定値と、生成物の説明に使う)
+ * @param dslFileName DSL のファイル名(出力先と、生成物の説明に使う)
+ * @param commentLocale 生成するコードのコメントの言語(プロジェクトの codegen.commentLocale)
  */
 export function generatePython(
   doc: BfmDocument,
   dslFileName: string,
   existing: string | undefined,
+  commentLocale?: CommentLocale,
 ): GenerateResult {
-  const target = resolveTargets(doc, dslFileName).python;
-  if (!target) return { ok: false, error: l10n.t('{0} is not set', 'codegen.python') };
-  const generated = emitPython(
-    buildModel(doc, target.className),
-    fileNameOf(dslFileName),
-    doc.codegen?.commentLocale,
-  );
+  const { className, file } = pythonTarget(doc, dslFileName);
+  const generated = emitPython(buildModel(doc, className), fileNameOf(dslFileName), commentLocale);
   if (existing === undefined) {
     return {
       ok: true,
       text: createFile(generated, PYTHON_SYNTAX),
       modifiedRegions: [],
       addedStubs: [],
-      path: target.file,
+      path: file,
     };
   }
-  return { ...mergeFile(existing, generated, PYTHON_SYNTAX), path: target.file };
+  return { ...mergeFile(existing, generated, PYTHON_SYNTAX), path: file };
 }
 
 /**
  * C++ のコードを生成する。ヘッダとソースのそれぞれについて、既存の内容があればマーカー区間だけを置き換え、
  * なければ新規ファイルを作る。
  * @param doc 検証を通過したドキュメント
- * @param dslFileName DSL のファイル名(出力先の既定値と、生成物の説明に使う)
+ * @param dslFileName DSL のファイル名(出力先と、生成物の説明に使う)
+ * @param commentLocale 生成するコードのコメントの言語(プロジェクトの codegen.commentLocale)
  */
 export function generateCpp(
   doc: BfmDocument,
   dslFileName: string,
   existingHeader: string | undefined,
   existingSource: string | undefined,
-): CppGenerateResult | { readonly error: string } {
-  const target = resolveTargets(doc, dslFileName).cpp;
-  if (!target) return { error: l10n.t('{0} is not set', 'codegen.cpp') };
+  commentLocale?: CommentLocale,
+): CppGenerateResult {
+  const target = cppTarget(doc, dslFileName);
   const files = emitCpp(
     buildModel(doc, target.className),
     fileNameOf(dslFileName),
     relativePath(target.source, target.header),
-    doc.codegen?.commentLocale,
+    commentLocale,
   );
   const syntax = cppSyntax(target.className);
   const generate = (
@@ -110,24 +125,37 @@ export interface GenerateAllResult {
 }
 
 /**
- * codegen に書かれたすべてのターゲットのコードを生成する(拡張機能・CLI の共通の入口)。
+ * settings で有効なすべての言語のコードを生成する(拡張機能・CLI の共通の入口)。
+ * @param settings フォームが属するプロジェクトから決めた設定(formCodegenSettings)
  * @param readExisting 出力先の既存の内容を返す(なければ undefined)
  */
 export function generateAll(
   doc: BfmDocument,
   dslFileName: string,
+  settings: FormCodegenSettings,
   readExisting: (path: string) => string | undefined,
 ): GenerateAllResult | { readonly error: string } {
-  const targets = resolveTargets(doc, dslFileName);
+  const targets = resolveTargets(doc, dslFileName, settings);
   if (!targets.cpp && !targets.python) {
-    return { error: l10n.t('codegen is not set (e.g. {0})', '"codegen": { "cpp": {} }') };
+    return {
+      error: l10n.t(
+        'No language to generate. Set codegen in the project file (e.g. {0})',
+        '"codegen": { "cpp": {} }',
+      ),
+    };
   }
+  const { commentLocale } = settings;
   const files: OutputFile[] = [];
   const staleChecks: StaleCheck[] = [];
   if (targets.cpp) {
     const existingHeader = readExisting(targets.cpp.header);
-    const result = generateCpp(doc, dslFileName, existingHeader, readExisting(targets.cpp.source));
-    if ('error' in result) return result;
+    const result = generateCpp(
+      doc,
+      dslFileName,
+      existingHeader,
+      readExisting(targets.cpp.source),
+      commentLocale,
+    );
     files.push({ path: targets.cpp.header, result: result.header });
     files.push({ path: targets.cpp.source, result: result.source });
     if (existingHeader !== undefined && result.header.ok && result.source.ok) {
@@ -145,7 +173,7 @@ export function generateAll(
   }
   if (targets.python) {
     const existing = readExisting(targets.python.file);
-    const result = generatePython(doc, dslFileName, existing);
+    const result = generatePython(doc, dslFileName, existing, commentLocale);
     files.push({ path: targets.python.file, result });
     if (existing !== undefined && result.ok) {
       staleChecks.push({
@@ -158,4 +186,16 @@ export function generateAll(
   }
   const stale = staleNamesWarning(staleChecks.flatMap(findStaleNames));
   return { files, warnings: stale ? [stale] : [] };
+}
+
+function cppTarget(doc: BfmDocument, dslFileName: string): CppTarget {
+  const target = resolveTargets(doc, dslFileName, { cpp: true, python: false }).cpp;
+  if (!target) throw new Error('unreachable');
+  return target;
+}
+
+function pythonTarget(doc: BfmDocument, dslFileName: string): PythonTarget {
+  const target = resolveTargets(doc, dslFileName, { cpp: false, python: true }).python;
+  if (!target) throw new Error('unreachable');
+  return target;
 }

@@ -1,10 +1,10 @@
 import type { ControlNode, BfmDocument } from '@bethany-designer/core';
 import { describe, expect, it } from 'vitest';
 import { generateAll, generatePython } from '../index.ts';
-import { DSL_FILE, PYTHON_SAMPLE } from '../testing.ts';
+import { DSL_FILE, PYTHON_ONLY, SAMPLE } from '../testing.ts';
 
-function generate(doc: BfmDocument = PYTHON_SAMPLE, existing?: string) {
-  const result = generatePython(doc, DSL_FILE, existing);
+function generate(doc: BfmDocument = SAMPLE, existing?: string, commentLocale?: 'ja') {
+  const result = generatePython(doc, DSL_FILE, existing, commentLocale);
   if (!result.ok) throw new Error(result.error);
   return result;
 }
@@ -21,7 +21,7 @@ function statements(doc: BfmDocument): string[] {
 }
 
 function form(props: BfmDocument['form']): BfmDocument {
-  return { formatVersion: 1, codegen: { python: {} }, form: props };
+  return { formatVersion: 1, form: props };
 }
 
 const INITIAL = generate().text;
@@ -31,15 +31,6 @@ describe('generatePython', () => {
     const result = generate();
     expect(result.path).toBe('MainForm.py');
     await expect(result.text).toMatchFileSnapshot('../__golden__/MainForm.py');
-  });
-
-  it('codegen.python の指定(クラス名・出力先)に従う', () => {
-    const result = generate({
-      ...PYTHON_SAMPLE,
-      codegen: { python: { className: 'MyForm', file: 'ui/my_form.py' } },
-    });
-    expect(result.path).toBe('ui/my_form.py');
-    expect(result.text).toContain('class MyForm(TForm):');
   });
 
   it('値の書き方', () => {
@@ -96,30 +87,36 @@ describe('generatePython', () => {
   });
 
   it('commentLocale が ja なら日本語のコメント', () => {
-    const text = generate({ ...PYTHON_SAMPLE, codegen: { commentLocale: 'ja', python: {} } }).text;
+    const text = generate(SAMPLE, undefined, 'ja').text;
     expect(text).toContain('"""Bethany のデザイナーで作成したフォーム(MainForm.bfm.json)。');
   });
 });
 
 describe('マーカー区間のマージ(Python)', () => {
   it('同じ内容で再生成しても変わらない(冪等)', () => {
-    const result = generate(PYTHON_SAMPLE, INITIAL);
+    const result = generate(SAMPLE, INITIAL);
     expect(result.text).toBe(INITIAL);
     expect(result.modifiedRegions).toEqual([]);
   });
 
   it('区間内の手編集は上書きし、その区間を知らせる', () => {
     const edited = INITIAL.replace('self.Caption = "Sample"', 'self.Caption = "Edited"');
-    const result = generate(PYTHON_SAMPLE, edited);
+    const result = generate(SAMPLE, edited);
     expect(result.text).toBe(INITIAL);
     expect(result.modifiedRegions).toEqual(['beth_CreateComponents']);
+  });
+
+  it('フォームの変数の区間が無い(0.2.0 より前に生成した)ファイルには、末尾に加える', () => {
+    const before = `${INITIAL.slice(0, INITIAL.indexOf('\n\n# <bethany-designer:begin id="beth_FormVariable">'))}\n`;
+    const result = generate(SAMPLE, before);
+    expect(result.text).toBe(INITIAL);
   });
 
   it('stubs マーカーが無ければ、if __name__ == "__main__": の手前に雛形を追記する', () => {
     const withoutStub = INITIAL.replace('    # <bethany-designer:handler-stubs>\n', '')
       .replace('\n    def Timer1Timer(self, Sender):\n        pass\n', '')
       .concat('\n\nif __name__ == "__main__":\n    Application.Initialize()\n');
-    const result = generate(PYTHON_SAMPLE, withoutStub);
+    const result = generate(SAMPLE, withoutStub);
     expect(result.addedStubs).toEqual(['Timer1Timer']);
     expect(result.text).toContain(
       '    def Timer1Timer(self, Sender):\n        pass\n\n\nif __name__ == "__main__":',
@@ -141,7 +138,7 @@ describe('DSL からなくなった名前の警告(Python)', () => {
   });
 
   function warnings(doc: BfmDocument, existing: string): string[] {
-    const result = generateAll(doc, DSL_FILE, () => existing);
+    const result = generateAll(doc, DSL_FILE, PYTHON_ONLY, () => existing);
     if ('error' in result) throw new Error(result.error);
     return [...result.warnings];
   }
@@ -151,7 +148,7 @@ describe('DSL からなくなった名前の警告(Python)', () => {
       '    def FormCreate(self, Sender):\n        pass',
       '    def FormCreate(self, Sender):\n        self.OkButton.Enabled = False',
     );
-    const [warning, ...rest] = warnings(renameOk(PYTHON_SAMPLE), edited);
+    const [warning, ...rest] = warnings(renameOk(SAMPLE), edited);
     expect(rest).toEqual([]);
     expect(warning).toContain('OkButton (MainForm.py line');
     expect(warning).toContain('OkButtonClick (MainForm.py line');
@@ -162,7 +159,7 @@ describe('DSL からなくなった名前の警告(Python)', () => {
       '    def FormCreate(self, Sender):\n        pass',
       '    def FormCreate(self, Sender):\n        self.Caption = "x"',
     );
-    const doc = { ...PYTHON_SAMPLE, form: { ...PYTHON_SAMPLE.form, properties: {} } };
+    const doc = { ...SAMPLE, form: { ...SAMPLE.form, properties: {} } };
     expect(warnings(doc, edited)).toEqual([]);
   });
 });

@@ -3,8 +3,10 @@
  * (docs/designer/project-spec.md §4)。
  */
 import {
+  autoCreateForms,
   createProject,
   dirname,
+  isJapanese,
   isSameOrInside,
   mapFormPaths,
   minimalTextEdit,
@@ -29,6 +31,8 @@ export interface ProjectInfo {
   /** forms の順のフォーム */
   readonly forms: readonly vscode.Uri[];
   readonly mainForm: vscode.Uri | undefined;
+  /** 起動時に作るフォーム(作る順。メインフォームが先頭) */
+  readonly autoCreate: readonly vscode.Uri[];
 }
 
 export async function findProjects(): Promise<ProjectInfo[]> {
@@ -51,6 +55,7 @@ async function loadProject(uri: vscode.Uri): Promise<ProjectInfo> {
     doc,
     forms: (doc?.forms ?? []).map((form) => formUri(uri, form)),
     mainForm: doc?.mainForm === undefined ? undefined : formUri(uri, doc.mainForm),
+    autoCreate: doc ? autoCreateForms(doc).map((form) => formUri(uri, form)) : [],
   };
 }
 
@@ -120,7 +125,11 @@ export async function createProjectFile(
     uri = vscode.Uri.joinPath(folder, `Project${String(n)}${PROJECT_EXTENSION}`);
     if (!(await exists(uri))) break;
   }
-  const doc = createProject(forms.map((form) => formPathIn(uri, form)));
+  // 生成するコードのコメントの言語は、作成した人の表示言語を初期値にする(新しいフォームと同じ)
+  const doc = createProject(
+    forms.map((form) => formPathIn(uri, form)),
+    isJapanese(vscode.env.language) ? 'ja' : 'en',
+  );
   await vscode.workspace.fs.writeFile(uri, new TextEncoder().encode(serializeProject(doc)));
   return uri;
 }

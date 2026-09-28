@@ -4,7 +4,8 @@
  * - 生成するクラス(TForm の派生)の __init__ の中に、区間 declarations(コンポーネントの型の注釈)。
  * - 区間 beth_CreateComponents(メソッド)。文の並びは C++ と同じ中間表現から作る。
  * - ハンドラの雛形(pass)。参照渡しの引数(bool& CanClose 等)は Ref で渡される(.value を読み書きする)。
- * - フォームのグローバル変数は生成しない(Form1 = Application.CreateForm(TForm1) と書く。dsl-spec.md §10 Q3)。
+ * - 区間 beth_FormVariable(モジュールの末尾): フォームの変数(Form1 = None)。C++Builder のフォームのグローバル変数に当たり、
+ *   プロジェクトの起動部分が Form1.Form1 = Application.CreateForm(Form1.TForm1) で代入する(dsl-spec.md §10 Q3)。
  */
 import type { CommentLocale } from '@bethany-designer/core';
 import { generatedComments } from '../comments.ts';
@@ -53,8 +54,19 @@ export function emitPython(
     ].join('\n'),
   }));
 
+  const variable: Region = {
+    id: 'beth_FormVariable',
+    indent: 0,
+    // 起動後は必ず入っている(C++Builder と同じ)前提で、型は None を含めない(Form1.Form1.Show() を型チェッカーが警告しない)
+    content: [
+      ...comments.formVariable(model.formName).map((line) => `# ${line}`),
+      `${model.formName}: "${className}" = None`,
+    ].join('\n'),
+    appendIfMissing: true,
+  };
+
   return {
-    regions: [declarations, create],
+    regions: [declarations, create, variable],
     stubs,
     scaffold: (rendered) =>
       [
@@ -73,6 +85,9 @@ export function emitPython(
         '',
         `${INDENT}# <bethany-designer:handler-stubs>`,
         ...stubs.flatMap((s) => ['', s.code]),
+        '',
+        '',
+        rendered('beth_FormVariable'),
         '',
       ].join('\n'),
   };

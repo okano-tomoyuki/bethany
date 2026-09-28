@@ -361,47 +361,6 @@ input[aria-invalid='true'] {
   color: var(--vscode-errorForeground);
 }
 
-/* ---- コード生成の画面 ---- */
-
-.codegen-view {
-  max-width: 640px;
-  padding: 16px;
-}
-
-.codegen-header {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.codegen-header h2 {
-  margin: 0;
-}
-
-.codegen-target {
-  margin: 16px 0;
-  padding: 8px 12px;
-  border: 1px solid var(--vscode-widget-border, #888);
-  border-radius: 4px;
-}
-
-.codegen-toggle {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  font-weight: bold;
-}
-
-.codegen-fields {
-  margin-top: 8px;
-}
-
-.codegen-footer {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
 /* ---- キャンバス ----------------------------------------------------------
  * フォームの中は Windows 11 のテーマに近い固定の配色で描く(ADR 0036)。周囲と選択枠は VS Code のテーマに合わせる。 */
 

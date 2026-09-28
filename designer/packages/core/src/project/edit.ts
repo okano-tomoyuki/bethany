@@ -3,11 +3,25 @@
  * どれも元のドキュメントを変えず、新しいドキュメントを返す。パスはプロジェクトファイルのフォルダからの相対パス。
  */
 import * as z from 'zod';
+import type { CommentLocale } from '../dsl/schema.ts';
 import { normalizePath, sameFormPath } from './paths.ts';
 import { BfprojDocument, PROJECT_FORMAT_VERSION } from './schema.ts';
 
-export function createProject(forms: readonly string[] = []): BfprojDocument {
-  return withForms({ formatVersion: PROJECT_FORMAT_VERSION }, forms.map(normalizePath));
+/**
+ * 新しいプロジェクト。起動部分は C++ と Python の両方を生成する設定にする(新しいフォームと同じ)。
+ * @param commentLocale 生成するコードのコメントの言語(作成する人の表示言語。tk-designer ADR 0014)
+ */
+export function createProject(
+  forms: readonly string[] = [],
+  commentLocale?: CommentLocale,
+): BfprojDocument {
+  return withForms(
+    {
+      formatVersion: PROJECT_FORMAT_VERSION,
+      codegen: { ...(commentLocale && { commentLocale }), cpp: {}, python: {} },
+    },
+    forms.map(normalizePath),
+  );
 }
 
 export function containsForm(doc: BfprojDocument, form: string): boolean {
@@ -18,10 +32,39 @@ export function isMainForm(doc: BfprojDocument, form: string): boolean {
   return doc.mainForm !== undefined && sameFormPath(doc.mainForm, form);
 }
 
-/** フォームを末尾に加える。プロジェクトの最初のフォームはメインフォームにもする(C++Builder と同じ) */
+/**
+ * フォームを末尾に加える。プロジェクトの最初のフォームはメインフォームにもする(C++Builder と同じ)。
+ * 起動時に作るフォームにもする(autoCreate が書かれていれば末尾に加える。無ければすべてが対象)。
+ */
 export function addForm(doc: BfprojDocument, form: string): BfprojDocument {
   if (containsForm(doc, form)) return doc;
-  return withForms(doc, [...(doc.forms ?? []), normalizePath(form)]);
+  const added = withForms(doc, [...(doc.forms ?? []), normalizePath(form)]);
+  return doc.autoCreate
+    ? { ...added, autoCreate: [...doc.autoCreate, normalizePath(form)] }
+    : added;
+}
+
+/** 起動時に作るか(メインフォームは常に作る) */
+export function isAutoCreated(doc: BfprojDocument, form: string): boolean {
+  return (
+    isMainForm(doc, form) || (doc.autoCreate ?? doc.forms ?? []).some((f) => sameFormPath(f, form))
+  );
+}
+
+/** 起動時に作るフォーム(作る順)。メインフォームが先頭、残りは autoCreate(無ければ forms)の順 */
+export function autoCreateForms(doc: BfprojDocument): string[] {
+  const main = doc.mainForm === undefined ? [] : [normalizePath(doc.mainForm)];
+  const rest = (doc.autoCreate ?? doc.forms ?? [])
+    .map(normalizePath)
+    .filter((form) => !main.some((m) => sameFormPath(m, form)));
+  return [...main, ...rest];
+}
+
+/** 起動時に作るかを切り替える。autoCreate が無ければ、今の状態(forms のすべて)から書き出す */
+export function setAutoCreate(doc: BfprojDocument, form: string, on: boolean): BfprojDocument {
+  const current = (doc.autoCreate ?? doc.forms ?? []).map(normalizePath);
+  const without = current.filter((f) => !sameFormPath(f, form));
+  return { ...doc, autoCreate: on ? [...without, normalizePath(form)] : without };
 }
 
 /** フォームを外す。メインフォームを外したら、残りの先頭をメインフォームにする */
@@ -51,6 +94,15 @@ export function mapFormPaths(
       forms.push(normalizePath(mapped));
   }
   const result: BfprojDocument = { ...doc, forms };
+  if (doc.autoCreate) {
+    const autoCreate: string[] = [];
+    for (const form of doc.autoCreate) {
+      const mapped = fn(form);
+      if (mapped !== null && !autoCreate.some((f) => sameFormPath(f, mapped)))
+        autoCreate.push(normalizePath(mapped));
+    }
+    result.autoCreate = autoCreate;
+  }
   if (doc.mainForm === undefined) return result;
   const mainMapped = fn(doc.mainForm);
   const mainForm =
@@ -62,13 +114,20 @@ export function mapFormPaths(
   return result;
 }
 
-/** 決まった形で書き出す(キーの順は $schema・formatVersion・mainForm・forms。forms は 1 行に 1 つ) */
+/** 決まった形で書き出す(キーの順は $schema・formatVersion・codegen・mainForm・forms・autoCreate。一覧は 1 行に 1 つ) */
 export function serializeProject(doc: BfprojDocument): string {
+  const codegen = doc.codegen && {
+    ...(doc.codegen.commentLocale !== undefined && { commentLocale: doc.codegen.commentLocale }),
+    ...(doc.codegen.cpp && { cpp: doc.codegen.cpp }),
+    ...(doc.codegen.python && { python: doc.codegen.python }),
+  };
   const ordered = {
     ...(doc.$schema !== undefined && { $schema: doc.$schema }),
     formatVersion: doc.formatVersion,
+    ...(codegen && { codegen }),
     ...(doc.mainForm !== undefined && { mainForm: doc.mainForm }),
     forms: doc.forms ?? [],
+    ...(doc.autoCreate && { autoCreate: doc.autoCreate }),
   };
   return `${JSON.stringify(ordered, null, 2)}\n`;
 }

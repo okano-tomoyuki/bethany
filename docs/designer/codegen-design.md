@@ -41,7 +41,7 @@ Python では `#` を使う。`id` で区間を識別し、`hash` は区間の�
 
 [dsl-spec.md §2](dsl-spec.md#2-例) の例(抜粋)から生成するコード。実際の生成結果は
 [designer/packages/codegen/src/\_\_golden\_\_/](../../designer/packages/codegen/src/__golden__/)(見本 designer/samples/MainForm.bfm.json から生成したもの)を参照。
-コメントは `codegen.commentLocale`(既定は英語)で決まる。
+コメントの言語は、フォームが属するプロジェクトの `codegen.commentLocale`(既定は英語)で決まる([project-spec.md](project-spec.md) §5)。
 
 ### C++
 
@@ -172,7 +172,7 @@ void TMainForm::FormCloseQuery(TObject* Sender, bool& CanClose)
 // ...
 ```
 
-利用側(`main` は生成しない。C++Builder の プロジェクトファイル(.cpp)に当たる):
+利用側(C++Builder のプロジェクトファイル(.cpp)に当たる。プロジェクトファイルがあれば生成できる。[project-spec.md](project-spec.md) §5):
 
 ```cpp
 #include "MainForm.hpp"
