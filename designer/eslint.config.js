@@ -29,6 +29,7 @@ export default defineConfig(
             '*.js',
             '*.ts',
             'packages/*/vitest.config.ts',
+            'packages/*/vitest.config.mts',
             'packages/*/build.mjs',
             'packages/*/vite.config.ts',
           ],

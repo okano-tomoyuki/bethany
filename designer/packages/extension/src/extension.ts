@@ -2,9 +2,10 @@ import { configureL10n } from '@bethany-designer/core';
 import * as vscode from 'vscode';
 import { DesignerEditorProvider } from './designerEditorProvider.ts';
 import { registerDiagnostics } from './diagnostics.ts';
-import { registerFormsView } from './formsView.ts';
+import { registerFormsView, type ViewNode } from './formsView.ts';
 import { generateCode } from './generateCode.ts';
-import { newForm } from './newForm.ts';
+import { registerProjectCommands } from './projectCommands.ts';
+import { registerProjectTracking } from './projects.ts';
 
 export function activate(context: vscode.ExtensionContext): void {
   // core・codegen のメッセージも VS Code の表示言語で表示する(tk-designer ADR 0014)
@@ -13,14 +14,22 @@ export function activate(context: vscode.ExtensionContext): void {
     DesignerEditorProvider.register(context),
     registerDiagnostics(),
     registerFormsView(),
-    vscode.commands.registerCommand('bethanyDesigner.newForm', (target?: vscode.Uri) =>
-      newForm(target),
+    registerProjectCommands(),
+    registerProjectTracking(),
+    vscode.commands.registerCommand(
+      'bethanyDesigner.generateCode',
+      async (target?: vscode.Uri | ViewNode) => {
+        // エクスプローラー・エディタのタイトルからは Uri、フォームのビューからはその項目が渡される
+        const uri =
+          target instanceof vscode.Uri
+            ? target
+            : target?.kind === 'form'
+              ? target.uri
+              : activeDslUri();
+        if (!uri) return;
+        await generateCode(await vscode.workspace.openTextDocument(uri));
+      },
     ),
-    vscode.commands.registerCommand('bethanyDesigner.generateCode', async (target?: vscode.Uri) => {
-      const uri = target ?? activeDslUri();
-      if (!uri) return;
-      await generateCode(await vscode.workspace.openTextDocument(uri));
-    }),
   );
 }
 

@@ -12,5 +12,10 @@
   "viewContainer.title": "Bethany Designer",
   "view.forms.name": "フォーム",
   "command.refreshForms.title": "フォームの一覧を更新",
-  "view.forms.welcome": "このワークスペースには、まだフォーム(*.bfm.json)がありません。\n[新しいフォームを作成](command:bethanyDesigner.newForm)\nフォームはキャンバスで設計し、「コードを生成」で C++ か Python のコードを作ります。"
+  "view.forms.welcome": "このワークスペースには、まだフォーム(*.bfm.json)がありません。\n[新しいフォームを作成](command:bethanyDesigner.newForm)\nフォームはキャンバスで設計し、「コードを生成」で C++ か Python のコードを作ります。",
+  "command.newProject.title": "新しいプロジェクト",
+  "command.setMainForm.title": "メインフォームに設定",
+  "command.addToProject.title": "プロジェクトに追加...",
+  "command.removeFromProject.title": "プロジェクトから外す",
+  "command.openProjectFile.title": "プロジェクトファイルを開く"
 }

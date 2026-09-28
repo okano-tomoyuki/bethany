@@ -96,6 +96,34 @@
         "title": "%command.refreshForms.title%",
         "category": "Bethany Designer",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "bethanyDesigner.newProject",
+        "title": "%command.newProject.title%",
+        "category": "Bethany Designer",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "bethanyDesigner.setMainForm",
+        "title": "%command.setMainForm.title%",
+        "category": "Bethany Designer",
+        "icon": "$(star-empty)"
+      },
+      {
+        "command": "bethanyDesigner.addToProject",
+        "title": "%command.addToProject.title%",
+        "category": "Bethany Designer"
+      },
+      {
+        "command": "bethanyDesigner.removeFromProject",
+        "title": "%command.removeFromProject.title%",
+        "category": "Bethany Designer"
+      },
+      {
+        "command": "bethanyDesigner.openProjectFile",
+        "title": "%command.openProjectFile.title%",
+        "category": "Bethany Designer",
+        "icon": "$(go-to-file)"
       }
     ],
     "menus": {
@@ -127,18 +155,53 @@
           "command": "bethanyDesigner.refreshForms",
           "when": "view == bethanyDesigner.forms",
           "group": "navigation@2"
+        },
+        {
+          "command": "bethanyDesigner.newProject",
+          "when": "view == bethanyDesigner.forms",
+          "group": "1_project@1"
         }
       ],
       "view/item/context": [
         {
-          "command": "bethanyDesigner.generateCode",
-          "when": "view == bethanyDesigner.forms && viewItem == bethanyForm",
+          "command": "bethanyDesigner.newForm",
+          "when": "view == bethanyDesigner.forms && viewItem == project",
           "group": "inline"
         },
         {
           "command": "bethanyDesigner.generateCode",
-          "when": "view == bethanyDesigner.forms && viewItem == bethanyForm",
+          "when": "view == bethanyDesigner.forms && viewItem =~ /^(form|projectForm|projectMainForm)$/",
+          "group": "inline"
+        },
+        {
+          "command": "bethanyDesigner.generateCode",
+          "when": "view == bethanyDesigner.forms && viewItem =~ /^(form|projectForm|projectMainForm)$/",
           "group": "navigation@1"
+        },
+        {
+          "command": "bethanyDesigner.newForm",
+          "when": "view == bethanyDesigner.forms && viewItem == project",
+          "group": "navigation@1"
+        },
+        {
+          "command": "bethanyDesigner.openProjectFile",
+          "when": "view == bethanyDesigner.forms && viewItem =~ /^(project|brokenProject)$/",
+          "group": "navigation@2"
+        },
+        {
+          "command": "bethanyDesigner.setMainForm",
+          "when": "view == bethanyDesigner.forms && viewItem =~ /^(form|projectForm)$/",
+          "group": "2_project@1"
+        },
+        {
+          "command": "bethanyDesigner.addToProject",
+          "when": "view == bethanyDesigner.forms && viewItem =~ /^(form|projectForm|projectMainForm)$/",
+          "group": "2_project@2"
+        },
+        {
+          "command": "bethanyDesigner.removeFromProject",
+          "when": "view == bethanyDesigner.forms && viewItem =~ /^project(Main|Missing)?Form$/",
+          "group": "2_project@3"
         }
       ],
       "commandPalette": [
@@ -149,6 +212,22 @@
         {
           "command": "bethanyDesigner.refreshForms",
           "when": "view.bethanyDesigner.forms.visible"
+        },
+        {
+          "command": "bethanyDesigner.setMainForm",
+          "when": "false"
+        },
+        {
+          "command": "bethanyDesigner.addToProject",
+          "when": "false"
+        },
+        {
+          "command": "bethanyDesigner.removeFromProject",
+          "when": "false"
+        },
+        {
+          "command": "bethanyDesigner.openProjectFile",
+          "when": "false"
         }
       ]
     },
@@ -156,6 +235,10 @@
       {
         "fileMatch": "*.bfm.json",
         "url": "./schema/bfm.schema.json"
+      },
+      {
+        "fileMatch": "*.bfproj.json",
+        "url": "./schema/bfproj.schema.json"
       }
     ],
     "configuration": {

@@ -74,3 +74,27 @@ export {
   type Insets,
 } from './layout/insets.ts';
 export { computeLayout, type Rect } from './layout/engine.ts';
+
+export { BfprojDocument, PROJECT_FORMAT_VERSION } from './project/schema.ts';
+export { parseProject, type ProjectParseResult } from './project/parse.ts';
+export {
+  addForm,
+  containsForm,
+  createProject,
+  isMainForm,
+  mapFormPaths,
+  projectJsonSchema,
+  removeForm,
+  serializeProject,
+  setMainForm,
+} from './project/edit.ts';
+export {
+  dirname,
+  FORM_EXTENSION,
+  isSameOrInside,
+  normalizePath,
+  PROJECT_EXTENSION,
+  relativePath,
+  resolvePath,
+  sameFormPath,
+} from './project/paths.ts';

@@ -17,6 +17,7 @@ The form is stored in a JSON file (`*.bfm.json`) that you can also edit as text.
 - **Code generation**: the _Generate Code_ command writes a form class (`class TMainForm : public TForm`) to your source files.
   Only the regions between the designer's markers are replaced, so your own code, including event handlers, is kept.
 - **Forms view**: the Bethany Designer icon in the Activity Bar lists the forms in your workspace. Open a form with a click, create one with the **+** button, or generate code from the list.
+- **Projects**: a project file (`*.bfproj.json`) lists the forms of an application and its main form. With projects, the Forms view groups the forms by project and marks the main form with a star. Renaming, moving or deleting a form in VS Code updates the projects that contain it.
 - **Validation**: problems in `*.bfm.json` are shown in the Problems panel, and a JSON Schema is provided for text editing.
 - English and Japanese.
 

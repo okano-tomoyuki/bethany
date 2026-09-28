@@ -12,5 +12,10 @@
   "viewContainer.title": "Bethany Designer",
   "view.forms.name": "Forms",
   "command.refreshForms.title": "Refresh Forms",
-  "view.forms.welcome": "There are no forms (*.bfm.json) in this workspace yet.\n[Create New Form](command:bethanyDesigner.newForm)\nA form is designed on a canvas, and its C++ or Python code is generated with Generate Code."
+  "view.forms.welcome": "There are no forms (*.bfm.json) in this workspace yet.\n[Create New Form](command:bethanyDesigner.newForm)\nA form is designed on a canvas, and its C++ or Python code is generated with Generate Code.",
+  "command.newProject.title": "New Project",
+  "command.setMainForm.title": "Set as Main Form",
+  "command.addToProject.title": "Add to Project...",
+  "command.removeFromProject.title": "Remove from Project",
+  "command.openProjectFile.title": "Open Project File"
 }

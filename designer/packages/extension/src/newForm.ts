@@ -9,18 +9,20 @@ import {
 } from '@bethany-designer/core';
 import * as vscode from 'vscode';
 import { DesignerEditorProvider } from './designerEditorProvider.ts';
+import { exists } from './workspaceFiles.ts';
 
 const EXTENSION = '.bfm.json';
 
 /**
- * @param target エクスプローラーのコンテキストメニューから呼ばれた場合の、選ばれたフォルダまたはファイル
+ * @param target 作成先のフォルダの初期値(エクスプローラーで選ばれたフォルダまたはファイル・プロジェクトのフォルダ)
+ * @returns 作ったフォーム。取り消したら undefined
  */
-export async function newForm(target: vscode.Uri | undefined): Promise<void> {
+export async function newForm(target: vscode.Uri | undefined): Promise<vscode.Uri | undefined> {
   const folder = await initialFolder(target);
-  if (!folder) return;
+  if (!folder) return undefined;
 
   const answer = await askName(folder, await defaultName(folder));
-  if (!answer) return;
+  if (!answer) return undefined;
   const uri = fileUri(answer.folder, answer.name);
 
   // 生成するコードのコメントの言語は、作成した人の表示言語を初期値にする(tk-designer ADR 0014)
@@ -28,6 +30,7 @@ export async function newForm(target: vscode.Uri | undefined): Promise<void> {
   const text = serializeDocument(createDocument(answer.name, commentLocale));
   await vscode.workspace.fs.writeFile(uri, new TextEncoder().encode(text));
   await vscode.commands.executeCommand('vscode.openWith', uri, DesignerEditorProvider.viewType);
+  return uri;
 }
 
 /**
@@ -129,13 +132,4 @@ function askName(
 
 function fileUri(folder: vscode.Uri, baseName: string): vscode.Uri {
   return vscode.Uri.joinPath(folder, `${baseName}${EXTENSION}`);
-}
-
-async function exists(uri: vscode.Uri): Promise<boolean> {
-  try {
-    await vscode.workspace.fs.stat(uri);
-    return true;
-  } catch {
-    return false;
-  }
 }

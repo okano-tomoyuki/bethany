@@ -284,7 +284,7 @@ tk-designer ADR 0010 と同じく、利用者の明示的な操作で生成す�
 - **フォームのビュー**: アクティビティバーの Bethany Designer(アイコンは拡張のアイコンの בּ を単色にしたもの)に、ワークスペースの
   `*.bfm.json` の一覧を出す。検索の除外(`search.exclude`・`files.exclude`)に従い、ファイルの作成・削除で更新する。クリックでデザイナーで開き、
   項目のボタンと右クリックでコードを生成できる。フォームが無いときは、説明と「新しいフォームを作成」のボタンを出す(`viewsWelcome`)。
-  メインフォームの印は、起動部分の生成とあわせて後で加える。
+  プロジェクトファイル(`*.bfproj.json`)があれば、プロジェクトごとに並べてメインフォームに ★ を付ける([project-spec.md](project-spec.md) §4)。
 - **診断**: TextDocument が変わるたびに検証し、`DiagnosticCollection` に出す。JSON 上の位置は `core/src/dsl/locate.ts`
   (JSON のテキストを走査して、パスの値の範囲を求める)で範囲にする。
 - **JSON Schema**: Zod のスキーマから `schema/bfm.schema.json` を生成してコミットし(`--check` で食い違いを検査)、

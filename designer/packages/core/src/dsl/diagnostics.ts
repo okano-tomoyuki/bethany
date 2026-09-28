@@ -26,7 +26,12 @@ export type DiagnosticCode =
   | 'controls-not-allowed'
   | 'invalid-child-class'
   | 'invalid-parent-class'
-  | 'items-not-allowed';
+  | 'items-not-allowed'
+  // プロジェクトファイル(docs/designer/project-spec.md)
+  | 'invalid-form-path'
+  | 'duplicate-form'
+  | 'unknown-main-form'
+  | 'missing-form-file';
 
 export interface Diagnostic {
   readonly severity: Severity;
