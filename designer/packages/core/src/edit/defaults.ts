@@ -53,3 +53,35 @@ export function initialProperties(
   if (CAPTION_CLASSES.has(className)) properties.Caption = name;
   return properties;
 }
+
+/** 既定のイベントが OnChange のクラス(C++Builder と同じ。値を入力・選択するもの) */
+const CHANGE_CLASSES: ReadonlySet<string> = new Set([
+  'TEdit',
+  'TMaskEdit',
+  'TLabeledEdit',
+  'TSpinEdit',
+  'TFloatSpinEdit',
+  'TMemo',
+  'TComboBox',
+  'TTrackBar',
+  'TScrollBar',
+  'TPageControl',
+  'TTabControl',
+]);
+
+/**
+ * キャンバスでダブルクリックしたときに設定するイベント(docs/designer/editor-design.md §5.2。C++Builder と同じ)。
+ * TForm は OnCreate、値を入力・選択するものは OnChange、TTimer は OnTimer、それ以外は OnClick(無ければ最初のイベント)。
+ */
+export function defaultEventOf(className: string): string | undefined {
+  const events = Object.keys(findClass(className)?.events ?? {});
+  const preferred =
+    className === 'TForm'
+      ? 'OnCreate'
+      : CHANGE_CLASSES.has(className)
+        ? 'OnChange'
+        : className === 'TTimer'
+          ? 'OnTimer'
+          : 'OnClick';
+  return events.includes(preferred) ? preferred : events[0];
+}

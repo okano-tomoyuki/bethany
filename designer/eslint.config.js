@@ -1,5 +1,6 @@
 import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
+import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
@@ -12,6 +13,7 @@ const pureModuleRestrictions = {
       group: ['node:*', 'fs', 'path', 'os', 'child_process'],
       message: 'core / codegen では Node API を使わない',
     },
+    { group: ['react', 'react-dom', 'react/*'], message: 'core / codegen では React を使わない' },
   ],
 };
 
@@ -28,6 +30,7 @@ export default defineConfig(
             '*.ts',
             'packages/*/vitest.config.ts',
             'packages/*/build.mjs',
+            'packages/*/vite.config.ts',
           ],
         },
         tsconfigRootDir: import.meta.dirname,
@@ -39,7 +42,19 @@ export default defineConfig(
     rules: { 'no-restricted-imports': ['error', pureModuleRestrictions] },
   },
   {
-    files: ['packages/cli/**', 'tools/**', '*.js', '*.ts'],
+    files: ['packages/webview/src/**'],
+    languageOptions: { globals: globals.browser },
+    extends: [reactHooks.configs.flat['recommended-latest']],
+  },
+  {
+    files: [
+      'packages/cli/**',
+      'packages/extension/**',
+      'tools/**',
+      '*.js',
+      '*.ts',
+      'packages/*/vite.config.ts',
+    ],
     languageOptions: { globals: globals.node },
   },
   {

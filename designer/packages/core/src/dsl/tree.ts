@@ -1,3 +1,4 @@
+import { findClass } from '../catalog/catalog.ts';
 import type { JsonPath } from './diagnostics.ts';
 import type {
   ComponentNode,
@@ -69,4 +70,31 @@ function* walkItems(
 /** ノードのクラス(メニュー項目は TMenuItem) */
 export function classOf(location: NodeLocation): string {
   return location.kind === 'menuItem' ? 'TMenuItem' : location.node.class;
+}
+
+/** name のノード(name が重複していれば最初のもの) */
+export function findNode(doc: NvformDocument, name: string): NodeLocation | undefined {
+  for (const location of walkNodes(doc)) if (location.node.name === name) return location;
+  return undefined;
+}
+
+/**
+ * プロパティの値。書いていなければカタログの既定値(入れ子のオブジェクトの中は path の 2 つ目で指す)。
+ * カタログにも無ければ undefined。
+ */
+export function propertyValue(
+  location: NodeLocation,
+  path: readonly [string] | readonly [string, string],
+): unknown {
+  const [name, sub] = path;
+  const own = location.node.properties?.[name];
+  const info = findClass(classOf(location));
+  const fallback =
+    info && Object.hasOwn(info.properties, name) ? info.properties[name]?.default : undefined;
+  if (sub === undefined) return own ?? fallback;
+  const pick = (object: unknown) =>
+    typeof object === 'object' && object !== null && !Array.isArray(object)
+      ? (object as Record<string, unknown>)[sub]
+      : undefined;
+  return pick(own) ?? pick(fallback);
 }

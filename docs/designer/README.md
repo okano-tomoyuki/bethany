@@ -20,4 +20,4 @@ no_vcl の C++(no_vcl.hpp)と Python(py/no_vcl.py)のコードを生成する。
 1. DSL 仕様・コード生成・カタログの設計(このフォルダ)
 2. カタログの抽出(`designer/tools/catalog/`、Python)
 3. コード生成と CLI(C++ を先に作り、生成したコードを no_vcl でビルドして確かめてから Python に広げる)← 済み
-4. VS Code 拡張とデザイナーの画面([editor-design.md](editor-design.md) §10 の順)← 着手
+4. VS Code 拡張とデザイナーの画面([editor-design.md](editor-design.md) §10 の順)← §10 の 3 まで済み

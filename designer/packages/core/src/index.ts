@@ -17,7 +17,7 @@ export {
 } from './dsl/diagnostics.ts';
 export { parseDocument, type ParseResult } from './dsl/parse.ts';
 export { validateDocument } from './dsl/validate.ts';
-export { classOf, walkNodes, type NodeLocation } from './dsl/tree.ts';
+export { classOf, findNode, propertyValue, walkNodes, type NodeLocation } from './dsl/tree.ts';
 
 export { findClass, findProperty, getCatalog, isSubclassOf, setTypeOf } from './catalog/catalog.ts';
 export type {
@@ -43,6 +43,7 @@ export {
 } from './edit/commands.ts';
 export {
   DEFAULT_POSITION,
+  defaultEventOf,
   defaultSizeOf,
   hasOwnBounds,
   initialProperties,
@@ -63,3 +64,6 @@ export type {
   ExtensionToWebviewMessage,
   WebviewToExtensionMessage,
 } from './protocol.ts';
+export { formatValue, normalizeShortCut, parseInput, type InputResult } from './edit/inputs.ts';
+
+export { clientInsets, type Insets } from './layout/insets.ts';
