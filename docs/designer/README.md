@@ -13,10 +13,11 @@ no_vcl の C++(no_vcl.hpp)と Python(py/no_vcl.py)のコードを生成する。
 | [dsl-spec.md](dsl-spec.md) | フォームの定義ファイル(DSL)の仕様 | 実装済み(スキーマ・意味の検証。§10 の Q5〜Q8 は未決) |
 | [codegen-design.md](codegen-design.md) | コード生成(マーカー区間の更新)の設計と生成例 | C++・Python とも実装済み(no_vcl でのビルド・実行で確認) |
 | [catalog.md](catalog.md) | コンポーネントカタログ(no_vcl.hpp からの抽出・既定値・補足情報) | 初版(抽出を実装済み) |
+| [editor-design.md](editor-design.md) | VS Code 拡張とデザイナーの画面(編集モデル・配置の計算・キャンバス・プロパティ)。キャンバスの方式は [ADR 0036](../adr/0036-designer-canvas.md) | 草案 |
 
 ## 進める順序(ADR 0035)
 
 1. DSL 仕様・コード生成・カタログの設計(このフォルダ)
 2. カタログの抽出(`designer/tools/catalog/`、Python)
 3. コード生成と CLI(C++ を先に作り、生成したコードを no_vcl でビルドして確かめてから Python に広げる)← 済み
-4. VS Code 拡張とデザイナーの画面
+4. VS Code 拡張とデザイナーの画面([editor-design.md](editor-design.md) §10 の順)← 着手

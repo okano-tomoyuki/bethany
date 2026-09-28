@@ -55,6 +55,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0033](adr/0033-dialogs.md) | Tier 4 としてダイアログを追加し、結果を適用する先の TControl.Color・Font を追加する | 承認 |
 | [0034](adr/0034-designer-common-properties.md) | デザイナーで設定する共通のプロパティ(Anchors・BorderSpacing・Constraints・TabOrder 等)を追加し、集合型を Set<E> で表す | 承認 |
 | [0035](adr/0035-designer-in-this-repository.md) | デザイナーアプリは本リポジトリ内に no_vcl 専用として作り、tk-designer からは GUI に依存しない仕組みだけを流用する | 承認 |
+| [0036](adr/0036-designer-canvas.md) | デザイナーのキャンバスは Windows の LCL の見た目を HTML で再現し、Align・Anchors の配置は core で計算して LCL の実測と照合する | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。
