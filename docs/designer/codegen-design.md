@@ -194,6 +194,8 @@ from no_vcl import *
 
 
 class TMainForm(TForm):
+    """Form created with the no_vcl designer (MainForm.nvform.json). Regions enclosed in markers are overwritten when regenerated."""
+
     def __init__(self, AOwner):
         super().__init__(AOwner)
         # <no_vcl-designer:begin id="declarations">
@@ -205,23 +207,36 @@ class TMainForm(TForm):
 
     # <no_vcl-designer:begin id="nvd_CreateComponents">
     def nvd_CreateComponents(self):
+        """Creates the components and sets their properties (generated)."""
         self.NameEdit = TEdit(self)
         # ...
+
         self.Caption = "Sample"
+        self.Menu = self.MainMenu1
         self.OnCreate = self.FormCreate
+
         self.NameEdit.Parent = self
-        self.NameEdit.Anchors = {akLeft, akTop, akRight}
-        self.NameEdit.OnChange = self.NameEditChange
         # ...
+        self.NameEdit.Anchors = {akTop, akLeft, akRight}
+        self.NameEdit.OnChange = self.NameEditChange
+        # ...(C++ と同じ並び。値の書き方は §6 N4)
     # <no_vcl-designer:end id="nvd_CreateComponents" hash="...">
 
     # <no_vcl-designer:handler-stubs>
+
     def FormCreate(self, Sender):
         pass
 
     def FormCloseQuery(self, Sender, CanClose):
         pass
 ```
+
+- 参照渡しの引数(`bool& CanClose`・`TCloseAction& Action` 等)は、py/no_vcl.py の規則どおり `Ref` で渡される(`CanClose.value = False`)。
+- フォームのグローバル変数は生成しない(`MainForm = Application.CreateForm(TMainForm)` と書く。dsl-spec.md §10 Q3)。
+- Python の値の書き方: 集合型は `{akTop, akLeft}`(空なら `set()`)、ビット集合は `|` でつなぐ(空なら `TFontStyles(0)` のように型の 0)、
+  TColor の `"#RRGGBB"` は `0x00BBGGRR  # #RRGGBB`、参照は `self.名前`。
+- 区間の外の参照の警告(M7)では、宣言の区間の型の注釈(`self.OkButton: TButton`)と、イベントに代入したハンドラを生成したメンバとする
+  (`self.Caption = ...` のようなフォームのプロパティの設定は含めない)。
 
 ## 4. `nvd_CreateComponents` の中の順序
 
@@ -276,10 +291,14 @@ tk-designer の codegen-design.md の決定を、名前だけ変えて引き継�
   1. 表示後の各コントロールの位置と大きさが、DSL に書いた値(デザイナーが計算した配置)と一致すること(Align・Anchors・BorderSpacing を含む)。
   2. イベントが接続されていること(ボタンの Click・メニューの Click でハンドラが呼ばれる)。
   3. 参照(Menu・PopupMenu・Images)・入れ子のオブジェクト(Font 等)・TStrings が設定されていること。
-- 検証のプログラムは [designer/tools/codegen/verify-cpp.mts](../../designer/tools/codegen/verify-cpp.mts)(`pnpm codegen:verify-cpp`)。
+- 検証のプログラムは [designer/tools/codegen/verify-cpp.mts](../../designer/tools/codegen/verify-cpp.mts)(`pnpm codegen:verify-cpp`)と
+  [verify-python.mts](../../designer/tools/codegen/verify-python.mts)(`pnpm codegen:verify-python`)。期待は共通
+  ([report.mts](../../designer/tools/codegen/report.mts))で、C++ と Python で同じ結果になることも確かめている。
   生成したコードのハンドラの雛形を「呼ばれたことを記録する処理」に置き換え、フォームを `Application->CreateForm` で生成・表示した後に、
   配置・プロパティを読み、LCL を通してイベントを発生させる(Text の変更・Checked の変更・メニュー項目の Click・Close)。
-  生成したコードは `-Wall -Wextra -Werror`(未使用の引数を除く)でコンパイルする。
+  C++ の生成したコードは `-Wall -Wextra -Werror`(未使用の引数を除く)でコンパイルする。
+  Python はバインディング(py/*.py)と DLL を作業フォルダに写して実行する。
+- Linux(GTK2)での検証はまだ行っていない(既定の大きさ・クライアント領域が Win32 と違うため、期待の扱いを決める必要がある)。
 
 ### 7.1 検証で分かったこと(2026-09-28、Win32)
 

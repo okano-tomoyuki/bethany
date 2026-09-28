@@ -11,32 +11,31 @@
  * 必要なもの: C++ コンパイラ・CMake・Ninja と、ビルド済みの no_vcl の DLL(リポジトリ直下の no_vcl.dll / libno_vcl.so。
  * build-windows.sh・build-linux.sh で作る)。ビルドの作業フォルダは .cache/verify-cpp(2 回目以降は差分ビルドになる)。
  */
-import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
-import {
-  findClass,
-  parseDocument,
-  walkNodes,
-  type NvformDocument,
-} from '../../packages/core/src/index.ts';
+import { walkNodes, type NvformDocument } from '../../packages/core/src/index.ts';
 import { generateCpp } from '../../packages/codegen/src/index.ts';
+import {
+  checkReport,
+  designerRoot,
+  loadSample,
+  parseReport,
+  repoRoot,
+  SAMPLE_FILE,
+  writeIfChanged,
+} from './report.mts';
 
-const designerRoot = fileURLToPath(new URL('../../', import.meta.url));
-const repoRoot = join(designerRoot, '..');
 const workDir = join(designerRoot, '.cache/verify-cpp');
 const buildDir = join(workDir, 'build');
 const isWindows = process.platform === 'win32';
 const dllName = isWindows ? 'no_vcl.dll' : 'libno_vcl.so';
-let failures = 0;
 
 // ---- コードの生成 --------------------------------------------------------------
 
 mkdirSync(workDir, { recursive: true });
-const sampleFile = join(designerRoot, 'samples/MainForm.nvform.json');
-const doc = load(readFileSync(sampleFile, 'utf8'));
-const result = generateCpp(doc, 'MainForm.nvform.json', undefined, undefined);
+const doc = loadSample();
+const result = generateCpp(doc, SAMPLE_FILE, undefined, undefined);
 if ('error' in result) throw new Error(result.error);
 if (!result.header.ok || !result.source.ok) throw new Error('生成に失敗しました');
 writeIfChanged(join(workDir, 'MainForm.hpp'), result.header.text);
@@ -63,116 +62,15 @@ copyFileSync(join(repoRoot, dllName), join(buildDir, dllName));
 
 // ---- 実行 ---------------------------------------------------------------------
 
-interface Report {
-  readonly bounds: Readonly<Record<string, readonly number[]>>;
-  readonly calls: readonly string[];
-  readonly checks: Readonly<Record<string, string>>;
-}
-
 const output = execFileSync(join(buildDir, isWindows ? 'verify.exe' : 'verify'), {
   encoding: 'utf8',
   cwd: buildDir,
   timeout: 60_000,
   env: { ...process.env, LD_LIBRARY_PATH: buildDir },
 });
-const report = JSON.parse(output.trim().split(/\r?\n/).pop() ?? '') as Report;
-
-// 1. 配置
-const KEYS = ['Left', 'Top', 'Width', 'Height'] as const;
-for (const location of walkNodes(doc)) {
-  if (location.kind !== 'control') continue;
-  const { name, properties = {} } = location.node;
-  const actual = report.bounds[name];
-  // AutoSize のコントロールの大きさは LCL が内容(文字列・フォント)から決める。デザイナーが書くのは見積もりなので比べない
-  const autoSize =
-    properties.AutoSize ?? findClass(location.node.class)?.properties.AutoSize?.default;
-  const keys = autoSize === true ? KEYS.slice(0, 2) : KEYS;
-  const mismatched = keys.filter((key, i) => {
-    const expected = properties[key];
-    return typeof expected === 'number' && actual?.[i] !== expected;
-  });
-  if (mismatched.length > 0) {
-    failures++;
-    const expected = KEYS.map((k) => JSON.stringify(properties[k] ?? '-')).join(',');
-    console.error(`  ✗ 配置 ${name}: 期待 [${expected}] / 実際 [${actual?.join(',') ?? '-'}]`);
-  }
-}
-if (failures === 0)
-  console.log(`✓ 配置: ${String(Object.keys(report.bounds).length)} コントロール`);
-
-// 2. イベント
-const expectedCalls = [
-  'FormCreate',
-  'NameEditChange',
-  'WrapCheckClick',
-  'FileOpenItemClick',
-  'ClearItemClick',
-  'OkButtonClick',
-  'Timer1Timer',
-  'FormCloseQuery',
-];
-const missingCalls = expectedCalls.filter((c) => !report.calls.includes(c));
-if (missingCalls.length === 0) {
-  console.log(`✓ イベント: ${report.calls.join(', ')}`);
-} else {
-  failures++;
-  console.error(
-    `  ✗ イベント: 呼ばれていない ${missingCalls.join(', ')} / 実際 ${report.calls.join(', ')}`,
-  );
-}
-
-// 3. 参照・入れ子のオブジェクト・TStrings・メニュー
-const expectedChecks: Record<string, string> = {
-  menu: '1',
-  activePage: '1',
-  popupMenu: '1',
-  memoLines: 'line 1|line "2"',
-  okFontBold: '1',
-  statusFont: '10/16711680',
-  panelColor: '12644607',
-  shortCut: 'Ctrl+O',
-  menuCounts: '1/3/1',
-  dialogOptions: String((1 << 20) | (1 << 23) | (1 << 9)),
-  timer: '0/500',
-  caption: 'Sample',
-  spinValue: '150',
-  anchors: '404/380/500',
-};
-const wrongChecks = Object.entries(expectedChecks).filter(([k, v]) => report.checks[k] !== v);
-if (wrongChecks.length === 0) {
-  console.log(`✓ プロパティ: ${Object.keys(expectedChecks).join(', ')}`);
-} else {
-  failures++;
-  for (const [k, v] of wrongChecks)
-    console.error(`  ✗ プロパティ ${k}: 期待 ${v} / 実際 ${report.checks[k] ?? '-'}`);
-}
-
-if (failures > 0) {
-  console.error(`\n${String(failures)} 件の不一致があります`);
-  process.exitCode = 1;
-} else {
-  console.log('\nすべて一致しました');
-}
+checkReport(doc, parseReport(output));
 
 // ---- 補助 ---------------------------------------------------------------------
-
-function load(text: string): NvformDocument {
-  const { document, diagnostics } = parseDocument(text);
-  if (!document || diagnostics.length > 0)
-    throw new Error(`見本が検証を通りません: ${JSON.stringify(diagnostics)}`);
-  return document;
-}
-
-/** 内容が同じなら書き換えない(差分ビルドを効かせる) */
-function writeIfChanged(path: string, text: string): void {
-  let current: string | undefined;
-  try {
-    current = readFileSync(path, 'utf8');
-  } catch {
-    current = undefined;
-  }
-  if (current !== text) writeFileSync(path, text);
-}
 
 /** ハンドラの雛形の中身を、呼ばれたことを記録する処理に置き換える */
 function recordHandlerCalls(source: string, className: string): string {

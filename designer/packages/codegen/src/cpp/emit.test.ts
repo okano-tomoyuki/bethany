@@ -158,11 +158,15 @@ describe('generateCpp', () => {
 });
 
 describe('generateAll', () => {
-  it('Python はまだ生成せず、警告で知らせる', () => {
+  it('codegen に書かれたすべてのターゲットを生成する', () => {
     const result = generateAll(SAMPLE, DSL_FILE, () => undefined);
     if ('error' in result) throw new Error(result.error);
-    expect(result.files.map((f) => f.path)).toEqual(['MainForm.hpp', 'MainForm.cpp']);
-    expect(result.warnings).toEqual(['Python code generation is not implemented yet']);
+    expect(result.files.map((f) => f.path)).toEqual([
+      'MainForm.hpp',
+      'MainForm.cpp',
+      'MainForm.py',
+    ]);
+    expect(result.warnings).toEqual([]);
   });
 
   it('codegen が無ければエラー', () => {

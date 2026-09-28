@@ -22,6 +22,7 @@ pnpm install
 pnpm check                 # 型チェック・lint・書式・カタログの食い違い・テスト
 pnpm build                 # CLI を packages/cli/dist/cli.js にまとめる
 pnpm codegen:verify-cpp    # 見本から生成した C++ をビルド・実行して確かめる(C++ コンパイラ・CMake・Ninja と、ビルド済みの no_vcl.dll が要る)
+pnpm codegen:verify-python # 見本から生成した Python を実行して確かめる(Python 3 と、ビルド済みの no_vcl.dll が要る)
 node packages/cli/src/main.ts generate samples/MainForm.nvform.json   # ビルドせずに CLI を動かす
 ```
 

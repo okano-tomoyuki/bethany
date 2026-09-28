@@ -6,6 +6,8 @@ import { l10n, type NvformDocument } from '@no-vcl-designer/core';
 import { emitCpp } from './cpp/emit.ts';
 import { CPP_NAMES, cppSyntax } from './cpp/syntax.ts';
 import { buildModel } from './model.ts';
+import { emitPython } from './python/emit.ts';
+import { PYTHON_NAMES, PYTHON_SYNTAX } from './python/syntax.ts';
 import { fileNameOf, relativePath, resolveTargets } from './names.ts';
 import { createFile, mergeFile, type GeneratedCode, type MergeResult } from './region.ts';
 import { findStaleNames, staleNamesWarning, type StaleCheck } from './stale.ts';
@@ -29,6 +31,35 @@ export type GenerateResult = MergeResult & {
 export interface CppGenerateResult {
   readonly header: GenerateResult;
   readonly source: GenerateResult;
+}
+
+/**
+ * Python のコードを生成する。existing があればマーカー区間だけを置き換え、なければ新規ファイルを作る。
+ * @param doc 検証を通過したドキュメント
+ * @param dslFileName DSL のファイル名(出力先の既定値と、生成物の説明に使う)
+ */
+export function generatePython(
+  doc: NvformDocument,
+  dslFileName: string,
+  existing: string | undefined,
+): GenerateResult {
+  const target = resolveTargets(doc, dslFileName).python;
+  if (!target) return { ok: false, error: l10n.t('{0} is not set', 'codegen.python') };
+  const generated = emitPython(
+    buildModel(doc, target.className),
+    fileNameOf(dslFileName),
+    doc.codegen?.commentLocale,
+  );
+  if (existing === undefined) {
+    return {
+      ok: true,
+      text: createFile(generated, PYTHON_SYNTAX),
+      modifiedRegions: [],
+      addedStubs: [],
+      path: target.file,
+    };
+  }
+  return { ...mergeFile(existing, generated, PYTHON_SYNTAX), path: target.file };
 }
 
 /**
@@ -93,7 +124,6 @@ export function generateAll(
   }
   const files: OutputFile[] = [];
   const staleChecks: StaleCheck[] = [];
-  const warnings: string[] = [];
   if (targets.cpp) {
     const existingHeader = readExisting(targets.cpp.header);
     const result = generateCpp(doc, dslFileName, existingHeader, readExisting(targets.cpp.source));
@@ -114,9 +144,18 @@ export function generateAll(
     }
   }
   if (targets.python) {
-    // Python のエミッタは C++ の生成コードを no_vcl で確かめた後に作る(ADR 0035)
-    warnings.push(l10n.t('Python code generation is not implemented yet'));
+    const existing = readExisting(targets.python.file);
+    const result = generatePython(doc, dslFileName, existing);
+    files.push({ path: targets.python.file, result });
+    if (existing !== undefined && result.ok) {
+      staleChecks.push({
+        rules: PYTHON_NAMES,
+        before: existing,
+        after: result.text,
+        files: [{ path: targets.python.file, text: result.text }],
+      });
+    }
   }
   const stale = staleNamesWarning(staleChecks.flatMap(findStaleNames));
-  return { files, warnings: [...warnings, ...(stale ? [stale] : [])] };
+  return { files, warnings: stale ? [stale] : [] };
 }
