@@ -7,6 +7,9 @@ import { createStore } from 'zustand/vanilla';
 
 export type InspectorTab = 'properties' | 'events';
 
+/** パレットの並べ方(アイコンと名前の一覧・アイコンだけの格子) */
+export type PaletteView = 'list' | 'icons';
+
 export const ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 
 /** 倍率を 1 段階上げる(step = 1)・下げる(step = -1)。端ではそのまま */
@@ -26,6 +29,7 @@ export interface UiState {
   /** パレットで選んだクラス(次にキャンバスをクリック・ドラッグしたときに追加する) */
   readonly tool: string | undefined;
   readonly zoom: number;
+  readonly paletteView: PaletteView;
   readonly settings: CanvasSettings;
   /** キャンバスで表示している TPageControl のタブ(TPageControl の name → TTabSheet の name) */
   readonly shownPages: Readonly<Record<string, string>>;
@@ -38,6 +42,7 @@ export interface UiActions {
   readonly setInspectorTab: (tab: InspectorTab) => void;
   readonly setTool: (tool: string | undefined) => void;
   readonly setZoom: (zoom: number) => void;
+  readonly setPaletteView: (view: PaletteView) => void;
   readonly receiveSettings: (settings: CanvasSettings) => void;
   readonly showPage: (pageControl: string, sheet: string) => void;
   readonly openContextMenu: (at: { x: number; y: number } | undefined) => void;
@@ -51,6 +56,7 @@ export function createUiStore() {
     inspectorTab: 'properties',
     tool: undefined,
     zoom: 1,
+    paletteView: 'list',
     settings: { fontFamily: 'Segoe UI', fontSize: 9, gridSize: 8, showGrid: true },
     shownPages: {},
     contextMenu: undefined,
@@ -65,6 +71,9 @@ export function createUiStore() {
     },
     setZoom(zoom) {
       set({ zoom });
+    },
+    setPaletteView(paletteView) {
+      set({ paletteView });
     },
     receiveSettings(settings) {
       set({ settings });

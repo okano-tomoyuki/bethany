@@ -5,6 +5,8 @@
 - Go to an event handler as in C++Builder: double-clicking a control on the canvas, or the **+** / **→** button on the Events tab,
   sets the handler name if needed, generates the code (adding the handler stub) and opens the handler in the editor.
   When both C++ and Python are generated, the language is asked the first time (setting `bethanyDesigner.goToHandler.language`)
+- Icons for the classes in the palette, the structure tree and the non-visual components on the canvas.
+  The palette can show icons only (the button next to its title)
 - **Fixed**: double-clicking a control on the canvas set the event of the form instead of the control
 
 ## [0.2.0] - 2026-09-28

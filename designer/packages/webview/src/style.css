@@ -127,6 +127,61 @@ input[aria-invalid='true'] {
 
 /* ---- パレット ---- */
 
+/* ---- クラスのアイコン(ClassIcon.tsx) ---- */
+
+.class-icon {
+  --beth-icon-accent: var(--vscode-charts-blue, #3794ff);
+
+  flex: none;
+  overflow: visible;
+}
+
+.class-icon .a {
+  stroke: var(--beth-icon-accent);
+}
+
+.class-icon .af {
+  fill: var(--beth-icon-accent);
+  stroke: none;
+}
+
+.class-icon .sf {
+  fill: currentColor;
+  fill-opacity: 0.15;
+  stroke: none;
+}
+
+/* 選択中の項目では、背景の色に埋もれないよう強調色も文字の色にする */
+.palette-item.active .class-icon,
+.tree-label.selected .class-icon {
+  --beth-icon-accent: currentColor;
+}
+
+/* ---- パネルの見出し ---- */
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.panel-header h2 {
+  margin: 0;
+}
+
+.panel-header-button {
+  padding: 0 6px;
+  color: var(--vscode-foreground);
+  background: transparent;
+}
+
+.panel-header-button:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
+/* ---- パレット ---- */
+
 .palette summary {
   cursor: pointer;
   color: var(--vscode-descriptionForeground);
@@ -137,6 +192,37 @@ input[aria-invalid='true'] {
   flex-wrap: wrap;
   gap: 3px;
   margin: 4px 0 6px;
+}
+
+.palette-items.list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 2px;
+}
+
+.palette-item {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+
+.palette-items.list .palette-item {
+  padding: 2px 6px;
+  text-align: left;
+}
+
+.palette-items.icons .palette-item {
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+}
+
+.palette-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .palette-item.active {
@@ -159,7 +245,8 @@ input[aria-invalid='true'] {
 
 .tree-label {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  align-items: center;
   width: 100%;
   text-align: left;
   color: var(--vscode-foreground);
@@ -589,13 +676,11 @@ input[aria-invalid='true'] {
 
 .component-glyph {
   box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 28px;
   height: 28px;
-  line-height: 26px;
-  text-align: center;
-  font:
-    bold 10px 'Segoe UI',
-    sans-serif;
   color: #333;
   background: #fff;
   border: 1px solid #999;
@@ -611,6 +696,11 @@ input[aria-invalid='true'] {
     sans-serif;
   color: #333;
   white-space: nowrap;
+}
+
+.component-glyph .class-icon {
+  /* キャンバスは Windows の見た目(明るい色)なので、テーマによらない色にする */
+  --beth-icon-accent: #0078d4;
 }
 
 .component-icon.selected .component-glyph {

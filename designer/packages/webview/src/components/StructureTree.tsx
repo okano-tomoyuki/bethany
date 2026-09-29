@@ -14,6 +14,7 @@ import { useShallow } from 'zustand/shallow';
 import { select } from '../editing.ts';
 import { uiStore, useDocumentStore, useSelectedNodes, useUiStore } from '../store/stores.ts';
 import { actionsFor } from './actions.ts';
+import { ClassIcon } from './ClassIcon.tsx';
 
 export function StructureTree() {
   const document = useDocumentStore((s) => s.document);
@@ -35,7 +36,7 @@ export function StructureTree() {
     uiStore.getState().openContextMenu({ x: e.clientX, y: e.clientY });
   };
 
-  const label = (name: string, detail: string) => (
+  const label = (name: string, className: string, detail: string = className) => (
     <button
       type="button"
       className={selected.has(name) ? 'tree-label selected' : 'tree-label'}
@@ -43,6 +44,7 @@ export function StructureTree() {
       onClick={onClick(name)}
       onContextMenu={onContextMenu(name)}
     >
+      <ClassIcon className={className} />
       <span>{name}</span>
       <span className="tree-class">{detail}</span>
     </button>
@@ -65,7 +67,7 @@ export function StructureTree() {
       <ul>
         {list.map((item) => (
           <li key={item.name}>
-            {label(item.name, captionOf(item))}
+            {label(item.name, 'TMenuItem', captionOf(item))}
             {items(item.items)}
           </li>
         ))}

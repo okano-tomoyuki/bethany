@@ -46,6 +46,7 @@ import {
 } from '../editing.ts';
 import { uiStore, useDocumentStore, useUiStore } from '../store/stores.ts';
 import { stepZoom, ZOOM_LEVELS } from '../store/uiStore.ts';
+import { ClassIcon } from '../components/ClassIcon.tsx';
 import { Caption, CanvasContext, Children, type CanvasState } from './ControlView.tsx';
 import { fontStyle, resolveLook, rootInherited, text } from './look.ts';
 
@@ -691,7 +692,9 @@ export function DesignCanvas() {
                     data-icon={component.name}
                     title={`${component.name}: ${component.class}`}
                   >
-                    <span className="component-glyph">{glyphOf(component.class)}</span>
+                    <span className="component-glyph">
+                      <ClassIcon className={component.class} size={20} />
+                    </span>
                     <span className="component-name">{component.name}</span>
                   </div>
                 );
@@ -948,10 +951,4 @@ function mainMenuOf(document: BfmDocument) {
 
 function numberOr(value: unknown, fallback: number): number {
   return typeof value === 'number' && value > 0 ? value : fallback;
-}
-
-/** アイコンの代わりの短い表示(クラス名の大文字。TMainMenu → MM) */
-function glyphOf(className: string): string {
-  const capitals = className.slice(1).replace(/[^A-Z]/g, '');
-  return (capitals.length > 0 ? capitals : className.slice(1, 3)).slice(0, 3);
 }

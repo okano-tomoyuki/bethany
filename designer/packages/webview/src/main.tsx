@@ -18,11 +18,14 @@ configureL10n(
   JSON.parse(container.dataset.l10n ?? '{}') as L10nBundle,
 );
 
-// 倍率は Webview の状態に保存し、開き直したときに戻す
-const { zoom } = loadState();
+// 倍率とパレットの並べ方は Webview の状態に保存し、開き直したときに戻す
+const { zoom, paletteView } = loadState();
 if (ZOOM_LEVELS.some((z) => z === zoom)) uiStore.getState().setZoom(zoom ?? 1);
+if (paletteView === 'list' || paletteView === 'icons')
+  uiStore.getState().setPaletteView(paletteView);
 uiStore.subscribe((state, previous) => {
-  if (state.zoom !== previous.zoom) saveState({ ...loadState(), zoom: state.zoom });
+  if (state.zoom !== previous.zoom || state.paletteView !== previous.paletteView)
+    saveState({ ...loadState(), zoom: state.zoom, paletteView: state.paletteView });
 });
 
 connectToHost();
