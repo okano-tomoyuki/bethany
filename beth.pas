@@ -5412,10 +5412,62 @@ begin
   end;
 end;
 
+{ LCL の Win32 実装の Exchange・Move(ItemExchange・ItemMove の LVItemAssign)は、行の文字列・画像・チェックだけを書き換え、
+  行が指す項目(LVITEM の lParam)を付け替えない。Win32 の並べ替え(ListView_SortItems)は lParam の項目の Index で行を並べるため、
+  その後に並べ替えると、表示される文字列と行の項目(選択・編集・GetItemAt の対象)がずれる(docs/adr/0052)。
+  そこで、書き換えられた範囲の行の lParam を、その位置の項目に付け直す。 }
+procedure FixListItemParams(Items: TListItems; FromIndex, ToIndex: Integer);
+{$ifdef LCLwin32}
+type
+  TLVItemParam = record
+    mask: UINT;
+    iItem: Integer;
+    iSubItem: Integer;
+    state: UINT;
+    stateMask: UINT;
+    pszText: PWideChar;
+    cchTextMax: Integer;
+    iImage: Integer;
+    lParam: LPARAM;
+  end;
+const
+  LVM_SETITEMW = $1000 + 76;
+  LVIF_PARAM = $0004;
+var
+  LV: TCustomListView;
+  I, T: Integer;
+  Item: TLVItemParam;
+{$endif}
+begin
+  {$ifdef LCLwin32}
+  LV := Items.Owner;
+  if (LV = nil) or LV.OwnerData or not LV.HandleAllocated then
+    Exit;
+  if FromIndex > ToIndex then
+  begin
+    T := FromIndex;
+    FromIndex := ToIndex;
+    ToIndex := T;
+  end;
+  for I := FromIndex to ToIndex do
+  begin
+    if (I < 0) or (I >= Items.Count) then
+      Continue;
+    FillChar(Item, SizeOf(Item), 0);
+    Item.mask := LVIF_PARAM;
+    Item.iItem := I;
+    Item.lParam := LPARAM(Items[I]);
+    SendMessage(LV.Handle, LVM_SETITEMW, 0, LPARAM(@Item));
+  end;
+  {$endif}
+end;
+
 procedure TListItems_Exchange(Obj: Pointer; Index1, Index2: Integer); BETH_CALL;
 begin
   try
     TListItems(Obj).Exchange(Index1, Index2);
+    FixListItemParams(TListItems(Obj), Index1, Index1);
+    FixListItemParams(TListItems(Obj), Index2, Index2);
   except
     ReportException;
   end;
@@ -5425,6 +5477,7 @@ procedure TListItems_Move(Obj: Pointer; FromIndex, ToIndex: Integer); BETH_CALL;
 begin
   try
     TListItems(Obj).Move(FromIndex, ToIndex);
+    FixListItemParams(TListItems(Obj), FromIndex, ToIndex);
   except
     ReportException;
   end;
@@ -16186,6 +16239,431 @@ begin
   end;
 end;
 
+
+{ ---------------- TListView の細部(docs/adr/0052) ----------------
+  OnCustomDrawItem・OnCustomDrawSubItem の State は TCustomDrawState、OnDrawItem の State は TOwnerDrawState の Ord の位置のビット。
+  OnEdited・OnCustomDrawItem のコールバックは TTreeView(docs/adr/0051)と同じ形を使う。 }
+
+type
+  { OnCompare(TLVCompareEvent)用。 }
+  TBethLVCompareCallback = procedure(Sender, Item1, Item2: Pointer; Data: Integer; Compare: PInteger; CbData: Pointer); BETH_CALL;
+  { OnCustomDrawSubItem(TLVCustomDrawSubItemEvent)用。 }
+  TBethLVCustomDrawSubItemCallback = procedure(Sender, Item: Pointer; SubItem: Integer; State: Cardinal; DefaultDraw: PInteger;
+    Data: Pointer); BETH_CALL;
+  { OnDrawItem(TLVDrawItemEvent)用。 }
+  TBethLVDrawItemCallback = procedure(Sender, Item: Pointer; Left, Top, Right, Bottom: Integer; State: Cardinal; Data: Pointer); BETH_CALL;
+
+  TListViewBridge052 = class(TComponent)
+  private
+    FCompare: TBethLVCompareCallback;
+    FEditing: TBethItemAllowCallback;
+    FEdited: TBethTVEditedCallback;
+    FCustomDraw: TBethTVCustomDrawCallback;
+    FCustomDrawSub: TBethLVCustomDrawSubItemCallback;
+    FDraw: TBethLVDrawItemCallback;
+    FData: Pointer;
+  public
+    procedure DoCompare(Sender: TObject; Item1, Item2: TListItem; Data: Integer; var Compare: Integer);
+    procedure DoEditing(Sender: TObject; Item: TListItem; var AllowEdit: Boolean);
+    procedure DoEdited(Sender: TObject; Item: TListItem; var AValue: AnsiString);
+    procedure DoCustomDraw(Sender: TCustomListView; Item: TListItem; State: TCustomDrawState; var DefaultDraw: Boolean);
+    procedure DoCustomDrawSub(Sender: TCustomListView; Item: TListItem; SubItem: Integer; State: TCustomDrawState;
+      var DefaultDraw: Boolean);
+    procedure DoDraw(Sender: TCustomListView; AItem: TListItem; ARect: TRect; AState: LCLType.TOwnerDrawState);
+  end;
+
+function CustomDrawStateBits052(State: TCustomDrawState): Cardinal;
+var
+  F: TCustomDrawStateFlag;
+begin
+  Result := 0;
+  for F := Low(TCustomDrawStateFlag) to High(TCustomDrawStateFlag) do
+    if F in State then
+      Result := Result or (Cardinal(1) shl Ord(F));
+end;
+
+procedure TListViewBridge052.DoCompare(Sender: TObject; Item1, Item2: TListItem; Data: Integer; var Compare: Integer);
+var
+  C: Integer;
+begin
+  if not Assigned(FCompare) or GDetaching then
+    Exit;
+  WatchItem(Item1);
+  WatchItem(Item2);
+  C := Compare;
+  FCompare(Pointer(Sender), Pointer(Item1), Pointer(Item2), Data, @C, FData);
+  Compare := C;
+  CheckCallbackError;
+end;
+
+procedure TListViewBridge052.DoEditing(Sender: TObject; Item: TListItem; var AllowEdit: Boolean);
+var
+  A: Integer;
+begin
+  if not Assigned(FEditing) or GDetaching then
+    Exit;
+  if AllowEdit then A := -1 else A := 0;
+  FEditing(Pointer(Sender), WatchItem(Item), @A, FData);
+  AllowEdit := A <> 0;
+  CheckCallbackError;
+end;
+
+procedure TListViewBridge052.DoEdited(Sender: TObject; Item: TListItem; var AValue: AnsiString);
+var
+  R: PChar;
+begin
+  if not Assigned(FEdited) or GDetaching then
+    Exit;
+  R := nil;
+  FEdited(Pointer(Sender), WatchItem(Item), PChar(AValue), @R, FData);
+  if R <> nil then
+    AValue := AnsiString(R);
+  CheckCallbackError;
+end;
+
+procedure TListViewBridge052.DoCustomDraw(Sender: TCustomListView; Item: TListItem; State: TCustomDrawState;
+  var DefaultDraw: Boolean);
+var
+  D: Integer;
+begin
+  if not Assigned(FCustomDraw) or GDetaching then
+    Exit;
+  if DefaultDraw then D := -1 else D := 0;
+  FCustomDraw(Pointer(Sender), WatchItem(Item), CustomDrawStateBits052(State), @D, FData);
+  DefaultDraw := D <> 0;
+  CheckCallbackError;
+end;
+
+procedure TListViewBridge052.DoCustomDrawSub(Sender: TCustomListView; Item: TListItem; SubItem: Integer;
+  State: TCustomDrawState; var DefaultDraw: Boolean);
+var
+  D: Integer;
+begin
+  if not Assigned(FCustomDrawSub) or GDetaching then
+    Exit;
+  if DefaultDraw then D := -1 else D := 0;
+  FCustomDrawSub(Pointer(Sender), WatchItem(Item), SubItem, CustomDrawStateBits052(State), @D, FData);
+  DefaultDraw := D <> 0;
+  CheckCallbackError;
+end;
+
+procedure TListViewBridge052.DoDraw(Sender: TCustomListView; AItem: TListItem; ARect: TRect; AState: LCLType.TOwnerDrawState);
+begin
+  if not Assigned(FDraw) or GDetaching then
+    Exit;
+  FDraw(Pointer(Sender), WatchItem(AItem), ARect.Left, ARect.Top, ARect.Right, ARect.Bottom, OwnerDrawStateBits(AState), FData);
+  CheckCallbackError;
+end;
+
+function ListViewBridge052For(Owner: TComponent; Current: Pointer; Data: Pointer): TListViewBridge052;
+begin
+  if (Current <> nil) and (TObject(Current) is TListViewBridge052) and (TListViewBridge052(Current).Owner = Owner) then
+    Result := TListViewBridge052(Current)
+  else
+    Result := TListViewBridge052.Create(Owner);
+  Result.FData := Data;
+end;
+
+function TCustomListView_GetCanvas(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TCustomListView(Obj).Canvas);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+function TCustomListView_GetOwnerData(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomListView(Obj).OwnerData;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+{ LCL は OwnerData を切り替えると Items(TListItems)を作り直す。C++ 側は切り替えの後に Items のハンドルを取り直す。 }
+procedure TCustomListView_SetOwnerData(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomListView(Obj).OwnerData := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomListView_GetHotTrack(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomListView(Obj).HotTrack;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomListView_SetHotTrack(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomListView(Obj).HotTrack := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomListView_IsEditing(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomListView(Obj).IsEditing;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+function TCustomListView_AlphaSort(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomListView(Obj).AlphaSort;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomListView_Sort(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TCustomListView(Obj).Sort;
+  except
+    ReportException;
+  end;
+end;
+
+function TListView_GetShowColumnHeaders(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TListView(Obj).ShowColumnHeaders;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TListView_SetShowColumnHeaders(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TListView(Obj).ShowColumnHeaders := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TListView_GetColumnClick(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TListView(Obj).ColumnClick;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TListView_SetColumnClick(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TListView(Obj).ColumnClick := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TListView_GetToolTips(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TListView(Obj).ToolTips;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TListView_SetToolTips(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TListView(Obj).ToolTips := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TListView_GetOwnerDraw(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TListView(Obj).OwnerDraw;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TListView_SetOwnerDraw(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TListView(Obj).OwnerDraw := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TListView_GetAutoSort(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TListView(Obj).AutoSort;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TListView_SetAutoSort(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TListView(Obj).AutoSort := Value;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TListView_SetOnData(Obj: Pointer; Cb: TBethItemCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TListView(Obj).OnData := @ItemBridgeFor(TListView(Obj), TMethod(TListView(Obj).OnData).Data, Cb, Data).DoListItem;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TListView_SetOnCompare(Obj: Pointer; Cb: TBethLVCompareCallback; Data: Pointer); BETH_CALL;
+var
+  B: TListViewBridge052;
+begin
+  try
+    B := ListViewBridge052For(TListView(Obj), TMethod(TListView(Obj).OnCompare).Data, Data);
+    B.FCompare := Cb;
+    TListView(Obj).OnCompare := @B.DoCompare;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TListView_SetOnEditing(Obj: Pointer; Cb: TBethItemAllowCallback; Data: Pointer); BETH_CALL;
+var
+  B: TListViewBridge052;
+begin
+  try
+    B := ListViewBridge052For(TListView(Obj), TMethod(TListView(Obj).OnEditing).Data, Data);
+    B.FEditing := Cb;
+    TListView(Obj).OnEditing := @B.DoEditing;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TListView_SetOnEdited(Obj: Pointer; Cb: TBethTVEditedCallback; Data: Pointer); BETH_CALL;
+var
+  B: TListViewBridge052;
+begin
+  try
+    B := ListViewBridge052For(TListView(Obj), TMethod(TListView(Obj).OnEdited).Data, Data);
+    B.FEdited := Cb;
+    TListView(Obj).OnEdited := @B.DoEdited;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TListView_SetOnCustomDrawItem(Obj: Pointer; Cb: TBethTVCustomDrawCallback; Data: Pointer); BETH_CALL;
+var
+  B: TListViewBridge052;
+begin
+  try
+    B := ListViewBridge052For(TListView(Obj), TMethod(TListView(Obj).OnCustomDrawItem).Data, Data);
+    B.FCustomDraw := Cb;
+    TListView(Obj).OnCustomDrawItem := @B.DoCustomDraw;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TListView_SetOnCustomDrawSubItem(Obj: Pointer; Cb: TBethLVCustomDrawSubItemCallback; Data: Pointer); BETH_CALL;
+var
+  B: TListViewBridge052;
+begin
+  try
+    B := ListViewBridge052For(TListView(Obj), TMethod(TListView(Obj).OnCustomDrawSubItem).Data, Data);
+    B.FCustomDrawSub := Cb;
+    TListView(Obj).OnCustomDrawSubItem := @B.DoCustomDrawSub;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TListView_SetOnDrawItem(Obj: Pointer; Cb: TBethLVDrawItemCallback; Data: Pointer); BETH_CALL;
+var
+  B: TListViewBridge052;
+begin
+  try
+    B := ListViewBridge052For(TListView(Obj), TMethod(TListView(Obj).OnDrawItem).Data, Data);
+    B.FDraw := Cb;
+    TListView(Obj).OnDrawItem := @B.DoDraw;
+  except
+    ReportException;
+  end;
+end;
+
+{ OwnerData のときだけ効く(LCL の TListItems.SetCount は、OwnerData でなければ何もしない)。 }
+procedure TListItems_SetCount(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TListItems(Obj).Count := Value;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TListItem_DisplayRect(Obj: Pointer; Code: Integer; Left, Top, Right, Bottom: PInteger); BETH_CALL;
+var
+  R: TRect;
+begin
+  try
+    R := TListItem(Obj).DisplayRect(TDisplayCode(Code));
+    Left^ := R.Left;
+    Top^ := R.Top;
+    Right^ := R.Right;
+    Bottom^ := R.Bottom;
+  except
+    ReportException;
+  end;
+end;
+
+{ LCL の TListItem.EditCaption は、OnEditing で断られても True を返す。編集を始めたかを返すよう、呼び出しの後の IsEditing を返す。 }
+function TListItem_EditCaption(Obj: Pointer): LongBool; BETH_CALL;
+var
+  LV: TCustomListView;
+begin
+  try
+    TListItem(Obj).EditCaption;
+    LV := TListItem(Obj).Owner.Owner;
+    Result := (LV <> nil) and LV.IsEditing;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
 exports
   FreeNotify_SetCallback,
   Error_SetCallback,
@@ -17706,7 +18184,35 @@ exports
   TTreeView_SetOnCustomDrawItem,
   TTreeNode_DisplayRect,
   TTreeNode_EditText,
-  TTreeNode_EndEdit;
+  TTreeNode_EndEdit,
+  TCustomListView_GetCanvas,
+  TCustomListView_GetOwnerData,
+  TCustomListView_SetOwnerData,
+  TCustomListView_GetHotTrack,
+  TCustomListView_SetHotTrack,
+  TCustomListView_IsEditing,
+  TCustomListView_AlphaSort,
+  TCustomListView_Sort,
+  TListView_GetShowColumnHeaders,
+  TListView_SetShowColumnHeaders,
+  TListView_GetColumnClick,
+  TListView_SetColumnClick,
+  TListView_GetToolTips,
+  TListView_SetToolTips,
+  TListView_GetOwnerDraw,
+  TListView_SetOwnerDraw,
+  TListView_GetAutoSort,
+  TListView_SetAutoSort,
+  TListView_SetOnData,
+  TListView_SetOnCompare,
+  TListView_SetOnEditing,
+  TListView_SetOnEdited,
+  TListView_SetOnCustomDrawItem,
+  TListView_SetOnCustomDrawSubItem,
+  TListView_SetOnDrawItem,
+  TListItems_SetCount,
+  TListItem_DisplayRect,
+  TListItem_EditCaption;
 
 begin
   RequireDerivedFormResource := False;

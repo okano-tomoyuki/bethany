@@ -65,6 +65,11 @@ using menu_measure_callback_t = void (BETH_CALL *)(obj_t sender, obj_t canvas, i
 using tv_compare_callback_t = void (BETH_CALL *)(obj_t sender, obj_t node1, obj_t node2, int_t* compare, void* data);
 using tv_edited_callback_t = void (BETH_CALL *)(obj_t sender, obj_t node, str_t s, str_t* result, void* data);
 using tv_custom_draw_callback_t = void (BETH_CALL *)(obj_t sender, obj_t node, uint_t state, bool_t* defaultDraw, void* data);
+// TListView の OnCompare・OnCustomDrawSubItem・OnDrawItem(docs/adr/0052)。OnEdited・OnCustomDrawItem は TTreeView と同じ形を使う。
+// OnDrawItem の state は TOwnerDrawState のビット。
+using lv_compare_callback_t = void (BETH_CALL *)(obj_t sender, obj_t item1, obj_t item2, int_t data, int_t* compare, void* cbData);
+using lv_custom_draw_sub_item_callback_t = void (BETH_CALL *)(obj_t sender, obj_t item, int_t subItem, uint_t state, bool_t* defaultDraw, void* data);
+using lv_draw_item_callback_t = void (BETH_CALL *)(obj_t sender, obj_t item, int_t left, int_t top, int_t right, int_t bottom, uint_t state, void* data);
 
 #define BETH_DECLARE_FUNC(ret, name, params, args) ret name params;
 BETH_FUNCS(BETH_DECLARE_FUNC)

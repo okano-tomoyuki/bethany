@@ -106,7 +106,8 @@ checks["groupColumns"] = f"{f.RadioGroup1.Columns}/{int(f.RadioGroup1.ColumnLayo
 checks["scrollChange"] = f"{f.ScrollBar1.LargeChange}/{f.ScrollBar1.SmallChange}"
 checks["ownerDraw"] = f"{int(f.ColorList.Style)}/{f.ColorList.ItemHeight}"
 checks["treeView"] = f"{int(f.Tree1.SortType)}/{f.Tree1.Indent}/{int(f.Tree1.MultiSelect)}"
-checks["memoBorder"] = f"{int(f.Memo1.BorderStyle)}/{int(f.Memo1.ScrollBars)}"
+checks["listView"] = f"{int(f.List1.ViewStyle)}/{int(f.List1.ShowColumnHeaders)}/{int(f.List1.AutoSort)}/{int(f.List1.OwnerData)}"
+checks["memoBorder"] =f"{int(f.Memo1.BorderStyle)}/{int(f.Memo1.ScrollBars)}"
 checks["timer"] = f"{int(f.Timer1.Enabled)}/{f.Timer1.Interval}"
 checks["caption"] = f.Caption
 checks["spinValue"] = str(f.SizeSpin.Value)
@@ -134,6 +135,14 @@ _edited = Ref("x")
 f.Tree1.OnEdited(f.Tree1, None, _edited)
 checks["treeEdited"] = _edited.value + "!"
 f.Tree1.OnCustomDrawItem(f.Tree1, None, cdsSelected, Ref(True))
+# OwnerData のリストビューは、項目を求めると LCL が OnData を呼ぶ
+f.List1.Items.Count = 3
+checks["listCount"] = str(f.List1.Items.Count)
+f.List1.Items.Item[1].Caption
+f.List1.OnCompare(f.List1, None, None, 0, Ref(0))
+_list_edited = Ref("y")
+f.List1.OnEdited(f.List1, None, _list_edited)
+checks["listEdited"] = _list_edited.value + "!"
 f.OnDropFiles(f, ["C:/temp/a.txt"])
 f.Close()
 for _ in range(5):

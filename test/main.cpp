@@ -2683,6 +2683,80 @@ int main()
         };
     }
 
+    // TListView の細部(docs/adr/0052)。ListView1("Page 2")は、ラベルの編集(項目のダブルクリック)を Gamma だけ始めさせず、
+    // 空にした編集は元の文字列に戻す。Beta は青い文字、Size の列は緑の文字で描く。列見出しのクリックでの並べ替えは AutoSort と
+    // OnCompare で、Size の列は数の順にする。"Virtual" ページには、10000 行の仮想モード(OwnerData)の一覧を OnDrawItem で縞模様に描く。
+    {
+        TListView* lv = Form1->ListView1;
+        lv->OnEditing = [](TObject*, TListItem* Item, bool& AllowEdit) {
+            std::printf("ListView1 OnEditing: %s\n", std::string(Item->Caption).c_str());
+            AllowEdit = std::string(Item->Caption) != "Gamma";  // Gamma は編集させない
+        };
+        lv->OnEdited = [](TObject*, TListItem* Item, std::string& AValue) {
+            std::printf("ListView1 OnEdited: %s -> %s\n", std::string(Item->Caption).c_str(), AValue.c_str());
+            if (AValue.empty())
+                AValue = Item->Caption;  // 空にはさせない
+        };
+        lv->OnCustomDrawItem = [](TCustomListView* Sender, TListItem* Item, TCustomDrawState, bool&) {
+            Sender->Canvas.Font.Color = std::string(Item->Caption) == "Beta" ? clBlue : clWindowText;
+        };
+        lv->OnCustomDrawSubItem = [](TCustomListView* Sender, TListItem*, int SubItem, TCustomDrawState, bool&) {
+            Sender->Canvas.Font.Color = SubItem == 1 ? clGreen : clWindowText;
+        };
+        lv->OnCompare = [lv](TObject*, TListItem* Item1, TListItem* Item2, int, int& Compare) {
+            if (lv->SortColumn == 1)
+                Compare = std::stoi(std::string(Item1->SubItems->Strings[0])) - std::stoi(std::string(Item2->SubItems->Strings[0]));
+            else
+                Compare = std::string(Item1->Caption).compare(std::string(Item2->Caption));
+            if (lv->SortDirection == sdDescending)
+                Compare = -Compare;  // OnCompare があると SortDirection は使われないので、自分で逆にする
+        };
+        // 並べ替えは AutoSort(既定で true)に任せる: 列見出しのクリックでその列の昇順、同じ列をもう一度クリックすると降順
+        lv->SortType = stText;
+        lv->OnColumnClick = [](TObject*, TListColumn* Column) {
+            std::printf("ListView1ColumnClick: %s\n", std::string(Column->Caption).c_str());
+            std::fflush(stdout);
+        };
+        std::printf("ListView1 ShowColumnHeaders=%d ColumnClick=%d AutoSort=%d ToolTips=%d (expected 1 1 1 1)\n",
+                    (bool)lv->ShowColumnHeaders, (bool)lv->ColumnClick, (bool)lv->AutoSort, (bool)lv->ToolTips);
+
+        TTabSheet* virtualSheet = new TTabSheet(Form1);
+        virtualSheet->PageControl = Form1->PageControl1;
+        virtualSheet->Caption = "Virtual";
+        TListView* vlist = new TListView(Form1);
+        vlist->Parent = virtualSheet;
+        vlist->Align = alClient;
+        vlist->ViewStyle = vsReport;
+        vlist->RowSelect = true;
+        TListColumn* rowColumn = vlist->Columns->Add();
+        rowColumn->Caption = "Row";
+        rowColumn->Width = 100;
+        TListColumn* squareColumn = vlist->Columns->Add();
+        squareColumn->Caption = "Square";
+        squareColumn->Width = 90;
+        vlist->OnData = [](TObject*, TListItem* Item) {
+            int i = Item->Index;
+            Item->Caption = "Row " + std::to_string(i);
+            Item->SubItems->Add(std::to_string(static_cast<long long>(i) * i));
+        };
+        vlist->OwnerData = true;
+        vlist->Items->Count = 10000;
+        vlist->OwnerDraw = true;
+        vlist->OnDrawItem = [](TCustomListView* Sender, TListItem* Item, TRect ARect, TOwnerDrawState State) {
+            TCanvas& c = Sender->Canvas;
+            bool selected = (State & odSelected) != 0;
+            c.Brush.Color = selected ? clHighlight : (Item->Index % 2 ? clWindow : clYellow);
+            c.FillRect(ARect);
+            c.Brush.Style = bsClear;
+            c.Font.Color = selected ? clHighlightText : clWindowText;
+            c.TextOut(ARect.Left + 4, ARect.Top + 1, std::string(Item->Caption));
+            c.TextOut(ARect.Left + 104, ARect.Top + 1, std::string(Item->SubItems->Strings[0]));
+            c.Brush.Style = bsSolid;
+        };
+        std::printf("Virtual list OwnerData=%d Items->Count=%d (expected 1 10000), Item[1234]=%s\n", (bool)vlist->OwnerData,
+                    (int)vlist->Items->Count, std::string(vlist->Items->Item[1234]->Caption).c_str());
+    }
+
     // ステータスバーのパネル(docs/adr/0044)。StatusBar1 の上に、パネルを持つ 2 つ目のステータスバーを置く。
     {
         TStatusBar* panelBar = new TStatusBar(Form1);

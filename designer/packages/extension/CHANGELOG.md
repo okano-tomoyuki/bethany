@@ -38,6 +38,9 @@
   `clWindow` and `clBtnFace`
 - New from the Bethany library 0.3.0: `MultiSelect`, `MultiSelectStyle`, `SortType`, `Indent`, `HotTrack`, `RightClickSelect` and
   `ToolTips` of tree views, and the `OnCompare`, `OnEditing`, `OnEdited` and `OnCustomDrawItem` events
+- New from the Bethany library 0.3.0: `ShowColumnHeaders`, `ColumnClick`, `ToolTips`, `OwnerDraw`, `AutoSort`, `OwnerData` and
+  `HotTrack` of list views, and the `OnCompare`, `OnData`, `OnEditing`, `OnEdited`, `OnCustomDrawItem`, `OnCustomDrawSubItem` and
+  `OnDrawItem` events
 - The include guard macro does not repeat a namespace that is also the folder of the header
   (`APP_DIALOGS_ABOUT_HPP` instead of `APP_DIALOGS_DIALOGS_ABOUT_HPP` for `app::dialogs` and `dialogs/About.hpp`)
 

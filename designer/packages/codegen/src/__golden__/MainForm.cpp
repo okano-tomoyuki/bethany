@@ -29,6 +29,8 @@ void TMainForm::beth_CreateComponents()
     ScrollBar1 = new TScrollBar(this);
     MemoSheet = new TTabSheet(this);
     Memo1 = new TMemo(this);
+    ListSheet = new TTabSheet(this);
+    List1 = new TListView(this);
     BottomPanel = new TPanel(this);
     StatusLabel = new TLabel(this);
     HintPanel = new TPanel(this);
@@ -164,6 +166,23 @@ void TMainForm::beth_CreateComponents()
     Memo1->Lines->Add("line 1");
     Memo1->Lines->Add("line \"2\"");
 
+    ListSheet->PageControl = PageControl1;
+    ListSheet->Caption = "List";
+
+    List1->Parent = ListSheet;
+    List1->Left = 0;
+    List1->Top = 0;
+    List1->Width = 355;
+    List1->Height = 92;
+    List1->Align = alClient;
+    List1->OwnerData = true;
+    List1->ViewStyle = vsReport;
+    List1->ShowColumnHeaders = false;
+    List1->AutoSort = false;
+    List1->OnCompare = [this](TObject* Sender, TListItem* Item1, TListItem* Item2, int Data, int& Compare) { List1Compare(Sender, Item1, Item2, Data, Compare); };
+    List1->OnData = [this](TObject* Sender, TListItem* Item) { List1Data(Sender, Item); };
+    List1->OnEdited = [this](TObject* Sender, TListItem* Item, std::string& AValue) { List1Edited(Sender, Item, AValue); };
+
     BottomPanel->Parent = this;
     BottomPanel->Left = 0;
     BottomPanel->Top = 259;
@@ -259,7 +278,7 @@ void TMainForm::beth_CreateComponents()
 
     FileSaveItem->Action = FileSaveAction;
 }
-// <bethany-designer:end id="beth_CreateComponents" hash="2da69caf">
+// <bethany-designer:end id="beth_CreateComponents" hash="fa11fcfe">
 
 // <bethany-designer:handler-stubs>
 
@@ -299,6 +318,21 @@ void TMainForm::RadioGroup1SelectionChanged(TObject* Sender)
 }
 
 void TMainForm::ScrollBar1Scroll(TObject* Sender, TScrollCode ScrollCode, int& ScrollPos)
+{
+    // TODO: implement
+}
+
+void TMainForm::List1Compare(TObject* Sender, TListItem* Item1, TListItem* Item2, int Data, int& Compare)
+{
+    // TODO: implement
+}
+
+void TMainForm::List1Data(TObject* Sender, TListItem* Item)
+{
+    // TODO: implement
+}
+
+void TMainForm::List1Edited(TObject* Sender, TListItem* Item, std::string& AValue)
 {
     // TODO: implement
 }

@@ -3974,6 +3974,8 @@ enum TViewStyle     { vsIcon, vsSmallIcon, vsList, vsReport };
 // TSortType は TTreeView と共通(docs/adr/0051 の区間)。
 enum TSortDirection { sdAscending, sdDescending };
 enum TItemChange    { ctText, ctImage, ctState };
+// TListItem::DisplayRect で求める矩形(項目全体・画像・文字・選択の範囲。docs/adr/0052)。
+enum TDisplayCode   { drBounds, drIcon, drLabel, drSelectBounds };
 
 class TCustomListView;
 class TListView;
@@ -4005,6 +4007,13 @@ public:
     // この項目を削除する。このラッパーも delete されるため、呼び出し後に触れてはならない。
     void Delete();
     void MakeVisible(bool PartialOK);
+
+    // ---- docs/adr/0052 ----
+    // 項目の矩形(リストビューのクライアント座標)。
+    TRect DisplayRect(TDisplayCode Code) const;
+    // この項目だけを選んで、ラベルの編集を始める(ReadOnly のときや OnEditing で断られたときは始めず false)。
+    // 編集は Enter・フォーカスの移動で終わり(OnEdited)、Esc で取り消す。
+    bool EditCaption();
 
 private:
     TStrings subItems_;
@@ -4045,7 +4054,8 @@ public:
     explicit TListItems(ObjectHandle handle);
     ~TListItems() override = default;
 
-    ReadOnlyProperty<int> Count;
+    // 項目の数。OwnerData のときは、設定した数の項目を表示する(OwnerData でなければ設定しても何もしない。docs/adr/0052)。
+    Property<int> Count;
     // ListView1->Items->Item[i]。
     ReadOnlyIndexedProperty<TListItem*> Item;
 
@@ -4063,8 +4073,12 @@ public:
     void       EndUpdate();
 
 private:
+    friend class TCustomListView;  // OwnerData を切り替えたときに、作り直された一覧のハンドルに付け替えるため
+    void Rebind(ObjectHandle handle) { handle_ = handle; }
+
     static TListItem* GetItemImpl(TObject* owner, int Index);
     static int GetCountImpl(TObject* owner);
+    static void SetCountImpl(TObject* owner, const int& value);
 };
 
 // リストビューの列(LCL の TListColumn。TCollectionItem)。項目と同じく同じ列には常に同じポインタが返る。
@@ -4136,6 +4150,26 @@ using TLVSelectItemEvent  = std::function<void(TObject* Sender, TListItem* Item,
 using TLVChangeEvent      = std::function<void(TObject* Sender, TListItem* Item, TItemChange Change)>;
 using TLVColumnClickEvent = std::function<void(TObject* Sender, TListColumn* Column)>;
 
+// ---- TListView の細部(docs/adr/0052。LCL・VCL と同じ形) ----
+// 並べ替えで 2 つの項目を比べる(Item1 が前なら負、後ろなら正、同じなら 0 を Compare に入れる。Data は常に 0)。
+// OnCompare があると、SortDirection は使われない(降順にするときは Compare の符号を変える)。
+using TLVCompareEvent = std::function<void(TObject* Sender, TListItem* Item1, TListItem* Item2, int Data, int& Compare)>;
+// ラベルの編集を始める前(AllowEdit を false にすると編集させない)。
+using TLVEditingEvent = std::function<void(TObject* Sender, TListItem* Item, bool& AllowEdit)>;
+// ラベルの編集を終えたとき(AValue は入力した文字列。書き換えると、その文字列が Caption になる)。
+using TLVEditedEvent = std::function<void(TObject* Sender, TListItem* Item, std::string& AValue)>;
+// OwnerData のとき、表示する項目の内容を求める(Item->Index の項目の Caption・SubItems・ImageIndex を設定する)。
+using TLVDataEvent = TLVDeletedEvent;
+// 項目を描く前(DefaultDraw を false にすると、既定の描画をしない)。Sender->Canvas の Font・Brush を変えて
+// DefaultDraw のままにすると、その色で描かれる。
+using TLVCustomDrawItemEvent =
+    std::function<void(TCustomListView* Sender, TListItem* Item, TCustomDrawState State, bool& DefaultDraw)>;
+// vsReport のとき、2 列目以降(SubItem は 1 から)を描く前。
+using TLVCustomDrawSubItemEvent =
+    std::function<void(TCustomListView* Sender, TListItem* Item, int SubItem, TCustomDrawState State, bool& DefaultDraw)>;
+// OwnerDraw で ViewStyle が vsReport のとき、項目(行)を描く(ARect の範囲に Sender->Canvas で描く)。
+using TLVDrawItemEvent = std::function<void(TCustomListView* Sender, TListItem* Item, TRect ARect, TOwnerDrawState State)>;
+
 // 以下のメンバは LCL の TCustomListView の public。
 class TCustomListView : public TWinControl
 {
@@ -4167,6 +4201,22 @@ public:
     void       ClearSelection();
     void       SelectAll();
 
+    // ---- docs/adr/0052 ----
+    // OnCustomDrawItem・OnDrawItem で使う描画先。
+    TCanvas Canvas;
+    // 仮想モード。true にすると項目を持たず、Items->Count の数の項目を、表示のたびに OnData で求める。
+    // Items->Item[i] は、その位置の内容を入れた 1 つの共有の項目を返す(次に別の位置を求めると内容が変わる)。
+    // 切り替えると、それまでの項目はすべて削除される。
+    Property<bool> OwnerData;
+    // true なら、マウスの下の項目を強調する。
+    Property<bool> HotTrack;
+    // ラベルを編集しているか。
+    bool IsEditing() const;
+    // 1 列目(Caption)の昇順に並べる。SortType を stText、SortColumn を 0、SortDirection を sdAscending にする(LCL の仕様)。
+    bool AlphaSort();
+    // SortType・SortColumn・SortDirection(OnCompare があればそれ)で並べ直す(SortType が stNone なら何もしない)。
+    void Sort();
+
 protected:
     explicit TCustomListView(ObjectHandle handle);
     ~TCustomListView() override = default;
@@ -4196,6 +4246,12 @@ private:
     // ---- docs/adr/0048 ----
     static TScrollStyle GetScrollBarsImpl(TObject* owner);
     static void         SetScrollBarsImpl(TObject* owner, const TScrollStyle& value);
+
+    // ---- docs/adr/0052 ----
+    static bool GetOwnerDataImpl(TObject* owner);
+    static void SetOwnerDataImpl(TObject* owner, const bool& value);
+    static bool GetHotTrackImpl(TObject* owner);
+    static void SetHotTrackImpl(TObject* owner, const bool& value);
 };
 
 // 以下のメンバは LCL では TCustomListView の protected で、TListView が published にしている。
@@ -4230,6 +4286,25 @@ public:
     Property<TCustomImageList*> LargeImages;
     Property<TCustomImageList*> SmallImages;
     Property<TCustomImageList*> StateImages;
+
+    // ---- docs/adr/0052 ----
+    // vsReport のときに列見出しを表示するか。
+    Property<bool> ShowColumnHeaders;
+    // 列見出しをクリックできるか(false なら OnColumnClick も呼ばれない)。
+    Property<bool> ColumnClick;
+    // true なら、はみ出した項目の文字をツールチップで表示する。
+    Property<bool> ToolTips;
+    // true で ViewStyle が vsReport なら、項目を OnDrawItem で描く。
+    Property<bool> OwnerDraw;
+    // true(既定)なら、SortType が stNone でないとき、列見出しのクリックで SortColumn をその列にする(同じ列なら SortDirection を逆にする)。
+    Property<bool> AutoSort;
+    Property<TLVCompareEvent>           OnCompare;
+    Property<TLVDataEvent>              OnData;
+    Property<TLVEditingEvent>           OnEditing;
+    Property<TLVEditedEvent>            OnEdited;
+    Property<TLVCustomDrawItemEvent>    OnCustomDrawItem;
+    Property<TLVCustomDrawSubItemEvent> OnCustomDrawSubItem;
+    Property<TLVDrawItemEvent>          OnDrawItem;
 
 protected:
     ~TListView() override = default;
@@ -4283,6 +4358,53 @@ private:
     static void SetSmallImagesImpl(TObject* owner, TCustomImageList* const& value);
     static TCustomImageList* GetStateImagesImpl(TObject* owner);
     static void SetStateImagesImpl(TObject* owner, TCustomImageList* const& value);
+
+    // ---- docs/adr/0052 ----
+    static bool GetShowColumnHeadersImpl(TObject* owner);
+    static void SetShowColumnHeadersImpl(TObject* owner, const bool& value);
+    static bool GetColumnClickImpl(TObject* owner);
+    static void SetColumnClickImpl(TObject* owner, const bool& value);
+    static bool GetToolTipsImpl(TObject* owner);
+    static void SetToolTipsImpl(TObject* owner, const bool& value);
+    static bool GetOwnerDrawImpl(TObject* owner);
+    static void SetOwnerDrawImpl(TObject* owner, const bool& value);
+    static bool GetAutoSortImpl(TObject* owner);
+    static void SetAutoSortImpl(TObject* owner, const bool& value);
+    TLVCompareEvent onCompare_;
+    bool onCompareHooked_ = false;
+    static TLVCompareEvent GetOnCompareImpl(TObject* owner);
+    static void SetOnCompareImpl(TObject* owner, const TLVCompareEvent& value);
+    static void BETH_CALL CompareTrampoline(ObjectHandle sender, ObjectHandle item1, ObjectHandle item2, internal::int_t data, internal::int_t* compare, void* cbData);
+    TLVDataEvent onData_;
+    bool onDataHooked_ = false;
+    static TLVDataEvent GetOnDataImpl(TObject* owner);
+    static void SetOnDataImpl(TObject* owner, const TLVDataEvent& value);
+    static void BETH_CALL DataTrampoline(ObjectHandle sender, ObjectHandle item, void* data);
+    TLVEditingEvent onEditing_;
+    bool onEditingHooked_ = false;
+    static TLVEditingEvent GetOnEditingImpl(TObject* owner);
+    static void SetOnEditingImpl(TObject* owner, const TLVEditingEvent& value);
+    static void BETH_CALL EditingTrampoline(ObjectHandle sender, ObjectHandle item, internal::bool_t* allow, void* data);
+    TLVEditedEvent onEdited_;
+    bool onEditedHooked_ = false;
+    static TLVEditedEvent GetOnEditedImpl(TObject* owner);
+    static void SetOnEditedImpl(TObject* owner, const TLVEditedEvent& value);
+    static void BETH_CALL EditedTrampoline(ObjectHandle sender, ObjectHandle item, internal::str_t s, internal::str_t* result, void* data);
+    TLVCustomDrawItemEvent onCustomDrawItem_;
+    bool onCustomDrawItemHooked_ = false;
+    static TLVCustomDrawItemEvent GetOnCustomDrawItemImpl(TObject* owner);
+    static void SetOnCustomDrawItemImpl(TObject* owner, const TLVCustomDrawItemEvent& value);
+    static void BETH_CALL CustomDrawItemTrampoline(ObjectHandle sender, ObjectHandle item, internal::uint_t state, internal::bool_t* defaultDraw, void* data);
+    TLVCustomDrawSubItemEvent onCustomDrawSubItem_;
+    bool onCustomDrawSubItemHooked_ = false;
+    static TLVCustomDrawSubItemEvent GetOnCustomDrawSubItemImpl(TObject* owner);
+    static void SetOnCustomDrawSubItemImpl(TObject* owner, const TLVCustomDrawSubItemEvent& value);
+    static void BETH_CALL CustomDrawSubItemTrampoline(ObjectHandle sender, ObjectHandle item, internal::int_t subItem, internal::uint_t state, internal::bool_t* defaultDraw, void* data);
+    TLVDrawItemEvent onDrawItem_;
+    bool onDrawItemHooked_ = false;
+    static TLVDrawItemEvent GetOnDrawItemImpl(TObject* owner);
+    static void SetOnDrawItemImpl(TObject* owner, const TLVDrawItemEvent& value);
+    static void BETH_CALL DrawItemTrampoline(ObjectHandle sender, ObjectHandle item, internal::int_t left, internal::int_t top, internal::int_t right, internal::int_t bottom, internal::uint_t state, void* data);
 };
 
 // Splitter のドラッグ中の表示のしかた(寄せる辺の ResizeAnchor は TAnchorKind)。

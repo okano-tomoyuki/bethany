@@ -157,6 +157,35 @@
                 }
               }
             ]
+          },
+          {
+            "name": "ListSheet",
+            "class": "TTabSheet",
+            "properties": {
+              "Caption": "List"
+            },
+            "controls": [
+              {
+                "name": "List1",
+                "class": "TListView",
+                "properties": {
+                  "Left": 0,
+                  "Top": 0,
+                  "Width": 355,
+                  "Height": 92,
+                  "Align": "alClient",
+                  "OwnerData": true,
+                  "ViewStyle": "vsReport",
+                  "ShowColumnHeaders": false,
+                  "AutoSort": false
+                },
+                "events": {
+                  "OnCompare": "List1Compare",
+                  "OnData": "List1Data",
+                  "OnEdited": "List1Edited"
+                }
+              }
+            ]
           }
         ]
       },

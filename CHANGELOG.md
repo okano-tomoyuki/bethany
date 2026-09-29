@@ -53,6 +53,10 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
 - TTreeView の複数選択(`MultiSelect`・`MultiSelectStyle`・`Selections[i]`・`SelectionCount`)、並べ替え(`SortType`・`OnCompare`)、ラベルの編集
   (`OnEditing`・`OnEdited`・`IsEditing()`、ノードの `EditText()`・`EndEdit()`)、`Options`・`Indent`・`HotTrack`・`RightClickSelect`・`ToolTips`・
   `OnCustomDrawItem`、ノードの `DisplayRect()`([ADR 0051](docs/adr/0051-treeview-details.md))
+- TListView の仮想モード(`OwnerData`・`OnData`、`Items->Count` の設定)、ラベルの編集(`OnEditing`・`OnEdited`・`IsEditing()`、項目の
+  `EditCaption()`)、並べ替え(`OnCompare`・`AlphaSort()`・`Sort()`・`AutoSort`)、独自の描画(`Canvas`・`OnCustomDrawItem`・`OnCustomDrawSubItem`、
+  `OwnerDraw`・`OnDrawItem`)、`ShowColumnHeaders`・`ColumnClick`・`ToolTips`・`HotTrack`、項目の `DisplayRect()`
+  ([ADR 0052](docs/adr/0052-listview-details.md))
 
 ### 変更
 
@@ -62,6 +66,8 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
 
 ### 修正
 
+- TListView の `Items->Exchange()`・`Move()` の後に並べ替えると、表示される文字列と行の項目(選択・編集の対象)がずれていた
+  (LCL の Win32 実装の不具合。DLL で行の項目を付け直す。[ADR 0052](docs/adr/0052-listview-details.md))
 - メインフォームを最小化すると、フォームが隠れたままタスクバーのボタンも消え、元に戻せなかった(`Application->Minimize()` も同じ)。
   DLL では LCL のアプリケーションのウィンドウが作られないため、メインフォームがタスクバーのボタンを持つ(`MainFormOnTaskBar`)ようにした
 - FetchContent の取り込み先を変えた(`FETCHCONTENT_SOURCE_DIR_BETH` 等)後も、以前の取り込み先の `beth.dll` を exe の隣に写し続けていた。

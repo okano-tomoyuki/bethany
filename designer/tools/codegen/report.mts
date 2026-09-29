@@ -67,6 +67,9 @@ export const EXPECTED_CALLS = [
   'ColorListDrawItem',
   'Tree1Edited',
   'Tree1CustomDrawItem',
+  'List1Data',
+  'List1Compare',
+  'List1Edited',
 ];
 
 /** 参照・入れ子のオブジェクト・TStrings・メニュー等(検証のプログラムが読んだ値) */
@@ -95,6 +98,10 @@ export const EXPECTED_CHECKS: Readonly<Record<string, string>> = {
   // TTreeView(docs/adr/0051): SortType(stText)/Indent/MultiSelect と、OnEdited で書き換えた文字列
   treeView: '2/20/1',
   treeEdited: 'x!',
+  // TListView(docs/adr/0052): ViewStyle(vsReport)/ShowColumnHeaders/AutoSort/OwnerData、OwnerData の Items->Count と、OnEdited で書き換えた文字列
+  listView: '3/0/0/1',
+  listCount: '3',
+  listEdited: 'y!',
   dialogOptions: String((1 << 20) | (1 << 23) | (1 << 9)),
   timer: '0/500',
   caption: 'Sample',

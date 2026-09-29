@@ -10080,6 +10080,22 @@
           "declaredIn": "TCustomListView",
           "default": false
         },
+        "OwnerData": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomListView",
+          "default": false,
+          "doc": "仮想モード。true にすると項目を持たず、Items->Count の数の項目を、表示のたびに OnData で求める。 Items->Item[i] は、その位置の内容を入れた 1 つの共有の項目を返す(次に別の位置を求めると内容が変わる)。 切り替えると、それまでの項目はすべて削除される。"
+        },
+        "HotTrack": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomListView",
+          "default": false,
+          "doc": "true なら、マウスの下の項目を強調する。"
+        },
         "ViewStyle": {
           "type": {
             "kind": "enum",
@@ -10144,6 +10160,46 @@
           },
           "declaredIn": "TListView",
           "default": null
+        },
+        "ShowColumnHeaders": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TListView",
+          "default": true,
+          "doc": "vsReport のときに列見出しを表示するか。"
+        },
+        "ColumnClick": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TListView",
+          "default": true,
+          "doc": "列見出しをクリックできるか(false なら OnColumnClick も呼ばれない)。"
+        },
+        "ToolTips": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TListView",
+          "default": true,
+          "doc": "true なら、はみ出した項目の文字をツールチップで表示する。"
+        },
+        "OwnerDraw": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TListView",
+          "default": false,
+          "doc": "true で ViewStyle が vsReport なら、項目を OnDrawItem で描く。"
+        },
+        "AutoSort": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TListView",
+          "default": true,
+          "doc": "true(既定)なら、SortType が stNone でないとき、列見出しのクリックで SortColumn をその列にする(同じ列なら SortDirection を逆にする)。"
         }
       },
       "events": {
@@ -10229,6 +10285,34 @@
           "type": "TLVColumnClickEvent",
           "declaredIn": "TListView",
           "doc": "列見出しがクリックされたとき。"
+        },
+        "OnCompare": {
+          "type": "TLVCompareEvent",
+          "declaredIn": "TListView"
+        },
+        "OnData": {
+          "type": "TLVDeletedEvent",
+          "declaredIn": "TListView"
+        },
+        "OnEditing": {
+          "type": "TLVEditingEvent",
+          "declaredIn": "TListView"
+        },
+        "OnEdited": {
+          "type": "TLVEditedEvent",
+          "declaredIn": "TListView"
+        },
+        "OnCustomDrawItem": {
+          "type": "TLVCustomDrawItemEvent",
+          "declaredIn": "TListView"
+        },
+        "OnCustomDrawSubItem": {
+          "type": "TLVCustomDrawSubItemEvent",
+          "declaredIn": "TListView"
+        },
+        "OnDrawItem": {
+          "type": "TLVDrawItemEvent",
+          "declaredIn": "TListView"
         }
       }
     },
@@ -17692,6 +17776,12 @@
       "ctImage",
       "ctState"
     ],
+    "TDisplayCode": [
+      "drBounds",
+      "drIcon",
+      "drLabel",
+      "drSelectBounds"
+    ],
     "TResizeStyle": [
       "rsLine",
       "rsNone",
@@ -18498,6 +18588,114 @@
       {
         "name": "Column",
         "type": "TListColumn*"
+      }
+    ],
+    "TLVCompareEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "Item1",
+        "type": "TListItem*"
+      },
+      {
+        "name": "Item2",
+        "type": "TListItem*"
+      },
+      {
+        "name": "Data",
+        "type": "int"
+      },
+      {
+        "name": "Compare",
+        "type": "int&"
+      }
+    ],
+    "TLVEditingEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "Item",
+        "type": "TListItem*"
+      },
+      {
+        "name": "AllowEdit",
+        "type": "bool&"
+      }
+    ],
+    "TLVEditedEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "Item",
+        "type": "TListItem*"
+      },
+      {
+        "name": "AValue",
+        "type": "std::string&"
+      }
+    ],
+    "TLVCustomDrawItemEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "Item",
+        "type": "TListItem*"
+      },
+      {
+        "name": "State",
+        "type": "TCustomDrawState"
+      },
+      {
+        "name": "DefaultDraw",
+        "type": "bool&"
+      }
+    ],
+    "TLVCustomDrawSubItemEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "Item",
+        "type": "TListItem*"
+      },
+      {
+        "name": "SubItem",
+        "type": "int"
+      },
+      {
+        "name": "State",
+        "type": "TCustomDrawState"
+      },
+      {
+        "name": "DefaultDraw",
+        "type": "bool&"
+      }
+    ],
+    "TLVDrawItemEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "Item",
+        "type": "TListItem*"
+      },
+      {
+        "name": "ARect",
+        "type": "TRect"
+      },
+      {
+        "name": "State",
+        "type": "TOwnerDrawState"
       }
     ],
     "TDrawPanelEvent": [

@@ -1474,6 +1474,34 @@
     X(void,          TTreeView_SetOnCustomDrawItem,         (obj_t o, tv_custom_draw_callback_t cb, void* d),              (o, cb, d)) \
     X(void,          TTreeNode_DisplayRect,                 (obj_t o, bool_t textOnly, int_t* l, int_t* t, int_t* r, int_t* b), (o, textOnly, l, t, r, b)) \
     X(bool_t,        TTreeNode_EditText,                    (obj_t o),                                                     (o)) \
-    X(void,          TTreeNode_EndEdit,                     (obj_t o, bool_t cancel),                                      (o, cancel))
+    X(void,          TTreeNode_EndEdit,                     (obj_t o, bool_t cancel),                                      (o, cancel)) \
+    X(obj_t,         TCustomListView_GetCanvas,             (obj_t o),                                                     (o)) \
+    X(bool_t,        TCustomListView_GetOwnerData,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomListView_SetOwnerData,          (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomListView_GetHotTrack,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomListView_SetHotTrack,           (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomListView_IsEditing,             (obj_t o),                                                     (o)) \
+    X(bool_t,        TCustomListView_AlphaSort,             (obj_t o),                                                     (o)) \
+    X(void,          TCustomListView_Sort,                  (obj_t o),                                                     (o)) \
+    X(bool_t,        TListView_GetShowColumnHeaders,        (obj_t o),                                                     (o)) \
+    X(void,          TListView_SetShowColumnHeaders,        (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TListView_GetColumnClick,              (obj_t o),                                                     (o)) \
+    X(void,          TListView_SetColumnClick,              (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TListView_GetToolTips,                 (obj_t o),                                                     (o)) \
+    X(void,          TListView_SetToolTips,                 (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TListView_GetOwnerDraw,                (obj_t o),                                                     (o)) \
+    X(void,          TListView_SetOwnerDraw,                (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TListView_GetAutoSort,                 (obj_t o),                                                     (o)) \
+    X(void,          TListView_SetAutoSort,                 (obj_t o, bool_t v),                                           (o, v)) \
+    X(void,          TListView_SetOnData,                   (obj_t o, item_callback_t cb, void* d),                        (o, cb, d)) \
+    X(void,          TListView_SetOnCompare,                (obj_t o, lv_compare_callback_t cb, void* d),                  (o, cb, d)) \
+    X(void,          TListView_SetOnEditing,                (obj_t o, item_allow_callback_t cb, void* d),                  (o, cb, d)) \
+    X(void,          TListView_SetOnEdited,                 (obj_t o, tv_edited_callback_t cb, void* d),                   (o, cb, d)) \
+    X(void,          TListView_SetOnCustomDrawItem,         (obj_t o, tv_custom_draw_callback_t cb, void* d),              (o, cb, d)) \
+    X(void,          TListView_SetOnCustomDrawSubItem,      (obj_t o, lv_custom_draw_sub_item_callback_t cb, void* d),     (o, cb, d)) \
+    X(void,          TListView_SetOnDrawItem,               (obj_t o, lv_draw_item_callback_t cb, void* d),                (o, cb, d)) \
+    X(void,          TListItems_SetCount,                   (obj_t o, int_t v),                                            (o, v)) \
+    X(void,          TListItem_DisplayRect,                 (obj_t o, int_t code, int_t* l, int_t* t, int_t* r, int_t* b), (o, code, l, t, r, b)) \
+    X(bool_t,        TListItem_EditCaption,                 (obj_t o),                                                     (o))
 
 #endif

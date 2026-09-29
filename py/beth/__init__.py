@@ -583,6 +583,16 @@ class TItemChange(enum.IntEnum):
 ctText, ctImage, ctState = TItemChange.ctText, TItemChange.ctImage, TItemChange.ctState
 
 
+# TListItem::DisplayRect で求める矩形(項目全体・画像・文字・選択の範囲。docs/adr/0052)。
+class TDisplayCode(enum.IntEnum):
+    drBounds = 0
+    drIcon = 1
+    drLabel = 2
+    drSelectBounds = 3
+
+drBounds, drIcon, drLabel, drSelectBounds = TDisplayCode.drBounds, TDisplayCode.drIcon, TDisplayCode.drLabel, TDisplayCode.drSelectBounds
+
+
 # Splitter のドラッグ中の表示のしかた(寄せる辺の ResizeAnchor は TAnchorKind)。
 class TResizeStyle(enum.IntEnum):
     rsLine = 0
@@ -2651,12 +2661,24 @@ class TListItem(TPersistent, _ItemMixin):
         lib.TListItem_Delete(self._current())
     def MakeVisible(self, PartialOK):
         lib.TListItem_MakeVisible(self._current(), _b(PartialOK))
+    # ---- docs/adr/0052 ----
+    # 項目の矩形(リストビューのクライアント座標)。
+    def DisplayRect(self, Code):
+        _r = [ctypes.c_int() for _ in range(4)]
+        lib.TListItem_DisplayRect(self._current(), int(Code), *(ctypes.byref(x) for x in _r))
+        return TRect(*(x.value for x in _r))
+    # この項目だけを選んで、ラベルの編集を始める(ReadOnly のときや OnEditing で断られたときは始めず false)。
+    # 編集は Enter・フォーカスの移動で終わり(OnEdited)、Esc で取り消す。
+    def EditCaption(self):
+        _r = lib.TListItem_EditCaption(self._current())
+        return _r != 0
 
 
 class TListItems(TPersistent):
     """リストビューの項目の一覧(LCL の TListItems)。TTreeNodes と同じく、リストビューの値メンバとして持つ非所有のビュー。
     Item[Index] は LCL と同じ名前(Items ではない)。"""
-    Count = _Prop("TListItems_GetCount", None, _int)
+    # 項目の数。OwnerData のときは、設定した数の項目を表示する(OwnerData でなければ設定しても何もしない。docs/adr/0052)。
+    Count = _Prop("TListItems_GetCount", "TListItems_SetCount", _int)
     # ListView1->Items->Item[i]。
     Item = _Indexed("TListItems_GetItem", None, _item("TListItem"))
     # 末尾に(Insert は Index の位置に)空の項目を追加して返す(Caption 等はその後で設定する。VCL と同じ)。
@@ -2748,6 +2770,26 @@ class TCustomListView(TWinControl):
         lib.TCustomListView_ClearSelection(self._current())
     def SelectAll(self):
         lib.TCustomListView_SelectAll(self._current())
+    # ---- docs/adr/0052 ----
+    # OnCustomDrawItem・OnDrawItem で使う描画先。
+    Canvas = _Prop("TCustomListView_GetCanvas", None, _obj("TCanvas"))
+    # 仮想モード。true にすると項目を持たず、Items->Count の数の項目を、表示のたびに OnData で求める。
+    # Items->Item[i] は、その位置の内容を入れた 1 つの共有の項目を返す(次に別の位置を求めると内容が変わる)。
+    # 切り替えると、それまでの項目はすべて削除される。
+    OwnerData = _Prop("TCustomListView_GetOwnerData", "TCustomListView_SetOwnerData", _bool)
+    # true なら、マウスの下の項目を強調する。
+    HotTrack = _Prop("TCustomListView_GetHotTrack", "TCustomListView_SetHotTrack", _bool)
+    # ラベルを編集しているか。
+    def IsEditing(self):
+        _r = lib.TCustomListView_IsEditing(self._current())
+        return _r != 0
+    # 1 列目(Caption)の昇順に並べる。SortType を stText、SortColumn を 0、SortDirection を sdAscending にする(LCL の仕様)。
+    def AlphaSort(self):
+        _r = lib.TCustomListView_AlphaSort(self._current())
+        return _r != 0
+    # SortType・SortColumn・SortDirection(OnCompare があればそれ)で並べ直す(SortType が stNone なら何もしない)。
+    def Sort(self):
+        lib.TCustomListView_Sort(self._current())
 
 
 class TListView(TCustomListView):
@@ -2779,6 +2821,24 @@ class TListView(TCustomListView):
     LargeImages = _Prop("TListView_GetLargeImages", "TListView_SetLargeImages", _comp("TCustomImageList"))
     SmallImages = _Prop("TListView_GetSmallImages", "TListView_SetSmallImages", _comp("TCustomImageList"))
     StateImages = _Prop("TListView_GetStateImages", "TListView_SetStateImages", _comp("TCustomImageList"))
+    # ---- docs/adr/0052 ----
+    # vsReport のときに列見出しを表示するか。
+    ShowColumnHeaders = _Prop("TListView_GetShowColumnHeaders", "TListView_SetShowColumnHeaders", _bool)
+    # 列見出しをクリックできるか(false なら OnColumnClick も呼ばれない)。
+    ColumnClick = _Prop("TListView_GetColumnClick", "TListView_SetColumnClick", _bool)
+    # true なら、はみ出した項目の文字をツールチップで表示する。
+    ToolTips = _Prop("TListView_GetToolTips", "TListView_SetToolTips", _bool)
+    # true で ViewStyle が vsReport なら、項目を OnDrawItem で描く。
+    OwnerDraw = _Prop("TListView_GetOwnerDraw", "TListView_SetOwnerDraw", _bool)
+    # true(既定)なら、SortType が stNone でないとき、列見出しのクリックで SortColumn をその列にする(同じ列なら SortDirection を逆にする)。
+    AutoSort = _Prop("TListView_GetAutoSort", "TListView_SetAutoSort", _bool)
+    OnCompare = _Event("TListView_SetOnCompare", "TLVCompareEvent")
+    OnData = _Event("TListView_SetOnData", "TLVDeletedEvent")
+    OnEditing = _Event("TListView_SetOnEditing", "TLVEditingEvent")
+    OnEdited = _Event("TListView_SetOnEdited", "TLVEditedEvent")
+    OnCustomDrawItem = _Event("TListView_SetOnCustomDrawItem", "TLVCustomDrawItemEvent")
+    OnCustomDrawSubItem = _Event("TListView_SetOnCustomDrawSubItem", "TLVCustomDrawSubItemEvent")
+    OnDrawItem = _Event("TListView_SetOnDrawItem", "TLVDrawItemEvent")
 
 
 class TCustomSplitter(TCustomControl):
@@ -3642,6 +3702,12 @@ _event_types.update({
     "TLVSelectItemEvent": (_a_item("TListItem"), _a_bool, ),  # (Sender, Item, Selected)
     "TLVChangeEvent": (_a_item("TListItem"), _a_enum("TItemChange"), ),  # (Sender, Item, Change)
     "TLVColumnClickEvent": (_a_item("TListColumn"), ),  # (Sender, Column)
+    "TLVCompareEvent": (_a_item("TListItem"), _a_item("TListItem"), _a_int, _a_ref_int, ),  # (Sender, Item1, Item2, Data, Compare)
+    "TLVEditingEvent": (_a_item("TListItem"), _a_ref_bool, ),  # (Sender, Item, AllowEdit)
+    "TLVEditedEvent": (_a_item("TListItem"), _a_ref_str, ),  # (Sender, Item, AValue)
+    "TLVCustomDrawItemEvent": (_a_item("TListItem"), _a_enum("TCustomDrawState"), _a_ref_bool, ),  # (Sender, Item, State, DefaultDraw)
+    "TLVCustomDrawSubItemEvent": (_a_item("TListItem"), _a_int, _a_enum("TCustomDrawState"), _a_ref_bool, ),  # (Sender, Item, SubItem, State, DefaultDraw)
+    "TLVDrawItemEvent": (_a_item("TListItem"), _a_rect, _a_enum("TOwnerDrawState"), ),  # (Sender, Item, ARect, State)
     "TDrawPanelEvent": (_a_item("TStatusPanel"), _a_rect, ),  # (Sender, Panel, Rect)
     "TOnDrawCell": (_a_int, _a_int, _a_rect, _a_enum("TGridDrawState"), ),  # (Sender, ACol, ARow, ARect, AState)
     "TOnSelectCellEvent": (_a_int, _a_int, _a_ref_bool, ),  # (Sender, ACol, ARow, CanSelect)
@@ -3705,28 +3771,29 @@ __all__ = [
     "TTabPosition", "tpTop", "tpBottom", "tpLeft", "tpRight", "TNodeAttachMode", "naAdd", "naAddFirst",
     "naAddChild", "naAddChildFirst", "naInsert", "naInsertBehind", "TSortType", "stNone", "stData", "stText",
     "stBoth", "TViewStyle", "vsIcon", "vsSmallIcon", "vsList", "vsReport", "TSortDirection", "sdAscending",
-    "sdDescending", "TItemChange", "ctText", "ctImage", "ctState", "TResizeStyle", "rsLine", "rsNone", "rsPattern",
-    "rsUpdate", "TStaticBorderStyle", "sbsNone", "sbsSingle", "sbsSunken", "TStatusPanelStyle", "psText",
-    "psOwnerDraw", "TStatusPanelBevel", "pbNone", "pbLowered", "pbRaised", "TShapeType", "stRectangle", "stSquare",
-    "stRoundRect", "stRoundSquare", "stEllipse", "stCircle", "stSquaredDiamond", "stDiamond", "stTriangle",
-    "stTriangleLeft", "stTriangleRight", "stTriangleDown", "stStar", "stStarDown", "stPolygon",
-    "TSectionTrackState", "tsTrackBegin", "tsTrackMove", "tsTrackEnd", "TEdgeStyle", "esNone", "esRaised",
-    "esLowered", "TToolButtonStyle", "tbsButton", "tbsCheck", "tbsDropDown", "tbsSeparator", "tbsDivider",
-    "tbsButtonDrop", "TGrabStyle", "gsSimple", "gsDouble", "gsHorLines", "gsVerLines", "gsGripper", "gsButton",
-    "TActionListState", "asNormal", "asSuspended", "asSuspendedEnabled", "TBorderStyle", "TShiftState", "ssShift",
-    "ssAlt", "ssCtrl", "ssLeft", "ssRight", "ssMiddle", "ssDouble", "ssMeta", "ssSuper", "ssHyper", "ssAltGr",
-    "ssCaps", "ssNum", "ssScroll", "ssTriple", "ssQuad", "ssExtra1", "ssExtra2", "TFontStyles", "fsBold",
-    "fsItalic", "fsUnderline", "fsStrikeOut", "TOwnerDrawState", "odSelected", "odGrayed", "odDisabled",
-    "odChecked", "odFocused", "odDefault", "odHotLight", "odInactive", "odNoAccel", "odNoFocusRect", "odReserved1",
-    "odReserved2", "odComboBoxEdit", "odBackgroundPainted", "TMultiSelectStyle", "msControlSelect",
-    "msShiftSelect", "msVisibleOnly", "msSiblingOnly", "TTreeViewOptions", "tvoAllowMultiselect", "tvoAutoExpand",
-    "tvoAutoInsertMark", "tvoAutoItemHeight", "tvoHideSelection", "tvoHotTrack", "tvoKeepCollapsedNodes",
-    "tvoReadOnly", "tvoRightClickSelect", "tvoRowSelect", "tvoShowButtons", "tvoShowLines", "tvoShowRoot",
-    "tvoShowSeparators", "tvoToolTips", "tvoNoDoubleClickExpand", "tvoThemedDraw", "tvoEmptySpaceUnselect",
-    "TCustomDrawState", "cdsSelected", "cdsGrayed", "cdsDisabled", "cdsChecked", "cdsFocused", "cdsDefault",
-    "cdsHot", "cdsMarked", "cdsIndeterminate", "TGridOptions", "goFixedVertLine", "goFixedHorzLine", "goVertLine",
-    "goHorzLine", "goRangeSelect", "goDrawFocusSelected", "goRowSizing", "goColSizing", "goRowMoving",
-    "goColMoving", "goEditing", "goAutoAddRows", "goTabs", "goRowSelect", "goAlwaysShowEditor", "goThumbTracking",
+    "sdDescending", "TItemChange", "ctText", "ctImage", "ctState", "TDisplayCode", "drBounds", "drIcon", "drLabel",
+    "drSelectBounds", "TResizeStyle", "rsLine", "rsNone", "rsPattern", "rsUpdate", "TStaticBorderStyle", "sbsNone",
+    "sbsSingle", "sbsSunken", "TStatusPanelStyle", "psText", "psOwnerDraw", "TStatusPanelBevel", "pbNone",
+    "pbLowered", "pbRaised", "TShapeType", "stRectangle", "stSquare", "stRoundRect", "stRoundSquare", "stEllipse",
+    "stCircle", "stSquaredDiamond", "stDiamond", "stTriangle", "stTriangleLeft", "stTriangleRight",
+    "stTriangleDown", "stStar", "stStarDown", "stPolygon", "TSectionTrackState", "tsTrackBegin", "tsTrackMove",
+    "tsTrackEnd", "TEdgeStyle", "esNone", "esRaised", "esLowered", "TToolButtonStyle", "tbsButton", "tbsCheck",
+    "tbsDropDown", "tbsSeparator", "tbsDivider", "tbsButtonDrop", "TGrabStyle", "gsSimple", "gsDouble",
+    "gsHorLines", "gsVerLines", "gsGripper", "gsButton", "TActionListState", "asNormal", "asSuspended",
+    "asSuspendedEnabled", "TBorderStyle", "TShiftState", "ssShift", "ssAlt", "ssCtrl", "ssLeft", "ssRight",
+    "ssMiddle", "ssDouble", "ssMeta", "ssSuper", "ssHyper", "ssAltGr", "ssCaps", "ssNum", "ssScroll", "ssTriple",
+    "ssQuad", "ssExtra1", "ssExtra2", "TFontStyles", "fsBold", "fsItalic", "fsUnderline", "fsStrikeOut",
+    "TOwnerDrawState", "odSelected", "odGrayed", "odDisabled", "odChecked", "odFocused", "odDefault", "odHotLight",
+    "odInactive", "odNoAccel", "odNoFocusRect", "odReserved1", "odReserved2", "odComboBoxEdit",
+    "odBackgroundPainted", "TMultiSelectStyle", "msControlSelect", "msShiftSelect", "msVisibleOnly",
+    "msSiblingOnly", "TTreeViewOptions", "tvoAllowMultiselect", "tvoAutoExpand", "tvoAutoInsertMark",
+    "tvoAutoItemHeight", "tvoHideSelection", "tvoHotTrack", "tvoKeepCollapsedNodes", "tvoReadOnly",
+    "tvoRightClickSelect", "tvoRowSelect", "tvoShowButtons", "tvoShowLines", "tvoShowRoot", "tvoShowSeparators",
+    "tvoToolTips", "tvoNoDoubleClickExpand", "tvoThemedDraw", "tvoEmptySpaceUnselect", "TCustomDrawState",
+    "cdsSelected", "cdsGrayed", "cdsDisabled", "cdsChecked", "cdsFocused", "cdsDefault", "cdsHot", "cdsMarked",
+    "cdsIndeterminate", "TGridOptions", "goFixedVertLine", "goFixedHorzLine", "goVertLine", "goHorzLine",
+    "goRangeSelect", "goDrawFocusSelected", "goRowSizing", "goColSizing", "goRowMoving", "goColMoving",
+    "goEditing", "goAutoAddRows", "goTabs", "goRowSelect", "goAlwaysShowEditor", "goThumbTracking",
     "goColSpanning", "goRelaxedRowSelect", "goDblClickAutoSize", "goSmoothScroll", "goFixedRowNumbering",
     "goScrollKeepVisible", "goHeaderHotTracking", "goHeaderPushedLook", "goSelectionActive", "goFixedColSizing",
     "goDontScrollPartCell", "goCellHints", "goTruncCellHints", "goCellEllipsis", "goAutoAddRowsSkipContentCheck",

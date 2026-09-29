@@ -2179,6 +2179,84 @@ def main():
     tree.OnEditing = tree_editing
     tree.OnEdited = tree_edited
     tree.OnCustomDrawItem = tree_custom_draw
+
+    # TListView の細部(docs/adr/0052)。ListView1("Page 2")は、ラベルの編集(項目のダブルクリック)を Gamma だけ始めさせず、
+    # 空にした編集は元の文字列に戻す。Beta は青い文字、Size の列は緑の文字で描く。列見出しのクリックでの並べ替えは AutoSort と
+    # OnCompare で、Size の列は数の順にする。"Virtual" ページには、10000 行の仮想モード(OwnerData)の一覧を OnDrawItem で縞模様に描く。
+    lv = Form1.ListView1
+
+    def lv_editing(Sender, Item, AllowEdit):
+        pr(f"ListView1 OnEditing: {Item.Caption}")
+        AllowEdit.value = Item.Caption != "Gamma"
+
+    def lv_edited(Sender, Item, AValue):
+        pr(f"ListView1 OnEdited: {Item.Caption} -> {AValue.value}")
+        if not AValue.value:
+            AValue.value = Item.Caption
+
+    def lv_custom_draw(Sender, Item, State, DefaultDraw):
+        Sender.Canvas.Font.Color = clBlue if Item.Caption == "Beta" else clWindowText
+
+    def lv_custom_draw_sub(Sender, Item, SubItem, State, DefaultDraw):
+        Sender.Canvas.Font.Color = clGreen if SubItem == 1 else clWindowText
+
+    def lv_compare(Sender, Item1, Item2, Data, Compare):
+        if lv.SortColumn == 1:
+            c = int(Item1.SubItems.Strings[0]) - int(Item2.SubItems.Strings[0])
+        else:
+            c = (Item1.Caption > Item2.Caption) - (Item1.Caption < Item2.Caption)
+        # OnCompare があると SortDirection は使われないので、自分で逆にする
+        Compare.value = -c if lv.SortDirection == sdDescending else c
+
+    lv.OnEditing = lv_editing
+    lv.OnEdited = lv_edited
+    lv.OnCustomDrawItem = lv_custom_draw
+    lv.OnCustomDrawSubItem = lv_custom_draw_sub
+    lv.OnCompare = lv_compare
+    # 並べ替えは AutoSort(既定で True)に任せる: 列見出しのクリックでその列の昇順、同じ列をもう一度クリックすると降順
+    lv.SortType = stText
+    lv.OnColumnClick = lambda Sender, Column: pr(f"ListView1ColumnClick: {Column.Caption}")
+    pr(f"ListView1 ShowColumnHeaders={int(lv.ShowColumnHeaders)} ColumnClick={int(lv.ColumnClick)} "
+       f"AutoSort={int(lv.AutoSort)} ToolTips={int(lv.ToolTips)} (expected 1 1 1 1)")
+
+    virtualSheet = TTabSheet(Form1)
+    virtualSheet.PageControl = Form1.PageControl1
+    virtualSheet.Caption = "Virtual"
+    vlist = TListView(Form1)
+    vlist.Parent = virtualSheet
+    vlist.Align = alClient
+    vlist.ViewStyle = vsReport
+    vlist.RowSelect = True
+    rowColumn = vlist.Columns.Add()
+    rowColumn.Caption = "Row"
+    rowColumn.Width = 100
+    squareColumn = vlist.Columns.Add()
+    squareColumn.Caption = "Square"
+    squareColumn.Width = 90
+
+    def vlist_data(Sender, Item):
+        i = Item.Index
+        Item.Caption = f"Row {i}"
+        Item.SubItems.Add(str(i * i))
+
+    def vlist_draw(Sender, Item, ARect, State):
+        c = Sender.Canvas
+        selected = bool(State & odSelected)
+        c.Brush.Color = clHighlight if selected else (clWindow if Item.Index % 2 else clYellow)
+        c.FillRect(ARect)
+        c.Brush.Style = bsClear
+        c.Font.Color = clHighlightText if selected else clWindowText
+        c.TextOut(ARect.Left + 4, ARect.Top + 1, Item.Caption)
+        c.TextOut(ARect.Left + 104, ARect.Top + 1, Item.SubItems.Strings[0])
+        c.Brush.Style = bsSolid
+
+    vlist.OnData = vlist_data
+    vlist.OwnerData = True
+    vlist.Items.Count = 10000
+    vlist.OwnerDraw = True
+    vlist.OnDrawItem = vlist_draw
+    pr(f"Virtual list OwnerData={int(vlist.OwnerData)} Items->Count={vlist.Items.Count} (expected 1 10000), "
+       f"Item[1234]={vlist.Items.Item[1234].Caption}")
     pr(f"AlignClientPanel BevelOuter/BevelInner={int(Form1.AlignClientPanel.BevelOuter)}/{int(Form1.AlignClientPanel.BevelInner)} "
        f"(expected 1/2), TreeView ScrollBars={int(Form1.TreeView1.ScrollBars)} (expected 3 = ssBoth)")
 

@@ -24,6 +24,8 @@ public:
     beth::TScrollBar* ScrollBar1;
     beth::TTabSheet* MemoSheet;
     beth::TMemo* Memo1;
+    beth::TTabSheet* ListSheet;
+    beth::TListView* List1;
     beth::TPanel* BottomPanel;
     beth::TLabel* StatusLabel;
     beth::TPanel* HintPanel;
@@ -50,6 +52,9 @@ public:
     void WrapCheckClick(beth::TObject* Sender);
     void RadioGroup1SelectionChanged(beth::TObject* Sender);
     void ScrollBar1Scroll(beth::TObject* Sender, beth::TScrollCode ScrollCode, int& ScrollPos);
+    void List1Compare(beth::TObject* Sender, beth::TListItem* Item1, beth::TListItem* Item2, int Data, int& Compare);
+    void List1Data(beth::TObject* Sender, beth::TListItem* Item);
+    void List1Edited(beth::TObject* Sender, beth::TListItem* Item, std::string& AValue);
     void ColorListDrawItem(beth::TObject* Sender, int Index, beth::TRect ARect, beth::TOwnerDrawState State);
     void Tree1Edited(beth::TObject* Sender, beth::TTreeNode* Node, std::string& S);
     void Tree1CustomDrawItem(beth::TObject* Sender, beth::TTreeNode* Node, beth::TCustomDrawState State, bool& DefaultDraw);
@@ -58,7 +63,7 @@ public:
     void ClearItemClick(beth::TObject* Sender);
     void Timer1Timer(beth::TObject* Sender);
     void FileSaveActionExecute(beth::TObject* Sender);
-    // <bethany-designer:end id="declarations" hash="d44d2d6c">
+    // <bethany-designer:end id="declarations" hash="d25328eb">
 
     explicit TMainForm(beth::TComponent* AOwner);
 

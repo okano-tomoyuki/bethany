@@ -2891,7 +2891,7 @@ TCustomListView* TListItem::GetListViewImpl(TObject* owner)
 
 TListItems::TListItems(ObjectHandle handle)
     : TPersistent(handle)
-    , Count(this, &TListItems::GetCountImpl)
+    , Count(this, &TListItems::GetCountImpl, &TListItems::SetCountImpl)
     , Item(this, &TListItems::GetItemImpl)
 {}
 
@@ -2962,6 +2962,9 @@ TCustomListView::TCustomListView(ObjectHandle handle)
     , MultiSelect(this, &TCustomListView::GetMultiSelectImpl, &TCustomListView::SetMultiSelectImpl)
     , ReadOnly(this, &TCustomListView::GetReadOnlyImpl, &TCustomListView::SetReadOnlyImpl)
     , RowSelect(this, &TCustomListView::GetRowSelectImpl, &TCustomListView::SetRowSelectImpl)
+    , Canvas(internal::TCustomListView_GetCanvas(handle))
+    , OwnerData(this, &TCustomListView::GetOwnerDataImpl, &TCustomListView::SetOwnerDataImpl)
+    , HotTrack(this, &TCustomListView::GetHotTrackImpl, &TCustomListView::SetHotTrackImpl)
     , items_(internal::TCustomListView_GetItems(handle))
 {}
 
@@ -3009,6 +3012,18 @@ TListView::TListView(TComponent* AOwner)
     , LargeImages(this, &TListView::GetLargeImagesImpl, &TListView::SetLargeImagesImpl)
     , SmallImages(this, &TListView::GetSmallImagesImpl, &TListView::SetSmallImagesImpl)
     , StateImages(this, &TListView::GetStateImagesImpl, &TListView::SetStateImagesImpl)
+    , ShowColumnHeaders(this, &TListView::GetShowColumnHeadersImpl, &TListView::SetShowColumnHeadersImpl)
+    , ColumnClick(this, &TListView::GetColumnClickImpl, &TListView::SetColumnClickImpl)
+    , ToolTips(this, &TListView::GetToolTipsImpl, &TListView::SetToolTipsImpl)
+    , OwnerDraw(this, &TListView::GetOwnerDrawImpl, &TListView::SetOwnerDrawImpl)
+    , AutoSort(this, &TListView::GetAutoSortImpl, &TListView::SetAutoSortImpl)
+    , OnCompare(this, &TListView::GetOnCompareImpl, &TListView::SetOnCompareImpl)
+    , OnData(this, &TListView::GetOnDataImpl, &TListView::SetOnDataImpl)
+    , OnEditing(this, &TListView::GetOnEditingImpl, &TListView::SetOnEditingImpl)
+    , OnEdited(this, &TListView::GetOnEditedImpl, &TListView::SetOnEditedImpl)
+    , OnCustomDrawItem(this, &TListView::GetOnCustomDrawItemImpl, &TListView::SetOnCustomDrawItemImpl)
+    , OnCustomDrawSubItem(this, &TListView::GetOnCustomDrawSubItemImpl, &TListView::SetOnCustomDrawSubItemImpl)
+    , OnDrawItem(this, &TListView::GetOnDrawItemImpl, &TListView::SetOnDrawItemImpl)
     , columns_(internal::TListView_GetColumns(handle_))
 {}
 
@@ -6231,6 +6246,185 @@ void BETH_CALL TTreeView::CustomDrawItemTrampoline(ObjectHandle sender, ObjectHa
         bool value = *defaultDraw != 0;
         handler(self, TTreeNode::Wrap(node), state, value);
         *defaultDraw = value ? 1 : 0;
+    });
+}
+
+/* ---------------- TListView の細部(docs/adr/0052) ---------------- */
+
+void TListItems::SetCountImpl(TObject* owner, const int& value) { internal::TListItems_SetCount(owner->Handle(), value); }
+
+TRect TListItem::DisplayRect(TDisplayCode Code) const
+{
+    internal::int_t l = 0, t = 0, r = 0, b = 0;
+    internal::TListItem_DisplayRect(handle_, Code, &l, &t, &r, &b);
+    return TRect{l, t, r, b};
+}
+bool TListItem::EditCaption() { return internal::TListItem_EditCaption(handle_) != 0; }
+
+bool TCustomListView::GetOwnerDataImpl(TObject* owner) { return internal::TCustomListView_GetOwnerData(owner->Handle()) != 0; }
+// LCL は OwnerData を切り替えると Items(TListItems)を作り直すため、Items のビューを新しい一覧に付け替える。
+void TCustomListView::SetOwnerDataImpl(TObject* owner, const bool& value)
+{
+    TCustomListView* self = static_cast<TCustomListView*>(owner);
+    internal::TCustomListView_SetOwnerData(self->handle_, value ? 1 : 0);
+    self->items_.Rebind(internal::TCustomListView_GetItems(self->handle_));
+}
+bool TCustomListView::GetHotTrackImpl(TObject* owner) { return internal::TCustomListView_GetHotTrack(owner->Handle()) != 0; }
+void TCustomListView::SetHotTrackImpl(TObject* owner, const bool& value) { internal::TCustomListView_SetHotTrack(owner->Handle(), value ? 1 : 0); }
+bool TCustomListView::IsEditing() const { return internal::TCustomListView_IsEditing(handle_) != 0; }
+bool TCustomListView::AlphaSort() { return internal::TCustomListView_AlphaSort(handle_) != 0; }
+void TCustomListView::Sort() { internal::TCustomListView_Sort(handle_); }
+
+bool TListView::GetShowColumnHeadersImpl(TObject* owner) { return internal::TListView_GetShowColumnHeaders(owner->Handle()) != 0; }
+void TListView::SetShowColumnHeadersImpl(TObject* owner, const bool& value) { internal::TListView_SetShowColumnHeaders(owner->Handle(), value ? 1 : 0); }
+bool TListView::GetColumnClickImpl(TObject* owner) { return internal::TListView_GetColumnClick(owner->Handle()) != 0; }
+void TListView::SetColumnClickImpl(TObject* owner, const bool& value) { internal::TListView_SetColumnClick(owner->Handle(), value ? 1 : 0); }
+bool TListView::GetToolTipsImpl(TObject* owner) { return internal::TListView_GetToolTips(owner->Handle()) != 0; }
+void TListView::SetToolTipsImpl(TObject* owner, const bool& value) { internal::TListView_SetToolTips(owner->Handle(), value ? 1 : 0); }
+bool TListView::GetOwnerDrawImpl(TObject* owner) { return internal::TListView_GetOwnerDraw(owner->Handle()) != 0; }
+void TListView::SetOwnerDrawImpl(TObject* owner, const bool& value) { internal::TListView_SetOwnerDraw(owner->Handle(), value ? 1 : 0); }
+bool TListView::GetAutoSortImpl(TObject* owner) { return internal::TListView_GetAutoSort(owner->Handle()) != 0; }
+void TListView::SetAutoSortImpl(TObject* owner, const bool& value) { internal::TListView_SetAutoSort(owner->Handle(), value ? 1 : 0); }
+
+TLVCompareEvent TListView::GetOnCompareImpl(TObject* owner) { return static_cast<TListView*>(owner)->onCompare_; }
+void TListView::SetOnCompareImpl(TObject* owner, const TLVCompareEvent& value)
+{
+    TListView* self = static_cast<TListView*>(owner);
+    SetSimpleEvent(self->handle_, self->onCompare_, self->onCompareHooked_, value, &internal::TListView_SetOnCompare, &TListView::CompareTrampoline);
+}
+
+TLVDataEvent TListView::GetOnDataImpl(TObject* owner) { return static_cast<TListView*>(owner)->onData_; }
+void TListView::SetOnDataImpl(TObject* owner, const TLVDataEvent& value)
+{
+    TListView* self = static_cast<TListView*>(owner);
+    SetSimpleEvent(self->handle_, self->onData_, self->onDataHooked_, value, &internal::TListView_SetOnData, &TListView::DataTrampoline);
+}
+
+TLVEditingEvent TListView::GetOnEditingImpl(TObject* owner) { return static_cast<TListView*>(owner)->onEditing_; }
+void TListView::SetOnEditingImpl(TObject* owner, const TLVEditingEvent& value)
+{
+    TListView* self = static_cast<TListView*>(owner);
+    SetSimpleEvent(self->handle_, self->onEditing_, self->onEditingHooked_, value, &internal::TListView_SetOnEditing, &TListView::EditingTrampoline);
+}
+
+TLVEditedEvent TListView::GetOnEditedImpl(TObject* owner) { return static_cast<TListView*>(owner)->onEdited_; }
+void TListView::SetOnEditedImpl(TObject* owner, const TLVEditedEvent& value)
+{
+    TListView* self = static_cast<TListView*>(owner);
+    SetSimpleEvent(self->handle_, self->onEdited_, self->onEditedHooked_, value, &internal::TListView_SetOnEdited, &TListView::EditedTrampoline);
+}
+
+TLVCustomDrawItemEvent TListView::GetOnCustomDrawItemImpl(TObject* owner) { return static_cast<TListView*>(owner)->onCustomDrawItem_; }
+void TListView::SetOnCustomDrawItemImpl(TObject* owner, const TLVCustomDrawItemEvent& value)
+{
+    TListView* self = static_cast<TListView*>(owner);
+    SetSimpleEvent(self->handle_, self->onCustomDrawItem_, self->onCustomDrawItemHooked_, value, &internal::TListView_SetOnCustomDrawItem, &TListView::CustomDrawItemTrampoline);
+}
+
+TLVCustomDrawSubItemEvent TListView::GetOnCustomDrawSubItemImpl(TObject* owner) { return static_cast<TListView*>(owner)->onCustomDrawSubItem_; }
+void TListView::SetOnCustomDrawSubItemImpl(TObject* owner, const TLVCustomDrawSubItemEvent& value)
+{
+    TListView* self = static_cast<TListView*>(owner);
+    SetSimpleEvent(self->handle_, self->onCustomDrawSubItem_, self->onCustomDrawSubItemHooked_, value, &internal::TListView_SetOnCustomDrawSubItem, &TListView::CustomDrawSubItemTrampoline);
+}
+
+TLVDrawItemEvent TListView::GetOnDrawItemImpl(TObject* owner) { return static_cast<TListView*>(owner)->onDrawItem_; }
+void TListView::SetOnDrawItemImpl(TObject* owner, const TLVDrawItemEvent& value)
+{
+    TListView* self = static_cast<TListView*>(owner);
+    SetSimpleEvent(self->handle_, self->onDrawItem_, self->onDrawItemHooked_, value, &internal::TListView_SetOnDrawItem, &TListView::DrawItemTrampoline);
+}
+
+void BETH_CALL TListView::CompareTrampoline(ObjectHandle sender, ObjectHandle item1, ObjectHandle item2, internal::int_t data,
+                                            internal::int_t* compare, void*)
+{
+    GuardCallback([&] {
+        TListView* self = static_cast<TListView*>(FromHandle(sender));
+        if (!self || !self->onCompare_)
+            return;
+        TLVCompareEvent handler = self->onCompare_;
+        int value = *compare;
+        handler(self, TListItem::Wrap(item1), TListItem::Wrap(item2), data, value);
+        *compare = value;
+    });
+}
+
+void BETH_CALL TListView::DataTrampoline(ObjectHandle sender, ObjectHandle item, void*)
+{
+    GuardCallback([&] {
+        TListView* self = static_cast<TListView*>(FromHandle(sender));
+        if (!self || !self->onData_)
+            return;
+        TLVDataEvent handler = self->onData_;
+        handler(self, TListItem::Wrap(item));
+    });
+}
+
+void BETH_CALL TListView::EditingTrampoline(ObjectHandle sender, ObjectHandle item, internal::bool_t* allow, void*)
+{
+    GuardCallback([&] {
+        TListView* self = static_cast<TListView*>(FromHandle(sender));
+        if (!self || !self->onEditing_)
+            return;
+        TLVEditingEvent handler = self->onEditing_;
+        bool value = *allow != 0;
+        handler(self, TListItem::Wrap(item), value);
+        *allow = value ? 1 : 0;
+    });
+}
+
+// 書き換えた文字列は、DLL が写すまで有効であるよう、スレッドごとの領域に置いて返す(TTreeView と同じ)。
+void BETH_CALL TListView::EditedTrampoline(ObjectHandle sender, ObjectHandle item, internal::str_t s, internal::str_t* result, void*)
+{
+    GuardCallback([&] {
+        TListView* self = static_cast<TListView*>(FromHandle(sender));
+        if (!self || !self->onEdited_)
+            return;
+        TLVEditedEvent handler = self->onEdited_;
+        static thread_local std::string text;
+        text = s ? s : "";
+        handler(self, TListItem::Wrap(item), text);
+        *result = text.c_str();
+    });
+}
+
+void BETH_CALL TListView::CustomDrawItemTrampoline(ObjectHandle sender, ObjectHandle item, internal::uint_t state,
+                                                   internal::bool_t* defaultDraw, void*)
+{
+    GuardCallback([&] {
+        TListView* self = static_cast<TListView*>(FromHandle(sender));
+        if (!self || !self->onCustomDrawItem_)
+            return;
+        TLVCustomDrawItemEvent handler = self->onCustomDrawItem_;
+        bool value = *defaultDraw != 0;
+        handler(self, TListItem::Wrap(item), state, value);
+        *defaultDraw = value ? 1 : 0;
+    });
+}
+
+void BETH_CALL TListView::CustomDrawSubItemTrampoline(ObjectHandle sender, ObjectHandle item, internal::int_t subItem,
+                                                      internal::uint_t state, internal::bool_t* defaultDraw, void*)
+{
+    GuardCallback([&] {
+        TListView* self = static_cast<TListView*>(FromHandle(sender));
+        if (!self || !self->onCustomDrawSubItem_)
+            return;
+        TLVCustomDrawSubItemEvent handler = self->onCustomDrawSubItem_;
+        bool value = *defaultDraw != 0;
+        handler(self, TListItem::Wrap(item), subItem, state, value);
+        *defaultDraw = value ? 1 : 0;
+    });
+}
+
+void BETH_CALL TListView::DrawItemTrampoline(ObjectHandle sender, ObjectHandle item, internal::int_t left, internal::int_t top,
+                                             internal::int_t right, internal::int_t bottom, internal::uint_t state, void*)
+{
+    GuardCallback([&] {
+        TListView* self = static_cast<TListView*>(FromHandle(sender));
+        if (!self || !self->onDrawItem_)
+            return;
+        TLVDrawItemEvent handler = self->onDrawItem_;
+        handler(self, TListItem::Wrap(item), TRect{left, top, right, bottom}, state);
     });
 }
 

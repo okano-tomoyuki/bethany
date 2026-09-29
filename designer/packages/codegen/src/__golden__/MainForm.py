@@ -18,6 +18,8 @@ class TMainForm(TForm):
         self.ScrollBar1: TScrollBar
         self.MemoSheet: TTabSheet
         self.Memo1: TMemo
+        self.ListSheet: TTabSheet
+        self.List1: TListView
         self.BottomPanel: TPanel
         self.StatusLabel: TLabel
         self.HintPanel: TPanel
@@ -35,7 +37,7 @@ class TMainForm(TForm):
         self.Timer1: TTimer
         self.ActionList1: TActionList
         self.FileSaveAction: TAction
-        # <bethany-designer:end id="declarations" hash="00eb3441">
+        # <bethany-designer:end id="declarations" hash="5466cbda">
         self.beth_CreateComponents()
 
     # <bethany-designer:begin id="beth_CreateComponents">
@@ -52,6 +54,8 @@ class TMainForm(TForm):
         self.ScrollBar1 = TScrollBar(self)
         self.MemoSheet = TTabSheet(self)
         self.Memo1 = TMemo(self)
+        self.ListSheet = TTabSheet(self)
+        self.List1 = TListView(self)
         self.BottomPanel = TPanel(self)
         self.StatusLabel = TLabel(self)
         self.HintPanel = TPanel(self)
@@ -181,6 +185,23 @@ class TMainForm(TForm):
         self.Memo1.Lines.Add("line 1")
         self.Memo1.Lines.Add("line \"2\"")
 
+        self.ListSheet.PageControl = self.PageControl1
+        self.ListSheet.Caption = "List"
+
+        self.List1.Parent = self.ListSheet
+        self.List1.Left = 0
+        self.List1.Top = 0
+        self.List1.Width = 355
+        self.List1.Height = 92
+        self.List1.Align = alClient
+        self.List1.OwnerData = True
+        self.List1.ViewStyle = vsReport
+        self.List1.ShowColumnHeaders = False
+        self.List1.AutoSort = False
+        self.List1.OnCompare = self.List1Compare
+        self.List1.OnData = self.List1Data
+        self.List1.OnEdited = self.List1Edited
+
         self.BottomPanel.Parent = self
         self.BottomPanel.Left = 0
         self.BottomPanel.Top = 259
@@ -275,7 +296,7 @@ class TMainForm(TForm):
         self.FileSaveAction.OnExecute = self.FileSaveActionExecute
 
         self.FileSaveItem.Action = self.FileSaveAction
-    # <bethany-designer:end id="beth_CreateComponents" hash="5ef22649">
+    # <bethany-designer:end id="beth_CreateComponents" hash="29d3f326">
 
     # <bethany-designer:handler-stubs>
 
@@ -301,6 +322,15 @@ class TMainForm(TForm):
         pass
 
     def ScrollBar1Scroll(self, Sender, ScrollCode, ScrollPos):
+        pass
+
+    def List1Compare(self, Sender, Item1, Item2, Data, Compare):
+        pass
+
+    def List1Data(self, Sender, Item):
+        pass
+
+    def List1Edited(self, Sender, Item, AValue):
         pass
 
     def ColorListDrawItem(self, Sender, Index, ARect, State):
