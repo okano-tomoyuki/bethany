@@ -3,7 +3,8 @@
   "palette": ["Standard", "Additional", "Common Controls", "Dialogs", "System", "Misc"],
   "notDesignable": {
     "TControl": ["Parent", "Caption", "ClientWidth", "ClientHeight"],
-    "TCustomForm": ["Align", "Anchors", "BorderSpacing", "TabOrder", "TabStop", "Visible", "ModalResult"],
+    "TCustomForm": ["Align", "Anchors", "BorderSpacing", "TabOrder", "TabStop", "Visible", "ModalResult", "Action"],
+    "TContainedAction": ["ActionList", "Index"],
     "TCustomEdit": ["SelStart", "SelLength", "SelText", "Modified"],
     "TCustomListBox": ["TopIndex"],
     "TCustomComboBox": ["DroppedDown"],
@@ -84,6 +85,8 @@
     "TFindDialog": {"palette": "Dialogs"},
     "TReplaceDialog": {"palette": "Dialogs"},
     "TTimer": {"palette": "System"},
+    "TAction": {},
+    "TActionList": {"palette": "Standard"},
     "TSpinEdit": {"palette": "Misc"},
     "TFloatSpinEdit": {"palette": "Misc"}
   }

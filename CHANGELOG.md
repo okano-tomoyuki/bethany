@@ -32,6 +32,8 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
   ([ADR 0045](docs/adr/0045-custom-control-canvas-and-drawing.md))
 - Canvas の `TextWidth`・`TextHeight`・`TextRect`・`Polygon`・`Polyline`・`RoundRect`・`Arc`・`Pie`・`Chord`・`FrameRect`・`CopyRect`、
   `TPen` の `Style`・`Mode`、`TBrush` の `Style`、`TFont` の `Height`・`Orientation`・`Quality`
+- Action: `TActionList`・`TAction`(`Caption`・`Enabled`・`Checked`・`ShortCut`・`ImageIndex`・`Category`・`OnExecute`・`OnUpdate`・`Execute()` 等)と、
+  コントロール・メニュー項目の `Action`([ADR 0046](docs/adr/0046-actions.md))
 
 ### 変更
 

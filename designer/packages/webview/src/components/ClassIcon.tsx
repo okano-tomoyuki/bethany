@@ -364,6 +364,16 @@ const ICONS: Readonly<Record<string, ReactNode>> = {
     </>
   ),
 
+  // ---- Action(docs/adr/0046) ----
+  TAction: <path className="af" d="M9.5 1.5L3.5 9h4l-1 5.5 6-7.5h-4z" />,
+  TActionList: (
+    <>
+      <rect x="1.5" y="2.5" width="10" height="11" rx="1" />
+      <path d="M3.5 5.5h4M3.5 8h4M3.5 10.5h4" />
+      <path className="af" d="M13 6.5l-3 4h2l-.5 3 3-4h-2z" />
+    </>
+  ),
+
   // ---- システム ----
   TTimer: (
     <>

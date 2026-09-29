@@ -41,7 +41,8 @@ export interface EventInfo {
   readonly doc?: string;
 }
 
-export type ClassKind = 'form' | 'control' | 'component' | 'menuItem';
+/** action は ActionList の子(DSL の actions。docs/adr/0046) */
+export type ClassKind = 'form' | 'control' | 'component' | 'menuItem' | 'action';
 
 export interface ClassInfo {
   /** 基底クラス(近い順。TObject まで) */

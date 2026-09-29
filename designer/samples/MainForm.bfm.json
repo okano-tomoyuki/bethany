@@ -176,6 +176,12 @@
               "events": { "OnClick": "FileOpenItemClick" }
             },
             {
+              "name": "FileSaveItem",
+              "properties": {
+                "Action": "FileSaveAction"
+              }
+            },
+            {
               "name": "N1",
               "properties": {
                 "Caption": "-"
@@ -224,6 +230,22 @@
         "Enabled": false
       },
       "events": { "OnTimer": "Timer1Timer" }
+    },
+    {
+      "name": "ActionList1",
+      "class": "TActionList",
+      "design": { "left": 176, "top": 200 },
+      "actions": [
+        {
+          "name": "FileSaveAction",
+          "properties": {
+            "Category": "File",
+            "Caption": "&Save",
+            "ShortCut": "Ctrl+S"
+          },
+          "events": { "OnExecute": "FileSaveActionExecute" }
+        }
+      ]
     }
   ]
 }

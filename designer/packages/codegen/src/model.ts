@@ -122,10 +122,17 @@ export function buildModel(doc: BfmDocument, className: string): FormModel {
   const classByName = new Map(members.map((m) => [m.name, m.class]));
   /** コントロールへの参照(ActivePage・Associate)。相手の親が決まった後(すべてのコントロールの後)に設定する */
   const deferred: Statement[] = [];
-  const isControlRef = (s: Statement) =>
-    s.kind === 'assign' &&
-    s.value.kind === 'ref' &&
-    findClass(classByName.get(s.value.name) ?? '')?.kind === 'control';
+  const refKind = (s: Statement) =>
+    s.kind === 'assign' && s.value.kind === 'ref'
+      ? findClass(classByName.get(s.value.name) ?? '')?.kind
+      : undefined;
+  const isControlRef = (s: Statement) => refKind(s) === 'control';
+  /**
+   * Action への参照(コントロール・メニュー項目の Action。docs/adr/0046)。割り当てた時点で Action の Caption 等が写るので、
+   * Action のプロパティを設定した後(すべての文の最後)に設定する
+   */
+  const actionRefs: Statement[] = [];
+  const isActionRef = (s: Statement) => refKind(s) === 'action';
 
   for (const location of nodes) {
     if (location.kind === 'component' && deferred.length > 0) {
@@ -137,10 +144,12 @@ export function buildModel(doc: BfmDocument, className: string): FormModel {
         handlers.set(s.handler, { name: s.handler, params: s.params });
     }
     deferred.push(...block.filter(isControlRef));
-    const rest = block.filter((s) => !isControlRef(s));
+    actionRefs.push(...block.filter(isActionRef));
+    const rest = block.filter((s) => !isControlRef(s) && !isActionRef(s));
     if (rest.length > 0) statements.push({ kind: 'blank' }, ...rest);
   }
   if (deferred.length > 0) statements.push({ kind: 'blank' }, ...deferred);
+  if (actionRefs.length > 0) statements.push({ kind: 'blank' }, ...actionRefs);
   return {
     className,
     formName: doc.form.name,
@@ -169,6 +178,15 @@ function nodeStatements(location: NodeLocation): Statement[] {
       parent: parent.class === 'TForm' ? undefined : parent.name,
     });
   }
+
+  // Action は ActionList に入れる(docs/adr/0046)
+  if (location.kind === 'action')
+    out.push({
+      kind: 'assign',
+      target: location.node.name,
+      path: ['ActionList'],
+      value: { kind: 'ref', name: location.list.name },
+    });
 
   // プロパティはカタログの順(Left・Top・Width・Height が先頭)。Anchors は Parent と大きさが決まった後に設定する(ADR 0034)
   const properties = location.node.properties ?? {};

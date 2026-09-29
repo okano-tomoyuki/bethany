@@ -562,6 +562,15 @@ class TGrabStyle(enum.IntEnum):
 gsSimple, gsDouble, gsHorLines, gsVerLines, gsGripper, gsButton = TGrabStyle.gsSimple, TGrabStyle.gsDouble, TGrabStyle.gsHorLines, TGrabStyle.gsVerLines, TGrabStyle.gsGripper, TGrabStyle.gsButton
 
 
+# ActionList の状態(LCL の TActionListState と同じ値)。asSuspended は Action を実行・更新しない。
+class TActionListState(enum.IntEnum):
+    asNormal = 0
+    asSuspended = 1
+    asSuspendedEnabled = 2
+
+asNormal, asSuspended, asSuspendedEnabled = TActionListState.asNormal, TActionListState.asSuspended, TActionListState.asSuspendedEnabled
+
+
 # ---------------- 集合・定数 ----------------
 
 class TShiftState(enum.IntFlag):
@@ -1262,6 +1271,9 @@ class TMenuItem(TComponent):
     SubMenuImages = _Prop("TMenuItem_GetSubMenuImages", "TMenuItem_SetSubMenuImages", _comp("TCustomImageList"))
     # 項目の画像(ImageIndex を使わない場合)。項目が所有する TBitmap のビューで、初めて参照したときに作られる。代入は内容のコピー。
     Bitmap = _Prop("TMenuItem_GetBitmap", "TMenuItem_SetBitmap", _view("TBitmap"))
+    # 割り当てた Action(docs/adr/0046)。Action の Caption・Checked・Enabled・ShortCut・ImageIndex 等が項目に写り、以後も連動する。
+    # 選ぶと、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる。
+    Action = _Prop("TMenuItem_GetAction", "TMenuItem_SetAction", _comp("TBasicAction"))
     def Add(self, Item):
         lib.TMenuItem_Add(self._current(), _h(Item))
     def Insert(self, Index, Item):
@@ -1365,6 +1377,9 @@ class TControl(TComponent):
     # 位置と大きさをまとめて設定する(Left・Top・Width・Height を 1 つずつ設定するより、配置の計算が 1 回で済む)。
     def SetBounds(self, ALeft, ATop, AWidth, AHeight):
         lib.TControl_SetBounds(self._current(), int(ALeft), int(ATop), int(AWidth), int(AHeight))
+    # 割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。
+    # クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。
+    Action = _Prop("TControl_GetAction", "TControl_SetAction", _comp("TBasicAction"))
     Parent = _Prop("TControl_GetParent", "TControl_SetParent", _comp("TWinControl"))
     Left = _Prop("TControl_GetLeft", "TControl_SetLeft", _int)
     Top = _Prop("TControl_GetTop", "TControl_SetTop", _int)
@@ -2871,6 +2886,77 @@ class TTimer(TCustomTimer):
         self._attach(lib.TTimer_Create(_h(AOwner)))
 
 
+class TBasicAction(TComponent):
+    """操作(LCL の TBasicAction)。コントロール・メニュー項目の Action に割り当てると、選んだときに OnExecute が呼ばれる。"""
+    # OnExecute を呼ぶ(ActionList の OnExecute で Handled にされたときは呼ばない)。呼んだら true。
+    def Execute(self):
+        _r = lib.TBasicAction_Execute(self._current())
+        return _r != 0
+    # OnUpdate を呼ぶ(アイドルのときに LCL が呼ぶものを、すぐに呼ぶ)。
+    def Update(self):
+        _r = lib.TBasicAction_Update(self._current())
+        return _r != 0
+    # Execute を起こしたコントロール・メニュー項目(プログラムから Execute したときは nullptr)。
+    ActionComponent = _Prop("TBasicAction_GetActionComponent", None, _comp("TComponent"))
+    # 実行するとき。Sender は Action(起こしたものは ActionComponent)。
+    OnExecute = _Event("TBasicAction_SetOnExecute", "TNotifyEvent")
+    # アイドルのときに LCL が呼ぶ。Enabled・Checked 等をここで今の状態に合わせる(割り当てたコントロールにも写る)。
+    # 呼ばれるのは、表示中のフォームのコントロール・メインメニューの項目に割り当てた Action だけ(VCL と同じ)。
+    OnUpdate = _Event("TBasicAction_SetOnUpdate", "TNotifyEvent")
+
+
+class TContainedAction(TBasicAction):
+    """ActionList に入る Action(LCL の TContainedAction)。"""
+    # 属する ActionList。代入すると一覧の末尾に入る(nullptr なら一覧から外す)。
+    ActionList = _Prop("TContainedAction_GetActionList", "TContainedAction_SetActionList", _comp("TCustomActionList"))
+    # 分類(ActionList の中でまとめて扱うための名前。動作には影響しない)。
+    Category = _Prop("TContainedAction_GetCategory", "TContainedAction_SetCategory", _str)
+    # ActionList の中の位置。書き換えると移動する。
+    Index = _Prop("TContainedAction_GetIndex", "TContainedAction_SetIndex", _int)
+
+
+class TCustomAction(TContainedAction):
+    """表示の状態を持つ Action(LCL の TCustomAction)。値を変えると、割り当てたコントロール・メニュー項目にも写る。"""
+    Caption = _Prop("TCustomAction_GetCaption", "TCustomAction_SetCaption", _str)
+    Hint = _Prop("TCustomAction_GetHint", "TCustomAction_SetHint", _str)
+    Checked = _Prop("TCustomAction_GetChecked", "TCustomAction_SetChecked", _bool)
+    # true にすると、実行するたびに Checked が反転する。
+    AutoCheck = _Prop("TCustomAction_GetAutoCheck", "TCustomAction_SetAutoCheck", _bool)
+    # 0 でなければ、同じ GroupIndex の Action のうち 1 つだけが Checked になる。
+    GroupIndex = _Prop("TCustomAction_GetGroupIndex", "TCustomAction_SetGroupIndex", _int)
+    Enabled = _Prop("TCustomAction_GetEnabled", "TCustomAction_SetEnabled", _bool)
+    Visible = _Prop("TCustomAction_GetVisible", "TCustomAction_SetVisible", _bool)
+    # 割り当てたメニュー項目・ボタンの画像の、ActionList の Images での位置(-1 なら無し)。
+    ImageIndex = _Prop("TCustomAction_GetImageIndex", "TCustomAction_SetImageIndex", _int)
+    # フォームにフォーカスがあるときにこのキーを押すと実行する(割り当てたメニュー項目にも表示される)。
+    ShortCut = _Prop("TCustomAction_GetShortCut", "TCustomAction_SetShortCut", _int)
+    # true(既定)なら、OnExecute が無いとき Enabled を false にする。
+    DisableIfNoHandler = _Prop("TCustomAction_GetDisableIfNoHandler", "TCustomAction_SetDisableIfNoHandler", _bool)
+
+
+class TAction(TCustomAction):
+    def __init__(self, AOwner):
+        self._attach(lib.TAction_Create(_h(AOwner)))
+
+
+class TCustomActionList(TComponent):
+    """Action の一覧(LCL の TCustomActionList)。"""
+    Actions = _Indexed("TCustomActionList_GetActions", None, _comp("TContainedAction"))
+    ActionCount = _Prop("TCustomActionList_GetActionCount", None, _int)
+    # Action の ImageIndex が指す画像リスト。割り当てたメニュー項目・ボタンにも使われる。
+    Images = _Prop("TCustomActionList_GetImages", "TCustomActionList_SetImages", _comp("TCustomImageList"))
+    State = _Prop("TCustomActionList_GetState", "TCustomActionList_SetState", _enum("TActionListState"))
+    # どの Action を実行するときにも、Action の OnExecute の前に呼ばれる。
+    OnExecute = _Event("TCustomActionList_SetOnExecute", "TActionEvent")
+    # どの Action を更新するときにも、Action の OnUpdate の前に呼ばれる。
+    OnUpdate = _Event("TCustomActionList_SetOnUpdate", "TActionEvent")
+
+
+class TActionList(TCustomActionList):
+    def __init__(self, AOwner):
+        self._attach(lib.TActionList_Create(_h(AOwner)))
+
+
 class TCommonDialog(TComponent):
     """ダイアログの共通の基底(LCL の TCommonDialog)。VCL と同じく、プロパティを設定して Execute() を呼び、結果を bool で受け取る
     (if (OpenDialog1->Execute()) Memo1->Lines->LoadFromFile(OpenDialog1->FileName);)。
@@ -3005,6 +3091,7 @@ _event_types.update({
     "TCustomSectionNotifyEvent": (_a_item("THeaderSection"), ),  # (Sender, Section)
     "TCustomSectionTrackEvent": (_a_item("THeaderSection"), _a_int, _a_enum("TSectionTrackState"), ),  # (Sender, Section, Width, State)
     "TSectionDragEvent": (_a_item("THeaderSection"), _a_item("THeaderSection"), _a_ref_bool, ),  # (Sender, FromSection, ToSection, AllowDrag)
+    "TActionEvent": (_a_comp("TBasicAction"), _a_ref_bool, ),  # (Sender, Action, Handled)
 })
 
 _register(globals())
@@ -3055,38 +3142,38 @@ __all__ = [
     "stStarDown", "stPolygon", "TSectionTrackState", "tsTrackBegin", "tsTrackMove", "tsTrackEnd", "TEdgeStyle",
     "esNone", "esRaised", "esLowered", "TToolButtonStyle", "tbsButton", "tbsCheck", "tbsDropDown", "tbsSeparator",
     "tbsDivider", "tbsButtonDrop", "TGrabStyle", "gsSimple", "gsDouble", "gsHorLines", "gsVerLines", "gsGripper",
-    "gsButton", "TShiftState", "ssShift", "ssAlt", "ssCtrl", "ssLeft", "ssRight", "ssMiddle", "ssDouble", "ssMeta",
-    "ssSuper", "ssHyper", "ssAltGr", "ssCaps", "ssNum", "ssScroll", "ssTriple", "ssQuad", "ssExtra1", "ssExtra2",
-    "TFontStyles", "fsBold", "fsItalic", "fsUnderline", "fsStrikeOut", "TGridOptions", "goFixedVertLine",
-    "goFixedHorzLine", "goVertLine", "goHorzLine", "goRangeSelect", "goDrawFocusSelected", "goRowSizing",
-    "goColSizing", "goRowMoving", "goColMoving", "goEditing", "goAutoAddRows", "goTabs", "goRowSelect",
-    "goAlwaysShowEditor", "goThumbTracking", "goColSpanning", "goRelaxedRowSelect", "goDblClickAutoSize",
-    "goSmoothScroll", "goFixedRowNumbering", "goScrollKeepVisible", "goHeaderHotTracking", "goHeaderPushedLook",
-    "goSelectionActive", "goFixedColSizing", "goDontScrollPartCell", "goCellHints", "goTruncCellHints",
-    "goCellEllipsis", "goAutoAddRowsSkipContentCheck", "goRowHighlight", "TGridDrawState", "gdSelected",
-    "gdFocused", "gdFixed", "gdHot", "gdPushed", "gdRowHighlight", "TEdgeBorders", "ebLeft", "ebTop", "ebRight",
-    "ebBottom", "TOpenOptions", "ofReadOnly", "ofOverwritePrompt", "ofHideReadOnly", "ofNoChangeDir", "ofShowHelp",
-    "ofNoValidate", "ofAllowMultiSelect", "ofExtensionDifferent", "ofPathMustExist", "ofFileMustExist",
-    "ofCreatePrompt", "ofShareAware", "ofNoReadOnlyReturn", "ofNoTestFileCreate", "ofNoNetworkButton",
-    "ofNoLongNames", "ofOldStyleDialog", "ofNoDereferenceLinks", "ofNoResolveLinks", "ofEnableIncludeNotify",
-    "ofEnableSizing", "ofDontAddToRecent", "ofForceShowHidden", "ofViewDetail", "ofAutoPreview",
-    "TColorDialogOptions", "cdFullOpen", "cdPreventFullOpen", "cdShowHelp", "cdSolidColor", "cdAnyColor",
-    "TFontDialogOptions", "fdAnsiOnly", "fdTrueTypeOnly", "fdEffects", "fdFixedPitchOnly", "fdForceFontExist",
-    "fdNoFaceSel", "fdNoOEMFonts", "fdNoSimulations", "fdNoSizeSel", "fdNoStyleSel", "fdNoVectorFonts",
-    "fdShowHelp", "fdWysiwyg", "fdLimitSize", "fdScalableOnly", "fdApplyButton", "TFindOptions", "frDown",
-    "frFindNext", "frHideMatchCase", "frHideWholeWord", "frHideUpDown", "frMatchCase", "frDisableMatchCase",
-    "frDisableUpDown", "frDisableWholeWord", "frReplace", "frReplaceAll", "frWholeWord", "frShowHelp",
-    "frEntireScope", "frHideEntireScope", "frPromptOnReplace", "frHidePromptOnReplace", "frButtonsAtBottom",
-    "TColor", "clBlack", "clWhite", "clRed", "clGreen", "clBlue", "clYellow", "clNone", "clDefault", "TShortCut",
-    "scShift", "scCtrl", "scAlt", "TCursor", "crDefault", "crNone", "crArrow", "crCross", "crIBeam", "crSizeNESW",
-    "crSizeNS", "crSizeNWSE", "crSizeWE", "crUpArrow", "crHourGlass", "crDrag", "crNoDrop", "crHSplit", "crVSplit",
-    "crMultiDrag", "crSQLWait", "crNo", "crAppStart", "crHelp", "crHandPoint", "crSizeAll", "crSize", "crSizeNW",
-    "crSizeN", "crSizeNE", "crSizeW", "crSizeE", "crSizeSW", "crSizeS", "crSizeSE", "TModalResult", "mrNone",
-    "mrOk", "mrCancel", "mrAbort", "mrRetry", "mrIgnore", "mrYes", "mrNo", "mrAll", "mrNoToAll", "mrYesToAll",
-    "mrClose", "mbYesNo", "mbYesNoCancel", "mbOKCancel", "mbAbortRetryIgnore", "TStrings", "TStringList", "TPen",
-    "TBrush", "TFont", "TCanvas", "TGraphic", "TRasterImage", "TCustomBitmap", "TBitmap",
-    "TPortableNetworkGraphic", "TJPEGImage", "TPicture", "TCustomImageList", "TImageList", "TMenuItem", "TMenu",
-    "TMainMenu", "TPopupMenu", "TSizeConstraints", "TControlBorderSpacing", "TControl", "TWinControl",
+    "gsButton", "TActionListState", "asNormal", "asSuspended", "asSuspendedEnabled", "TShiftState", "ssShift",
+    "ssAlt", "ssCtrl", "ssLeft", "ssRight", "ssMiddle", "ssDouble", "ssMeta", "ssSuper", "ssHyper", "ssAltGr",
+    "ssCaps", "ssNum", "ssScroll", "ssTriple", "ssQuad", "ssExtra1", "ssExtra2", "TFontStyles", "fsBold",
+    "fsItalic", "fsUnderline", "fsStrikeOut", "TGridOptions", "goFixedVertLine", "goFixedHorzLine", "goVertLine",
+    "goHorzLine", "goRangeSelect", "goDrawFocusSelected", "goRowSizing", "goColSizing", "goRowMoving",
+    "goColMoving", "goEditing", "goAutoAddRows", "goTabs", "goRowSelect", "goAlwaysShowEditor", "goThumbTracking",
+    "goColSpanning", "goRelaxedRowSelect", "goDblClickAutoSize", "goSmoothScroll", "goFixedRowNumbering",
+    "goScrollKeepVisible", "goHeaderHotTracking", "goHeaderPushedLook", "goSelectionActive", "goFixedColSizing",
+    "goDontScrollPartCell", "goCellHints", "goTruncCellHints", "goCellEllipsis", "goAutoAddRowsSkipContentCheck",
+    "goRowHighlight", "TGridDrawState", "gdSelected", "gdFocused", "gdFixed", "gdHot", "gdPushed",
+    "gdRowHighlight", "TEdgeBorders", "ebLeft", "ebTop", "ebRight", "ebBottom", "TOpenOptions", "ofReadOnly",
+    "ofOverwritePrompt", "ofHideReadOnly", "ofNoChangeDir", "ofShowHelp", "ofNoValidate", "ofAllowMultiSelect",
+    "ofExtensionDifferent", "ofPathMustExist", "ofFileMustExist", "ofCreatePrompt", "ofShareAware",
+    "ofNoReadOnlyReturn", "ofNoTestFileCreate", "ofNoNetworkButton", "ofNoLongNames", "ofOldStyleDialog",
+    "ofNoDereferenceLinks", "ofNoResolveLinks", "ofEnableIncludeNotify", "ofEnableSizing", "ofDontAddToRecent",
+    "ofForceShowHidden", "ofViewDetail", "ofAutoPreview", "TColorDialogOptions", "cdFullOpen", "cdPreventFullOpen",
+    "cdShowHelp", "cdSolidColor", "cdAnyColor", "TFontDialogOptions", "fdAnsiOnly", "fdTrueTypeOnly", "fdEffects",
+    "fdFixedPitchOnly", "fdForceFontExist", "fdNoFaceSel", "fdNoOEMFonts", "fdNoSimulations", "fdNoSizeSel",
+    "fdNoStyleSel", "fdNoVectorFonts", "fdShowHelp", "fdWysiwyg", "fdLimitSize", "fdScalableOnly", "fdApplyButton",
+    "TFindOptions", "frDown", "frFindNext", "frHideMatchCase", "frHideWholeWord", "frHideUpDown", "frMatchCase",
+    "frDisableMatchCase", "frDisableUpDown", "frDisableWholeWord", "frReplace", "frReplaceAll", "frWholeWord",
+    "frShowHelp", "frEntireScope", "frHideEntireScope", "frPromptOnReplace", "frHidePromptOnReplace",
+    "frButtonsAtBottom", "TColor", "clBlack", "clWhite", "clRed", "clGreen", "clBlue", "clYellow", "clNone",
+    "clDefault", "TShortCut", "scShift", "scCtrl", "scAlt", "TCursor", "crDefault", "crNone", "crArrow", "crCross",
+    "crIBeam", "crSizeNESW", "crSizeNS", "crSizeNWSE", "crSizeWE", "crUpArrow", "crHourGlass", "crDrag",
+    "crNoDrop", "crHSplit", "crVSplit", "crMultiDrag", "crSQLWait", "crNo", "crAppStart", "crHelp", "crHandPoint",
+    "crSizeAll", "crSize", "crSizeNW", "crSizeN", "crSizeNE", "crSizeW", "crSizeE", "crSizeSW", "crSizeS",
+    "crSizeSE", "TModalResult", "mrNone", "mrOk", "mrCancel", "mrAbort", "mrRetry", "mrIgnore", "mrYes", "mrNo",
+    "mrAll", "mrNoToAll", "mrYesToAll", "mrClose", "mbYesNo", "mbYesNoCancel", "mbOKCancel", "mbAbortRetryIgnore",
+    "TStrings", "TStringList", "TPen", "TBrush", "TFont", "TCanvas", "TGraphic", "TRasterImage", "TCustomBitmap",
+    "TBitmap", "TPortableNetworkGraphic", "TJPEGImage", "TPicture", "TCustomImageList", "TImageList", "TMenuItem",
+    "TMenu", "TMainMenu", "TPopupMenu", "TSizeConstraints", "TControlBorderSpacing", "TControl", "TWinControl",
     "TCustomScrollBar", "TScrollBar", "TCustomTrackBar", "TTrackBar", "TCustomProgressBar", "TProgressBar",
     "TGraphicControl", "TCustomControl", "TUpDown", "TScrollingWinControl", "TScrollBox", "TCustomForm", "TForm",
     "TApplication", "TCustomPanel", "TPanel", "TCustomGroupBox", "TGroupBox", "TCustomRadioGroup", "TRadioGroup",
@@ -3101,7 +3188,8 @@ __all__ = [
     "TCustomShape", "TShape", "TCustomSpeedButton", "TSpeedButton", "TPaintBox", "TCustomImage", "TImage",
     "TCustomGrid", "TCustomDrawGrid", "TDrawGrid", "TCustomStringGrid", "TStringGrid", "THeaderSection",
     "THeaderSections", "TCustomHeaderControl", "THeaderControl", "TToolWindow", "TToolBar", "TToolButton",
-    "TCoolBand", "TCoolBands", "TCustomCoolBar", "TCoolBar", "TCustomTimer", "TTimer", "TCommonDialog",
+    "TCoolBand", "TCoolBands", "TCustomCoolBar", "TCoolBar", "TCustomTimer", "TTimer", "TBasicAction",
+    "TContainedAction", "TCustomAction", "TAction", "TCustomActionList", "TActionList", "TCommonDialog",
     "TFileDialog", "TOpenDialog", "TSaveDialog", "TSelectDirectoryDialog", "TColorDialog", "TFontDialog",
     "TFindDialog", "TReplaceDialog",
 ]

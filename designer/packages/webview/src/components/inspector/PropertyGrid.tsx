@@ -17,6 +17,7 @@ import {
   type PropertyInfo,
   type PropertyType,
   type PropertyValue,
+  withActionValues,
 } from '@bethany-designer/core';
 import { useState } from 'react';
 import { setProperty } from '../../editing.ts';
@@ -70,6 +71,8 @@ export function PropertyGrid({
       (!onlySet || nodes.some((n) => n.node.properties?.[name] !== undefined)),
   );
   const [single] = nodes.length === 1 ? nodes : [];
+  // 表示する値: Action を割り当てたものは、Action から写る値(docs/adr/0046)
+  const display = nodes.map((n) => withActionValues(document, n));
 
   return (
     <div className="property-grid" role="table">
@@ -78,6 +81,7 @@ export function PropertyGrid({
           key={name}
           document={document}
           nodes={nodes}
+          display={display}
           path={[name]}
           info={info}
           error={single && messagesAt(diagnostics, [...single.path, 'properties', name])}
@@ -108,12 +112,15 @@ function commonProperties(nodes: readonly NodeLocation[]): [string, PropertyInfo
 function PropertyRow({
   document,
   nodes,
+  display,
   path,
   info,
   error,
 }: {
   readonly document: BfmDocument;
   readonly nodes: readonly NodeLocation[];
+  /** 値の表示に使うノード(Action から写る値を埋めたもの) */
+  readonly display: readonly NodeLocation[];
   readonly path: Path;
   readonly info: PropertyInfo;
   readonly error: string | undefined;
@@ -123,7 +130,7 @@ function PropertyRow({
   const names = nodes.map((n) => n.node.name);
   const own = nodes.map((n) => ownValue(n, path));
   const isSet = own.some((v) => v !== undefined);
-  const values = nodes.map((n) => propertyValue(n, path));
+  const values = display.map((n) => propertyValue(n, path));
   const mixed = values.some((v) => JSON.stringify(v) !== JSON.stringify(values[0]));
   const value = mixed ? undefined : values[0];
   const label = path[path.length - 1] ?? '';
@@ -200,6 +207,7 @@ function PropertyRow({
         <Expanded
           document={document}
           nodes={nodes}
+          display={display}
           path={path}
           type={type}
           value={value}
@@ -215,6 +223,7 @@ function PropertyRow({
 function Expanded({
   document,
   nodes,
+  display,
   path,
   type,
   value,
@@ -223,6 +232,7 @@ function Expanded({
 }: {
   readonly document: BfmDocument;
   readonly nodes: readonly NodeLocation[];
+  readonly display: readonly NodeLocation[];
   readonly path: Path;
   readonly type: PropertyType;
   readonly value: unknown;
@@ -239,6 +249,7 @@ function Expanded({
               key={sub}
               document={document}
               nodes={nodes}
+              display={display}
               path={[path[0], sub]}
               info={info}
               error={undefined}
@@ -680,6 +691,10 @@ function* referenceCandidates(document: BfmDocument, className: string): Generat
   };
   for (const c of walk(document.form.controls)) if (isSubclassOf(c.class, className)) yield c.name;
   for (const c of document.components ?? []) if (isSubclassOf(c.class, className)) yield c.name;
+  // ActionList の Action(docs/adr/0046)
+  for (const c of document.components ?? [])
+    for (const a of c.actions ?? [])
+      if (isSubclassOf(a.class ?? 'TAction', className)) yield a.name;
 }
 
 function ownValue(location: NodeLocation, path: Path): unknown {

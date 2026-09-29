@@ -10,7 +10,9 @@ import {
   type ControlNode,
   type FormNode,
   type NodeLocation,
+  withActionValues,
 } from '@bethany-designer/core';
+import { useDocumentStore } from '../store/stores.ts';
 import { createContext, useContext, type CSSProperties, type ReactNode } from 'react';
 import { boundsOf } from '../editing.ts';
 import {
@@ -74,6 +76,11 @@ function ControlView({
   readonly inherited: Inherited;
 }) {
   const canvas = useContext(CanvasContext);
+  const document = useDocumentStore((s) => s.document);
+  // Action を割り当てたものは、Action から写る値(Caption 等)で描く(docs/adr/0046)
+  location = document
+    ? (withActionValues(document, location) as NodeLocation & { readonly kind: 'control' })
+    : location;
   const { node } = location;
   const look = resolveLook(location, inherited);
   const own = hasOwnBounds(node.class);

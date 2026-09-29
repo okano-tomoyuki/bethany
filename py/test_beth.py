@@ -2055,6 +2055,29 @@ def main():
     pr(f"grayCheck State={int(gray_check.State)} (expected cbGrayed={int(cbGrayed)}), "
        f"ExeName is python: {'yes' if Application.ExeName.lower().endswith('python.exe') else 'no'}")
 
+    # Action(docs/adr/0046)。1 つの Action を、ボタンと View メニューの項目の両方に割り当てる
+    action_list = TActionList(Form1)
+    demo = TAction(Form1)
+    demo.Caption = "&Action demo"
+    demo.ShortCut = TextToShortCut("Ctrl+K")
+    demo.ActionList = action_list
+
+    def demo_execute(Sender):
+        demo.Checked = not demo.Checked
+        pr(f"demo OnExecute: Sender is the action: {'yes' if Sender is demo else 'no'}, "
+           f"Checked={'true' if demo.Checked else 'false'}")
+
+    demo.OnExecute = demo_execute
+    demo_button = TButton(Form1)
+    demo_button.Parent = Form1
+    demo_button.SetBounds(440, 386, 110, 25)
+    demo_button.Action = demo
+    demo_item = TMenuItem(Form1)
+    Form1.ViewMenu.Add(demo_item)
+    demo_item.Action = demo
+    pr(f"demoButton Caption={demo_button.Caption}, demoItem ShortCut={ShortCutToText(demo_item.ShortCut)} "
+       f"(expected &Action demo, Ctrl+K)")
+
     # ステータスバーのパネル(docs/adr/0044)。StatusBar1 の上に、パネルを持つ 2 つ目のステータスバーを置く。
     panel_bar = TStatusBar(Form1)
     panel_bar.Parent = Form1

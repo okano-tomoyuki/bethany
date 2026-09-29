@@ -13,6 +13,7 @@
 import { findClass, getCatalog } from '../catalog/catalog.ts';
 import type { PropertyInfo } from '../catalog/types.ts';
 import type {
+  ActionNode,
   ComponentNode,
   ControlNode,
   FormNode,
@@ -60,11 +61,20 @@ function controlLike(node: FormNode | ControlNode): Json {
 
 function componentNode(node: ComponentNode): Json {
   const info = findClass(node.class);
-  return pick(node, ['name', 'class', 'design', 'properties', 'events', 'items'], {
+  return pick(node, ['name', 'class', 'design', 'properties', 'events', 'items', 'actions'], {
     design: (d) => pick(d as object, ['left', 'top']),
     properties: (p) => properties(p as Properties, info?.properties),
     events: (e) => byKeys(e as Json, Object.keys(info?.events ?? {})),
     items: (list) => (list as MenuItemNode[]).map(menuItemNode),
+    actions: (list) => (list as ActionNode[]).map(actionNode),
+  });
+}
+
+function actionNode(node: ActionNode): Json {
+  const info = findClass(node.class ?? 'TAction');
+  return pick(node, ['name', 'class', 'properties', 'events'], {
+    properties: (p) => properties(p as Properties, info?.properties),
+    events: (e) => byKeys(e as Json, Object.keys(info?.events ?? {})),
   });
 }
 

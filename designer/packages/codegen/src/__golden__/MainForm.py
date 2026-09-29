@@ -21,13 +21,16 @@ class TMainForm(TForm):
         self.MainMenu1: TMainMenu
         self.FileMenu: TMenuItem
         self.FileOpenItem: TMenuItem
+        self.FileSaveItem: TMenuItem
         self.N1: TMenuItem
         self.FileExitItem: TMenuItem
         self.PopupMenu1: TPopupMenu
         self.ClearItem: TMenuItem
         self.OpenDialog1: TOpenDialog
         self.Timer1: TTimer
-        # <bethany-designer:end id="declarations" hash="94ef224e">
+        self.ActionList1: TActionList
+        self.FileSaveAction: TAction
+        # <bethany-designer:end id="declarations" hash="c83e20a0">
         self.beth_CreateComponents()
 
     # <bethany-designer:begin id="beth_CreateComponents">
@@ -47,12 +50,15 @@ class TMainForm(TForm):
         self.MainMenu1 = TMainMenu(self)
         self.FileMenu = TMenuItem(self)
         self.FileOpenItem = TMenuItem(self)
+        self.FileSaveItem = TMenuItem(self)
         self.N1 = TMenuItem(self)
         self.FileExitItem = TMenuItem(self)
         self.PopupMenu1 = TPopupMenu(self)
         self.ClearItem = TMenuItem(self)
         self.OpenDialog1 = TOpenDialog(self)
         self.Timer1 = TTimer(self)
+        self.ActionList1 = TActionList(self)
+        self.FileSaveAction = TAction(self)
 
         self.Width = 400
         self.Height = 300
@@ -167,6 +173,8 @@ class TMainForm(TForm):
         self.FileOpenItem.OnClick = self.FileOpenItemClick
         self.FileMenu.Add(self.FileOpenItem)
 
+        self.FileMenu.Add(self.FileSaveItem)
+
         self.N1.Caption = "-"
         self.FileMenu.Add(self.N1)
 
@@ -184,7 +192,15 @@ class TMainForm(TForm):
         self.Timer1.Interval = 500
         self.Timer1.Enabled = False
         self.Timer1.OnTimer = self.Timer1Timer
-    # <bethany-designer:end id="beth_CreateComponents" hash="81040610">
+
+        self.FileSaveAction.ActionList = self.ActionList1
+        self.FileSaveAction.Category = "File"
+        self.FileSaveAction.Caption = "&Save"
+        self.FileSaveAction.ShortCut = TextToShortCut("Ctrl+S")
+        self.FileSaveAction.OnExecute = self.FileSaveActionExecute
+
+        self.FileSaveItem.Action = self.FileSaveAction
+    # <bethany-designer:end id="beth_CreateComponents" hash="cca55aef">
 
     # <bethany-designer:handler-stubs>
 
@@ -213,6 +229,9 @@ class TMainForm(TForm):
         pass
 
     def Timer1Timer(self, Sender):
+        pass
+
+    def FileSaveActionExecute(self, Sender):
         pass
 
 

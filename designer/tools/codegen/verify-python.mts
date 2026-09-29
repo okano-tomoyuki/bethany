@@ -99,6 +99,7 @@ checks["panelColor"] = str(int(f.BottomPanel.Color))
 checks["shortCut"] = ShortCutToText(f.FileOpenItem.ShortCut)
 checks["menuCounts"] = f"{f.MainMenu1.Items.Count}/{f.FileMenu.Count}/{f.PopupMenu1.Items.Count}"
 checks["dialogOptions"] = str(int(f.OpenDialog1.Options))
+checks["actionLink"] = f"{f.FileSaveItem.Caption}/{ShortCutToText(f.FileSaveItem.ShortCut)}/{f.ActionList1.ActionCount}"
 checks["timer"] = f"{int(f.Timer1.Enabled)}/{f.Timer1.Interval}"
 checks["caption"] = f.Caption
 checks["spinValue"] = str(f.SizeSpin.Value)
@@ -115,6 +116,7 @@ checks["anchors"] = f"{f.OkButton.Left}/{f.NameEdit.Width}/{f.BottomPanel.Width}
 f.NameEdit.Text = "changed"
 f.WrapCheck.Checked = False
 f.FileOpenItem.Click()
+f.FileSaveItem.Click()
 f.ClearItem.Click()
 # TButton・TTimer はプログラムから発生させる手段が無いので、接続されたハンドラを呼ぶ
 f.OkButton.OnClick(f.OkButton)

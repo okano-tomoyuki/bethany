@@ -18,6 +18,9 @@
 - The C++ header declares handler parameters of const reference types with the namespace (`const beth::TRect& Rect`)
 - New from the Bethany library 0.3.0: the `OnPaint` event of forms, panels and scroll boxes, and `Height`, `Orientation` and `Quality`
   of fonts. The canvas uses the font `Height` for the text size
+- Actions: put an action list (Standard palette) and add actions to it with "Add Action" in the structure tree. Actions appear
+  under the action list, and the `Action` property of controls and menu items chooses one. The Object Inspector and the canvas
+  show the values that come from the action, and a warning tells when a property or `OnClick` set on the control is overridden
 - The include guard macro does not repeat a namespace that is also the folder of the header
   (`APP_DIALOGS_ABOUT_HPP` instead of `APP_DIALOGS_DIALOGS_ABOUT_HPP` for `app::dialogs` and `dialogs/About.hpp`)
 

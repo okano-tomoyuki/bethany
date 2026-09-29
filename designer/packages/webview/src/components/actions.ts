@@ -3,6 +3,7 @@
  */
 import { isSubclassOf, l10n, type NodeLocation } from '@bethany-designer/core';
 import {
+  addAction,
   addMenuItem,
   addTab,
   addToolButton,
@@ -61,6 +62,23 @@ export function actionsFor(selection: readonly NodeLocation[]): Action[] {
         toolbar: true,
         run: () => {
           addMenuItem(siblingParent, '-', index);
+        },
+      });
+    }
+    const actionList =
+      first.kind === 'component' && isSubclassOf(first.node.class, 'TCustomActionList')
+        ? first.node.name
+        : first.kind === 'action'
+          ? first.list.name
+          : undefined;
+    if (actionList !== undefined) {
+      const index = first.kind === 'action' ? indexIn(first) + 1 : undefined;
+      actions.push({
+        id: 'addAction',
+        label: l10n.t('Add Action'),
+        toolbar: true,
+        run: () => {
+          addAction(actionList, index);
         },
       });
     }
@@ -152,7 +170,9 @@ export function actionsFor(selection: readonly NodeLocation[]): Action[] {
       ? first.parent.name
       : first.kind === 'menuItem'
         ? (first.parentItem?.name ?? first.menu.name)
-        : undefined;
+        : first.kind === 'action'
+          ? first.list.name
+          : undefined;
   if (parent !== undefined)
     actions.push({
       id: 'selectParent',
@@ -178,6 +198,7 @@ export function actionsFor(selection: readonly NodeLocation[]): Action[] {
 function siblingsOf(location: NodeLocation): readonly { name: string }[] | undefined {
   if (location.kind === 'control') return location.parent.controls;
   if (location.kind === 'menuItem') return (location.parentItem ?? location.menu).items;
+  if (location.kind === 'action') return location.list.actions;
   return undefined;
 }
 
@@ -199,6 +220,13 @@ function reorder(location: NodeLocation, index: number): void {
       type: 'moveMenuItem',
       name: location.node.name,
       parent: (location.parentItem ?? location.menu).name,
+      index,
+    });
+  else if (location.kind === 'action')
+    store.dispatch({
+      type: 'moveAction',
+      name: location.node.name,
+      list: location.list.name,
       index,
     });
 }

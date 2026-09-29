@@ -57,6 +57,15 @@ export const MenuItemNode: z.ZodType<MenuItemNode> = z.strictObject({
   },
 });
 
+/** ActionList の Action(docs/adr/0046)。class を省略すると TAction */
+export const ActionNode = z.strictObject({
+  name: z.string(),
+  class: z.string().optional(),
+  properties: Properties.optional(),
+  events: Events.optional(),
+});
+export type ActionNode = z.infer<typeof ActionNode>;
+
 /** デザイナーのキャンバス上のアイコンの位置(生成するコードには影響しない) */
 export const DesignPosition = z.strictObject({ left: z.int(), top: z.int() });
 
@@ -68,6 +77,8 @@ export const ComponentNode = z.strictObject({
   events: Events.optional(),
   /** TMainMenu・TPopupMenu の項目 */
   items: z.array(MenuItemNode).optional(),
+  /** TActionList の Action(docs/adr/0046) */
+  actions: z.array(ActionNode).optional(),
 });
 export type ComponentNode = z.infer<typeof ComponentNode>;
 

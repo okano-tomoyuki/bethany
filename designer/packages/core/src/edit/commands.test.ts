@@ -132,11 +132,58 @@ describe('追加', () => {
       doc,
     );
     const file = node(doc, 'FileMenu').node as { items?: { name: string }[] };
-    expect(file.items?.map((i) => i.name)).toEqual(['FileOpenItem', 'Save1', 'N1', 'FileExitItem']);
+    expect(file.items?.map((i) => i.name)).toEqual([
+      'FileOpenItem',
+      'Save1',
+      'FileSaveItem',
+      'N1',
+      'FileExitItem',
+    ]);
     expect(node(doc, 'SaveAs1').kind).toBe('menuItem');
     expect(reject({ type: 'addMenuItem', parent: 'Timer1', name: 'M1', caption: 'x' })).toContain(
       'cannot have menu items',
     );
+  });
+});
+
+describe('Action(docs/adr/0046)', () => {
+  it('addAction: ActionList・Action の後ろに追加する(Caption は名前)', () => {
+    let doc = apply({ type: 'addAction', list: 'ActionList1', name: 'Action1' });
+    doc = apply({ type: 'addAction', list: 'ActionList1', name: 'Action2', index: 0 }, doc);
+    const list = node(doc, 'ActionList1');
+    expect(list.kind === 'component' && list.node.actions?.map((a) => a.name)).toEqual([
+      'Action2',
+      'FileSaveAction',
+      'Action1',
+    ]);
+    expect(node(doc, 'Action1').node).toEqual({
+      name: 'Action1',
+      properties: { Caption: 'Action1' },
+    });
+    expect(reject({ type: 'addAction', list: 'Timer1', name: 'Action3' })).toBe(
+      'TTimer cannot have actions',
+    );
+  });
+
+  it('moveAction・削除すると割り当てた Action も消す・改名すると参照も書き換える', () => {
+    let doc = apply({ type: 'addAction', list: 'ActionList1', name: 'Action1' });
+    doc = apply({ type: 'moveAction', name: 'Action1', list: 'ActionList1', index: 0 }, doc);
+    const list = node(doc, 'ActionList1');
+    expect(list.kind === 'component' && list.node.actions?.map((a) => a.name)).toEqual([
+      'Action1',
+      'FileSaveAction',
+    ]);
+    const renamed = apply(
+      { type: 'renameNode', name: 'FileSaveAction', newName: 'SaveAction' },
+      doc,
+    );
+    expect(node(renamed, 'FileSaveItem').node.properties).toEqual({ Action: 'SaveAction' });
+    const removed = apply({ type: 'removeNodes', names: ['FileSaveAction'] }, doc);
+    expect(node(removed, 'FileSaveItem').node.properties).toBeUndefined();
+    // 最後の Action を削除すると actions を消す
+    const empty = apply({ type: 'removeNodes', names: ['Action1', 'SaveAction'] }, renamed);
+    const emptied = node(empty, 'ActionList1');
+    expect(emptied.kind === 'component' && emptied.node.actions).toBeUndefined();
   });
 });
 

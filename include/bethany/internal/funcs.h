@@ -1230,6 +1230,51 @@
     X(int_t,         TFont_GetOrientation,                  (obj_t o),                                                     (o)) \
     X(void,          TFont_SetOrientation,                  (obj_t o, int_t v),                                            (o, v)) \
     X(int_t,         TFont_GetQuality,                      (obj_t o),                                                     (o)) \
-    X(void,          TFont_SetQuality,                      (obj_t o, int_t v),                                            (o, v))
+    X(void,          TFont_SetQuality,                      (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TBasicAction_Execute,                  (obj_t o),                                                     (o)) \
+    X(bool_t,        TBasicAction_Update,                   (obj_t o),                                                     (o)) \
+    X(obj_t,         TBasicAction_GetActionComponent,       (obj_t o),                                                     (o)) \
+    X(void,          TBasicAction_SetOnExecute,             (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(void,          TBasicAction_SetOnUpdate,              (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(obj_t,         TContainedAction_GetActionList,        (obj_t o),                                                     (o)) \
+    X(void,          TContainedAction_SetActionList,        (obj_t o, obj_t v),                                            (o, v)) \
+    X(str_t,         TContainedAction_GetCategory,          (obj_t o),                                                     (o)) \
+    X(void,          TContainedAction_SetCategory,          (obj_t o, str_t v),                                            (o, v)) \
+    X(int_t,         TContainedAction_GetIndex,             (obj_t o),                                                     (o)) \
+    X(void,          TContainedAction_SetIndex,             (obj_t o, int_t v),                                            (o, v)) \
+    X(str_t,         TCustomAction_GetCaption,              (obj_t o),                                                     (o)) \
+    X(void,          TCustomAction_SetCaption,              (obj_t o, str_t v),                                            (o, v)) \
+    X(str_t,         TCustomAction_GetHint,                 (obj_t o),                                                     (o)) \
+    X(void,          TCustomAction_SetHint,                 (obj_t o, str_t v),                                            (o, v)) \
+    X(bool_t,        TCustomAction_GetChecked,              (obj_t o),                                                     (o)) \
+    X(void,          TCustomAction_SetChecked,              (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomAction_GetAutoCheck,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomAction_SetAutoCheck,            (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomAction_GetEnabled,              (obj_t o),                                                     (o)) \
+    X(void,          TCustomAction_SetEnabled,              (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomAction_GetVisible,              (obj_t o),                                                     (o)) \
+    X(void,          TCustomAction_SetVisible,              (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomAction_GetDisableIfNoHandler,   (obj_t o),                                                     (o)) \
+    X(void,          TCustomAction_SetDisableIfNoHandler,   (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TCustomAction_GetGroupIndex,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomAction_SetGroupIndex,           (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomAction_GetImageIndex,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomAction_SetImageIndex,           (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomAction_GetShortCut,             (obj_t o),                                                     (o)) \
+    X(void,          TCustomAction_SetShortCut,             (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TAction_Create,                        (obj_t owner),                                                 (owner)) \
+    X(int_t,         TCustomActionList_GetActionCount,      (obj_t o),                                                     (o)) \
+    X(obj_t,         TCustomActionList_GetActions,          (obj_t o, int_t i),                                            (o, i)) \
+    X(obj_t,         TCustomActionList_GetImages,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomActionList_SetImages,           (obj_t o, obj_t v),                                            (o, v)) \
+    X(int_t,         TCustomActionList_GetState,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomActionList_SetState,            (obj_t o, int_t v),                                            (o, v)) \
+    X(void,          TCustomActionList_SetOnExecute,        (obj_t o, item_allow_callback_t cb, void* d),                  (o, cb, d)) \
+    X(void,          TCustomActionList_SetOnUpdate,         (obj_t o, item_allow_callback_t cb, void* d),                  (o, cb, d)) \
+    X(obj_t,         TActionList_Create,                    (obj_t owner),                                                 (owner)) \
+    X(obj_t,         TControl_GetAction,                    (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetAction,                    (obj_t o, obj_t v),                                            (o, v)) \
+    X(obj_t,         TMenuItem_GetAction,                   (obj_t o),                                                     (o)) \
+    X(void,          TMenuItem_SetAction,                   (obj_t o, obj_t v),                                            (o, v))
 
 #endif

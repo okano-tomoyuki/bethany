@@ -144,6 +144,7 @@
 | `properties` | | 名前 → 値 | §5 |
 | `events` | | 名前 → ハンドラ名 | §6 |
 | `items` | | メニュー項目ノードの配列 | TMainMenu・TPopupMenu のときだけ書ける(§4.4) |
+| `actions` | | Action ノードの配列 | TActionList のときだけ書ける(§4.5) |
 
 ### 4.4 メニュー項目ノード(`items`)
 
@@ -155,6 +156,21 @@
 | `items` | | メニュー項目ノードの配列 | サブメニュー |
 
 `class` は書かない(常に TMenuItem)。
+
+### 4.5 Action ノード(`actions`。[ADR 0046](../adr/0046-actions.md))
+
+| キー | 必須 | 型 | 説明 |
+|---|---|---|---|
+| `name` | ○ | 識別子 | フォームのメンバになる(`TAction* FileSave;`) |
+| `class` | | クラス名 | 省略すると `TAction`(後で標準の Action を入れる余地) |
+| `properties` | | 名前 → 値 | Caption・ShortCut・Checked・Enabled・ImageIndex・Category 等 |
+| `events` | | 名前 → ハンドラ名 | OnExecute・OnUpdate |
+
+- Action はキャンバスにアイコンを出さず、構造の木で ActionList の下に並ぶ。生成するコードでは `FileSave->ActionList = ActionList1;` で一覧に入れる。
+- コントロール・メニュー項目の `Action` には Action の `name` を書く。`Action` の代入は、すべての文の最後に生成する(割り当てた時点で
+  Action の Caption 等が写るため)。
+- `Action` を書いたコントロール・メニュー項目に、Action から写るプロパティ(Caption・Enabled・Hint・Visible、メニュー項目は Checked・ShortCut 等も)や
+  `OnClick` を書くと警告になる(Action の値で上書きされる。`OnClick` は Action の OnExecute と両方呼ばれる)。
 
 ## 5. プロパティ
 

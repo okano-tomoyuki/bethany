@@ -260,6 +260,7 @@ TControl::TControl(ObjectHandle handle)
     : TComponent(handle)
     , ClientWidth(this, &TControl::GetClientWidthImpl, &TControl::SetClientWidthImpl)
     , ClientHeight(this, &TControl::GetClientHeightImpl, &TControl::SetClientHeightImpl)
+    , Action(this, &TControl::GetActionImpl, &TControl::SetActionImpl)
     , Parent(this, &TControl::GetParentImpl, &TControl::SetParentImpl)
     , Left(this, &TControl::GetLeftImpl, &TControl::SetLeftImpl)
     , Top(this, &TControl::GetTopImpl, &TControl::SetTopImpl)
@@ -411,6 +412,16 @@ TAlign TControl::GetAlignImpl(TObject* owner)                  { return static_c
 void   TControl::SetAlignImpl(TObject* owner, const TAlign& value) { internal::TControl_SetAlign(owner->Handle(), value); }
 bool   TControl::GetAutoSizeImpl(TObject* owner)                  { return internal::TControl_GetAutoSize(owner->Handle()) != 0; }
 void   TControl::SetAutoSizeImpl(TObject* owner, const bool& value) { internal::TControl_SetAutoSize(owner->Handle(), value ? 1 : 0); }
+
+TBasicAction* TControl::GetActionImpl(TObject* owner)
+{
+    return static_cast<TBasicAction*>(FromHandle(internal::TControl_GetAction(owner->Handle())));
+}
+
+void TControl::SetActionImpl(TObject* owner, TBasicAction* const& value)
+{
+    internal::TControl_SetAction(owner->Handle(), HandleOf(value));
+}
 
 TPopupMenu* TControl::GetPopupMenuImpl(TObject* owner)
 {
@@ -3969,6 +3980,197 @@ TTimer::TTimer(TComponent* AOwner)
     : TCustomTimer(internal::TTimer_Create(HandleOf(AOwner)))
 {}
 
+/* ---------------- Action(docs/adr/0046) ---------------- */
+
+TBasicAction::TBasicAction(ObjectHandle handle)
+    : TComponent(handle)
+    , ActionComponent(this, &TBasicAction::GetActionComponentImpl)
+    , OnExecute(this, &TBasicAction::GetOnExecuteImpl, &TBasicAction::SetOnExecuteImpl)
+    , OnUpdate(this, &TBasicAction::GetOnUpdateImpl, &TBasicAction::SetOnUpdateImpl)
+{}
+
+bool TBasicAction::Execute() { return internal::TBasicAction_Execute(handle_) != 0; }
+bool TBasicAction::Update() { return internal::TBasicAction_Update(handle_) != 0; }
+
+TComponent* TBasicAction::GetActionComponentImpl(TObject* owner)
+{
+    return static_cast<TComponent*>(FromHandle(internal::TBasicAction_GetActionComponent(owner->Handle())));
+}
+
+TNotifyEvent TBasicAction::GetOnExecuteImpl(TObject* owner) { return static_cast<TBasicAction*>(owner)->onExecute_; }
+void TBasicAction::SetOnExecuteImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TBasicAction* self = static_cast<TBasicAction*>(owner);
+    SetSimpleEvent(self->handle_, self->onExecute_, self->onExecuteHooked_, value,
+                   &internal::TBasicAction_SetOnExecute, &TBasicAction::ExecuteTrampoline);
+}
+
+TNotifyEvent TBasicAction::GetOnUpdateImpl(TObject* owner) { return static_cast<TBasicAction*>(owner)->onUpdate_; }
+void TBasicAction::SetOnUpdateImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TBasicAction* self = static_cast<TBasicAction*>(owner);
+    SetSimpleEvent(self->handle_, self->onUpdate_, self->onUpdateHooked_, value,
+                   &internal::TBasicAction_SetOnUpdate, &TBasicAction::UpdateTrampoline);
+}
+
+void BETH_CALL TBasicAction::ExecuteTrampoline(ObjectHandle sender, void*)
+{
+    GuardCallback([&] {
+        TBasicAction* self = static_cast<TBasicAction*>(FromHandle(sender));
+        if (!self || !self->onExecute_)
+            return;
+        TNotifyEvent handler = self->onExecute_;
+        handler(self);
+    });
+}
+
+void BETH_CALL TBasicAction::UpdateTrampoline(ObjectHandle sender, void*)
+{
+    GuardCallback([&] {
+        TBasicAction* self = static_cast<TBasicAction*>(FromHandle(sender));
+        if (!self || !self->onUpdate_)
+            return;
+        TNotifyEvent handler = self->onUpdate_;
+        handler(self);
+    });
+}
+
+TContainedAction::TContainedAction(ObjectHandle handle)
+    : TBasicAction(handle)
+    , ActionList(this, &TContainedAction::GetActionListImpl, &TContainedAction::SetActionListImpl)
+    , Category(this, &TContainedAction::GetCategoryImpl, &TContainedAction::SetCategoryImpl)
+    , Index(this, &TContainedAction::GetIndexImpl, &TContainedAction::SetIndexImpl)
+{}
+
+TCustomActionList* TContainedAction::GetActionListImpl(TObject* owner)
+{
+    return static_cast<TCustomActionList*>(FromHandle(internal::TContainedAction_GetActionList(owner->Handle())));
+}
+void TContainedAction::SetActionListImpl(TObject* owner, TCustomActionList* const& value)
+{
+    internal::TContainedAction_SetActionList(owner->Handle(), HandleOf(value));
+}
+std::string TContainedAction::GetCategoryImpl(TObject* owner) { return internal::TContainedAction_GetCategory(owner->Handle()); }
+void TContainedAction::SetCategoryImpl(TObject* owner, const std::string& value) { internal::TContainedAction_SetCategory(owner->Handle(), value.c_str()); }
+int  TContainedAction::GetIndexImpl(TObject* owner) { return internal::TContainedAction_GetIndex(owner->Handle()); }
+void TContainedAction::SetIndexImpl(TObject* owner, const int& value) { internal::TContainedAction_SetIndex(owner->Handle(), value); }
+
+TCustomAction::TCustomAction(ObjectHandle handle)
+    : TContainedAction(handle)
+    , Caption(this, &TCustomAction::GetCaptionImpl, &TCustomAction::SetCaptionImpl)
+    , Hint(this, &TCustomAction::GetHintImpl, &TCustomAction::SetHintImpl)
+    , Checked(this, &TCustomAction::GetCheckedImpl, &TCustomAction::SetCheckedImpl)
+    , AutoCheck(this, &TCustomAction::GetAutoCheckImpl, &TCustomAction::SetAutoCheckImpl)
+    , GroupIndex(this, &TCustomAction::GetGroupIndexImpl, &TCustomAction::SetGroupIndexImpl)
+    , Enabled(this, &TCustomAction::GetEnabledImpl, &TCustomAction::SetEnabledImpl)
+    , Visible(this, &TCustomAction::GetVisibleImpl, &TCustomAction::SetVisibleImpl)
+    , ImageIndex(this, &TCustomAction::GetImageIndexImpl, &TCustomAction::SetImageIndexImpl)
+    , ShortCut(this, &TCustomAction::GetShortCutImpl, &TCustomAction::SetShortCutImpl)
+    , DisableIfNoHandler(this, &TCustomAction::GetDisableIfNoHandlerImpl, &TCustomAction::SetDisableIfNoHandlerImpl)
+{}
+
+std::string TCustomAction::GetCaptionImpl(TObject* owner) { return internal::TCustomAction_GetCaption(owner->Handle()); }
+void TCustomAction::SetCaptionImpl(TObject* owner, const std::string& value) { internal::TCustomAction_SetCaption(owner->Handle(), value.c_str()); }
+std::string TCustomAction::GetHintImpl(TObject* owner) { return internal::TCustomAction_GetHint(owner->Handle()); }
+void TCustomAction::SetHintImpl(TObject* owner, const std::string& value) { internal::TCustomAction_SetHint(owner->Handle(), value.c_str()); }
+bool TCustomAction::GetCheckedImpl(TObject* owner) { return internal::TCustomAction_GetChecked(owner->Handle()) != 0; }
+void TCustomAction::SetCheckedImpl(TObject* owner, const bool& value) { internal::TCustomAction_SetChecked(owner->Handle(), value ? 1 : 0); }
+bool TCustomAction::GetAutoCheckImpl(TObject* owner) { return internal::TCustomAction_GetAutoCheck(owner->Handle()) != 0; }
+void TCustomAction::SetAutoCheckImpl(TObject* owner, const bool& value) { internal::TCustomAction_SetAutoCheck(owner->Handle(), value ? 1 : 0); }
+int  TCustomAction::GetGroupIndexImpl(TObject* owner) { return internal::TCustomAction_GetGroupIndex(owner->Handle()); }
+void TCustomAction::SetGroupIndexImpl(TObject* owner, const int& value) { internal::TCustomAction_SetGroupIndex(owner->Handle(), value); }
+bool TCustomAction::GetEnabledImpl(TObject* owner) { return internal::TCustomAction_GetEnabled(owner->Handle()) != 0; }
+void TCustomAction::SetEnabledImpl(TObject* owner, const bool& value) { internal::TCustomAction_SetEnabled(owner->Handle(), value ? 1 : 0); }
+bool TCustomAction::GetVisibleImpl(TObject* owner) { return internal::TCustomAction_GetVisible(owner->Handle()) != 0; }
+void TCustomAction::SetVisibleImpl(TObject* owner, const bool& value) { internal::TCustomAction_SetVisible(owner->Handle(), value ? 1 : 0); }
+int  TCustomAction::GetImageIndexImpl(TObject* owner) { return internal::TCustomAction_GetImageIndex(owner->Handle()); }
+void TCustomAction::SetImageIndexImpl(TObject* owner, const int& value) { internal::TCustomAction_SetImageIndex(owner->Handle(), value); }
+TShortCut TCustomAction::GetShortCutImpl(TObject* owner) { return static_cast<TShortCut>(internal::TCustomAction_GetShortCut(owner->Handle())); }
+void TCustomAction::SetShortCutImpl(TObject* owner, const TShortCut& value) { internal::TCustomAction_SetShortCut(owner->Handle(), value); }
+bool TCustomAction::GetDisableIfNoHandlerImpl(TObject* owner) { return internal::TCustomAction_GetDisableIfNoHandler(owner->Handle()) != 0; }
+void TCustomAction::SetDisableIfNoHandlerImpl(TObject* owner, const bool& value) { internal::TCustomAction_SetDisableIfNoHandler(owner->Handle(), value ? 1 : 0); }
+
+TAction::TAction(TComponent* AOwner)
+    : TCustomAction(internal::TAction_Create(HandleOf(AOwner)))
+{}
+
+TCustomActionList::TCustomActionList(ObjectHandle handle)
+    : TComponent(handle)
+    , Actions(this, &TCustomActionList::GetActionsImpl)
+    , ActionCount(this, &TCustomActionList::GetActionCountImpl)
+    , Images(this, &TCustomActionList::GetImagesImpl, &TCustomActionList::SetImagesImpl)
+    , State(this, &TCustomActionList::GetStateImpl, &TCustomActionList::SetStateImpl)
+    , OnExecute(this, &TCustomActionList::GetOnExecuteImpl, &TCustomActionList::SetOnExecuteImpl)
+    , OnUpdate(this, &TCustomActionList::GetOnUpdateImpl, &TCustomActionList::SetOnUpdateImpl)
+{}
+
+TContainedAction* TCustomActionList::GetActionsImpl(TObject* owner, int Index)
+{
+    return static_cast<TContainedAction*>(FromHandle(internal::TCustomActionList_GetActions(owner->Handle(), Index)));
+}
+int TCustomActionList::GetActionCountImpl(TObject* owner) { return internal::TCustomActionList_GetActionCount(owner->Handle()); }
+TCustomImageList* TCustomActionList::GetImagesImpl(TObject* owner)
+{
+    return static_cast<TCustomImageList*>(FromHandle(internal::TCustomActionList_GetImages(owner->Handle())));
+}
+void TCustomActionList::SetImagesImpl(TObject* owner, TCustomImageList* const& value)
+{
+    internal::TCustomActionList_SetImages(owner->Handle(), HandleOf(value));
+}
+TActionListState TCustomActionList::GetStateImpl(TObject* owner) { return static_cast<TActionListState>(internal::TCustomActionList_GetState(owner->Handle())); }
+void TCustomActionList::SetStateImpl(TObject* owner, const TActionListState& value) { internal::TCustomActionList_SetState(owner->Handle(), value); }
+
+TActionEvent TCustomActionList::GetOnExecuteImpl(TObject* owner) { return static_cast<TCustomActionList*>(owner)->onExecute_; }
+void TCustomActionList::SetOnExecuteImpl(TObject* owner, const TActionEvent& value)
+{
+    TCustomActionList* self = static_cast<TCustomActionList*>(owner);
+    SetSimpleEvent(self->handle_, self->onExecute_, self->onExecuteHooked_, value,
+                   &internal::TCustomActionList_SetOnExecute, &TCustomActionList::ExecuteTrampoline);
+}
+
+TActionEvent TCustomActionList::GetOnUpdateImpl(TObject* owner) { return static_cast<TCustomActionList*>(owner)->onUpdate_; }
+void TCustomActionList::SetOnUpdateImpl(TObject* owner, const TActionEvent& value)
+{
+    TCustomActionList* self = static_cast<TCustomActionList*>(owner);
+    SetSimpleEvent(self->handle_, self->onUpdate_, self->onUpdateHooked_, value,
+                   &internal::TCustomActionList_SetOnUpdate, &TCustomActionList::UpdateTrampoline);
+}
+
+namespace
+{
+
+// ActionList の OnExecute・OnUpdate の共通の呼び出し(ハンドラはコピーしてから呼ぶ)。
+void CallActionEvent(TCustomActionList* self, TActionEvent handler, TBasicAction* action, internal::bool_t* handled)
+{
+    if (!handler)
+        return;
+    bool value = *handled != 0;
+    handler(self, action, value);
+    *handled = value ? 1 : 0;
+}
+
+} // namespace
+
+void BETH_CALL TCustomActionList::ExecuteTrampoline(ObjectHandle sender, ObjectHandle action, internal::bool_t* handled, void*)
+{
+    GuardCallback([&] {
+        if (TCustomActionList* self = static_cast<TCustomActionList*>(FromHandle(sender)))
+            CallActionEvent(self, self->onExecute_, static_cast<TBasicAction*>(FromHandle(action)), handled);
+    });
+}
+
+void BETH_CALL TCustomActionList::UpdateTrampoline(ObjectHandle sender, ObjectHandle action, internal::bool_t* handled, void*)
+{
+    GuardCallback([&] {
+        if (TCustomActionList* self = static_cast<TCustomActionList*>(FromHandle(sender)))
+            CallActionEvent(self, self->onUpdate_, static_cast<TBasicAction*>(FromHandle(action)), handled);
+    });
+}
+
+TActionList::TActionList(TComponent* AOwner)
+    : TCustomActionList(internal::TActionList_Create(HandleOf(AOwner)))
+{}
+
 /* ---------------- ImageList ---------------- */
 
 TCustomImageList::TCustomImageList(ObjectHandle handle)
@@ -4097,8 +4299,19 @@ TMenuItem::TMenuItem(ObjectHandle handle)
     , ImageIndex(this, &TMenuItem::GetImageIndexImpl, &TMenuItem::SetImageIndexImpl)
     , SubMenuImages(this, &TMenuItem::GetSubMenuImagesImpl, &TMenuItem::SetSubMenuImagesImpl)
     , Bitmap(this, &TMenuItem::GetBitmapImpl, &TMenuItem::SetBitmapImpl)
+    , Action(this, &TMenuItem::GetActionImpl, &TMenuItem::SetActionImpl)
     , bitmap_(this, &internal::TMenuItem_GetBitmap)
 {}
+
+TBasicAction* TMenuItem::GetActionImpl(TObject* owner)
+{
+    return static_cast<TBasicAction*>(FromHandle(internal::TMenuItem_GetAction(owner->Handle())));
+}
+
+void TMenuItem::SetActionImpl(TObject* owner, TBasicAction* const& value)
+{
+    internal::TMenuItem_SetAction(owner->Handle(), HandleOf(value));
+}
 
 TMenuItem* TMenuItem::GetItemsImpl(TObject* owner, int Index) { return WrapExisting<TMenuItem>(internal::TMenuItem_GetItem(owner->Handle(), Index)); }
 void TMenuItem::Add(TMenuItem* Item)              { internal::TMenuItem_Add(handle_, HandleOf(Item)); }

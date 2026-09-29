@@ -142,6 +142,27 @@ describe('意味の検証', () => {
     ]);
   });
 
+  it('Action(docs/adr/0046): 置き場所と、Action から写るプロパティ・OnClick の警告', () => {
+    expect(
+      diagnose((doc) => {
+        // FileSaveItem(components.0.items.0.items.1)は Action を割り当てている
+        const item = doc.components[0].items[0].items[1];
+        item.properties.Caption = 'x';
+        item.properties.RadioItem = true;
+        item.events = { OnClick: 'FileOpenItemClick' };
+        doc.components.push({ name: 'LooseAction', class: 'TAction' });
+        doc.components[3].actions = [];
+        doc.components[4].actions.push({ name: 'Bad', class: 'TTimer' });
+      }),
+    ).toEqual([
+      ['actions-not-allowed', 'components.3.actions'],
+      ['wrong-class-kind', 'components.4.actions.1.class'],
+      ['wrong-class-kind', 'components.5.class'],
+      ['overridden-by-action', 'components.0.items.0.items.1.properties.Caption'],
+      ['overridden-by-action', 'components.0.items.0.items.1.events.OnClick'],
+    ]);
+  });
+
   it('イベントとハンドラ', () => {
     expect(
       diagnose((doc) => {

@@ -22,6 +22,7 @@ import {
   type MenuItemNode,
   type NodeLocation,
   type BfmDocument,
+  withActionProperties,
 } from '@bethany-designer/core';
 import {
   useEffect,
@@ -647,11 +648,7 @@ export function DesignCanvas() {
                       selected.has(item.name) ? 'form-menu-item selected' : 'form-menu-item'
                     }
                   >
-                    <Caption
-                      value={
-                        typeof item.properties?.Caption === 'string' ? item.properties.Caption : ''
-                      }
-                    />
+                    <Caption value={menuCaption(document, item)} />
                     {opened?.menu === menu && opened.open.has(item.name) && (
                       <MenuList items={item.items ?? []} opened={opened.open} selected={selected} />
                     )}
@@ -887,6 +884,12 @@ function openedMenu(
   return { menu: location.menu, open };
 }
 
+/** メニューの項目の Caption(Action を割り当てた項目は Action の Caption) */
+function menuCaption(document: BfmDocument | undefined, item: MenuItemNode): string {
+  const p = (document && withActionProperties(document, 'TMenuItem', item.properties)) ?? {};
+  return typeof p.Caption === 'string' ? p.Caption : '';
+}
+
 /** メニューのドロップダウン(開いた項目のサブメニューは右に出す) */
 function MenuList({
   items,
@@ -897,11 +900,13 @@ function MenuList({
   readonly opened: ReadonlySet<string>;
   readonly selected: ReadonlySet<string>;
 }) {
+  const document = useDocumentStore((s) => s.document);
   return (
     <div className="menu-dropdown">
       {items.length === 0 && <div className="menu-row empty">{l10n.t('(no items)')}</div>}
       {items.map((item) => {
-        const p = item.properties ?? {};
+        // Action を割り当てた項目は、Action から写る値で描く(docs/adr/0046)
+        const p = (document && withActionProperties(document, 'TMenuItem', item.properties)) ?? {};
         const caption = typeof p.Caption === 'string' ? p.Caption : '';
         if (caption === '-')
           return (

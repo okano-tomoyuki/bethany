@@ -2549,6 +2549,29 @@ int main()
                     std::string(Application->ExeName).find("test_cpp.exe") != std::string::npos ? "yes" : "no");
     }
 
+    // Action(docs/adr/0046)。1 つの Action を、ボタンと View メニューの項目の両方に割り当てる
+    {
+        TActionList* actions = new TActionList(Form1);
+        TAction* demo = new TAction(Form1);
+        demo->Caption = "&Action demo";
+        demo->ShortCut = TextToShortCut("Ctrl+K");
+        demo->ActionList = actions;
+        demo->OnExecute = [demo](TObject* Sender) {
+            demo->Checked = !demo->Checked;
+            std::printf("demo OnExecute: Sender is the action: %s, Checked=%s\n", Sender == demo ? "yes" : "no",
+                        demo->Checked ? "true" : "false");
+        };
+        TButton* demoButton = new TButton(Form1);
+        demoButton->Parent = Form1;
+        demoButton->SetBounds(440, 386, 110, 25);
+        demoButton->Action = demo;
+        TMenuItem* demoItem = new TMenuItem(Form1);
+        Form1->ViewMenu->Add(demoItem);
+        demoItem->Action = demo;
+        std::printf("demoButton Caption=%s, demoItem ShortCut=%s (expected &Action demo, Ctrl+K)\n",
+                    std::string(demoButton->Caption).c_str(), ShortCutToText(demoItem->ShortCut).c_str());
+    }
+
     // ステータスバーのパネル(docs/adr/0044)。StatusBar1 の上に、パネルを持つ 2 つ目のステータスバーを置く。
     {
         TStatusBar* panelBar = new TStatusBar(Form1);

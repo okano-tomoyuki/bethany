@@ -33,7 +33,8 @@ uses
   Graphics,
   Dialogs,
   ImgList,
-  CustomTimer
+  CustomTimer,
+  ActnList
   {$ifdef LCLwin32}
   , Windows, InterfaceBase, WSControls
   {$endif};
@@ -13370,6 +13371,485 @@ begin
   end;
 end;
 
+{ ---------------- Action(docs/adr/0046) ----------------
+  TAction・TActionList は TComponent(Watch で破棄を知らせる)。TAction は ActionList に代入して一覧に入れる。 }
+
+type
+  { TActionList.OnExecute・OnUpdate(TActionEvent: Action と var Handled。Sender が無いので、ActionList を Sender として渡す)用。 }
+  TActionEventBridge = class(TComponent)
+  private
+    FCallback: TBethItemAllowCallback;
+    FData: Pointer;
+  public
+    procedure DoAction(AAction: TBasicAction; var Handled: Boolean);
+  end;
+
+procedure TActionEventBridge.DoAction(AAction: TBasicAction; var Handled: Boolean);
+var
+  H: Integer;
+begin
+  if not Assigned(FCallback) or GDetaching then
+    Exit;
+  if Handled then H := -1 else H := 0;
+  FCallback(Pointer(Owner), Pointer(AAction), @H, FData);
+  Handled := H <> 0;
+  CheckCallbackError;
+end;
+
+function ActionEventBridgeFor(Owner: TComponent; Current: Pointer; Cb: TBethItemAllowCallback; Data: Pointer): TActionEventBridge;
+begin
+  if (Current <> nil) and (TObject(Current) is TActionEventBridge) and (TActionEventBridge(Current).Owner = Owner) then
+    Result := TActionEventBridge(Current)
+  else
+    Result := TActionEventBridge.Create(Owner);
+  Result.FCallback := Cb;
+  Result.FData := Data;
+end;
+
+function MethodData(const M: TActionEvent): Pointer; overload;
+begin
+  Result := TMethod(M).Data;
+end;
+
+{ TBasicAction }
+
+function TBasicAction_Execute(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TBasicAction(Obj).Execute;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+function TBasicAction_Update(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TBasicAction(Obj).Update;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+function TBasicAction_GetActionComponent(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TBasicAction(Obj).ActionComponent);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TBasicAction_SetOnExecute(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TBasicAction(Obj).OnExecute := @BridgeFor(TComponent(Obj), MethodData(TBasicAction(Obj).OnExecute), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TBasicAction_SetOnUpdate(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TBasicAction(Obj).OnUpdate := @BridgeFor(TComponent(Obj), MethodData(TBasicAction(Obj).OnUpdate), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
+end;
+
+{ TContainedAction }
+
+function TContainedAction_GetActionList(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TContainedAction(Obj).ActionList);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TContainedAction_SetActionList(Obj: Pointer; Value: Pointer); BETH_CALL;
+begin
+  try
+    TContainedAction(Obj).ActionList := TCustomActionList(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TContainedAction_GetCategory(Obj: Pointer): PChar; BETH_CALL;
+begin
+  try
+    Result := ReturnStr(TContainedAction(Obj).Category);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TContainedAction_SetCategory(Obj: Pointer; Value: PChar); BETH_CALL;
+begin
+  try
+    TContainedAction(Obj).Category := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TContainedAction_GetIndex(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TContainedAction(Obj).Index;
+  except
+    Result := -1;
+    ReportException;
+  end;
+end;
+
+procedure TContainedAction_SetIndex(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TContainedAction(Obj).Index := Value;
+  except
+    ReportException;
+  end;
+end;
+
+{ TCustomAction }
+
+function TCustomAction_GetCaption(Obj: Pointer): PChar; BETH_CALL;
+begin
+  try
+    Result := ReturnStr(TCustomAction(Obj).Caption);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TCustomAction_SetCaption(Obj: Pointer; Value: PChar); BETH_CALL;
+begin
+  try
+    TCustomAction(Obj).Caption := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomAction_GetHint(Obj: Pointer): PChar; BETH_CALL;
+begin
+  try
+    Result := ReturnStr(TCustomAction(Obj).Hint);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TCustomAction_SetHint(Obj: Pointer; Value: PChar); BETH_CALL;
+begin
+  try
+    TCustomAction(Obj).Hint := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomAction_GetChecked(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomAction(Obj).Checked;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomAction_SetChecked(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomAction(Obj).Checked := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomAction_GetAutoCheck(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomAction(Obj).AutoCheck;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomAction_SetAutoCheck(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomAction(Obj).AutoCheck := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomAction_GetEnabled(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomAction(Obj).Enabled;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomAction_SetEnabled(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomAction(Obj).Enabled := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomAction_GetVisible(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomAction(Obj).Visible;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomAction_SetVisible(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomAction(Obj).Visible := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomAction_GetDisableIfNoHandler(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomAction(Obj).DisableIfNoHandler;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomAction_SetDisableIfNoHandler(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomAction(Obj).DisableIfNoHandler := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomAction_GetGroupIndex(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomAction(Obj).GroupIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomAction_SetGroupIndex(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomAction(Obj).GroupIndex := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomAction_GetImageIndex(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomAction(Obj).ImageIndex;
+  except
+    Result := -1;
+    ReportException;
+  end;
+end;
+
+procedure TCustomAction_SetImageIndex(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomAction(Obj).ImageIndex := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomAction_GetShortCut(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomAction(Obj).ShortCut;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomAction_SetShortCut(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomAction(Obj).ShortCut := TShortCut(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TAction_Create(Owner: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Watch(TAction.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+{ TCustomActionList }
+
+function TCustomActionList_GetActionCount(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomActionList(Obj).ActionCount;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function TCustomActionList_GetActions(Obj: Pointer; Index: Integer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TCustomActionList(Obj).Actions[Index]);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+function TCustomActionList_GetImages(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TCustomActionList(Obj).Images);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TCustomActionList_SetImages(Obj: Pointer; Value: Pointer); BETH_CALL;
+begin
+  try
+    TCustomActionList(Obj).Images := TCustomImageList(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomActionList_GetState(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomActionList(Obj).State);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomActionList_SetState(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomActionList(Obj).State := TActionListState(Value);
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomActionList_SetOnExecute(Obj: Pointer; Cb: TBethItemAllowCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TActionList(Obj).OnExecute := @ActionEventBridgeFor(TComponent(Obj), MethodData(TActionList(Obj).OnExecute), Cb, Data).DoAction;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomActionList_SetOnUpdate(Obj: Pointer; Cb: TBethItemAllowCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TActionList(Obj).OnUpdate := @ActionEventBridgeFor(TComponent(Obj), MethodData(TActionList(Obj).OnUpdate), Cb, Data).DoAction;
+  except
+    ReportException;
+  end;
+end;
+
+function TActionList_Create(Owner: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Watch(TActionList.Create(TComponent(Owner)));
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+{ コントロール・メニュー項目の Action }
+
+function TControl_GetAction(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TControl(Obj).Action);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TControl_SetAction(Obj: Pointer; Value: Pointer); BETH_CALL;
+begin
+  try
+    TControl(Obj).Action := TBasicAction(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TMenuItem_GetAction(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TMenuItem(Obj).Action);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TMenuItem_SetAction(Obj: Pointer; Value: Pointer); BETH_CALL;
+begin
+  try
+    TMenuItem(Obj).Action := TBasicAction(Value);
+  except
+    ReportException;
+  end;
+end;
+
 exports
   FreeNotify_SetCallback,
   Error_SetCallback,
@@ -14646,7 +15126,52 @@ exports
   TFont_GetOrientation,
   TFont_SetOrientation,
   TFont_GetQuality,
-  TFont_SetQuality;
+  TFont_SetQuality,
+  TBasicAction_Execute,
+  TBasicAction_Update,
+  TBasicAction_GetActionComponent,
+  TBasicAction_SetOnExecute,
+  TBasicAction_SetOnUpdate,
+  TContainedAction_GetActionList,
+  TContainedAction_SetActionList,
+  TContainedAction_GetCategory,
+  TContainedAction_SetCategory,
+  TContainedAction_GetIndex,
+  TContainedAction_SetIndex,
+  TCustomAction_GetCaption,
+  TCustomAction_SetCaption,
+  TCustomAction_GetHint,
+  TCustomAction_SetHint,
+  TCustomAction_GetChecked,
+  TCustomAction_SetChecked,
+  TCustomAction_GetAutoCheck,
+  TCustomAction_SetAutoCheck,
+  TCustomAction_GetEnabled,
+  TCustomAction_SetEnabled,
+  TCustomAction_GetVisible,
+  TCustomAction_SetVisible,
+  TCustomAction_GetDisableIfNoHandler,
+  TCustomAction_SetDisableIfNoHandler,
+  TCustomAction_GetGroupIndex,
+  TCustomAction_SetGroupIndex,
+  TCustomAction_GetImageIndex,
+  TCustomAction_SetImageIndex,
+  TCustomAction_GetShortCut,
+  TCustomAction_SetShortCut,
+  TAction_Create,
+  TCustomActionList_GetActionCount,
+  TCustomActionList_GetActions,
+  TCustomActionList_GetImages,
+  TCustomActionList_SetImages,
+  TCustomActionList_GetState,
+  TCustomActionList_SetState,
+  TCustomActionList_SetOnExecute,
+  TCustomActionList_SetOnUpdate,
+  TActionList_Create,
+  TControl_GetAction,
+  TControl_SetAction,
+  TMenuItem_GetAction,
+  TMenuItem_SetAction;
 
 begin
   RequireDerivedFormResource := False;

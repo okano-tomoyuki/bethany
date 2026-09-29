@@ -136,6 +136,15 @@ export function addMenuItem(parent: string, caption: string, index?: number): vo
     select([name]);
 }
 
+/** Action を ActionList に追加して選択する(docs/adr/0046)。index を省略すると末尾 */
+export function addAction(list: string, index?: number): void {
+  const document = currentDocument();
+  if (!document) return;
+  const name = nextName('Action', collectMemberNames(document));
+  if (dispatch({ type: 'addAction', list, name, ...(index !== undefined && { index }) }))
+    select([name]);
+}
+
 // ---- 削除・選択 ---------------------------------------------------------------------
 
 /** 選択中のノードを削除し、親(コントロールなら親、それ以外はフォーム)を選択する */
@@ -149,7 +158,9 @@ export function removeSelection(): void {
       ? first.parent.name
       : first.kind === 'menuItem'
         ? (first.parentItem?.name ?? first.menu.name)
-        : document.form.name;
+        : first.kind === 'action'
+          ? first.list.name
+          : document.form.name;
   if (dispatch({ type: 'removeNodes', names: locations.map((l) => l.node.name) })) select([next]);
 }
 
@@ -159,6 +170,7 @@ export function selectParent(): void {
   if (!first) return;
   if (first.kind === 'control') select([first.parent.name]);
   else if (first.kind === 'menuItem') select([first.parentItem?.name ?? first.menu.name]);
+  else if (first.kind === 'action') select([first.list.name]);
 }
 
 // ---- 位置と大きさ -------------------------------------------------------------------

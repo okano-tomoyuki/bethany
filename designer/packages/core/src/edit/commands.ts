@@ -58,6 +58,13 @@ export type EditCommand =
       readonly caption: string;
       readonly index?: number;
     }
+  /** Action を ActionList(list)の actions の index の位置に追加する(docs/adr/0046)。Caption は name */
+  | {
+      readonly type: 'addAction';
+      readonly list: string;
+      readonly name: string;
+      readonly index?: number;
+    }
   /** ノードを子孫ごと削除し、削除したものへの参照(プロパティ)も削除する */
   | { readonly type: 'removeNodes'; readonly names: readonly string[] }
   /**
@@ -75,6 +82,13 @@ export type EditCommand =
       readonly type: 'moveMenuItem';
       readonly name: string;
       readonly parent: string;
+      readonly index?: number;
+    }
+  /** Action を ActionList(list)の actions の index の位置へ移す */
+  | {
+      readonly type: 'moveAction';
+      readonly name: string;
+      readonly list: string;
       readonly index?: number;
     }
   /** 改名し、そのノードへの参照(プロパティ)も書き換える */
@@ -115,6 +129,7 @@ interface Node {
   events?: Record<string, string>;
   controls?: Node[];
   items?: Node[];
+  actions?: Node[];
 }
 
 interface Doc {
@@ -122,7 +137,7 @@ interface Doc {
   components?: Node[];
 }
 
-type Kind = 'form' | 'control' | 'component' | 'menuItem';
+type Kind = 'form' | 'control' | 'component' | 'menuItem' | 'action';
 
 interface Found {
   readonly node: Node;
@@ -215,6 +230,14 @@ function apply(doc: Doc, command: EditCommand): void {
       return;
     }
 
+    case 'addAction': {
+      const list = requireActionList(doc, command.list);
+      requireNewName(doc, command.name);
+      const node: Node = { name: command.name, properties: { Caption: command.name } };
+      insert((list.actions ??= []), node, command.index);
+      return;
+    }
+
     case 'removeNodes': {
       const removed = new Set<string>();
       for (const name of command.names) {
@@ -228,7 +251,10 @@ function apply(doc: Doc, command: EditCommand): void {
         for (const n of descendantsOrSelf(found.node)) removed.add(n.name);
         found.siblings?.splice(found.siblings.indexOf(found.node), 1);
         if (found.parent)
-          dropEmptyArray(found.parent, found.kind === 'control' ? 'controls' : 'items');
+          dropEmptyArray(
+            found.parent,
+            found.kind === 'control' ? 'controls' : found.kind === 'action' ? 'actions' : 'items',
+          );
       }
       if (doc.components?.length === 0) delete doc.components;
       forEachReference(doc, (holder, key, target) => {
@@ -274,6 +300,17 @@ function apply(doc: Doc, command: EditCommand): void {
       found.siblings?.splice(found.siblings.indexOf(found.node), 1);
       if (found.parent && found.parent !== parent) dropEmptyArray(found.parent, 'items');
       insert((parent.items ??= []), found.node, command.index);
+      return;
+    }
+
+    case 'moveAction': {
+      const found = requireNode(doc, command.name);
+      if (found.kind !== 'action')
+        throw new CommandError(l10n.t('"{0}" is not an action', command.name));
+      const list = requireActionList(doc, command.list);
+      found.siblings?.splice(found.siblings.indexOf(found.node), 1);
+      if (found.parent && found.parent !== list) dropEmptyArray(found.parent, 'actions');
+      insert((list.actions ??= []), found.node, command.index);
       return;
     }
 
@@ -457,6 +494,8 @@ function* walk(doc: Doc): Generator<Found> {
   for (const component of doc.components ?? []) {
     yield { node: component, kind: 'component', siblings: doc.components, parent: undefined };
     yield* walkItems(component);
+    for (const node of component.actions ?? [])
+      yield { node, kind: 'action', siblings: component.actions, parent: component };
   }
 }
 
@@ -506,8 +545,18 @@ function requireMenuParent(doc: Doc, name: string): Node {
   throw new CommandError(l10n.t('{0} cannot have menu items', classOf(found)));
 }
 
+/** Action を置ける ActionList(TCustomActionList の派生の非ビジュアルコンポーネント) */
+function requireActionList(doc: Doc, name: string): Node {
+  const found = requireNode(doc, name);
+  if (found.kind === 'component' && isSubclassOf(found.node.class ?? '', 'TCustomActionList'))
+    return found.node;
+  throw new CommandError(l10n.t('{0} cannot have actions', classOf(found)));
+}
+
 function classOf(found: Found): string {
-  return found.kind === 'menuItem' ? 'TMenuItem' : (found.node.class ?? '');
+  if (found.kind === 'menuItem') return 'TMenuItem';
+  if (found.kind === 'action') return found.node.class ?? 'TAction';
+  return found.node.class ?? '';
 }
 
 function descendantsOrSelf(node: Node): Node[] {
@@ -515,6 +564,7 @@ function descendantsOrSelf(node: Node): Node[] {
     node,
     ...(node.controls ?? []).flatMap(descendantsOrSelf),
     ...(node.items ?? []).flatMap(descendantsOrSelf),
+    ...(node.actions ?? []).flatMap(descendantsOrSelf),
   ];
 }
 
@@ -546,9 +596,10 @@ function clampIndex(index: number | undefined, length: number): number {
   return index === undefined ? length : Math.max(0, Math.min(index, length));
 }
 
-/** 空になった controls・items を取り除く(メニューの items は空でも残す) */
-function dropEmptyArray(node: Node, key: 'controls' | 'items'): void {
+/** 空になった controls・items・actions を取り除く(メニューの items は空でも残す) */
+function dropEmptyArray(node: Node, key: 'controls' | 'items' | 'actions'): void {
   if (key === 'controls' && node.controls?.length === 0) delete node.controls;
+  if (key === 'actions' && node.actions?.length === 0) delete node.actions;
   if (key === 'items' && node.items?.length === 0 && node.class === undefined) delete node.items;
 }
 

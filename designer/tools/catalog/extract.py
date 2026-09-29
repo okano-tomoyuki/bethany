@@ -193,6 +193,8 @@ class Extractor:
             return "control"
         if name == "TMenuItem":
             return "menuItem"
+        if self.derives(name, "TBasicAction"):
+            return "action"  # ActionList の子(DSL の actions。docs/adr/0046)
         return "component"
 
     def extract(self):

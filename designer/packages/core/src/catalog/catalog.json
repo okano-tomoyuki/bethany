@@ -1,5 +1,6 @@
 {
   "formMembers": [
+    "Action",
     "ActiveControl",
     "Align",
     "Anchors",
@@ -257,6 +258,15 @@
           "declaredIn": "TMenuItem",
           "default": null,
           "doc": "子の項目の画像リスト(設定すると、子の項目は TMenu::Images の代わりにこれを使う)。"
+        },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TMenuItem",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。Action の Caption・Checked・Enabled・ShortCut・ImageIndex 等が項目に写り、以後も連動する。 選ぶと、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる。"
         }
       },
       "events": {
@@ -398,6 +408,15 @@
           "declaredIn": "TComponent",
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
+        },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
         },
         "Visible": {
           "type": {
@@ -721,6 +740,15 @@
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
         },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
+        },
         "Visible": {
           "type": {
             "kind": "bool"
@@ -1028,6 +1056,15 @@
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
         },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
+        },
         "Visible": {
           "type": {
             "kind": "bool"
@@ -1330,6 +1367,15 @@
           "declaredIn": "TComponent",
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
+        },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
         },
         "Visible": {
           "type": {
@@ -1650,6 +1696,15 @@
           "declaredIn": "TComponent",
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
+        },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
         },
         "Visible": {
           "type": {
@@ -2279,6 +2334,15 @@
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
         },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
+        },
         "Visible": {
           "type": {
             "kind": "bool"
@@ -2573,6 +2637,15 @@
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
         },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
+        },
         "Visible": {
           "type": {
             "kind": "bool"
@@ -2862,6 +2935,15 @@
           "declaredIn": "TComponent",
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
+        },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
         },
         "Visible": {
           "type": {
@@ -3168,6 +3250,15 @@
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
         },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
+        },
         "Visible": {
           "type": {
             "kind": "bool"
@@ -3464,6 +3555,15 @@
           "declaredIn": "TComponent",
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
+        },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
         },
         "Visible": {
           "type": {
@@ -3768,6 +3868,15 @@
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
         },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
+        },
         "Visible": {
           "type": {
             "kind": "bool"
@@ -4030,6 +4139,15 @@
           "declaredIn": "TComponent",
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
+        },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
         },
         "Visible": {
           "type": {
@@ -4346,6 +4464,15 @@
           "declaredIn": "TComponent",
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
+        },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
         },
         "Visible": {
           "type": {
@@ -4718,6 +4845,15 @@
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
         },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
+        },
         "Visible": {
           "type": {
             "kind": "bool"
@@ -5038,6 +5174,15 @@
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
         },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
+        },
         "Visible": {
           "type": {
             "kind": "bool"
@@ -5340,6 +5485,15 @@
           "declaredIn": "TComponent",
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
+        },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
         },
         "Visible": {
           "type": {
@@ -5659,6 +5813,15 @@
           "declaredIn": "TComponent",
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
+        },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
         },
         "Visible": {
           "type": {
@@ -6035,6 +6198,15 @@
           "declaredIn": "TComponent",
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
+        },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
         },
         "Visible": {
           "type": {
@@ -6433,6 +6605,15 @@
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
         },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
+        },
         "Visible": {
           "type": {
             "kind": "bool"
@@ -6821,6 +7002,15 @@
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
         },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
+        },
         "Visible": {
           "type": {
             "kind": "bool"
@@ -7203,6 +7393,15 @@
           "declaredIn": "TComponent",
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
+        },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
         },
         "Visible": {
           "type": {
@@ -7595,6 +7794,15 @@
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
         },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
+        },
         "Visible": {
           "type": {
             "kind": "bool"
@@ -7935,6 +8143,15 @@
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
         },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
+        },
         "Visible": {
           "type": {
             "kind": "bool"
@@ -8269,6 +8486,15 @@
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
         },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
+        },
         "Visible": {
           "type": {
             "kind": "bool"
@@ -8584,6 +8810,15 @@
           "declaredIn": "TComponent",
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
+        },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
         },
         "Visible": {
           "type": {
@@ -8964,6 +9199,15 @@
           "declaredIn": "TComponent",
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
+        },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
         },
         "Visible": {
           "type": {
@@ -9373,6 +9617,15 @@
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
         },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
+        },
         "Visible": {
           "type": {
             "kind": "bool"
@@ -9698,6 +9951,15 @@
           "declaredIn": "TComponent",
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
+        },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
         },
         "Visible": {
           "type": {
@@ -10072,6 +10334,15 @@
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
         },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
+        },
         "Visible": {
           "type": {
             "kind": "bool"
@@ -10438,6 +10709,15 @@
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
         },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
+        },
         "Visible": {
           "type": {
             "kind": "bool"
@@ -10764,6 +11044,15 @@
           "declaredIn": "TComponent",
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
+        },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
         },
         "Visible": {
           "type": {
@@ -11095,6 +11384,15 @@
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
         },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
+        },
         "Visible": {
           "type": {
             "kind": "bool"
@@ -11390,6 +11688,15 @@
           "declaredIn": "TComponent",
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
+        },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
         },
         "Visible": {
           "type": {
@@ -11721,6 +12028,15 @@
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
         },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
+        },
         "Visible": {
           "type": {
             "kind": "bool"
@@ -11974,6 +12290,15 @@
           "declaredIn": "TComponent",
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
+        },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
         },
         "Visible": {
           "type": {
@@ -12300,6 +12625,15 @@
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
         },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
+        },
         "Visible": {
           "type": {
             "kind": "bool"
@@ -12549,6 +12883,15 @@
           "declaredIn": "TComponent",
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
+        },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
         },
         "Visible": {
           "type": {
@@ -12862,6 +13205,15 @@
           "declaredIn": "TComponent",
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
+        },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
         },
         "Visible": {
           "type": {
@@ -13238,6 +13590,15 @@
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
         },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
+        },
         "Visible": {
           "type": {
             "kind": "bool"
@@ -13611,6 +13972,15 @@
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
         },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
+        },
         "Visible": {
           "type": {
             "kind": "bool"
@@ -13943,6 +14313,15 @@
           "declaredIn": "TComponent",
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
+        },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
         },
         "Visible": {
           "type": {
@@ -14347,6 +14726,15 @@
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
         },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
+        },
         "Visible": {
           "type": {
             "kind": "bool"
@@ -14695,6 +15083,15 @@
           "declaredIn": "TComponent",
           "default": 0,
           "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
+        },
+        "Action": {
+          "type": {
+            "kind": "ref",
+            "class": "TBasicAction"
+          },
+          "declaredIn": "TControl",
+          "default": null,
+          "doc": "割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。 クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。"
         },
         "Visible": {
           "type": {
@@ -15074,6 +15471,174 @@
         "OnTimer": {
           "type": "TNotifyEvent",
           "declaredIn": "TCustomTimer"
+        }
+      }
+    },
+    "TAction": {
+      "ancestors": [
+        "TCustomAction",
+        "TContainedAction",
+        "TBasicAction",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
+      "kind": "action",
+      "acceptsControls": false,
+      "properties": {
+        "Tag": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TComponent",
+          "default": 0,
+          "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
+        },
+        "Category": {
+          "type": {
+            "kind": "string"
+          },
+          "declaredIn": "TContainedAction",
+          "default": "",
+          "doc": "分類(ActionList の中でまとめて扱うための名前。動作には影響しない)。"
+        },
+        "Caption": {
+          "type": {
+            "kind": "string"
+          },
+          "declaredIn": "TCustomAction",
+          "default": ""
+        },
+        "Hint": {
+          "type": {
+            "kind": "string"
+          },
+          "declaredIn": "TCustomAction",
+          "default": ""
+        },
+        "Checked": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomAction",
+          "default": false
+        },
+        "AutoCheck": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomAction",
+          "default": false,
+          "doc": "true にすると、実行するたびに Checked が反転する。"
+        },
+        "GroupIndex": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TCustomAction",
+          "default": 0,
+          "doc": "0 でなければ、同じ GroupIndex の Action のうち 1 つだけが Checked になる。"
+        },
+        "Enabled": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomAction",
+          "default": true
+        },
+        "Visible": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomAction",
+          "default": true
+        },
+        "ImageIndex": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TCustomAction",
+          "default": -1,
+          "doc": "割り当てたメニュー項目・ボタンの画像の、ActionList の Images での位置(-1 なら無し)。"
+        },
+        "ShortCut": {
+          "type": {
+            "kind": "alias",
+            "alias": "TShortCut"
+          },
+          "declaredIn": "TCustomAction",
+          "default": "",
+          "doc": "フォームにフォーカスがあるときにこのキーを押すと実行する(割り当てたメニュー項目にも表示される)。"
+        },
+        "DisableIfNoHandler": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomAction",
+          "default": true,
+          "doc": "true(既定)なら、OnExecute が無いとき Enabled を false にする。"
+        }
+      },
+      "events": {
+        "OnExecute": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TBasicAction",
+          "doc": "実行するとき。Sender は Action(起こしたものは ActionComponent)。"
+        },
+        "OnUpdate": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TBasicAction",
+          "doc": "アイドルのときに LCL が呼ぶ。Enabled・Checked 等をここで今の状態に合わせる(割り当てたコントロールにも写る)。 呼ばれるのは、表示中のフォームのコントロール・メインメニューの項目に割り当てた Action だけ(VCL と同じ)。"
+        }
+      }
+    },
+    "TActionList": {
+      "ancestors": [
+        "TCustomActionList",
+        "TComponent",
+        "TPersistent",
+        "TObject"
+      ],
+      "kind": "component",
+      "palette": "Standard",
+      "acceptsControls": false,
+      "properties": {
+        "Tag": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TComponent",
+          "default": 0,
+          "doc": "利用者が自由に使う整数(LCL は解釈しない。ポインタと同じ幅。docs/adr/0034)。"
+        },
+        "Images": {
+          "type": {
+            "kind": "ref",
+            "class": "TCustomImageList"
+          },
+          "declaredIn": "TCustomActionList",
+          "default": null,
+          "doc": "Action の ImageIndex が指す画像リスト。割り当てたメニュー項目・ボタンにも使われる。"
+        },
+        "State": {
+          "type": {
+            "kind": "enum",
+            "enum": "TActionListState"
+          },
+          "declaredIn": "TCustomActionList",
+          "default": "asNormal"
+        }
+      },
+      "events": {
+        "OnExecute": {
+          "type": "TActionEvent",
+          "declaredIn": "TCustomActionList",
+          "doc": "どの Action を実行するときにも、Action の OnExecute の前に呼ばれる。"
+        },
+        "OnUpdate": {
+          "type": "TActionEvent",
+          "declaredIn": "TCustomActionList",
+          "doc": "どの Action を更新するときにも、Action の OnUpdate の前に呼ばれる。"
         }
       }
     },
@@ -16229,6 +16794,11 @@
       "gsVerLines",
       "gsGripper",
       "gsButton"
+    ],
+    "TActionListState": [
+      "asNormal",
+      "asSuspended",
+      "asSuspendedEnabled"
     ]
   },
   "flags": {
@@ -16830,6 +17400,20 @@
       },
       {
         "name": "AllowDrag",
+        "type": "bool&"
+      }
+    ],
+    "TActionEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "Action",
+        "type": "TBasicAction*"
+      },
+      {
+        "name": "Handled",
         "type": "bool&"
       }
     ]

@@ -1113,6 +1113,7 @@ protected:
 };
 
 class TMenu;
+class TBasicAction;
 
 // メニューの項目。TControl ではない(Parent/Left 等は無く、画面上の親子関係は Add/Insert で組む)。
 // 子の項目は LCL の Items[Index] / Count に合わせ、Items[Index] / Count で参照する。
@@ -1149,6 +1150,9 @@ public:
     Property<TCustomImageList*> SubMenuImages;
     // 項目の画像(ImageIndex を使わない場合)。項目が所有する TBitmap のビューで、初めて参照したときに作られる。代入は内容のコピー。
     Property<TBitmap*> Bitmap;
+    // 割り当てた Action(docs/adr/0046)。Action の Caption・Checked・Enabled・ShortCut・ImageIndex 等が項目に写り、以後も連動する。
+    // 選ぶと、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる。
+    Property<TBasicAction*> Action;
 
     void Add(TMenuItem* Item);
     void Insert(int Index, TMenuItem* Item);
@@ -1174,6 +1178,9 @@ private:
     TNotifyEvent onClick_;
     bool         onClickHooked_ = false;
     static void BETH_CALL ClickTrampoline(ObjectHandle sender, void* data);
+
+    static TBasicAction* GetActionImpl(TObject* owner);
+    static void          SetActionImpl(TObject* owner, TBasicAction* const& value);
 
     static std::string  GetCaptionImpl(TObject* owner);
     static void         SetCaptionImpl(TObject* owner, const std::string& value);
@@ -1461,6 +1468,9 @@ public:
     void SendToBack();
     // 位置と大きさをまとめて設定する(Left・Top・Width・Height を 1 つずつ設定するより、配置の計算が 1 回で済む)。
     void SetBounds(int ALeft, int ATop, int AWidth, int AHeight);
+    // 割り当てた Action(docs/adr/0046)。割り当てると Action の Caption・Enabled・Hint・Visible 等がコントロールに写り、以後も連動する。
+    // クリックすると、OnClick(設定していれば)の後に Action の OnExecute が呼ばれる(LCL の仕様。VCL は OnClick だけを呼ぶ)。
+    Property<TBasicAction*> Action;
 
     Property<TWinControl*> Parent;
     Property<int>          Left;
@@ -1528,6 +1538,9 @@ private:
     static void BETH_CALL ClickTrampoline(ObjectHandle sender, void* data);
     static TNotifyEvent GetOnClickImpl(TObject* owner);
     static void         SetOnClickImpl(TObject* owner, const TNotifyEvent& value);
+
+    static TBasicAction* GetActionImpl(TObject* owner);
+    static void          SetActionImpl(TObject* owner, TBasicAction* const& value);
 
     TNotifyEvent     onDblClick_;
     TNotifyEvent     onResize_;
@@ -5016,6 +5029,178 @@ public:
 
 protected:
     ~TTimer() override = default;
+};
+
+/* ---------------- Action(docs/adr/0046) ---------------- */
+
+class TCustomActionList;
+
+// 操作(LCL の TBasicAction)。コントロール・メニュー項目の Action に割り当てると、選んだときに OnExecute が呼ばれる。
+class TBasicAction : public TComponent
+{
+public:
+    // OnExecute を呼ぶ(ActionList の OnExecute で Handled にされたときは呼ばない)。呼んだら true。
+    bool Execute();
+    // OnUpdate を呼ぶ(アイドルのときに LCL が呼ぶものを、すぐに呼ぶ)。
+    bool Update();
+    // Execute を起こしたコントロール・メニュー項目(プログラムから Execute したときは nullptr)。
+    ReadOnlyProperty<TComponent*> ActionComponent;
+
+    // 実行するとき。Sender は Action(起こしたものは ActionComponent)。
+    Property<TNotifyEvent> OnExecute;
+    // アイドルのときに LCL が呼ぶ。Enabled・Checked 等をここで今の状態に合わせる(割り当てたコントロールにも写る)。
+    // 呼ばれるのは、表示中のフォームのコントロール・メインメニューの項目に割り当てた Action だけ(VCL と同じ)。
+    Property<TNotifyEvent> OnUpdate;
+
+protected:
+    explicit TBasicAction(ObjectHandle handle);
+    ~TBasicAction() override = default;
+
+private:
+    TNotifyEvent onExecute_;
+    TNotifyEvent onUpdate_;
+    bool onExecuteHooked_ = false;
+    bool onUpdateHooked_  = false;
+    static void BETH_CALL ExecuteTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL UpdateTrampoline(ObjectHandle sender, void* data);
+    static TComponent*  GetActionComponentImpl(TObject* owner);
+    static TNotifyEvent GetOnExecuteImpl(TObject* owner);
+    static void         SetOnExecuteImpl(TObject* owner, const TNotifyEvent& value);
+    static TNotifyEvent GetOnUpdateImpl(TObject* owner);
+    static void         SetOnUpdateImpl(TObject* owner, const TNotifyEvent& value);
+};
+
+// ActionList に入る Action(LCL の TContainedAction)。
+class TContainedAction : public TBasicAction
+{
+public:
+    // 属する ActionList。代入すると一覧の末尾に入る(nullptr なら一覧から外す)。
+    Property<TCustomActionList*> ActionList;
+    // 分類(ActionList の中でまとめて扱うための名前。動作には影響しない)。
+    Property<std::string>        Category;
+    // ActionList の中の位置。書き換えると移動する。
+    Property<int>                Index;
+
+protected:
+    explicit TContainedAction(ObjectHandle handle);
+    ~TContainedAction() override = default;
+
+private:
+    static TCustomActionList* GetActionListImpl(TObject* owner);
+    static void               SetActionListImpl(TObject* owner, TCustomActionList* const& value);
+    static std::string        GetCategoryImpl(TObject* owner);
+    static void               SetCategoryImpl(TObject* owner, const std::string& value);
+    static int                GetIndexImpl(TObject* owner);
+    static void               SetIndexImpl(TObject* owner, const int& value);
+};
+
+// 表示の状態を持つ Action(LCL の TCustomAction)。値を変えると、割り当てたコントロール・メニュー項目にも写る。
+class TCustomAction : public TContainedAction
+{
+public:
+    Property<std::string> Caption;
+    Property<std::string> Hint;
+    Property<bool>        Checked;
+    // true にすると、実行するたびに Checked が反転する。
+    Property<bool>        AutoCheck;
+    // 0 でなければ、同じ GroupIndex の Action のうち 1 つだけが Checked になる。
+    Property<int>         GroupIndex;
+    Property<bool>        Enabled;
+    Property<bool>        Visible;
+    // 割り当てたメニュー項目・ボタンの画像の、ActionList の Images での位置(-1 なら無し)。
+    Property<int>         ImageIndex;
+    // フォームにフォーカスがあるときにこのキーを押すと実行する(割り当てたメニュー項目にも表示される)。
+    Property<TShortCut>   ShortCut;
+    // true(既定)なら、OnExecute が無いとき Enabled を false にする。
+    Property<bool>        DisableIfNoHandler;
+
+protected:
+    explicit TCustomAction(ObjectHandle handle);
+    ~TCustomAction() override = default;
+
+private:
+    static std::string GetCaptionImpl(TObject* owner);
+    static void        SetCaptionImpl(TObject* owner, const std::string& value);
+    static std::string GetHintImpl(TObject* owner);
+    static void        SetHintImpl(TObject* owner, const std::string& value);
+    static bool        GetCheckedImpl(TObject* owner);
+    static void        SetCheckedImpl(TObject* owner, const bool& value);
+    static bool        GetAutoCheckImpl(TObject* owner);
+    static void        SetAutoCheckImpl(TObject* owner, const bool& value);
+    static int         GetGroupIndexImpl(TObject* owner);
+    static void        SetGroupIndexImpl(TObject* owner, const int& value);
+    static bool        GetEnabledImpl(TObject* owner);
+    static void        SetEnabledImpl(TObject* owner, const bool& value);
+    static bool        GetVisibleImpl(TObject* owner);
+    static void        SetVisibleImpl(TObject* owner, const bool& value);
+    static int         GetImageIndexImpl(TObject* owner);
+    static void        SetImageIndexImpl(TObject* owner, const int& value);
+    static TShortCut   GetShortCutImpl(TObject* owner);
+    static void        SetShortCutImpl(TObject* owner, const TShortCut& value);
+    static bool        GetDisableIfNoHandlerImpl(TObject* owner);
+    static void        SetDisableIfNoHandlerImpl(TObject* owner, const bool& value);
+};
+
+class TAction : public TCustomAction
+{
+public:
+    explicit TAction(TComponent* AOwner);
+
+protected:
+    ~TAction() override = default;
+};
+
+// ActionList の状態(LCL の TActionListState と同じ値)。asSuspended は Action を実行・更新しない。
+enum TActionListState { asNormal, asSuspended, asSuspendedEnabled };
+
+// ActionList の OnExecute・OnUpdate。Handled を true にすると、Action の OnExecute・OnUpdate を呼ばない。
+// Sender は ActionList(VCL の TActionEvent には Sender が無いが、ほかのイベントと同じく先頭に置く)。
+using TActionEvent = std::function<void(TObject* Sender, TBasicAction* Action, bool& Handled)>;
+
+// Action の一覧(LCL の TCustomActionList)。
+class TCustomActionList : public TComponent
+{
+public:
+    ReadOnlyIndexedProperty<TContainedAction*> Actions;
+    ReadOnlyProperty<int>                      ActionCount;
+    // Action の ImageIndex が指す画像リスト。割り当てたメニュー項目・ボタンにも使われる。
+    Property<TCustomImageList*>                Images;
+    Property<TActionListState>                 State;
+    // どの Action を実行するときにも、Action の OnExecute の前に呼ばれる。
+    Property<TActionEvent>                     OnExecute;
+    // どの Action を更新するときにも、Action の OnUpdate の前に呼ばれる。
+    Property<TActionEvent>                     OnUpdate;
+
+protected:
+    explicit TCustomActionList(ObjectHandle handle);
+    ~TCustomActionList() override = default;
+
+private:
+    TActionEvent onExecute_;
+    TActionEvent onUpdate_;
+    bool onExecuteHooked_ = false;
+    bool onUpdateHooked_  = false;
+    static void BETH_CALL ExecuteTrampoline(ObjectHandle sender, ObjectHandle action, internal::bool_t* handled, void* data);
+    static void BETH_CALL UpdateTrampoline(ObjectHandle sender, ObjectHandle action, internal::bool_t* handled, void* data);
+    static TContainedAction* GetActionsImpl(TObject* owner, int Index);
+    static int               GetActionCountImpl(TObject* owner);
+    static TCustomImageList* GetImagesImpl(TObject* owner);
+    static void              SetImagesImpl(TObject* owner, TCustomImageList* const& value);
+    static TActionListState  GetStateImpl(TObject* owner);
+    static void              SetStateImpl(TObject* owner, const TActionListState& value);
+    static TActionEvent      GetOnExecuteImpl(TObject* owner);
+    static void              SetOnExecuteImpl(TObject* owner, const TActionEvent& value);
+    static TActionEvent      GetOnUpdateImpl(TObject* owner);
+    static void              SetOnUpdateImpl(TObject* owner, const TActionEvent& value);
+};
+
+class TActionList : public TCustomActionList
+{
+public:
+    explicit TActionList(TComponent* AOwner);
+
+protected:
+    ~TActionList() override = default;
 };
 
 /* ---------------- Dialogs(docs/adr/0033) ---------------- */

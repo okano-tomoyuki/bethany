@@ -16,6 +16,12 @@ export {
   type Severity,
 } from './dsl/diagnostics.ts';
 export { parseDocument, type ParseResult } from './dsl/parse.ts';
+export {
+  actionLinkedProperties,
+  assignedAction,
+  withActionProperties,
+  withActionValues,
+} from './dsl/actions.ts';
 export { validateDocument } from './dsl/validate.ts';
 export {
   classOf,

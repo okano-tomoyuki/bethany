@@ -56,6 +56,7 @@ export const EXPECTED_CALLS = [
   'NameEditChange',
   'WrapCheckClick',
   'FileOpenItemClick',
+  'FileSaveActionExecute',
   'ClearItemClick',
   'OkButtonClick',
   'Timer1Timer',
@@ -72,7 +73,9 @@ export const EXPECTED_CHECKS: Readonly<Record<string, string>> = {
   statusFont: '10/16711680',
   panelColor: '12644607',
   shortCut: 'Ctrl+O',
-  menuCounts: '1/3/1',
+  menuCounts: '1/4/1',
+  // Action(docs/adr/0046): Action を割り当てた項目の Caption/ShortCut/ActionList の Action の数
+  actionLink: '&Save/Ctrl+S/1',
   dialogOptions: String((1 << 20) | (1 << 23) | (1 << 9)),
   timer: '0/500',
   caption: 'Sample',

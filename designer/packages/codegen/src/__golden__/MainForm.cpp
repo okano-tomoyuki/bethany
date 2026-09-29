@@ -32,12 +32,15 @@ void TMainForm::beth_CreateComponents()
     MainMenu1 = new TMainMenu(this);
     FileMenu = new TMenuItem(this);
     FileOpenItem = new TMenuItem(this);
+    FileSaveItem = new TMenuItem(this);
     N1 = new TMenuItem(this);
     FileExitItem = new TMenuItem(this);
     PopupMenu1 = new TPopupMenu(this);
     ClearItem = new TMenuItem(this);
     OpenDialog1 = new TOpenDialog(this);
     Timer1 = new TTimer(this);
+    ActionList1 = new TActionList(this);
+    FileSaveAction = new TAction(this);
 
     Width = 400;
     Height = 300;
@@ -158,6 +161,8 @@ void TMainForm::beth_CreateComponents()
     FileOpenItem->OnClick = [this](TObject* Sender) { FileOpenItemClick(Sender); };
     FileMenu->Add(FileOpenItem);
 
+    FileMenu->Add(FileSaveItem);
+
     N1->Caption = "-";
     FileMenu->Add(N1);
 
@@ -175,8 +180,16 @@ void TMainForm::beth_CreateComponents()
     Timer1->Interval = 500;
     Timer1->Enabled = false;
     Timer1->OnTimer = [this](TObject* Sender) { Timer1Timer(Sender); };
+
+    FileSaveAction->ActionList = ActionList1;
+    FileSaveAction->Category = "File";
+    FileSaveAction->Caption = "&Save";
+    FileSaveAction->ShortCut = TextToShortCut("Ctrl+S");
+    FileSaveAction->OnExecute = [this](TObject* Sender) { FileSaveActionExecute(Sender); };
+
+    FileSaveItem->Action = FileSaveAction;
 }
-// <bethany-designer:end id="beth_CreateComponents" hash="1da8efec">
+// <bethany-designer:end id="beth_CreateComponents" hash="47c9e406">
 
 // <bethany-designer:handler-stubs>
 
@@ -221,6 +234,11 @@ void TMainForm::ClearItemClick(TObject* Sender)
 }
 
 void TMainForm::Timer1Timer(TObject* Sender)
+{
+    // TODO: implement
+}
+
+void TMainForm::FileSaveActionExecute(TObject* Sender)
 {
     // TODO: implement
 }

@@ -142,6 +142,7 @@ ${controls
     check(first, "shortCut", ShortCutToText(f->FileOpenItem->ShortCut));
     check(first, "menuCounts", std::to_string(f->MainMenu1->Items->Count) + "/" + std::to_string(f->FileMenu->Count) + "/" + std::to_string(f->PopupMenu1->Items->Count));
     check(first, "dialogOptions", std::to_string(f->OpenDialog1->Options));
+    check(first, "actionLink", std::string(f->FileSaveItem->Caption) + "/" + ShortCutToText(f->FileSaveItem->ShortCut) + "/" + std::to_string(f->ActionList1->ActionCount));
     check(first, "timer", std::to_string((int)f->Timer1->Enabled) + "/" + std::to_string(f->Timer1->Interval));
     check(first, "caption", f->Caption);
     check(first, "spinValue", std::to_string(f->SizeSpin->Value));
@@ -156,6 +157,7 @@ ${controls
     f->NameEdit->Text = "changed";
     f->WrapCheck->Checked = false;
     f->FileOpenItem->Click();
+    f->FileSaveItem->Click();
     f->ClearItem->Click();
     // TButton・TTimer はプログラムから発生させる手段が無いので、接続されたハンドラを呼ぶ
     TNotifyEvent onClick = f->OkButton->OnClick;

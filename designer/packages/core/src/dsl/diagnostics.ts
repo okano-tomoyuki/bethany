@@ -27,6 +27,9 @@ export type DiagnosticCode =
   | 'invalid-child-class'
   | 'invalid-parent-class'
   | 'items-not-allowed'
+  | 'actions-not-allowed'
+  // Action(docs/adr/0046)
+  | 'overridden-by-action'
   // 使わなくなった設定
   | 'legacy-codegen'
   // プロジェクトファイル(docs/designer/project-spec.md)

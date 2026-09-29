@@ -1,6 +1,13 @@
 import { findClass, getCatalog } from '../catalog/catalog.ts';
 import type { JsonPath } from './diagnostics.ts';
-import type { ComponentNode, ControlNode, FormNode, MenuItemNode, BfmDocument } from './schema.ts';
+import type {
+  ActionNode,
+  ComponentNode,
+  ControlNode,
+  FormNode,
+  MenuItemNode,
+  BfmDocument,
+} from './schema.ts';
 
 /** ドキュメントの中のノードと、その位置 */
 export type NodeLocation =
@@ -21,11 +28,19 @@ export type NodeLocation =
       readonly menu: ComponentNode;
       /** 親の項目。メニューのルートの項目なら undefined */
       readonly parentItem: MenuItemNode | undefined;
+    }
+  | {
+      readonly kind: 'action';
+      readonly node: ActionNode;
+      readonly path: JsonPath;
+      /** Action を持つ ActionList(docs/adr/0046) */
+      readonly list: ComponentNode;
     };
 
 /**
  * すべてのノードを、コンポーネントを生成する順(docs/designer/codegen-design.md §4)でたどる:
- * フォーム、コントロール(深さ優先。親が先)、非ビジュアルコンポーネント(メニューなら続けてその項目を深さ優先)。
+ * フォーム、コントロール(深さ優先。親が先)、非ビジュアルコンポーネント(メニューなら続けてその項目を深さ優先、
+ * ActionList なら続けてその Action)。
  */
 export function* walkNodes(doc: BfmDocument): Generator<NodeLocation> {
   yield { kind: 'form', node: doc.form, path: ['form'] };
@@ -34,6 +49,8 @@ export function* walkNodes(doc: BfmDocument): Generator<NodeLocation> {
     const path = ['components', i];
     yield { kind: 'component', node: component, path };
     yield* walkItems(component, undefined, component.items, path);
+    for (const [j, node] of (component.actions ?? []).entries())
+      yield { kind: 'action', node, path: [...path, 'actions', j], list: component };
   }
 }
 
@@ -61,9 +78,11 @@ function* walkItems(
   }
 }
 
-/** ノードのクラス(メニュー項目は TMenuItem) */
+/** ノードのクラス(メニュー項目は TMenuItem、class を省略した Action は TAction) */
 export function classOf(location: NodeLocation): string {
-  return location.kind === 'menuItem' ? 'TMenuItem' : location.node.class;
+  if (location.kind === 'menuItem') return 'TMenuItem';
+  if (location.kind === 'action') return location.node.class ?? 'TAction';
+  return location.node.class;
 }
 
 /** name のノード(name が重複していれば最初のもの) */

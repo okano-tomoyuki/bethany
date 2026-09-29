@@ -27,12 +27,15 @@ public:
     beth::TMainMenu* MainMenu1;
     beth::TMenuItem* FileMenu;
     beth::TMenuItem* FileOpenItem;
+    beth::TMenuItem* FileSaveItem;
     beth::TMenuItem* N1;
     beth::TMenuItem* FileExitItem;
     beth::TPopupMenu* PopupMenu1;
     beth::TMenuItem* ClearItem;
     beth::TOpenDialog* OpenDialog1;
     beth::TTimer* Timer1;
+    beth::TActionList* ActionList1;
+    beth::TAction* FileSaveAction;
 
     void FormCreate(beth::TObject* Sender);
     void FormCloseQuery(beth::TObject* Sender, bool& CanClose);
@@ -43,7 +46,8 @@ public:
     void FileExitItemClick(beth::TObject* Sender);
     void ClearItemClick(beth::TObject* Sender);
     void Timer1Timer(beth::TObject* Sender);
-    // <bethany-designer:end id="declarations" hash="fc9c5a81">
+    void FileSaveActionExecute(beth::TObject* Sender);
+    // <bethany-designer:end id="declarations" hash="64ecd84e">
 
     explicit TMainForm(beth::TComponent* AOwner);
 

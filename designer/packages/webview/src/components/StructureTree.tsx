@@ -7,6 +7,7 @@ import {
   l10n,
   type ComponentNode,
   type ControlNode,
+  type ActionNode,
   type MenuItemNode,
 } from '@bethany-designer/core';
 import type { MouseEvent } from 'react';
@@ -74,6 +75,17 @@ export function StructureTree() {
       </ul>
     ) : null;
 
+  const actions = (list: readonly ActionNode[] | undefined) =>
+    list && list.length > 0 ? (
+      <ul>
+        {list.map((action) => (
+          <li key={action.name}>
+            {label(action.name, action.class ?? 'TAction', captionOf(action))}
+          </li>
+        ))}
+      </ul>
+    ) : null;
+
   return (
     <section className="panel structure" aria-label={l10n.t('Structure')}>
       <h2>{l10n.t('Structure')}</h2>
@@ -87,6 +99,7 @@ export function StructureTree() {
           <li key={c.name}>
             {label(c.name, c.class)}
             {items(c.items)}
+            {actions(c.actions)}
           </li>
         ))}
       </ul>
@@ -115,7 +128,7 @@ function TreeToolbar() {
   );
 }
 
-function captionOf(item: MenuItemNode): string {
+function captionOf(item: MenuItemNode | ActionNode): string {
   const caption = item.properties?.Caption;
   return typeof caption === 'string' ? caption : '';
 }

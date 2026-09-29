@@ -5,6 +5,7 @@ import { findClass, getCatalog, isSubclassOf } from '../catalog/catalog.ts';
 import type { ClassInfo, PropertyInfo, PropertyType } from '../catalog/types.ts';
 import { isValidIdentifier, memberNameProblem } from '../identifier.ts';
 import { l10n } from '../l10n.ts';
+import { actionLinkedProperties, assignedAction } from './actions.ts';
 import { childProblem } from './constraints.ts';
 import type { Diagnostic, DiagnosticCode, JsonPath } from './diagnostics.ts';
 import type { BfmDocument, Properties } from './schema.ts';
@@ -94,6 +95,38 @@ export function validateDocument(doc: BfmDocument): Diagnostic[] {
         );
     }
   }
+
+  // ---- Action(docs/adr/0046) ----
+  // Action を割り当てたコントロール・メニュー項目に書いた、Action から写るプロパティは上書きされる。OnClick は Action と両方呼ばれる
+  for (const location of nodes) {
+    const action = assignedAction(doc, location);
+    if (!action) continue;
+    const own = location.node.properties ?? {};
+    for (const name of actionLinkedProperties(classOf(location)).keys()) {
+      if (own[name] === undefined) continue;
+      diagnostics.push({
+        severity: 'warning',
+        code: 'overridden-by-action',
+        message: l10n.t(
+          '{0} is overwritten by the value of the action {1}',
+          name,
+          action.node.name,
+        ),
+        path: [...location.path, 'properties', name],
+      });
+    }
+    if (location.node.events?.OnClick !== undefined)
+      diagnostics.push({
+        severity: 'warning',
+        code: 'overridden-by-action',
+        message: l10n.t(
+          'Both OnClick and OnExecute of the action {0} are called (LCL calls OnClick first)',
+          action.node.name,
+        ),
+        path: [...location.path, 'events', 'OnClick'],
+      });
+  }
+
   // コード生成の設定はプロジェクトファイルに移した(docs/designer/project-spec.md §5)。読み込めるように残し、使わない
   if (doc.codegen)
     diagnostics.push({
@@ -252,11 +285,19 @@ function checkClass(
       return info;
     case 'menuItem':
       return info;
+    case 'action':
+      if (info.kind !== 'action') {
+        error('wrong-class-kind', l10n.t('{0} is not an action', className), classPath);
+        return undefined;
+      }
+      return info;
     case 'component':
       if (info.kind !== 'component') {
         error(
           'wrong-class-kind',
-          l10n.t('{0} is a control. Write it in "controls"', className),
+          info.kind === 'action'
+            ? l10n.t('{0} is an action. Write it in "actions" of an action list', className)
+            : l10n.t('{0} is a control. Write it in "controls"', className),
           classPath,
         );
         return undefined;
@@ -265,6 +306,11 @@ function checkClass(
         error('items-not-allowed', l10n.t('{0} cannot have menu items', className), [
           ...location.path,
           'items',
+        ]);
+      if (location.node.actions && !isSubclassOf(className, 'TCustomActionList'))
+        error('actions-not-allowed', l10n.t('{0} cannot have actions', className), [
+          ...location.path,
+          'actions',
         ]);
       return info;
     case 'control': {
