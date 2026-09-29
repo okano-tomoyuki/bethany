@@ -204,8 +204,10 @@ function cppTarget(
         ? undefined
         : guardMacro([
             options.includeGuardPrefix,
-            ...options.namespace,
-            includePath ?? fileNameOf(header.path),
+            ...withoutOverlap(
+              options.namespace,
+              (includePath ?? fileNameOf(header.path)).split('/'),
+            ),
           ]),
   };
 }
@@ -225,6 +227,20 @@ function placeOutput(
   const formDir = form.includes('/') ? form.slice(0, form.lastIndexOf('/')) : '';
   const inDir = formDir === '' ? file : normalizePath(`${formDir}/${file}`);
   return { path: relativePath(form, normalizePath(`${dir}/${inDir}`)), inDir };
+}
+
+/**
+ * 名前空間とヘッダのパスをつなぐ。名前空間の末尾とパスの先頭が同じ(`app::dialogs` と `dialogs/About.hpp`)なら、重なりを 1 つにする
+ * (APP_DIALOGS_DIALOGS_ABOUT_HPP ではなく APP_DIALOGS_ABOUT_HPP)。大文字と小文字は区別しない
+ */
+function withoutOverlap(namespace: readonly string[], path: readonly string[]): string[] {
+  const same = (a: string | undefined, b: string | undefined) =>
+    a !== undefined && b !== undefined && a.toLowerCase() === b.toLowerCase();
+  for (let n = Math.min(namespace.length, path.length - 1); n > 0; n--) {
+    const tail = namespace.slice(namespace.length - n);
+    if (tail.every((part, i) => same(part, path[i]))) return [...namespace, ...path.slice(n)];
+  }
+  return [...namespace, ...path];
 }
 
 /** インクルードガードのマクロ名(大文字。識別子に使えない文字と、連続した・端の _ を畳む。__ は処理系の予約) */

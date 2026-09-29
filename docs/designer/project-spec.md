@@ -141,6 +141,7 @@ C++Builder の `.dfm` と `.cbproj` の分け方と同じ)。
   ビルドでは `headerDir` を include パスに入れる(CMake の `target_include_directories`)。書かなければ、include する側のファイルからの相対パスにする。
 - **マクロ名**は、`includeGuardPrefix`・名前空間・ヘッダのパス(`headerDir` からの、書かなければファイル名)を `_` でつないで大文字にしたもの
   (上の例なら `APP_UI_FORMS_MAINFORM_H`)。識別子に使えない文字は `_` にし、続いた `_` は 1 つにする(`__` は処理系の予約)。
+  名前空間の末尾とパスの先頭が同じとき(`app::dialogs` と `dialogs/About.h`)は、重なりを 1 つにする(`APP_DIALOGS_ABOUT_H`)。
 - **一部のフォームだけの設定(`overrides`)**: `cpp.overrides` の各要素は、`forms`(当てはめるフォームのパターン)と、
   `main` 以外の上のキーを持つ。`forms` に当てはまるフォームには、その値で `cpp` の値を上書きする。複数が当てはまれば書いた順に重ね、
   後に書いたものが勝つ(tsconfig・ESLint の overrides と同じ)。

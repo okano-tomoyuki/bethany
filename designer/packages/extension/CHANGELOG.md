@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+- The include guard macro does not repeat a namespace that is also the folder of the header
+  (`APP_DIALOGS_ABOUT_HPP` instead of `APP_DIALOGS_DIALOGS_ABOUT_HPP` for `app::dialogs` and `dialogs/About.hpp`)
+
 ## [0.4.0] - 2026-09-29
 
 This version requires the Bethany C++ library 0.2.0 or later for C++ (the headers moved to `include/bethany/`).

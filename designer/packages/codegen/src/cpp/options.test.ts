@@ -269,3 +269,27 @@ describe('overrides(一部のフォームだけの設定)', () => {
     );
   });
 });
+
+describe('インクルードガードのマクロ名', () => {
+  const guard = (cpp: Parameters<typeof cppOptions>[0], formPath: string) =>
+    resolveTargets(SAMPLE, DSL_FILE, {
+      cpp: cppOptions(cpp, formPath),
+      python: undefined,
+      formPath,
+    }).cpp?.includeGuard;
+
+  it('名前空間の末尾とパスの先頭の重なりは 1 つにする', () => {
+    expect(
+      guard({ namespace: 'app::dialogs', headerDir: 'cpp' }, 'dialogs/MainForm.bfm.json'),
+    ).toBe('APP_DIALOGS_MAINFORM_HPP');
+    expect(guard({ namespace: 'app::ui', headerDir: 'cpp' }, 'app/ui/MainForm.bfm.json')).toBe(
+      'APP_UI_MAINFORM_HPP',
+    );
+    // 重ならなければそのまま
+    expect(guard({ namespace: 'app', headerDir: 'cpp' }, 'dialogs/MainForm.bfm.json')).toBe(
+      'APP_DIALOGS_MAINFORM_HPP',
+    );
+    // ファイル名だけ(フォルダの設定なし)のときは、ファイル名とは重ねない
+    expect(guard({ namespace: 'mainform' }, 'MainForm.bfm.json')).toBe('MAINFORM_MAINFORM_HPP');
+  });
+});
