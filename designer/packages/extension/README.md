@@ -26,6 +26,7 @@ The form is stored in a JSON file (`*.bfm.json`) that you can also edit as text.
   The generated code includes Bethany as `#include <bethany/beth.hpp>`.
 - **Project settings**: a project file opens in a settings screen (like the project options of C++Builder): the main form,
   the forms created at startup and their order, the languages and the C++ and Python settings, with a preview of the output files.
+  _Generate Code for the Whole Project_ generates the code of all the forms and the startup code at once.
 - **Application startup code**: _Generate Code_ on a project writes `Project1.cpp` / `Project1.py`, which initializes the application,
   creates the forms (the main form first, then the others as in C++Builder; _Don't Create at Startup_ excludes a form) and runs it.
 - **Validation**: problems in `*.bfm.json` are shown in the Problems panel, and a JSON Schema is provided for text editing.

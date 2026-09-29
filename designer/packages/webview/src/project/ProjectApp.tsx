@@ -87,11 +87,21 @@ export function ProjectApp() {
             type="button"
             className="primary"
             disabled={blocked}
+            title={l10n.t('Generate the code of all the forms and the startup code')}
+            onClick={() => {
+              postMessage({ type: 'generateProject' });
+            }}
+          >
+            {l10n.t('Generate Code for the Whole Project')}
+          </button>
+          <button
+            type="button"
+            disabled={blocked}
             onClick={() => {
               postMessage({ type: 'generateCode' });
             }}
           >
-            {l10n.t('Generate Code')}
+            {l10n.t('Generate Startup Code')}
           </button>
           <button type="button" onClick={openAsText}>
             {l10n.t('Open as Text')}

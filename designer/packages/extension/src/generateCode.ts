@@ -30,10 +30,64 @@ const output = { channel: undefined as vscode.OutputChannel | undefined };
 
 export async function generateCode(document: vscode.TextDocument): Promise<void> {
   if (document.uri.path.endsWith(PROJECT_EXTENSION)) {
-    await generateProjectCode(document);
+    await generateProjectCode(document, { quiet: false });
     return;
   }
   await generateFormCode(document, { quiet: false });
+}
+
+/**
+ * プロジェクト全体のコード(forms のすべてのフォームと起動部分)を生成する(project-spec.md §5)。
+ * 個々の成功の通知は出さず、最後にまとめて知らせる。生成できなかったフォームは飛ばして続ける。
+ */
+export async function generateWholeProject(document: vscode.TextDocument): Promise<void> {
+  const { project, diagnostics } = parseProject(document.getText());
+  if (!project || hasErrors(diagnostics)) {
+    void vscode.window.showErrorMessage(
+      vscode.l10n.t(
+        'Cannot generate code because the project has validation errors. See the Problems panel.',
+      ),
+    );
+    return;
+  }
+  const failed: string[] = [];
+  let generated = 0;
+  for (const path of project.forms ?? []) {
+    const uri = document.uri.with({ path: resolvePath(dirname(document.uri.path), path) });
+    const text = await readText(uri);
+    const parsed = text === undefined ? undefined : parseDocument(text);
+    if (!parsed?.document || hasErrors(parsed.diagnostics)) {
+      failed.push(
+        text === undefined
+          ? vscode.l10n.t('"{0}" not found', path)
+          : vscode.l10n.t('{0} has validation errors', path),
+      );
+      continue;
+    }
+    if (await generateFormCode(await vscode.workspace.openTextDocument(uri), { quiet: true }))
+      generated++;
+    else failed.push(path);
+  }
+  const startup = await generateProjectCode(document, { quiet: true });
+  const name = (document.uri.path.split('/').pop() ?? '').replace(PROJECT_EXTENSION, '');
+  if (failed.length === 0 && startup) {
+    void vscode.window.showInformationMessage(
+      vscode.l10n.t(
+        'Generated the code of {0} forms and the startup code of {1}.',
+        generated,
+        name,
+      ),
+    );
+    return;
+  }
+  void vscode.window.showWarningMessage(
+    vscode.l10n.t(
+      'Generated the code of {0} forms of {1}. Not generated: {2}',
+      generated,
+      name,
+      [...failed, ...(startup ? [] : [vscode.l10n.t('the startup code')])].join(', '),
+    ),
+  );
 }
 
 /** フォームのコードを生成した結果。出力先はフォームのフォルダからの相対パス */
@@ -88,8 +142,11 @@ export async function generateFormCode(
   return written ? { directory, targets } : undefined;
 }
 
-/** プロジェクトの起動部分(Project1.cpp・Project1.py)を生成する */
-async function generateProjectCode(document: vscode.TextDocument): Promise<void> {
+/** プロジェクトの起動部分(Project1.cpp・Project1.py)を生成する。生成できなかった・取りやめたときは false */
+async function generateProjectCode(
+  document: vscode.TextDocument,
+  { quiet }: { readonly quiet: boolean },
+): Promise<boolean> {
   const { project, diagnostics } = parseProject(document.getText());
   if (!project || hasErrors(diagnostics)) {
     void vscode.window.showErrorMessage(
@@ -97,7 +154,7 @@ async function generateProjectCode(document: vscode.TextDocument): Promise<void>
         'Cannot generate code because the project has validation errors. See the Problems panel.',
       ),
     );
-    return;
+    return false;
   }
   const fileName = document.uri.path.split('/').pop() ?? `Project${PROJECT_EXTENSION}`;
   const directory = vscode.Uri.joinPath(document.uri, '..');
@@ -114,17 +171,18 @@ async function generateProjectCode(document: vscode.TextDocument): Promise<void>
           ? vscode.l10n.t('"{0}" not found', path)
           : vscode.l10n.t('Cannot generate code because the form {0} has validation errors.', path),
       );
-      return;
+      return false;
     }
     forms.push({ doc: parsed.document, path });
   }
 
   const targets = resolveProjectTargets(project, fileName);
   const existing = await readAll(directory, [targets.cpp?.main, targets.python?.main]);
-  await writeGenerated(
+  return writeGenerated(
     directory,
     generateProject(project, fileName, forms, (path) => existing.get(path)),
     existing,
+    quiet,
   );
 }
 

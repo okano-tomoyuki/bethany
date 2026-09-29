@@ -1,9 +1,9 @@
-import { configureL10n } from '@bethany-designer/core';
+import { configureL10n, PROJECT_EXTENSION } from '@bethany-designer/core';
 import * as vscode from 'vscode';
 import { DesignerEditorProvider } from './designerEditorProvider.ts';
 import { registerDiagnostics } from './diagnostics.ts';
 import { registerFormsView, type ViewNode } from './formsView.ts';
-import { generateCode } from './generateCode.ts';
+import { generateCode, generateWholeProject } from './generateCode.ts';
 import { registerProjectCommands } from './projectCommands.ts';
 import { ProjectEditorProvider } from './projectEditorProvider.ts';
 import { registerProjectTracking } from './projects.ts';
@@ -32,6 +32,20 @@ export function activate(context: vscode.ExtensionContext): void {
                 : activeDslUri();
         if (!uri) return;
         await generateCode(await vscode.workspace.openTextDocument(uri));
+      },
+    ),
+    vscode.commands.registerCommand(
+      'bethanyDesigner.generateProject',
+      async (target?: vscode.Uri | ViewNode) => {
+        // エクスプローラー・エディタのタイトルからは Uri、フォームのビューからはプロジェクトの項目が渡される
+        const uri =
+          target instanceof vscode.Uri
+            ? target
+            : target?.kind === 'project'
+              ? target.project.uri
+              : activeDslUri();
+        if (!uri?.path.endsWith(PROJECT_EXTENSION)) return;
+        await generateWholeProject(await vscode.workspace.openTextDocument(uri));
       },
     ),
   );

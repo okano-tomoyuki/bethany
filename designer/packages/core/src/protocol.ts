@@ -53,5 +53,7 @@ export type WebviewToExtensionMessage =
    * 最小の差分で TextDocument に当てる。結果は editResult で返す
    */
   | { readonly type: 'editProject'; readonly requestId: number; readonly project: BfprojDocument }
+  /** プロジェクト全体のコード(すべてのフォームと起動部分)を生成する(プロジェクトの設定画面から) */
+  | { readonly type: 'generateProject' }
   /** 開いているファイルをテキストエディタで開く */
   | { readonly type: 'openAsText' };

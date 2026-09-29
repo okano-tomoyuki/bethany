@@ -142,6 +142,8 @@ function projectItem(project: ProjectInfo): vscode.TreeItem {
   if (project.doc) {
     item.iconPath = new vscode.ThemeIcon('project');
     item.contextValue = 'project';
+    // クリックで設定画面(既定のエディタ)を開く
+    item.command = { title: '', command: 'vscode.open', arguments: [project.uri] };
   } else {
     // 読めないプロジェクトファイル(問題パネルに理由が出る)
     item.iconPath = new vscode.ThemeIcon('error');

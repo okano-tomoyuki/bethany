@@ -71,6 +71,7 @@ export class DesignerEditorProvider implements vscode.CustomTextEditorProvider {
             void generateCode(document);
             break;
           case 'editProject':
+          case 'generateProject':
             break;
           case 'openAsText':
             void openAsText(document.uri);

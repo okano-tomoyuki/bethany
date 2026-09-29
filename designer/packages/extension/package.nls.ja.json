@@ -25,5 +25,6 @@
   "config.goToHandler.language.ask": "毎回聞く",
   "config.goToHandler.language.cpp": "C++ のソースを開く",
   "config.goToHandler.language.python": "Python のファイルを開く",
-  "customEditor.project.displayName": "Bethany プロジェクトの設定"
+  "customEditor.project.displayName": "Bethany プロジェクトの設定",
+  "command.generateProject.title": "プロジェクト全体のコードを生成"
 }

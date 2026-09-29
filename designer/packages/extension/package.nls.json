@@ -25,5 +25,6 @@
   "config.goToHandler.language.ask": "Ask every time",
   "config.goToHandler.language.cpp": "Open the C++ source",
   "config.goToHandler.language.python": "Open the Python file",
-  "customEditor.project.displayName": "Bethany Project Settings"
+  "customEditor.project.displayName": "Bethany Project Settings",
+  "command.generateProject.title": "Generate Code for the Whole Project"
 }

@@ -102,6 +102,12 @@
         "icon": "$(code)"
       },
       {
+        "command": "bethanyDesigner.generateProject",
+        "title": "%command.generateProject.title%",
+        "category": "Bethany Designer",
+        "icon": "$(run-all)"
+      },
+      {
         "command": "bethanyDesigner.refreshForms",
         "title": "%command.refreshForms.title%",
         "category": "Bethany Designer",
@@ -163,6 +169,11 @@
           "command": "bethanyDesigner.generateCode",
           "when": "resourceFilename =~ /\\.(bfm|bfproj)\\.json$/",
           "group": "navigation"
+        },
+        {
+          "command": "bethanyDesigner.generateProject",
+          "when": "resourceFilename =~ /\\.bfproj\\.json$/",
+          "group": "navigation"
         }
       ],
       "view/title": [
@@ -184,13 +195,18 @@
       ],
       "view/item/context": [
         {
+          "command": "bethanyDesigner.generateProject",
+          "when": "view == bethanyDesigner.forms && viewItem == project",
+          "group": "inline"
+        },
+        {
           "command": "bethanyDesigner.newForm",
           "when": "view == bethanyDesigner.forms && viewItem == project",
           "group": "inline"
         },
         {
           "command": "bethanyDesigner.generateCode",
-          "when": "view == bethanyDesigner.forms && viewItem =~ /^(form|projectForm|projectFormManual|projectMainForm|project)$/",
+          "when": "view == bethanyDesigner.forms && viewItem =~ /^(form|projectForm|projectFormManual|projectMainForm)$/",
           "group": "inline"
         },
         {
@@ -232,12 +248,21 @@
           "command": "bethanyDesigner.createAtStartup",
           "when": "view == bethanyDesigner.forms && viewItem == projectFormManual",
           "group": "2_project@4"
+        },
+        {
+          "command": "bethanyDesigner.generateProject",
+          "when": "view == bethanyDesigner.forms && viewItem == project",
+          "group": "navigation@0"
         }
       ],
       "commandPalette": [
         {
           "command": "bethanyDesigner.generateCode",
           "when": "resourceFilename =~ /\\.(bfm|bfproj)\\.json$/"
+        },
+        {
+          "command": "bethanyDesigner.generateProject",
+          "when": "resourceFilename =~ /\\.bfproj\\.json$/"
         },
         {
           "command": "bethanyDesigner.refreshForms",

@@ -12,7 +12,7 @@ import {
 } from '@bethany-designer/core';
 import * as vscode from 'vscode';
 import { openAsText, renderHtml } from './designerEditorProvider.ts';
-import { generateCode } from './generateCode.ts';
+import { generateCode, generateWholeProject } from './generateCode.ts';
 
 export class ProjectEditorProvider implements vscode.CustomTextEditorProvider {
   static readonly viewType = 'bethanyDesigner.projectEditor';
@@ -65,6 +65,9 @@ export class ProjectEditorProvider implements vscode.CustomTextEditorProvider {
           }
           case 'generateCode':
             void generateCode(document);
+            break;
+          case 'generateProject':
+            void generateWholeProject(document);
             break;
           case 'openAsText':
             void openAsText(document.uri);
