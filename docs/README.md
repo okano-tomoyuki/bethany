@@ -9,6 +9,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [vision.md](vision.md) | 目的・市場調査・想定ユーザー・スコープ | 初版 |
 | [class-hierarchy.md](class-hierarchy.md) | LCL の継承関係(ソースで確認済み)・Bethany の階層・メンバの配置 | 初版 |
 | [component-coverage.md](component-coverage.md) | VCL 移行を見据えたコントロールの棚卸し(未実装クラスの一覧と優先度) | 初版 |
+| [member-coverage.md](member-coverage.md) | 実装済みのクラスに足りないメンバ・グローバルな関数の棚卸しと Tier 表(ModalResult・MessageDlg 等) | 初版 |
 | [designer/](designer/README.md) | デザイナーアプリ(VS Code 拡張)の設計: DSL・コード生成・カタログ([ADR 0035](adr/0035-designer-in-this-repository.md)) | 草案 |
 | [adr/](adr/) | 設計判断の記録（1判断1ファイル） | 随時追加 |
 | [../todo.md](../todo.md) | 実装タスクの進捗・実装パターン・既知の課題(Phase 単位) | 継続更新 |

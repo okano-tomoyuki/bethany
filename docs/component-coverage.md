@@ -8,6 +8,8 @@ VCL と LCL はクラス名・プロパティ名がほぼ一致するため、�
 方針は [ADR 0007](adr/0007-lcl-faithful-hierarchy.md) と同じ:
 LCL の継承関係の部分列にする。実装するクラスの基底が Bethany に無ければ、その基底から実装する。
 
+実装済みのクラスに足りないメンバ(`ModalResult`・`WordWrap` 等)とグローバルな関数(`MessageDlg` 等)は、[member-coverage.md](member-coverage.md) で扱う。
+
 ## 1. 実装済み(37 クラス)
 
 TObject, TPersistent, TComponent, TControl, TWinControl, TGraphicControl, TCustomControl, TScrollingWinControl,
