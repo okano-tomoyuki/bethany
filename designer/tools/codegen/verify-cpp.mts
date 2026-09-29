@@ -180,8 +180,8 @@ project(beth_verify_cpp CXX)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_library(beth STATIC \${BETH_DIR}/beth.cpp \${BETH_DIR}/internal/api.cpp)
-target_include_directories(beth PUBLIC \${BETH_DIR})
+add_library(beth STATIC \${BETH_DIR}/src/beth.cpp \${BETH_DIR}/src/internal/api.cpp)
+target_include_directories(beth PUBLIC \${BETH_DIR}/include)
 target_link_libraries(beth PRIVATE \${CMAKE_DL_LIBS})
 
 add_executable(verify MainForm.cpp main.cpp)

@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "beth.hpp"
+#include <bethany/beth.hpp>
 
 using namespace beth;
 

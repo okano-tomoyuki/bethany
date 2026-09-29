@@ -167,7 +167,7 @@ function emitCppMain(
     scaffold: (rendered) =>
       [
         `// ${doc}`,
-        '#include "beth.hpp"',
+        '#include <bethany/beth.hpp>',
         rendered('includes'),
         '',
         'using namespace beth;',

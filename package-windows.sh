@@ -27,7 +27,7 @@ STAGE="dist/$NAME"
 rm -rf "$STAGE" "dist/$NAME.zip"
 mkdir -p "$STAGE"
 
-cp -r beth.hpp beth.cpp internal beth.pas beth.dll CMakeLists.txt cmake win32 \
+cp -r include src beth.pas beth.dll CMakeLists.txt cmake win32 \
   README.md CHANGELOG.md LICENSE THIRD-PARTY-NOTICES.md licenses "$STAGE/"
 
 (cd dist && cmake -E tar cf "$NAME.zip" --format=zip "$NAME")

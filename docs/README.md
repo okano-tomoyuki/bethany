@@ -59,6 +59,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0037](adr/0037-rename-to-bethany.md) | ライブラリの名前を no_vcl から Bethany(略称 beth)に変える | 承認 |
 | [0038](adr/0038-cpp-distribution.md) | C++ はソースとビルド済みの beth.dll を zip で配り、C++ の部分は利用者のコンパイラでビルドする | 承認 |
 | [0039](adr/0039-python-distribution.md) | Python のバインディングを beth パッケージにまとめ、beth.dll を同梱した Windows x64 の wheel を PyPI に出す | 承認 |
+| [0040](adr/0040-system-include-path.md) | ヘッダを include/bethany/ に置き、利用者は #include <bethany/beth.hpp> と書く | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。

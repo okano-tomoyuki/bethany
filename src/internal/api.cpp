@@ -1,4 +1,4 @@
-#include "internal/api.h"
+#include <bethany/internal/api.h>
 
 #include <cassert>
 #include <mutex>
@@ -12,7 +12,7 @@ using beth_module_t = HMODULE;
 using beth_module_t = void*;
 #endif
 
-#include "beth.hpp"
+#include <bethany/beth.hpp>
 
 namespace beth
 {

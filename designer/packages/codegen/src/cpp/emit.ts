@@ -48,7 +48,7 @@ export function emitCpp(
       [
         '#pragma once',
         '',
-        '#include "beth.hpp"',
+        '#include <bethany/beth.hpp>',
         '',
         `/** ${comments.classDoc(sourceName)} */`,
         `class ${className} : public beth::TForm`,

@@ -4,7 +4,7 @@ beth.dll(Linux は libbeth.so)が公開する関数の決まり。
 C++ ラッパー(beth.hpp)の内部層(`internal/`)が従っているもので、別の言語(Python の ctypes・Rust 等)から
 DLL を直接呼ぶ層を作るときにも、これに従う([ADR 0032](adr/0032-internalize-c-api.md))。
 
-関数の一覧と引数の型は [internal/funcs.h](../internal/funcs.h)、実装は [beth.pas](../beth.pas)(`exports`)が正とする。
+関数の一覧と引数の型は [internal/funcs.h](../include/bethany/internal/funcs.h)、実装は [beth.pas](../beth.pas)(`exports`)が正とする。
 関数ごとの意味は、beth.hpp の対応するメンバのコメントと、[class-hierarchy.md](class-hierarchy.md) の対応表を参照する。
 
 ## 呼び出し規約・名前
@@ -67,7 +67,7 @@ DLL を直接呼ぶ層を作るときにも、これに従う([ADR 0032](adr/003
   - 同じイベントに何度呼んでもよく、最後に登録したものだけが呼ばれる。
   - cb に nil を渡すと解除する(コールバックの実行中に解除してもよい)。
 - **コールバックの引数**:
-  - 形は [internal/api.h](../internal/api.h) の `callback_t` 等。
+  - 形は [internal/api.h](../include/bethany/internal/api.h) の `callback_t` 等。
   - 最初の引数は、イベントを発生させたオブジェクト(Sender)。最後の引数は、登録時に渡した data。
 - **書き換えられる引数**(OnClose の Action・OnCloseQuery の CanClose・OnKeyDown の Key 等)は、ポインタで渡される。
   - 既定値が入った状態で呼ばれ、書き換えると LCL に反映される。

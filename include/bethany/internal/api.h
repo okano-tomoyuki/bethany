@@ -13,7 +13,7 @@
 
 #include <cstdint>
 
-#include "internal/funcs.h"
+#include "funcs.h"
 
 namespace beth
 {

@@ -7,8 +7,8 @@ import re
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-API_HEADER = HERE.parent / "internal" / "api.h"
-FUNCS_HEADER = HERE.parent / "internal" / "funcs.h"
+API_HEADER = HERE.parent / "include" / "bethany" / "internal" / "api.h"
+FUNCS_HEADER = HERE.parent / "include" / "bethany" / "internal" / "funcs.h"
 OUTPUT_FILE = HERE / "beth" / "_internal.py"
 
 # internal/api.h の基本型 → ctypes の型

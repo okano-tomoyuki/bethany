@@ -1,4 +1,4 @@
-#include "beth.hpp"
+#include <bethany/beth.hpp>
 
 #include <cstdlib>
 

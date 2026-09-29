@@ -23,11 +23,12 @@ option(BETH_INSTALL "Generate the install rules (headers, library, beth.dll and 
 
 # beth.hpp のクラスと、DLL の呼び出し層(internal/。利用者は直接使わない。docs/adr/0032)。
 # 利用者のコンパイラでビルドする(配布するのはソースと beth.dll。docs/adr/0038)。
-add_library(beth STATIC beth.cpp internal/api.cpp)
+# ヘッダは include/bethany/ に置き、利用者は #include <bethany/beth.hpp> と書く(システムインクルード。docs/adr/0040)。
+add_library(beth STATIC src/beth.cpp src/internal/api.cpp)
 add_library(beth::beth ALIAS beth)
 target_include_directories(beth PUBLIC
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
-    $<INSTALL_INTERFACE:include/beth>)
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
 # DLL を実行時に読み込む(Linux の dlopen)。
 target_link_libraries(beth PRIVATE ${CMAKE_DL_LIBS})
 
@@ -66,8 +67,7 @@ if(BETH_INSTALL)
     include(CMakePackageConfigHelpers)
 
     install(TARGETS beth EXPORT bethTargets ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-    install(FILES beth.hpp DESTINATION include/beth)
-    install(FILES internal/api.h internal/funcs.h DESTINATION include/beth/internal)
+    install(DIRECTORY include/bethany DESTINATION include)
     if(WIN32)
         install(FILES "${BETH_DLL}" DESTINATION ${CMAKE_INSTALL_BINDIR} OPTIONAL)
     else()

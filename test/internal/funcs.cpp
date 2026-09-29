@@ -2,7 +2,7 @@
 // 定数と Exception だけを beth.hpp から使う。C++ ラッパーのテストは test/main.cpp。
 #include <stdio.h>
 
-#include "beth.hpp"
+#include <bethany/beth.hpp>
 
 using namespace beth;
 using namespace beth::internal;

@@ -113,7 +113,7 @@ C++(`Project1.cpp`):
 
 ```cpp
 // Application created with the Bethany designer (Project1.bfproj.json). Regions enclosed in markers are overwritten when regenerated.
-#include "beth.hpp"
+#include <bethany/beth.hpp>
 // <bethany-designer:begin id="includes">
 #include "MainForm.hpp"
 #include "Form2.hpp"

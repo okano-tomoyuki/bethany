@@ -11,9 +11,9 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
-HPP = ROOT / "beth.hpp"
-FUNCS_HEADER = ROOT / "internal" / "funcs.h"
-API_HEADER = ROOT / "internal" / "api.h"
+HPP = ROOT / "include" / "bethany" / "beth.hpp"
+FUNCS_HEADER = ROOT / "include" / "bethany" / "internal" / "funcs.h"
+API_HEADER = ROOT / "include" / "bethany" / "internal" / "api.h"
 CORE_FILE = HERE / "beth" / "_core.py"
 OUTPUT_FILE = HERE / "beth" / "__init__.py"
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+- **Changed**: the generated C++ code includes Bethany as a system header, `#include <bethany/beth.hpp>`.
+  It requires the C++ library 0.2.0 or later, which moved the headers to `include/bethany/`
+
 ## [0.3.0] - 2026-09-29
 
 - Go to an event handler as in C++Builder: double-clicking a control on the canvas, or the **+** / **→** button on the Events tab,

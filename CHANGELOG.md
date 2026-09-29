@@ -6,6 +6,12 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
 
 ## [Unreleased]
 
+### 変更
+
+- **互換が無い変更**: ヘッダを `include/bethany/` に、ソースを `src/` に移した。`#include "beth.hpp"` は `#include <bethany/beth.hpp>` に書き換える
+  (システムインクルード。`find_package` で使うと、ライブラリのヘッダは `-isystem` で渡る。[ADR 0040](docs/adr/0040-system-include-path.md))。
+  インストール先のヘッダも `include/beth/` から `include/bethany/` になった
+
 ## [0.1.1] - 2026-09-28
 
 C++ の部分に変更は無い。

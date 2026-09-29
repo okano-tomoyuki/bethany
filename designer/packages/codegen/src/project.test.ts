@@ -31,7 +31,7 @@ describe('generateProject', () => {
     const cpp = files(
       generateProject(project, 'Project1.bfproj.json', [mainForm], () => undefined),
     )['Project1.cpp'];
-    expect(cpp).toContain('#include "beth.hpp"');
+    expect(cpp).toContain('#include <bethany/beth.hpp>');
     expect(cpp).toContain('#include "MainForm.hpp"');
     expect(cpp).toMatch(
       /Application->Initialize\(\);\n.*begin id="beth_CreateForms">\n {4}Application->CreateForm\(&MainForm\);\n.*\n {4}Application->Run\(\);/,

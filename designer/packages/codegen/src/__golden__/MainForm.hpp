@@ -1,6 +1,6 @@
 #pragma once
 
-#include "beth.hpp"
+#include <bethany/beth.hpp>
 
 /** Form created with the Bethany designer (MainForm.bfm.json). Regions enclosed in markers are overwritten when regenerated. */
 class TMainForm : public beth::TForm

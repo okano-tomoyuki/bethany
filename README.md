@@ -31,6 +31,17 @@ target_link_libraries(app PRIVATE beth::beth)
 beth_deploy(app)   # beth.dll を app.exe の隣に写す
 ```
 
+```cpp
+// main.cpp
+#include <bethany/beth.hpp>
+
+using namespace beth;
+```
+
+ヘッダは山括弧のシステムインクルードで `<bethany/beth.hpp>` と書く([ADR 0040](docs/adr/0040-system-include-path.md))。
+CMake 3.25 以降なら、`FetchContent_Declare` に `SYSTEM` を付けると、ライブラリのヘッダの警告が利用者のビルドに出なくなる
+(`find_package` で使う場合は何もしなくてもそうなる)。
+
 インストールして使う場合は、zip を展開したフォルダで `cmake -S . -B build -G Ninja`・`cmake --build build`・`cmake --install build --prefix <場所>` を実行し、
 利用側では `find_package(beth 0.1 REQUIRED)` の後に上と同じく `beth::beth` をリンクして `beth_deploy()` を呼ぶ。
 
@@ -60,7 +71,7 @@ from beth import *
 
 Bethany(ベタニア)は、聖書でラザロ(Lazarus)が暮らした村の名前。Delphi・Lazarus と同じく神話や聖書の固有名詞にちなみ、
 このライブラリが Lazarus の成果の上に成り立っていることを表す。略称の beth はヘブライ語の文字 ב(ベート、「家」の意味)の名前で、
-ファイル名・C++ の名前空間・Python のモジュール名に使う(`beth.hpp`・`namespace beth`・`import beth`)。
+ファイル名・C++ の名前空間・Python のモジュール名に使う(`bethany/beth.hpp`・`namespace beth`・`import beth`)。
 経緯は [ADR 0037](docs/adr/0037-rename-to-bethany.md)。
 
 ## 謝辞
