@@ -3,6 +3,7 @@
  * 両者はこの型を介してのみ通信し、互いのコードを直接 import しない。
  */
 import type { EditCommand } from './edit/commands.ts';
+import type { BfprojDocument } from './project/schema.ts';
 
 /** キャンバスの設定(拡張の設定 bethanyDesigner.canvas.*。editor-design.md §5.4) */
 export interface CanvasSettings {
@@ -46,4 +47,11 @@ export type WebviewToExtensionMessage =
    * ハンドラの定義へ移動する(editor-design.md §7)。拡張はコードを生成し(足りない雛形を追記し)てから、定義を開く。
    * 直前に送った edit(ハンドラ名の設定)の適用の後に処理する
    */
-  | { readonly type: 'goToHandler'; readonly handler: string };
+  | { readonly type: 'goToHandler'; readonly handler: string }
+  /**
+   * プロジェクトの設定画面(project-spec.md §6)での編集。変更後のプロジェクト全体を送り、拡張が決まった形で書き出して
+   * 最小の差分で TextDocument に当てる。結果は editResult で返す
+   */
+  | { readonly type: 'editProject'; readonly requestId: number; readonly project: BfprojDocument }
+  /** 開いているファイルをテキストエディタで開く */
+  | { readonly type: 'openAsText' };

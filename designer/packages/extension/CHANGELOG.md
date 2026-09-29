@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Project settings editor: a project file (`*.bfproj.json`) opens in a settings screen, like the project options of C++Builder.
+  Set the main form and the auto-create forms and their order, the languages, the C++ and Python settings and the settings
+  for some forms, and see where the code of each form is generated. _Open as Text_ switches to the text editor
 - **Changed**: the generated C++ code includes Bethany as a system header, `#include <bethany/beth.hpp>`.
   It requires the C++ library 0.2.0 or later, which moved the headers to `include/bethany/`
 - C++ settings in `codegen.cpp` of the project file: `namespace` (`app` or `app::ui`), `includeGuard` (`macro`, the default, or `pragma`),

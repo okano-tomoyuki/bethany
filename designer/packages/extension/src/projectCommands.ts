@@ -26,7 +26,8 @@ export function registerProjectCommands(): vscode.Disposable {
     vscode.commands.registerCommand(
       'bethanyDesigner.openProjectFile',
       async (node: ProjectNode) => {
-        await vscode.window.showTextDocument(node.project.uri);
+        // 既定のエディタ(プロジェクトの設定画面)で開く
+        await vscode.commands.executeCommand('vscode.open', node.project.uri);
       },
     ),
     vscode.commands.registerCommand('bethanyDesigner.setMainForm', async (node: FormNode) => {

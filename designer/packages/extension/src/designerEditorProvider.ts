@@ -32,7 +32,7 @@ export class DesignerEditorProvider implements vscode.CustomTextEditorProvider {
   resolveCustomTextEditor(document: vscode.TextDocument, panel: vscode.WebviewPanel): void {
     const webviewRoot = vscode.Uri.joinPath(this.context.extensionUri, 'dist', 'webview');
     panel.webview.options = { enableScripts: true, localResourceRoots: [webviewRoot] };
-    panel.webview.html = renderHtml(panel.webview, webviewRoot);
+    panel.webview.html = renderHtml(panel.webview, webviewRoot, 'form');
 
     const post = (message: ExtensionToWebviewMessage) => panel.webview.postMessage(message);
     const postDocument = () =>
@@ -70,6 +70,11 @@ export class DesignerEditorProvider implements vscode.CustomTextEditorProvider {
           case 'generateCode':
             void generateCode(document);
             break;
+          case 'editProject':
+            break;
+          case 'openAsText':
+            void openAsText(document.uri);
+            break;
           case 'goToHandler': {
             // 直前の編集(ハンドラ名の設定)が適用されてから生成する
             const { handler } = message;
@@ -102,6 +107,11 @@ export class DesignerEditorProvider implements vscode.CustomTextEditorProvider {
   }
 }
 
+/** テキストエディタで開く(既定のエディタがカスタムエディタでも) */
+export async function openAsText(uri: vscode.Uri): Promise<void> {
+  await vscode.commands.executeCommand('vscode.openWith', uri, 'default');
+}
+
 /** キャンバスの設定(docs/designer/editor-design.md §5.4)。空欄・0 は表示言語から決める */
 function canvasSettings(): CanvasSettings {
   const config = vscode.workspace.getConfiguration('bethanyDesigner.canvas');
@@ -120,7 +130,12 @@ function canvasSettings(): CanvasSettings {
   };
 }
 
-function renderHtml(webview: vscode.Webview, webviewRoot: vscode.Uri): string {
+/** Webview の HTML。mode でフォームのデザイナーとプロジェクトの設定画面を切り替える(同じ main.js) */
+export function renderHtml(
+  webview: vscode.Webview,
+  webviewRoot: vscode.Uri,
+  mode: 'form' | 'project',
+): string {
   const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(webviewRoot, 'main.js'));
   const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(webviewRoot, 'main.css'));
   const nonce = createNonce();
@@ -139,7 +154,7 @@ function renderHtml(webview: vscode.Webview, webviewRoot: vscode.Uri): string {
   <title>Bethany Designer</title>
 </head>
 <body>
-  <div id="root" data-language="${language}" data-l10n="${l10n}"></div>
+  <div id="root" data-mode="${mode}" data-language="${language}" data-l10n="${l10n}"></div>
   <script type="module" nonce="${nonce}" src="${scriptUri.toString()}"></script>
 </body>
 </html>`;

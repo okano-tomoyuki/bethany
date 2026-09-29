@@ -24,5 +24,6 @@
   "config.goToHandler.language.auto": "Ask the first time and remember the answer in the workspace",
   "config.goToHandler.language.ask": "Ask every time",
   "config.goToHandler.language.cpp": "Open the C++ source",
-  "config.goToHandler.language.python": "Open the Python file"
+  "config.goToHandler.language.python": "Open the Python file",
+  "customEditor.project.displayName": "Bethany Project Settings"
 }

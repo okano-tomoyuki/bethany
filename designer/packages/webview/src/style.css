@@ -1135,3 +1135,138 @@ input[aria-invalid='true'] {
   top: -4px;
   left: 100%;
 }
+
+/* ---- プロジェクトの設定画面(project/ProjectApp.tsx) ---- */
+
+.project-settings {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 8px 16px 32px;
+}
+
+.project-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.project-header h1 {
+  margin: 0;
+  font-size: 1.3em;
+  font-weight: 600;
+}
+
+.project-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.settings-section {
+  margin: 0 0 16px;
+  padding: 10px 14px 12px;
+  border: 1px solid var(--vscode-panel-border);
+}
+
+.settings-section h2 {
+  margin-bottom: 4px;
+}
+
+.settings-description {
+  margin: 0 0 8px;
+}
+
+.settings-section .field-row {
+  grid-template-columns: minmax(120px, 28%) minmax(0, 1fr);
+}
+
+.field-label {
+  padding-top: 3px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.language-checks {
+  display: flex;
+  gap: 16px;
+}
+
+.startup-lists {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: stretch;
+  margin-top: 8px;
+}
+
+.startup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.startup-list label {
+  color: var(--vscode-descriptionForeground);
+}
+
+.startup-list select {
+  flex: 1;
+  min-height: 120px;
+}
+
+.startup-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  justify-content: center;
+}
+
+.override-card {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--vscode-panel-border);
+  background: var(--vscode-editorWidget-background, transparent);
+}
+
+.override-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.override-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.override-matched {
+  margin: 0 0 6px;
+  font-size: 0.9em;
+}
+
+.preview-scroll {
+  overflow-x: auto;
+}
+
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.95em;
+}
+
+.preview-table th,
+.preview-table td {
+  padding: 3px 8px;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.preview-table th {
+  font-family: var(--vscode-font-family);
+  font-weight: 600;
+  color: var(--vscode-descriptionForeground);
+}

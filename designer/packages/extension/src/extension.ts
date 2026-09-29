@@ -5,6 +5,7 @@ import { registerDiagnostics } from './diagnostics.ts';
 import { registerFormsView, type ViewNode } from './formsView.ts';
 import { generateCode } from './generateCode.ts';
 import { registerProjectCommands } from './projectCommands.ts';
+import { ProjectEditorProvider } from './projectEditorProvider.ts';
 import { registerProjectTracking } from './projects.ts';
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -12,6 +13,7 @@ export function activate(context: vscode.ExtensionContext): void {
   configureL10n(vscode.env.language, vscode.l10n.bundle);
   context.subscriptions.push(
     DesignerEditorProvider.register(context),
+    ProjectEditorProvider.register(context),
     registerDiagnostics(),
     registerFormsView(),
     registerProjectCommands(),

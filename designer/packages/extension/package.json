@@ -50,6 +50,16 @@
           }
         ],
         "priority": "default"
+      },
+      {
+        "viewType": "bethanyDesigner.projectEditor",
+        "displayName": "%customEditor.project.displayName%",
+        "selector": [
+          {
+            "filenamePattern": "*.bfproj.json"
+          }
+        ],
+        "priority": "default"
       }
     ],
     "viewsContainers": {
