@@ -22,7 +22,7 @@ project(app CXX)
 
 include(FetchContent)
 FetchContent_Declare(beth
-    URL https://github.com/okano-tomoyuki/bethany/releases/download/v0.1.1/bethany-0.1.1-win64.zip
+    URL https://github.com/okano-tomoyuki/bethany/releases/download/v0.2.0/bethany-0.2.0-win64.zip
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
 FetchContent_MakeAvailable(beth)
 
@@ -43,7 +43,7 @@ CMake 3.25 以降なら、`FetchContent_Declare` に `SYSTEM` を付けると、
 (`find_package` で使う場合は何もしなくてもそうなる)。
 
 インストールして使う場合は、zip を展開したフォルダで `cmake -S . -B build -G Ninja`・`cmake --build build`・`cmake --install build --prefix <場所>` を実行し、
-利用側では `find_package(beth 0.1 REQUIRED)` の後に上と同じく `beth::beth` をリンクして `beth_deploy()` を呼ぶ。
+利用側では `find_package(beth 0.2 REQUIRED)` の後に上と同じく `beth::beth` をリンクして `beth_deploy()` を呼ぶ。
 
 アプリケーションを配るときは、exe と `beth.dll` に加えて [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) と [licenses/](licenses/) を同梱する
 (`beth.dll` は LCL を含む)。MinGW のランタイムは exe に静的にリンクされるため、`libstdc++-6.dll` などを同梱する必要はない。

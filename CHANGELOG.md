@@ -4,7 +4,9 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
 バージョンは [Semantic Versioning](https://semver.org/lang/ja/) に従う(0.x の間は、マイナーバージョンが上がると互換が無い変更を含みうる)。
 デザイナー(VS Code 拡張)の変更は [designer/packages/extension/CHANGELOG.md](designer/packages/extension/CHANGELOG.md) に書く。
 
-## [Unreleased]
+## [0.2.0] - 2026-09-29
+
+Python のパッケージに変更は無い(バージョンは C++ のライブラリと合わせる)。
 
 ### 変更
 
