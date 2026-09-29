@@ -1,0 +1,130 @@
+{
+  "formatVersion": 1,
+  "form": {
+    "name": "MainForm",
+    "class": "TForm",
+    "properties": {
+      "Width": 640,
+      "Height": 480,
+      "Caption": "Bethany Notepad",
+      "Menu": "MainMenu1"
+    },
+    "events": { "OnCreate": "FormCreate", "OnCloseQuery": "FormCloseQuery" },
+    "controls": [
+      {
+        "name": "Memo1",
+        "class": "TMemo",
+        "properties": {
+          "Left": 0,
+          "Top": 0,
+          "Width": 640,
+          "Height": 457,
+          "Align": "alClient",
+          "ScrollBars": 3
+        },
+        "events": { "OnChange": "Memo1Change" }
+      },
+      {
+        "name": "StatusBar1",
+        "class": "TStatusBar",
+        "properties": {
+          "Left": 0,
+          "Top": 457,
+          "Width": 640,
+          "Height": 23,
+          "SimpleText": "Ready"
+        }
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "MainMenu1",
+      "class": "TMainMenu",
+      "design": { "left": 16, "top": 16 },
+      "items": [
+        {
+          "name": "FileMenu",
+          "properties": { "Caption": "&File" },
+          "items": [
+            {
+              "name": "FileNewItem",
+              "properties": { "Caption": "&New", "ShortCut": "Ctrl+N" },
+              "events": { "OnClick": "FileNewItemClick" }
+            },
+            {
+              "name": "FileOpenItem",
+              "properties": { "Caption": "&Open...", "ShortCut": "Ctrl+O" },
+              "events": { "OnClick": "FileOpenItemClick" }
+            },
+            {
+              "name": "FileSaveItem",
+              "properties": { "Caption": "&Save", "ShortCut": "Ctrl+S" },
+              "events": { "OnClick": "FileSaveItemClick" }
+            },
+            {
+              "name": "FileSaveAsItem",
+              "properties": { "Caption": "Save &As..." },
+              "events": { "OnClick": "FileSaveAsItemClick" }
+            },
+            {
+              "name": "N1",
+              "properties": { "Caption": "-" }
+            },
+            {
+              "name": "FileExitItem",
+              "properties": { "Caption": "E&xit" },
+              "events": { "OnClick": "FileExitItemClick" }
+            }
+          ]
+        },
+        {
+          "name": "FormatMenu",
+          "properties": { "Caption": "F&ormat" },
+          "items": [
+            {
+              "name": "FormatFontItem",
+              "properties": { "Caption": "&Font..." },
+              "events": { "OnClick": "FormatFontItemClick" }
+            }
+          ]
+        },
+        {
+          "name": "HelpMenu",
+          "properties": { "Caption": "&Help" },
+          "items": [
+            {
+              "name": "HelpAboutItem",
+              "properties": { "Caption": "&About Bethany Notepad..." },
+              "events": { "OnClick": "HelpAboutItemClick" }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "OpenDialog1",
+      "class": "TOpenDialog",
+      "design": { "left": 56, "top": 16 },
+      "properties": {
+        "Filter": "Text files (*.txt)|*.txt|All files (*.*)|*.*",
+        "Options": ["ofEnableSizing", "ofViewDetail", "ofFileMustExist"]
+      }
+    },
+    {
+      "name": "SaveDialog1",
+      "class": "TSaveDialog",
+      "design": { "left": 96, "top": 16 },
+      "properties": {
+        "Filter": "Text files (*.txt)|*.txt|All files (*.*)|*.*",
+        "DefaultExt": "txt",
+        "Options": ["ofEnableSizing", "ofViewDetail", "ofOverwritePrompt"]
+      }
+    },
+    {
+      "name": "FontDialog1",
+      "class": "TFontDialog",
+      "design": { "left": 136, "top": 16 }
+    }
+  ]
+}

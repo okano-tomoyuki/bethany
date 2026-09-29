@@ -7,6 +7,7 @@ C++/Python bindings for the Lazarus LCL
 フォームを画面で設計するデザイナー(VS Code 拡張)を [designer/](designer/README.md) で開発している。
 
 設計は [docs/](docs/README.md) を、実装の進捗は [todo.md](todo.md) を参照。
+C++ と Python で同じアプリケーションを書いたサンプル(メモ帳)は [example/](example/README.md) にある。
 
 ## C++ で使う
 

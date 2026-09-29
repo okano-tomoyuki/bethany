@@ -1,0 +1,28 @@
+{
+  "$schema": "../designer/packages/extension/schema/bfproj.schema.json",
+  "formatVersion": 1,
+  "codegen": {
+    "cpp": {
+      "main": "cpp/Notepad.cpp",
+      "namespace": "notepad",
+      "headerDir": "cpp",
+      "sourceDir": "cpp",
+      "overrides": [
+        {
+          "forms": ["dialogs"],
+          "namespace": "notepad::dialogs"
+        }
+      ]
+    },
+    "python": {
+      "main": "py/Notepad.py",
+      "moduleDir": "py"
+    }
+  },
+  "mainForm": "MainForm.bfm.json",
+  "forms": [
+    "MainForm.bfm.json",
+    "dialogs/AboutForm.bfm.json",
+    "dialogs/ConfirmSaveForm.bfm.json"
+  ]
+}
