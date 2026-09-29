@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- **Changed**: code is generated only for forms in a project, because the output folders, the file extensions and the languages
+  are set in the project. _Generate Code_ on a form that is not in a project offers to add it to a project (or to create one)
+  and then generates the code. The CLI reports an error
 - Project settings editor: a project file (`*.bfproj.json`) opens in a settings screen, like the project options of C++Builder.
   Set the main form and the auto-create forms and their order, the languages, the C++ and Python settings and the settings
   for some forms, and see where the code of each form is generated. _Open as Text_ switches to the text editor

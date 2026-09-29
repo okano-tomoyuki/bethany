@@ -132,7 +132,7 @@ function main(argv: readonly string[]): number {
   return 0;
 }
 
-/** フォームのコードを生成する。検証のエラーがあれば undefined */
+/** フォームのコードを生成する。検証のエラーがあるか、どのプロジェクトにも属さなければ undefined */
 function generateFormFile(
   file: string,
   dslPath: string,
@@ -141,7 +141,18 @@ function generateFormFile(
   const { document, diagnostics } = parseDocument(readFileSync(dslPath, 'utf8'));
   report(file, diagnostics);
   if (!document || diagnostics.some((d) => d.severity === 'error')) return undefined;
-  const settings = formCodegenSettings(projectsContaining(dslPath));
+  // 出力先・言語はフォームが属するプロジェクトの設定で決まる(project-spec.md §5)
+  const projects = projectsContaining(dslPath);
+  if (projects.length === 0) {
+    console.error(
+      l10n.t(
+        '{0} is not in a project. Add it to the forms of a project file (*.bfproj.json) to generate code',
+        file,
+      ),
+    );
+    return undefined;
+  }
+  const settings = formCodegenSettings(projects);
   return generateAll(document, basename(dslPath), settings, (path) => readIfExists(outPath(path)));
 }
 

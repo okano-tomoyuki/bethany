@@ -206,12 +206,12 @@
         },
         {
           "command": "bethanyDesigner.generateCode",
-          "when": "view == bethanyDesigner.forms && viewItem =~ /^(form|projectForm|projectFormManual|projectMainForm)$/",
+          "when": "view == bethanyDesigner.forms && viewItem =~ /^(projectForm|projectFormManual|projectMainForm)$/",
           "group": "inline"
         },
         {
           "command": "bethanyDesigner.generateCode",
-          "when": "view == bethanyDesigner.forms && viewItem =~ /^(form|projectForm|projectFormManual|projectMainForm|project)$/",
+          "when": "view == bethanyDesigner.forms && viewItem =~ /^(projectForm|projectFormManual|projectMainForm|project)$/",
           "group": "navigation@1"
         },
         {

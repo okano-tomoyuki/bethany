@@ -1,6 +1,6 @@
 /**
  * コード生成(tk-designer ADR 0010。docs/designer/editor-design.md §7)。コマンド「コードを生成」と、デザイナーの画面から呼ばれる。
- * 生成する言語とコメントの言語は、フォームが属するプロジェクトの codegen から決める(属さなければ C++ と Python の両方)。
+ * 生成する言語とコメントの言語は、フォームが属するプロジェクトの codegen から決める(どのプロジェクトにも属さないフォームは生成しない)。
  * プロジェクトファイル(*.bfproj.json)なら起動部分を生成する(docs/designer/project-spec.md §5)。
  */
 import {
@@ -24,7 +24,7 @@ import {
   resolvePath,
 } from '@bethany-designer/core';
 import * as vscode from 'vscode';
-import { findProjects, samePath } from './projects.ts';
+import { findProjects, samePath, type ProjectInfo } from './projects.ts';
 
 const output = { channel: undefined as vscode.OutputChannel | undefined };
 
@@ -99,6 +99,8 @@ export interface FormCodeResult {
 /**
  * フォームのコードを生成する。生成できなかった・取りやめたときは undefined。
  * quiet なら、成功の通知(「生成しました」「最新です」)を出さない(ハンドラへの移動から呼ぶとき)。
+ * 出力先・言語はフォームが属するプロジェクトの設定で決まるので、どのプロジェクトにも属さないフォームは生成しない
+ * (プロジェクトへの追加を案内し、追加されたら続ける。project-spec.md §5)。
  */
 export async function generateFormCode(
   document: vscode.TextDocument,
@@ -116,9 +118,8 @@ export async function generateFormCode(
 
   const fileName = document.uri.path.split('/').pop() ?? 'Form.bfm.json';
   const directory = vscode.Uri.joinPath(document.uri, '..');
-  const projects = (await findProjects()).filter((p) =>
-    p.forms.some((form) => samePath(form, document.uri)),
-  );
+  const projects = await projectsContaining(document.uri);
+  if (projects.length === 0) return undefined;
   // 各プロジェクトの forms に書かれた、このフォームのパス(headerDir・sourceDir の下の置き場所を決める)
   const settings = formCodegenSettings(
     projects.flatMap((p) => {
@@ -140,6 +141,28 @@ export async function generateFormCode(
     quiet,
   );
   return written ? { directory, targets } : undefined;
+}
+
+/**
+ * フォームを含むプロジェクト。どれにも属さなければ、プロジェクトへの追加を案内する(追加されたらもう一度探す)。
+ * 取りやめたら空
+ */
+async function projectsContaining(uri: vscode.Uri): Promise<ProjectInfo[]> {
+  const find = async () =>
+    (await findProjects()).filter((p) => p.forms.some((form) => samePath(form, uri)));
+  const found = await find();
+  if (found.length > 0) return found;
+  const add = vscode.l10n.t('Add to Project...');
+  const answer = await vscode.window.showWarningMessage(
+    vscode.l10n.t(
+      '{0} is not in a project. Code is generated with the settings of the project that contains the form (languages, folders and so on).',
+      uri.path.split('/').pop() ?? '',
+    ),
+    add,
+  );
+  if (answer !== add) return [];
+  await vscode.commands.executeCommand('bethanyDesigner.addToProject', { kind: 'form', uri });
+  return find();
 }
 
 /** プロジェクトの起動部分(Project1.cpp・Project1.py)を生成する。生成できなかった・取りやめたときは false */

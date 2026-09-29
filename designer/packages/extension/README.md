@@ -36,7 +36,8 @@ The form is stored in a JSON file (`*.bfm.json`) that you can also edit as text.
 
 1. Open the Bethany Designer view from the Activity Bar and choose **Create New Form**
    (or right-click a folder in the Explorer, or use _File > New File..._).
-2. Design the form, then run **Generate Code** from the editor title bar.
+2. Design the form, then run **Generate Code** from the editor title bar. Code is generated for forms in a project
+   (`*.bfproj.json`), which sets the languages and the output folders; the first time, you are asked to add the form to a project.
 3. Build the generated code with Bethany. For C++, see the C++ section of the
    [Bethany README](https://github.com/okano-tomoyuki/bethany#readme).
 

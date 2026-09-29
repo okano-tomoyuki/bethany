@@ -140,7 +140,8 @@ export interface FormProject {
 /**
  * フォームが属するプロジェクト(複数可)の codegen から、フォームのコード生成の設定を決める。
  * 言語はすべてのプロジェクトの和集合、コメントの言語と C++ の設定は最初に書かれているもの
- * (食い違いは拡張がプロジェクトファイルに警告を出す)。プロジェクトに属さなければ DEFAULT_FORM_CODEGEN。
+ * (食い違いは拡張がプロジェクトファイルに警告を出す)。プロジェクトに属さなければ DEFAULT_FORM_CODEGEN
+ * (拡張・CLI はプロジェクトに属さないフォームを生成しない。テスト・確認のツールが使う)。
  */
 export function formCodegenSettings(projects: readonly FormProject[]): FormCodegenSettings {
   if (projects.length === 0) return DEFAULT_FORM_CODEGEN;
