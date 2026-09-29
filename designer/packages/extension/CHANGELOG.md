@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.3.0] - 2026-09-29
 
 - Go to an event handler as in C++Builder: double-clicking a control on the canvas, or the **+** / **→** button on the Events tab,
   sets the handler name if needed, generates the code (adding the handler stub) and opens the handler in the editor.
