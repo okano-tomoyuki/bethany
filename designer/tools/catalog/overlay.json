@@ -13,6 +13,7 @@
     "THeaderControl": ["BorderStyle"],
     "TToolBar": ["BorderStyle"],
     "TCoolBar": ["BorderStyle"],
+    "TCustomTreeView": ["Options"],
     "TRadioButton": ["State", "AllowGrayed"],
     "TCustomMemo": ["Text", "PasswordChar", "EchoMode", "NumbersOnly", "TextHint"],
     "TCustomFloatSpinEdit": ["Text", "MaxLength"],

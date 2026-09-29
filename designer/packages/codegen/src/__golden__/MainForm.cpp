@@ -33,6 +33,7 @@ void TMainForm::beth_CreateComponents()
     StatusLabel = new TLabel(this);
     HintPanel = new TPanel(this);
     ColorList = new TListBox(this);
+    Tree1 = new TTreeView(this);
     MainMenu1 = new TMainMenu(this);
     FileMenu = new TMenuItem(this);
     FileOpenItem = new TMenuItem(this);
@@ -209,6 +210,17 @@ void TMainForm::beth_CreateComponents()
     ColorList->ItemHeight = 20;
     ColorList->OnDrawItem = [this](TObject* Sender, int Index, TRect ARect, TOwnerDrawState State) { ColorListDrawItem(Sender, Index, ARect, State); };
 
+    Tree1->Parent = this;
+    Tree1->Left = 200;
+    Tree1->Top = 176;
+    Tree1->Width = 179;
+    Tree1->Height = 76;
+    Tree1->MultiSelect = true;
+    Tree1->SortType = stText;
+    Tree1->Indent = 20;
+    Tree1->OnEdited = [this](TObject* Sender, TTreeNode* Node, std::string& S) { Tree1Edited(Sender, Node, S); };
+    Tree1->OnCustomDrawItem = [this](TObject* Sender, TTreeNode* Node, TCustomDrawState State, bool& DefaultDraw) { Tree1CustomDrawItem(Sender, Node, State, DefaultDraw); };
+
     PageControl1->ActivePage = MemoSheet;
 
     FileMenu->Caption = "&File";
@@ -247,7 +259,7 @@ void TMainForm::beth_CreateComponents()
 
     FileSaveItem->Action = FileSaveAction;
 }
-// <bethany-designer:end id="beth_CreateComponents" hash="1c357d5e">
+// <bethany-designer:end id="beth_CreateComponents" hash="2da69caf">
 
 // <bethany-designer:handler-stubs>
 
@@ -292,6 +304,16 @@ void TMainForm::ScrollBar1Scroll(TObject* Sender, TScrollCode ScrollCode, int& S
 }
 
 void TMainForm::ColorListDrawItem(TObject* Sender, int Index, TRect ARect, TOwnerDrawState State)
+{
+    // TODO: implement
+}
+
+void TMainForm::Tree1Edited(TObject* Sender, TTreeNode* Node, std::string& S)
+{
+    // TODO: implement
+}
+
+void TMainForm::Tree1CustomDrawItem(TObject* Sender, TTreeNode* Node, TCustomDrawState State, bool& DefaultDraw)
 {
     // TODO: implement
 }

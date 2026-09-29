@@ -389,6 +389,9 @@ class Gen:
                 return "_a_ref_bool"
             if s == "char":
                 return "_a_ref_char"
+            if s == "str":
+                # 書き戻す文字列(TTreeView の OnEdited の S)。DLL は文字列と、返す文字列を入れる場所を渡す
+                return "_a_ref_str"
             if isinstance(s, tuple):
                 return f'_a_ref_enum("{s[1]}")'
             return None
@@ -634,7 +637,7 @@ class Gen:
             if a is None:
                 self.err(f"{cls}.{name}: イベントの引数 {t} を変換できない")
                 return
-            n += 4 if a == "_a_rect" else 2 if a in ("_a_exception", "_a_strings") else 1
+            n += 4 if a == "_a_rect" else 2 if a in ("_a_exception", "_a_strings", "_a_ref_str") else 1
         if n != raw:
             self.err(f"{cls}.{name}: {ev} の引数({n})と {cb} の引数({raw})が合わない")
 
@@ -793,7 +796,7 @@ from ._core import (BethError, Ref, TRect, TPoint, TObject, TPersistent, TCompon
 from ._core import (lib, _mixins, _register, _event_types, _ItemMixin, _Prop, _Indexed, _Event,
                    _int, _float, _bool, _str, _char, _ptr, _rect_conv, _point_conv, _enum, _set, _comp, _existing, _item, _obj, _view,
                    _str_key, _enc, _dec, _h, _b, _rect, _point, _to_enum, _to_comp, _to_existing, _to_item, _to_obj,
-                   _a_int, _a_bool, _a_rect, _a_exception, _a_strings, _a_enum, _a_comp, _a_item, _a_obj, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_enum)
+                   _a_int, _a_bool, _a_rect, _a_exception, _a_strings, _a_enum, _a_comp, _a_item, _a_obj, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_str, _a_ref_enum)
 '''
 
 FOOTER = '''\

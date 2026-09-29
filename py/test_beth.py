@@ -2155,6 +2155,30 @@ def main():
 
     Form1.PopupHelloItem.OnMeasureItem = popup_measure
     Form1.PopupHelloItem.OnDrawItem = popup_draw
+
+    # TTreeView の細部(docs/adr/0051)。TreeView1 を Ctrl・Shift で複数選択できるようにする。ラベルの編集(F2 か、選択済みのノードの
+    # クリック)は Root 2 だけ始めさせず、空にした編集は元の文字列に戻す。最上位のノードは青い文字で描く。
+    tree = Form1.TreeView1
+    tree.MultiSelect = True
+    tree.MultiSelectStyle = msControlSelect | msShiftSelect
+    # テーマで描く(既定)と、文字はテーマの色になり、OnCustomDrawItem で設定した Canvas の Font の色が使われない
+    tree.Options = tree.Options & ~tvoThemedDraw
+
+    def tree_editing(Sender, Node, AllowEdit):
+        pr(f"TreeView1 OnEditing: {Node.Text}")
+        AllowEdit.value = Node.Level > 0 or Node.Text != "Root 2"
+
+    def tree_edited(Sender, Node, S):
+        pr(f"TreeView1 OnEdited: {Node.Text} -> {S.value}")
+        if not S.value:
+            S.value = Node.Text
+
+    def tree_custom_draw(Sender, Node, State, DefaultDraw):
+        Sender.Canvas.Font.Color = clBlue if Node.Level == 0 and not State & cdsSelected else clWindowText
+
+    tree.OnEditing = tree_editing
+    tree.OnEdited = tree_edited
+    tree.OnCustomDrawItem = tree_custom_draw
     pr(f"AlignClientPanel BevelOuter/BevelInner={int(Form1.AlignClientPanel.BevelOuter)}/{int(Form1.AlignClientPanel.BevelInner)} "
        f"(expected 1/2), TreeView ScrollBars={int(Form1.TreeView1.ScrollBars)} (expected 3 = ssBoth)")
 

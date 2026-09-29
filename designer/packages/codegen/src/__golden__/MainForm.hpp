@@ -28,6 +28,7 @@ public:
     beth::TLabel* StatusLabel;
     beth::TPanel* HintPanel;
     beth::TListBox* ColorList;
+    beth::TTreeView* Tree1;
     beth::TMainMenu* MainMenu1;
     beth::TMenuItem* FileMenu;
     beth::TMenuItem* FileOpenItem;
@@ -50,12 +51,14 @@ public:
     void RadioGroup1SelectionChanged(beth::TObject* Sender);
     void ScrollBar1Scroll(beth::TObject* Sender, beth::TScrollCode ScrollCode, int& ScrollPos);
     void ColorListDrawItem(beth::TObject* Sender, int Index, beth::TRect ARect, beth::TOwnerDrawState State);
+    void Tree1Edited(beth::TObject* Sender, beth::TTreeNode* Node, std::string& S);
+    void Tree1CustomDrawItem(beth::TObject* Sender, beth::TTreeNode* Node, beth::TCustomDrawState State, bool& DefaultDraw);
     void FileOpenItemClick(beth::TObject* Sender);
     void FileExitItemClick(beth::TObject* Sender);
     void ClearItemClick(beth::TObject* Sender);
     void Timer1Timer(beth::TObject* Sender);
     void FileSaveActionExecute(beth::TObject* Sender);
-    // <bethany-designer:end id="declarations" hash="59cf7773">
+    // <bethany-designer:end id="declarations" hash="d44d2d6c">
 
     explicit TMainForm(beth::TComponent* AOwner);
 

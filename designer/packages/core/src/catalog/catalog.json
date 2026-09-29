@@ -9569,6 +9569,16 @@
           "default": null,
           "doc": "状態(チェック等)の画像リスト。各ノードの画像は TTreeNode::StateIndex。"
         },
+        "MultiSelectStyle": {
+          "type": {
+            "kind": "flags",
+            "flags": "TMultiSelectStyle"
+          },
+          "declaredIn": "TCustomTreeView",
+          "default": [
+            "msControlSelect"
+          ]
+        },
         "ReadOnly": {
           "type": {
             "kind": "bool"
@@ -9617,6 +9627,55 @@
           },
           "declaredIn": "TTreeView",
           "default": false
+        },
+        "MultiSelect": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TTreeView",
+          "default": false,
+          "doc": "true なら、複数のノードを選べる(MultiSelectStyle の操作で。選んだノードは Selections)。"
+        },
+        "SortType": {
+          "type": {
+            "kind": "enum",
+            "enum": "TSortType"
+          },
+          "declaredIn": "TTreeView",
+          "default": "stNone",
+          "doc": "並べ替えの基準。stText なら、ノードを加えるたびに Text の順に並ぶ。"
+        },
+        "Indent": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TTreeView",
+          "default": 15,
+          "doc": "子のノードの字下げの幅(ピクセル)。"
+        },
+        "HotTrack": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TTreeView",
+          "default": false,
+          "doc": "true なら、マウスの下のノードを強調する。"
+        },
+        "RightClickSelect": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TTreeView",
+          "default": false,
+          "doc": "true なら、右クリックでもノードを選ぶ。"
+        },
+        "ToolTips": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TTreeView",
+          "default": true,
+          "doc": "true なら、はみ出したノードの文字をツールチップで表示する。"
         }
       },
       "events": {
@@ -9708,6 +9767,22 @@
           "type": "TTVChangedEvent",
           "declaredIn": "TTreeView",
           "doc": "ノードが削除される直前(Node はまだ有効。ハンドラから戻った後にラッパーが delete される)。"
+        },
+        "OnCompare": {
+          "type": "TTVCompareEvent",
+          "declaredIn": "TTreeView"
+        },
+        "OnEditing": {
+          "type": "TTVEditingEvent",
+          "declaredIn": "TTreeView"
+        },
+        "OnEdited": {
+          "type": "TTVEditedEvent",
+          "declaredIn": "TTreeView"
+        },
+        "OnCustomDrawItem": {
+          "type": "TTVCustomDrawItemEvent",
+          "declaredIn": "TTreeView"
         }
       }
     },
@@ -17596,17 +17671,17 @@
       "naInsert",
       "naInsertBehind"
     ],
-    "TViewStyle": [
-      "vsIcon",
-      "vsSmallIcon",
-      "vsList",
-      "vsReport"
-    ],
     "TSortType": [
       "stNone",
       "stData",
       "stText",
       "stBoth"
+    ],
+    "TViewStyle": [
+      "vsIcon",
+      "vsSmallIcon",
+      "vsList",
+      "vsReport"
     ],
     "TSortDirection": [
       "sdAscending",
@@ -17728,6 +17803,43 @@
       "odReserved2",
       "odComboBoxEdit",
       "odBackgroundPainted"
+    ],
+    "TMultiSelectStyle": [
+      "msControlSelect",
+      "msShiftSelect",
+      "msVisibleOnly",
+      "msSiblingOnly"
+    ],
+    "TTreeViewOptions": [
+      "tvoAllowMultiselect",
+      "tvoAutoExpand",
+      "tvoAutoInsertMark",
+      "tvoAutoItemHeight",
+      "tvoHideSelection",
+      "tvoHotTrack",
+      "tvoKeepCollapsedNodes",
+      "tvoReadOnly",
+      "tvoRightClickSelect",
+      "tvoRowSelect",
+      "tvoShowButtons",
+      "tvoShowLines",
+      "tvoShowRoot",
+      "tvoShowSeparators",
+      "tvoToolTips",
+      "tvoNoDoubleClickExpand",
+      "tvoThemedDraw",
+      "tvoEmptySpaceUnselect"
+    ],
+    "TCustomDrawState": [
+      "cdsSelected",
+      "cdsGrayed",
+      "cdsDisabled",
+      "cdsChecked",
+      "cdsFocused",
+      "cdsDefault",
+      "cdsHot",
+      "cdsMarked",
+      "cdsIndeterminate"
     ],
     "TGridOptions": [
       "goFixedVertLine",
@@ -18273,6 +18385,70 @@
       },
       {
         "name": "AllowCollapse",
+        "type": "bool&"
+      }
+    ],
+    "TTVCompareEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "Node1",
+        "type": "TTreeNode*"
+      },
+      {
+        "name": "Node2",
+        "type": "TTreeNode*"
+      },
+      {
+        "name": "Compare",
+        "type": "int&"
+      }
+    ],
+    "TTVEditingEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "Node",
+        "type": "TTreeNode*"
+      },
+      {
+        "name": "AllowEdit",
+        "type": "bool&"
+      }
+    ],
+    "TTVEditedEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "Node",
+        "type": "TTreeNode*"
+      },
+      {
+        "name": "S",
+        "type": "std::string&"
+      }
+    ],
+    "TTVCustomDrawItemEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "Node",
+        "type": "TTreeNode*"
+      },
+      {
+        "name": "State",
+        "type": "TCustomDrawState"
+      },
+      {
+        "name": "DefaultDraw",
         "type": "bool&"
       }
     ],

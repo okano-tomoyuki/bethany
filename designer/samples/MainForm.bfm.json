@@ -220,6 +220,20 @@
           "ItemHeight": 20
         },
         "events": { "OnDrawItem": "ColorListDrawItem" }
+      },
+      {
+        "name": "Tree1",
+        "class": "TTreeView",
+        "properties": {
+          "Left": 200,
+          "Top": 176,
+          "Width": 179,
+          "Height": 76,
+          "MultiSelect": true,
+          "SortType": "stText",
+          "Indent": 20
+        },
+        "events": { "OnEdited": "Tree1Edited", "OnCustomDrawItem": "Tree1CustomDrawItem" }
       }
     ]
   },

@@ -50,6 +50,9 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
   `ItemHeight`・`Canvas`・`OnDrawItem`・`OnMeasureItem`、メニューの `OwnerDraw` と項目の `OnDrawItem`・`OnMeasureItem`(`TOwnerDrawState`)
   ([ADR 0050](docs/adr/0050-owner-draw.md))
 - 色の定数: 標準の 16 色(`clNavy`・`clGray`・`clSilver` 等)と `clMoneyGreen` 等、システムの色(`clHighlight`・`clWindow`・`clBtnFace` 等)
+- TTreeView の複数選択(`MultiSelect`・`MultiSelectStyle`・`Selections[i]`・`SelectionCount`)、並べ替え(`SortType`・`OnCompare`)、ラベルの編集
+  (`OnEditing`・`OnEdited`・`IsEditing()`、ノードの `EditText()`・`EndEdit()`)、`Options`・`Indent`・`HotTrack`・`RightClickSelect`・`ToolTips`・
+  `OnCustomDrawItem`、ノードの `DisplayRect()`([ADR 0051](docs/adr/0051-treeview-details.md))
 
 ### 変更
 

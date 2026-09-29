@@ -36,6 +36,8 @@
   `clHighlight`, which the canvas draws with the Windows 11 default colors
 - The default `Color` of tree views and grids and `FixedColor` of grids were wrong (almost black) in the catalog; they are now
   `clWindow` and `clBtnFace`
+- New from the Bethany library 0.3.0: `MultiSelect`, `MultiSelectStyle`, `SortType`, `Indent`, `HotTrack`, `RightClickSelect` and
+  `ToolTips` of tree views, and the `OnCompare`, `OnEditing`, `OnEdited` and `OnCustomDrawItem` events
 - The include guard macro does not repeat a namespace that is also the folder of the header
   (`APP_DIALOGS_ABOUT_HPP` instead of `APP_DIALOGS_DIALOGS_ABOUT_HPP` for `app::dialogs` and `dialogs/About.hpp`)
 

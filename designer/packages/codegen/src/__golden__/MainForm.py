@@ -22,6 +22,7 @@ class TMainForm(TForm):
         self.StatusLabel: TLabel
         self.HintPanel: TPanel
         self.ColorList: TListBox
+        self.Tree1: TTreeView
         self.MainMenu1: TMainMenu
         self.FileMenu: TMenuItem
         self.FileOpenItem: TMenuItem
@@ -34,7 +35,7 @@ class TMainForm(TForm):
         self.Timer1: TTimer
         self.ActionList1: TActionList
         self.FileSaveAction: TAction
-        # <bethany-designer:end id="declarations" hash="941b0b29">
+        # <bethany-designer:end id="declarations" hash="00eb3441">
         self.beth_CreateComponents()
 
     # <bethany-designer:begin id="beth_CreateComponents">
@@ -55,6 +56,7 @@ class TMainForm(TForm):
         self.StatusLabel = TLabel(self)
         self.HintPanel = TPanel(self)
         self.ColorList = TListBox(self)
+        self.Tree1 = TTreeView(self)
         self.MainMenu1 = TMainMenu(self)
         self.FileMenu = TMenuItem(self)
         self.FileOpenItem = TMenuItem(self)
@@ -225,6 +227,17 @@ class TMainForm(TForm):
         self.ColorList.ItemHeight = 20
         self.ColorList.OnDrawItem = self.ColorListDrawItem
 
+        self.Tree1.Parent = self
+        self.Tree1.Left = 200
+        self.Tree1.Top = 176
+        self.Tree1.Width = 179
+        self.Tree1.Height = 76
+        self.Tree1.MultiSelect = True
+        self.Tree1.SortType = stText
+        self.Tree1.Indent = 20
+        self.Tree1.OnEdited = self.Tree1Edited
+        self.Tree1.OnCustomDrawItem = self.Tree1CustomDrawItem
+
         self.PageControl1.ActivePage = self.MemoSheet
 
         self.FileMenu.Caption = "&File"
@@ -262,7 +275,7 @@ class TMainForm(TForm):
         self.FileSaveAction.OnExecute = self.FileSaveActionExecute
 
         self.FileSaveItem.Action = self.FileSaveAction
-    # <bethany-designer:end id="beth_CreateComponents" hash="55cec535">
+    # <bethany-designer:end id="beth_CreateComponents" hash="5ef22649">
 
     # <bethany-designer:handler-stubs>
 
@@ -291,6 +304,12 @@ class TMainForm(TForm):
         pass
 
     def ColorListDrawItem(self, Sender, Index, ARect, State):
+        pass
+
+    def Tree1Edited(self, Sender, Node, S):
+        pass
+
+    def Tree1CustomDrawItem(self, Sender, Node, State, DefaultDraw):
         pass
 
     def FileOpenItemClick(self, Sender):

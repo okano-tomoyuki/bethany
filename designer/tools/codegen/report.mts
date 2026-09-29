@@ -65,6 +65,8 @@ export const EXPECTED_CALLS = [
   'RadioGroup1SelectionChanged',
   'ScrollBar1Scroll',
   'ColorListDrawItem',
+  'Tree1Edited',
+  'Tree1CustomDrawItem',
 ];
 
 /** 参照・入れ子のオブジェクト・TStrings・メニュー等(検証のプログラムが読んだ値) */
@@ -90,6 +92,9 @@ export const EXPECTED_CHECKS: Readonly<Record<string, string>> = {
   scrollChange: '10/2',
   // オーナードロー(docs/adr/0050): ColorList の Style(lbOwnerDrawFixed)/ItemHeight
   ownerDraw: '1/20',
+  // TTreeView(docs/adr/0051): SortType(stText)/Indent/MultiSelect と、OnEdited で書き換えた文字列
+  treeView: '2/20/1',
+  treeEdited: 'x!',
   dialogOptions: String((1 << 20) | (1 << 23) | (1 << 9)),
   timer: '0/500',
   caption: 'Sample',

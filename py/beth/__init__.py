@@ -39,7 +39,7 @@ from ._core import (BethError, Ref, TRect, TPoint, TObject, TPersistent, TCompon
 from ._core import (lib, _mixins, _register, _event_types, _ItemMixin, _Prop, _Indexed, _Event,
                    _int, _float, _bool, _str, _char, _ptr, _rect_conv, _point_conv, _enum, _set, _comp, _existing, _item, _obj, _view,
                    _str_key, _enc, _dec, _h, _b, _rect, _point, _to_enum, _to_comp, _to_existing, _to_item, _to_obj,
-                   _a_int, _a_bool, _a_rect, _a_exception, _a_strings, _a_enum, _a_comp, _a_item, _a_obj, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_enum)
+                   _a_int, _a_bool, _a_rect, _a_exception, _a_strings, _a_enum, _a_comp, _a_item, _a_obj, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_str, _a_ref_enum)
 
 
 # ---------------- 列挙型 ----------------
@@ -547,6 +547,16 @@ class TNodeAttachMode(enum.IntEnum):
 naAdd, naAddFirst, naAddChild, naAddChildFirst, naInsert, naInsertBehind = TNodeAttachMode.naAdd, TNodeAttachMode.naAddFirst, TNodeAttachMode.naAddChild, TNodeAttachMode.naAddChildFirst, TNodeAttachMode.naInsert, TNodeAttachMode.naInsertBehind
 
 
+# 並べ替えの基準(TTreeView・TListView。stText は Text(Caption)の順、stData・stBoth は OnCompare で決める。stNone は並べ替えない)。
+class TSortType(enum.IntEnum):
+    stNone = 0
+    stData = 1
+    stText = 2
+    stBoth = 3
+
+stNone, stData, stText, stBoth = TSortType.stNone, TSortType.stData, TSortType.stText, TSortType.stBoth
+
+
 # 表示形式・並べ替え・列の文字の寄せ方・OnChange の変更の種類(LCL / VCL と同じ値)。
 class TViewStyle(enum.IntEnum):
     vsIcon = 0
@@ -557,15 +567,7 @@ class TViewStyle(enum.IntEnum):
 vsIcon, vsSmallIcon, vsList, vsReport = TViewStyle.vsIcon, TViewStyle.vsSmallIcon, TViewStyle.vsList, TViewStyle.vsReport
 
 
-class TSortType(enum.IntEnum):
-    stNone = 0
-    stData = 1
-    stText = 2
-    stBoth = 3
-
-stNone, stData, stText, stBoth = TSortType.stNone, TSortType.stData, TSortType.stText, TSortType.stBoth
-
-
+# TSortType は TTreeView と共通(docs/adr/0051 の区間)。
 class TSortDirection(enum.IntEnum):
     sdAscending = 0
     sdDescending = 1
@@ -780,6 +782,83 @@ odReserved1 = TOwnerDrawState.odReserved1
 odReserved2 = TOwnerDrawState.odReserved2
 odComboBoxEdit = TOwnerDrawState.odComboBoxEdit
 odBackgroundPainted = TOwnerDrawState.odBackgroundPainted
+
+
+class TMultiSelectStyle(enum.IntFlag):
+    msControlSelect = 1 << 0  # Ctrl を押しながらクリック
+    msShiftSelect = 1 << 1  # Shift を押しながらクリック(範囲)
+    msVisibleOnly = 1 << 2
+    msSiblingOnly = 1 << 3
+
+
+msControlSelect = TMultiSelectStyle.msControlSelect
+msShiftSelect = TMultiSelectStyle.msShiftSelect
+msVisibleOnly = TMultiSelectStyle.msVisibleOnly
+msSiblingOnly = TMultiSelectStyle.msSiblingOnly
+
+
+class TTreeViewOptions(enum.IntFlag):
+    tvoAllowMultiselect = 1 << 0
+    tvoAutoExpand = 1 << 1
+    tvoAutoInsertMark = 1 << 2
+    tvoAutoItemHeight = 1 << 3
+    tvoHideSelection = 1 << 4
+    tvoHotTrack = 1 << 5
+    tvoKeepCollapsedNodes = 1 << 6
+    tvoReadOnly = 1 << 7
+    tvoRightClickSelect = 1 << 8
+    tvoRowSelect = 1 << 9
+    tvoShowButtons = 1 << 10
+    tvoShowLines = 1 << 11
+    tvoShowRoot = 1 << 12
+    tvoShowSeparators = 1 << 13
+    tvoToolTips = 1 << 14
+    tvoNoDoubleClickExpand = 1 << 15
+    tvoThemedDraw = 1 << 16
+    tvoEmptySpaceUnselect = 1 << 17
+
+
+tvoAllowMultiselect = TTreeViewOptions.tvoAllowMultiselect
+tvoAutoExpand = TTreeViewOptions.tvoAutoExpand
+tvoAutoInsertMark = TTreeViewOptions.tvoAutoInsertMark
+tvoAutoItemHeight = TTreeViewOptions.tvoAutoItemHeight
+tvoHideSelection = TTreeViewOptions.tvoHideSelection
+tvoHotTrack = TTreeViewOptions.tvoHotTrack
+tvoKeepCollapsedNodes = TTreeViewOptions.tvoKeepCollapsedNodes
+tvoReadOnly = TTreeViewOptions.tvoReadOnly
+tvoRightClickSelect = TTreeViewOptions.tvoRightClickSelect
+tvoRowSelect = TTreeViewOptions.tvoRowSelect
+tvoShowButtons = TTreeViewOptions.tvoShowButtons
+tvoShowLines = TTreeViewOptions.tvoShowLines
+tvoShowRoot = TTreeViewOptions.tvoShowRoot
+tvoShowSeparators = TTreeViewOptions.tvoShowSeparators
+tvoToolTips = TTreeViewOptions.tvoToolTips
+tvoNoDoubleClickExpand = TTreeViewOptions.tvoNoDoubleClickExpand
+tvoThemedDraw = TTreeViewOptions.tvoThemedDraw
+tvoEmptySpaceUnselect = TTreeViewOptions.tvoEmptySpaceUnselect
+
+
+class TCustomDrawState(enum.IntFlag):
+    cdsSelected = 1 << 0
+    cdsGrayed = 1 << 1
+    cdsDisabled = 1 << 2
+    cdsChecked = 1 << 3
+    cdsFocused = 1 << 4
+    cdsDefault = 1 << 5
+    cdsHot = 1 << 6
+    cdsMarked = 1 << 7
+    cdsIndeterminate = 1 << 8
+
+
+cdsSelected = TCustomDrawState.cdsSelected
+cdsGrayed = TCustomDrawState.cdsGrayed
+cdsDisabled = TCustomDrawState.cdsDisabled
+cdsChecked = TCustomDrawState.cdsChecked
+cdsFocused = TCustomDrawState.cdsFocused
+cdsDefault = TCustomDrawState.cdsDefault
+cdsHot = TCustomDrawState.cdsHot
+cdsMarked = TCustomDrawState.cdsMarked
+cdsIndeterminate = TCustomDrawState.cdsIndeterminate
 
 
 class TGridOptions(enum.IntFlag):
@@ -2418,6 +2497,18 @@ class TTreeNode(TPersistent, _ItemMixin):
         lib.TTreeNode_MakeVisible(self._current())
     def MoveTo(self, Destination, Mode):
         lib.TTreeNode_MoveTo(self._current(), _h(Destination), int(Mode))
+    # ---- docs/adr/0051 ----
+    # ノードの矩形(ツリービューのクライアント座標)。TextOnly なら文字の部分だけ。
+    def DisplayRect(self, TextOnly):
+        _r = [ctypes.c_int() for _ in range(4)]
+        lib.TTreeNode_DisplayRect(self._current(), _b(TextOnly), *(ctypes.byref(x) for x in _r))
+        return TRect(*(x.value for x in _r))
+    # ラベルの編集を始める(ReadOnly なら始めない)。EndEdit は編集を終える(Cancel なら入力を捨てる)。
+    def EditText(self):
+        _r = lib.TTreeNode_EditText(self._current())
+        return _r != 0
+    def EndEdit(self, Cancel):
+        lib.TTreeNode_EndEdit(self._current(), _b(Cancel))
 
 
 class TTreeNodes(TPersistent):
@@ -2484,6 +2575,16 @@ class TCustomTreeView(TCustomControl):
     def GetNodeAt(self, X, Y):
         _r = lib.TCustomTreeView_GetNodeAt(self._current(), int(X), int(Y))
         return _to_item("TTreeNode", _r)
+    # 動作・表示の設定(tvo… のビットの集合。docs/adr/0051)。
+    Options = _Prop("TCustomTreeView_GetOptions", "TCustomTreeView_SetOptions", _enum("TTreeViewOptions"))
+    MultiSelectStyle = _Prop("TCustomTreeView_GetMultiSelectStyle", "TCustomTreeView_SetMultiSelectStyle", _enum("TMultiSelectStyle"))
+    # 選択されているノード(MultiSelect のとき。Selections[0] … Selections[SelectionCount - 1])。
+    SelectionCount = _Prop("TCustomTreeView_GetSelectionCount", None, _int)
+    Selections = _Indexed("TCustomTreeView_GetSelections", None, _item("TTreeNode"))
+    # ラベルを編集しているか。
+    def IsEditing(self):
+        _r = lib.TCustomTreeView_IsEditing(self._current())
+        return _r != 0
 
 
 class TTreeView(TCustomTreeView):
@@ -2507,6 +2608,23 @@ class TTreeView(TCustomTreeView):
     OnCollapsed = _Event("TTreeView_SetOnCollapsed", "TTVChangedEvent")
     # ノードが削除される直前(Node はまだ有効。ハンドラから戻った後にラッパーが delete される)。
     OnDeletion = _Event("TTreeView_SetOnDeletion", "TTVChangedEvent")
+    # ---- docs/adr/0051 ----
+    # true なら、複数のノードを選べる(MultiSelectStyle の操作で。選んだノードは Selections)。
+    MultiSelect = _Prop("TTreeView_GetMultiSelect", "TTreeView_SetMultiSelect", _bool)
+    # 並べ替えの基準。stText なら、ノードを加えるたびに Text の順に並ぶ。
+    SortType = _Prop("TTreeView_GetSortType", "TTreeView_SetSortType", _enum("TSortType"))
+    # 子のノードの字下げの幅(ピクセル)。
+    Indent = _Prop("TTreeView_GetIndent", "TTreeView_SetIndent", _int)
+    # true なら、マウスの下のノードを強調する。
+    HotTrack = _Prop("TTreeView_GetHotTrack", "TTreeView_SetHotTrack", _bool)
+    # true なら、右クリックでもノードを選ぶ。
+    RightClickSelect = _Prop("TTreeView_GetRightClickSelect", "TTreeView_SetRightClickSelect", _bool)
+    # true なら、はみ出したノードの文字をツールチップで表示する。
+    ToolTips = _Prop("TTreeView_GetToolTips", "TTreeView_SetToolTips", _bool)
+    OnCompare = _Event("TTreeView_SetOnCompare", "TTVCompareEvent")
+    OnEditing = _Event("TTreeView_SetOnEditing", "TTVEditingEvent")
+    OnEdited = _Event("TTreeView_SetOnEdited", "TTVEditedEvent")
+    OnCustomDrawItem = _Event("TTreeView_SetOnCustomDrawItem", "TTVCustomDrawItemEvent")
 
 
 class TListItem(TPersistent, _ItemMixin):
@@ -3516,6 +3634,10 @@ _event_types.update({
     "TTVChangingEvent": (_a_item("TTreeNode"), _a_ref_bool, ),  # (Sender, Node, AllowChange)
     "TTVExpandingEvent": (_a_item("TTreeNode"), _a_ref_bool, ),  # (Sender, Node, AllowExpansion)
     "TTVCollapsingEvent": (_a_item("TTreeNode"), _a_ref_bool, ),  # (Sender, Node, AllowCollapse)
+    "TTVCompareEvent": (_a_item("TTreeNode"), _a_item("TTreeNode"), _a_ref_int, ),  # (Sender, Node1, Node2, Compare)
+    "TTVEditingEvent": (_a_item("TTreeNode"), _a_ref_bool, ),  # (Sender, Node, AllowEdit)
+    "TTVEditedEvent": (_a_item("TTreeNode"), _a_ref_str, ),  # (Sender, Node, S)
+    "TTVCustomDrawItemEvent": (_a_item("TTreeNode"), _a_enum("TCustomDrawState"), _a_ref_bool, ),  # (Sender, Node, State, DefaultDraw)
     "TLVDeletedEvent": (_a_item("TListItem"), ),  # (Sender, Item)
     "TLVSelectItemEvent": (_a_item("TListItem"), _a_bool, ),  # (Sender, Item, Selected)
     "TLVChangeEvent": (_a_item("TListItem"), _a_enum("TItemChange"), ),  # (Sender, Item, Change)
@@ -3581,8 +3703,8 @@ __all__ = [
     "bkAbort", "bkRetry", "bkIgnore", "bkAll", "bkNoToAll", "bkYesToAll", "TButtonLayout", "blGlyphLeft",
     "blGlyphRight", "blGlyphTop", "blGlyphBottom", "TLabelPosition", "lpAbove", "lpBelow", "lpLeft", "lpRight",
     "TTabPosition", "tpTop", "tpBottom", "tpLeft", "tpRight", "TNodeAttachMode", "naAdd", "naAddFirst",
-    "naAddChild", "naAddChildFirst", "naInsert", "naInsertBehind", "TViewStyle", "vsIcon", "vsSmallIcon", "vsList",
-    "vsReport", "TSortType", "stNone", "stData", "stText", "stBoth", "TSortDirection", "sdAscending",
+    "naAddChild", "naAddChildFirst", "naInsert", "naInsertBehind", "TSortType", "stNone", "stData", "stText",
+    "stBoth", "TViewStyle", "vsIcon", "vsSmallIcon", "vsList", "vsReport", "TSortDirection", "sdAscending",
     "sdDescending", "TItemChange", "ctText", "ctImage", "ctState", "TResizeStyle", "rsLine", "rsNone", "rsPattern",
     "rsUpdate", "TStaticBorderStyle", "sbsNone", "sbsSingle", "sbsSunken", "TStatusPanelStyle", "psText",
     "psOwnerDraw", "TStatusPanelBevel", "pbNone", "pbLowered", "pbRaised", "TShapeType", "stRectangle", "stSquare",
@@ -3596,33 +3718,38 @@ __all__ = [
     "ssCaps", "ssNum", "ssScroll", "ssTriple", "ssQuad", "ssExtra1", "ssExtra2", "TFontStyles", "fsBold",
     "fsItalic", "fsUnderline", "fsStrikeOut", "TOwnerDrawState", "odSelected", "odGrayed", "odDisabled",
     "odChecked", "odFocused", "odDefault", "odHotLight", "odInactive", "odNoAccel", "odNoFocusRect", "odReserved1",
-    "odReserved2", "odComboBoxEdit", "odBackgroundPainted", "TGridOptions", "goFixedVertLine", "goFixedHorzLine",
-    "goVertLine", "goHorzLine", "goRangeSelect", "goDrawFocusSelected", "goRowSizing", "goColSizing",
-    "goRowMoving", "goColMoving", "goEditing", "goAutoAddRows", "goTabs", "goRowSelect", "goAlwaysShowEditor",
-    "goThumbTracking", "goColSpanning", "goRelaxedRowSelect", "goDblClickAutoSize", "goSmoothScroll",
-    "goFixedRowNumbering", "goScrollKeepVisible", "goHeaderHotTracking", "goHeaderPushedLook", "goSelectionActive",
-    "goFixedColSizing", "goDontScrollPartCell", "goCellHints", "goTruncCellHints", "goCellEllipsis",
-    "goAutoAddRowsSkipContentCheck", "goRowHighlight", "TGridDrawState", "gdSelected", "gdFocused", "gdFixed",
-    "gdHot", "gdPushed", "gdRowHighlight", "TEdgeBorders", "ebLeft", "ebTop", "ebRight", "ebBottom",
-    "TOpenOptions", "ofReadOnly", "ofOverwritePrompt", "ofHideReadOnly", "ofNoChangeDir", "ofShowHelp",
-    "ofNoValidate", "ofAllowMultiSelect", "ofExtensionDifferent", "ofPathMustExist", "ofFileMustExist",
-    "ofCreatePrompt", "ofShareAware", "ofNoReadOnlyReturn", "ofNoTestFileCreate", "ofNoNetworkButton",
-    "ofNoLongNames", "ofOldStyleDialog", "ofNoDereferenceLinks", "ofNoResolveLinks", "ofEnableIncludeNotify",
-    "ofEnableSizing", "ofDontAddToRecent", "ofForceShowHidden", "ofViewDetail", "ofAutoPreview",
-    "TColorDialogOptions", "cdFullOpen", "cdPreventFullOpen", "cdShowHelp", "cdSolidColor", "cdAnyColor",
-    "TFontDialogOptions", "fdAnsiOnly", "fdTrueTypeOnly", "fdEffects", "fdFixedPitchOnly", "fdForceFontExist",
-    "fdNoFaceSel", "fdNoOEMFonts", "fdNoSimulations", "fdNoSizeSel", "fdNoStyleSel", "fdNoVectorFonts",
-    "fdShowHelp", "fdWysiwyg", "fdLimitSize", "fdScalableOnly", "fdApplyButton", "TFindOptions", "frDown",
-    "frFindNext", "frHideMatchCase", "frHideWholeWord", "frHideUpDown", "frMatchCase", "frDisableMatchCase",
-    "frDisableUpDown", "frDisableWholeWord", "frReplace", "frReplaceAll", "frWholeWord", "frShowHelp",
-    "frEntireScope", "frHideEntireScope", "frPromptOnReplace", "frHidePromptOnReplace", "frButtonsAtBottom",
-    "TColor", "clBlack", "clMaroon", "clGreen", "clOlive", "clNavy", "clPurple", "clTeal", "clGray", "clSilver",
-    "clRed", "clLime", "clYellow", "clBlue", "clFuchsia", "clAqua", "clWhite", "clMoneyGreen", "clSkyBlue",
-    "clCream", "clMedGray", "clScrollBar", "clBackground", "clActiveCaption", "clInactiveCaption", "clMenu",
-    "clWindow", "clWindowFrame", "clMenuText", "clWindowText", "clCaptionText", "clActiveBorder",
-    "clInactiveBorder", "clAppWorkspace", "clHighlight", "clHighlightText", "clBtnFace", "clBtnShadow",
-    "clGrayText", "clBtnText", "clInactiveCaptionText", "clBtnHighlight", "cl3DDkShadow", "cl3DLight",
-    "clInfoText", "clInfoBk", "clHotLight", "clGradientActiveCaption", "clGradientInactiveCaption",
+    "odReserved2", "odComboBoxEdit", "odBackgroundPainted", "TMultiSelectStyle", "msControlSelect",
+    "msShiftSelect", "msVisibleOnly", "msSiblingOnly", "TTreeViewOptions", "tvoAllowMultiselect", "tvoAutoExpand",
+    "tvoAutoInsertMark", "tvoAutoItemHeight", "tvoHideSelection", "tvoHotTrack", "tvoKeepCollapsedNodes",
+    "tvoReadOnly", "tvoRightClickSelect", "tvoRowSelect", "tvoShowButtons", "tvoShowLines", "tvoShowRoot",
+    "tvoShowSeparators", "tvoToolTips", "tvoNoDoubleClickExpand", "tvoThemedDraw", "tvoEmptySpaceUnselect",
+    "TCustomDrawState", "cdsSelected", "cdsGrayed", "cdsDisabled", "cdsChecked", "cdsFocused", "cdsDefault",
+    "cdsHot", "cdsMarked", "cdsIndeterminate", "TGridOptions", "goFixedVertLine", "goFixedHorzLine", "goVertLine",
+    "goHorzLine", "goRangeSelect", "goDrawFocusSelected", "goRowSizing", "goColSizing", "goRowMoving",
+    "goColMoving", "goEditing", "goAutoAddRows", "goTabs", "goRowSelect", "goAlwaysShowEditor", "goThumbTracking",
+    "goColSpanning", "goRelaxedRowSelect", "goDblClickAutoSize", "goSmoothScroll", "goFixedRowNumbering",
+    "goScrollKeepVisible", "goHeaderHotTracking", "goHeaderPushedLook", "goSelectionActive", "goFixedColSizing",
+    "goDontScrollPartCell", "goCellHints", "goTruncCellHints", "goCellEllipsis", "goAutoAddRowsSkipContentCheck",
+    "goRowHighlight", "TGridDrawState", "gdSelected", "gdFocused", "gdFixed", "gdHot", "gdPushed",
+    "gdRowHighlight", "TEdgeBorders", "ebLeft", "ebTop", "ebRight", "ebBottom", "TOpenOptions", "ofReadOnly",
+    "ofOverwritePrompt", "ofHideReadOnly", "ofNoChangeDir", "ofShowHelp", "ofNoValidate", "ofAllowMultiSelect",
+    "ofExtensionDifferent", "ofPathMustExist", "ofFileMustExist", "ofCreatePrompt", "ofShareAware",
+    "ofNoReadOnlyReturn", "ofNoTestFileCreate", "ofNoNetworkButton", "ofNoLongNames", "ofOldStyleDialog",
+    "ofNoDereferenceLinks", "ofNoResolveLinks", "ofEnableIncludeNotify", "ofEnableSizing", "ofDontAddToRecent",
+    "ofForceShowHidden", "ofViewDetail", "ofAutoPreview", "TColorDialogOptions", "cdFullOpen", "cdPreventFullOpen",
+    "cdShowHelp", "cdSolidColor", "cdAnyColor", "TFontDialogOptions", "fdAnsiOnly", "fdTrueTypeOnly", "fdEffects",
+    "fdFixedPitchOnly", "fdForceFontExist", "fdNoFaceSel", "fdNoOEMFonts", "fdNoSimulations", "fdNoSizeSel",
+    "fdNoStyleSel", "fdNoVectorFonts", "fdShowHelp", "fdWysiwyg", "fdLimitSize", "fdScalableOnly", "fdApplyButton",
+    "TFindOptions", "frDown", "frFindNext", "frHideMatchCase", "frHideWholeWord", "frHideUpDown", "frMatchCase",
+    "frDisableMatchCase", "frDisableUpDown", "frDisableWholeWord", "frReplace", "frReplaceAll", "frWholeWord",
+    "frShowHelp", "frEntireScope", "frHideEntireScope", "frPromptOnReplace", "frHidePromptOnReplace",
+    "frButtonsAtBottom", "TColor", "clBlack", "clMaroon", "clGreen", "clOlive", "clNavy", "clPurple", "clTeal",
+    "clGray", "clSilver", "clRed", "clLime", "clYellow", "clBlue", "clFuchsia", "clAqua", "clWhite",
+    "clMoneyGreen", "clSkyBlue", "clCream", "clMedGray", "clScrollBar", "clBackground", "clActiveCaption",
+    "clInactiveCaption", "clMenu", "clWindow", "clWindowFrame", "clMenuText", "clWindowText", "clCaptionText",
+    "clActiveBorder", "clInactiveBorder", "clAppWorkspace", "clHighlight", "clHighlightText", "clBtnFace",
+    "clBtnShadow", "clGrayText", "clBtnText", "clInactiveCaptionText", "clBtnHighlight", "cl3DDkShadow",
+    "cl3DLight", "clInfoText", "clInfoBk", "clHotLight", "clGradientActiveCaption", "clGradientInactiveCaption",
     "clMenuHighlight", "clMenuBar", "clForm", "clNone", "clDefault", "TShortCut", "scShift", "scCtrl", "scAlt",
     "TCursor", "crDefault", "crNone", "crArrow", "crCross", "crIBeam", "crSizeNESW", "crSizeNS", "crSizeNWSE",
     "crSizeWE", "crUpArrow", "crHourGlass", "crDrag", "crNoDrop", "crHSplit", "crVSplit", "crMultiDrag",

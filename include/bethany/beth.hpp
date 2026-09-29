@@ -3622,6 +3622,13 @@ public:
     void MakeVisible();
     void MoveTo(TTreeNode* Destination, TNodeAttachMode Mode);
 
+    // ---- docs/adr/0051 ----
+    // ノードの矩形(ツリービューのクライアント座標)。TextOnly なら文字の部分だけ。
+    TRect DisplayRect(bool TextOnly) const;
+    // ラベルの編集を始める(ReadOnly なら始めない)。EndEdit は編集を終える(Cancel なら入力を捨てる)。
+    bool EditText();
+    void EndEdit(bool Cancel);
+
 private:
     static TTreeNode* GetItemsImpl(TObject* owner, int Index);
     friend class ItemRegistry;
@@ -3660,6 +3667,8 @@ private:
     static void SetStateIndexImpl(TObject* owner, const int& value);
     static int GetOverlayIndexImpl(TObject* owner);
     static void SetOverlayIndexImpl(TObject* owner, const int& value);
+
+
 };
 
 // ツリービューのノードの一覧(LCL の TTreeNodes)。ツリービューが所有する実体への非所有のビューで、
@@ -3702,6 +3711,60 @@ using TTVChangingEvent   = std::function<void(TObject* Sender, TTreeNode* Node, 
 using TTVExpandingEvent  = std::function<void(TObject* Sender, TTreeNode* Node, bool& AllowExpansion)>;
 using TTVCollapsingEvent = std::function<void(TObject* Sender, TTreeNode* Node, bool& AllowCollapse)>;
 
+// ---- TTreeView の細部(docs/adr/0051。値の順は LCL と同じ) ----
+
+// 並べ替えの基準(TTreeView・TListView。stText は Text(Caption)の順、stData・stBoth は OnCompare で決める。stNone は並べ替えない)。
+enum TSortType { stNone, stData, stText, stBoth };
+// 複数選択のしかた(MultiSelect が true のとき。既定は msControlSelect)。
+using TMultiSelectStyle = unsigned int;
+const TMultiSelectStyle msControlSelect = 1u << 0;  // Ctrl を押しながらクリック
+const TMultiSelectStyle msShiftSelect   = 1u << 1;  // Shift を押しながらクリック(範囲)
+const TMultiSelectStyle msVisibleOnly   = 1u << 2;
+const TMultiSelectStyle msSiblingOnly   = 1u << 3;
+// ツリービューの動作・表示の設定(LCL の TTreeViewOptions)。MultiSelect・ReadOnly 等のプロパティと連動する。
+using TTreeViewOptions = unsigned int;
+const TTreeViewOptions tvoAllowMultiselect    = 1u << 0;
+const TTreeViewOptions tvoAutoExpand          = 1u << 1;
+const TTreeViewOptions tvoAutoInsertMark      = 1u << 2;
+const TTreeViewOptions tvoAutoItemHeight      = 1u << 3;
+const TTreeViewOptions tvoHideSelection       = 1u << 4;
+const TTreeViewOptions tvoHotTrack            = 1u << 5;
+const TTreeViewOptions tvoKeepCollapsedNodes  = 1u << 6;
+const TTreeViewOptions tvoReadOnly            = 1u << 7;
+const TTreeViewOptions tvoRightClickSelect    = 1u << 8;
+const TTreeViewOptions tvoRowSelect           = 1u << 9;
+const TTreeViewOptions tvoShowButtons         = 1u << 10;
+const TTreeViewOptions tvoShowLines           = 1u << 11;
+const TTreeViewOptions tvoShowRoot            = 1u << 12;
+const TTreeViewOptions tvoShowSeparators      = 1u << 13;
+const TTreeViewOptions tvoToolTips            = 1u << 14;
+const TTreeViewOptions tvoNoDoubleClickExpand = 1u << 15;
+const TTreeViewOptions tvoThemedDraw          = 1u << 16;
+const TTreeViewOptions tvoEmptySpaceUnselect  = 1u << 17;
+// OnCustomDrawItem の State(LCL の TCustomDrawState)。
+using TCustomDrawState = unsigned int;
+const TCustomDrawState cdsSelected      = 1u << 0;
+const TCustomDrawState cdsGrayed        = 1u << 1;
+const TCustomDrawState cdsDisabled      = 1u << 2;
+const TCustomDrawState cdsChecked       = 1u << 3;
+const TCustomDrawState cdsFocused       = 1u << 4;
+const TCustomDrawState cdsDefault       = 1u << 5;
+const TCustomDrawState cdsHot           = 1u << 6;
+const TCustomDrawState cdsMarked        = 1u << 7;
+const TCustomDrawState cdsIndeterminate = 1u << 8;
+
+// 並べ替えで 2 つのノードを比べる(Node1 が前なら負、後ろなら正、同じなら 0 を Compare に入れる)。
+using TTVCompareEvent = std::function<void(TObject* Sender, TTreeNode* Node1, TTreeNode* Node2, int& Compare)>;
+// ラベルの編集を始める前(AllowEdit を false にすると編集させない)。
+using TTVEditingEvent = std::function<void(TObject* Sender, TTreeNode* Node, bool& AllowEdit)>;
+// ラベルの編集を終えたとき(S は入力した文字列。書き換えると、その文字列が Text になる)。
+using TTVEditedEvent = std::function<void(TObject* Sender, TTreeNode* Node, std::string& S)>;
+// ノードを描く前(DefaultDraw を false にすると、既定の描画をしない。Sender->Canvas と Node->DisplayRect で描く)。
+// DefaultDraw のまま Sender->Canvas の Font の色等を変えて既定の描画に使わせるときは、Options から tvoThemedDraw を外す
+// (LCL は、テーマで描く(既定)ときは文字をテーマの色で描く)。
+using TTVCustomDrawItemEvent =
+    std::function<void(TCustomTreeView* Sender, TTreeNode* Node, TCustomDrawState State, bool& DefaultDraw)>;
+
 // 以下のメンバは LCL の TCustomTreeView の public。
 class TCustomTreeView : public TCustomControl
 {
@@ -3725,6 +3788,15 @@ public:
     // X, Y はクライアント座標。そこにノードが無ければ nullptr。
     TTreeNode* GetNodeAt(int X, int Y) const;
 
+    // 動作・表示の設定(tvo… のビットの集合。docs/adr/0051)。
+    Property<TTreeViewOptions>  Options;
+    Property<TMultiSelectStyle> MultiSelectStyle;
+    // 選択されているノード(MultiSelect のとき。Selections[0] … Selections[SelectionCount - 1])。
+    ReadOnlyProperty<int>               SelectionCount;
+    ReadOnlyIndexedProperty<TTreeNode*> Selections;
+    // ラベルを編集しているか。
+    bool IsEditing() const;
+
 protected:
     explicit TCustomTreeView(ObjectHandle handle);
     ~TCustomTreeView() override = default;
@@ -3746,6 +3818,13 @@ private:
     // ---- docs/adr/0048 ----
     static TScrollStyle GetScrollBarsImpl(TObject* owner);
     static void         SetScrollBarsImpl(TObject* owner, const TScrollStyle& value);
+
+    static TTreeViewOptions  GetOptionsImpl(TObject* owner);
+    static void              SetOptionsImpl(TObject* owner, const TTreeViewOptions& value);
+    static TMultiSelectStyle GetMultiSelectStyleImpl(TObject* owner);
+    static void              SetMultiSelectStyleImpl(TObject* owner, const TMultiSelectStyle& value);
+    static int               GetSelectionCountImpl(TObject* owner);
+    static TTreeNode*        GetSelectionsImpl(TObject* owner, int Index);
 };
 
 // 以下のメンバは LCL では TCustomTreeView の protected で、TTreeView が published にしている。
@@ -3772,6 +3851,24 @@ public:
     Property<TTVExpandedEvent>   OnCollapsed;
     // ノードが削除される直前(Node はまだ有効。ハンドラから戻った後にラッパーが delete される)。
     Property<TTVExpandedEvent>   OnDeletion;
+
+    // ---- docs/adr/0051 ----
+    // true なら、複数のノードを選べる(MultiSelectStyle の操作で。選んだノードは Selections)。
+    Property<bool> MultiSelect;
+    // 並べ替えの基準。stText なら、ノードを加えるたびに Text の順に並ぶ。
+    Property<TSortType> SortType;
+    // 子のノードの字下げの幅(ピクセル)。
+    Property<int> Indent;
+    // true なら、マウスの下のノードを強調する。
+    Property<bool> HotTrack;
+    // true なら、右クリックでもノードを選ぶ。
+    Property<bool> RightClickSelect;
+    // true なら、はみ出したノードの文字をツールチップで表示する。
+    Property<bool> ToolTips;
+    Property<TTVCompareEvent>        OnCompare;
+    Property<TTVEditingEvent>        OnEditing;
+    Property<TTVEditedEvent>         OnEdited;
+    Property<TTVCustomDrawItemEvent> OnCustomDrawItem;
 
 protected:
     ~TTreeView() override = default;
@@ -3834,13 +3931,47 @@ private:
     static void               SetOnCollapsedImpl(TObject* owner, const TTVExpandedEvent& value);
     static TTVExpandedEvent   GetOnDeletionImpl(TObject* owner);
     static void               SetOnDeletionImpl(TObject* owner, const TTVExpandedEvent& value);
+
+    // ---- docs/adr/0051 ----
+    static bool GetMultiSelectImpl(TObject* owner);
+    static void SetMultiSelectImpl(TObject* owner, const bool& value);
+    static TSortType GetSortTypeImpl(TObject* owner);
+    static void SetSortTypeImpl(TObject* owner, const TSortType& value);
+    static int GetIndentImpl(TObject* owner);
+    static void SetIndentImpl(TObject* owner, const int& value);
+    static bool GetHotTrackImpl(TObject* owner);
+    static void SetHotTrackImpl(TObject* owner, const bool& value);
+    static bool GetRightClickSelectImpl(TObject* owner);
+    static void SetRightClickSelectImpl(TObject* owner, const bool& value);
+    static bool GetToolTipsImpl(TObject* owner);
+    static void SetToolTipsImpl(TObject* owner, const bool& value);
+    TTVCompareEvent onCompare_;
+    bool onCompareHooked_ = false;
+    static TTVCompareEvent GetOnCompareImpl(TObject* owner);
+    static void SetOnCompareImpl(TObject* owner, const TTVCompareEvent& value);
+    static void BETH_CALL CompareTrampoline(ObjectHandle sender, ObjectHandle node1, ObjectHandle node2, internal::int_t* compare, void* data);
+    TTVEditingEvent onEditing_;
+    bool onEditingHooked_ = false;
+    static TTVEditingEvent GetOnEditingImpl(TObject* owner);
+    static void SetOnEditingImpl(TObject* owner, const TTVEditingEvent& value);
+    static void BETH_CALL EditingTrampoline(ObjectHandle sender, ObjectHandle node, internal::bool_t* allow, void* data);
+    TTVEditedEvent onEdited_;
+    bool onEditedHooked_ = false;
+    static TTVEditedEvent GetOnEditedImpl(TObject* owner);
+    static void SetOnEditedImpl(TObject* owner, const TTVEditedEvent& value);
+    static void BETH_CALL EditedTrampoline(ObjectHandle sender, ObjectHandle node, internal::str_t s, internal::str_t* result, void* data);
+    TTVCustomDrawItemEvent onCustomDrawItem_;
+    bool onCustomDrawItemHooked_ = false;
+    static TTVCustomDrawItemEvent GetOnCustomDrawItemImpl(TObject* owner);
+    static void SetOnCustomDrawItemImpl(TObject* owner, const TTVCustomDrawItemEvent& value);
+    static void BETH_CALL CustomDrawItemTrampoline(ObjectHandle sender, ObjectHandle node, internal::uint_t state, internal::bool_t* defaultDraw, void* data);
 };
 
 /* ---------------- ListView ---------------- */
 
 // 表示形式・並べ替え・列の文字の寄せ方・OnChange の変更の種類(LCL / VCL と同じ値)。
 enum TViewStyle     { vsIcon, vsSmallIcon, vsList, vsReport };
-enum TSortType      { stNone, stData, stText, stBoth };
+// TSortType は TTreeView と共通(docs/adr/0051 の区間)。
 enum TSortDirection { sdAscending, sdDescending };
 enum TItemChange    { ctText, ctImage, ctState };
 

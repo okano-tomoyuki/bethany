@@ -105,6 +105,7 @@ checks["panelBevel"] = f"{int(f.BottomPanel.BevelOuter)}/{int(f.BottomPanel.Beve
 checks["groupColumns"] = f"{f.RadioGroup1.Columns}/{int(f.RadioGroup1.ColumnLayout)}"
 checks["scrollChange"] = f"{f.ScrollBar1.LargeChange}/{f.ScrollBar1.SmallChange}"
 checks["ownerDraw"] = f"{int(f.ColorList.Style)}/{f.ColorList.ItemHeight}"
+checks["treeView"] = f"{int(f.Tree1.SortType)}/{f.Tree1.Indent}/{int(f.Tree1.MultiSelect)}"
 checks["memoBorder"] = f"{int(f.Memo1.BorderStyle)}/{int(f.Memo1.ScrollBars)}"
 checks["timer"] = f"{int(f.Timer1.Enabled)}/{f.Timer1.Interval}"
 checks["caption"] = f.Caption
@@ -129,6 +130,10 @@ f.RadioGroup1.ItemIndex = 1  # LCL は代入でも OnSelectionChanged を呼ぶ
 f.OkButton.OnClick(f.OkButton)
 f.Timer1.OnTimer(f.Timer1)
 f.ScrollBar1.OnScroll(f.ScrollBar1, scLineDown, Ref(5))
+_edited = Ref("x")
+f.Tree1.OnEdited(f.Tree1, None, _edited)
+checks["treeEdited"] = _edited.value + "!"
+f.Tree1.OnCustomDrawItem(f.Tree1, None, cdsSelected, Ref(True))
 f.OnDropFiles(f, ["C:/temp/a.txt"])
 f.Close()
 for _ in range(5):

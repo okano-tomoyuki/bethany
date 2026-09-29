@@ -1448,6 +1448,32 @@
     X(bool_t,        TMenu_GetOwnerDraw,                    (obj_t o),                                                     (o)) \
     X(void,          TMenu_SetOwnerDraw,                    (obj_t o, bool_t v),                                           (o, v)) \
     X(void,          TMenuItem_SetOnDrawItem,               (obj_t o, menu_draw_callback_t cb, void* d),                   (o, cb, d)) \
-    X(void,          TMenuItem_SetOnMeasureItem,            (obj_t o, menu_measure_callback_t cb, void* d),                (o, cb, d))
+    X(void,          TMenuItem_SetOnMeasureItem,            (obj_t o, menu_measure_callback_t cb, void* d),                (o, cb, d)) \
+    X(uint_t,        TCustomTreeView_GetOptions,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomTreeView_SetOptions,            (obj_t o, uint_t v),                                           (o, v)) \
+    X(uint_t,        TCustomTreeView_GetMultiSelectStyle,   (obj_t o),                                                     (o)) \
+    X(void,          TCustomTreeView_SetMultiSelectStyle,   (obj_t o, uint_t v),                                           (o, v)) \
+    X(int_t,         TCustomTreeView_GetSelectionCount,     (obj_t o),                                                     (o)) \
+    X(obj_t,         TCustomTreeView_GetSelections,         (obj_t o, int_t i),                                            (o, i)) \
+    X(bool_t,        TCustomTreeView_IsEditing,             (obj_t o),                                                     (o)) \
+    X(bool_t,        TTreeView_GetMultiSelect,              (obj_t o),                                                     (o)) \
+    X(void,          TTreeView_SetMultiSelect,              (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TTreeView_GetSortType,                 (obj_t o),                                                     (o)) \
+    X(void,          TTreeView_SetSortType,                 (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TTreeView_GetIndent,                   (obj_t o),                                                     (o)) \
+    X(void,          TTreeView_SetIndent,                   (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TTreeView_GetHotTrack,                 (obj_t o),                                                     (o)) \
+    X(void,          TTreeView_SetHotTrack,                 (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TTreeView_GetRightClickSelect,         (obj_t o),                                                     (o)) \
+    X(void,          TTreeView_SetRightClickSelect,         (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TTreeView_GetToolTips,                 (obj_t o),                                                     (o)) \
+    X(void,          TTreeView_SetToolTips,                 (obj_t o, bool_t v),                                           (o, v)) \
+    X(void,          TTreeView_SetOnEditing,                (obj_t o, item_allow_callback_t cb, void* d),                  (o, cb, d)) \
+    X(void,          TTreeView_SetOnCompare,                (obj_t o, tv_compare_callback_t cb, void* d),                  (o, cb, d)) \
+    X(void,          TTreeView_SetOnEdited,                 (obj_t o, tv_edited_callback_t cb, void* d),                   (o, cb, d)) \
+    X(void,          TTreeView_SetOnCustomDrawItem,         (obj_t o, tv_custom_draw_callback_t cb, void* d),              (o, cb, d)) \
+    X(void,          TTreeNode_DisplayRect,                 (obj_t o, bool_t textOnly, int_t* l, int_t* t, int_t* r, int_t* b), (o, textOnly, l, t, r, b)) \
+    X(bool_t,        TTreeNode_EditText,                    (obj_t o),                                                     (o)) \
+    X(void,          TTreeNode_EndEdit,                     (obj_t o, bool_t cancel),                                      (o, cancel))
 
 #endif

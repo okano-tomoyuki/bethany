@@ -2661,6 +2661,28 @@ int main()
         };
     }
 
+    // TTreeView の細部(docs/adr/0051)。TreeView1 を Ctrl・Shift で複数選択できるようにする。ラベルの編集(F2 か、選択済みのノードの
+    // クリック)は Root 2 だけ始めさせず、空にした編集は元の文字列に戻す。最上位のノードは青い文字で描く。
+    {
+        TTreeView* tree = Form1->TreeView1;
+        tree->MultiSelect = true;
+        tree->MultiSelectStyle = msControlSelect | msShiftSelect;
+        // テーマで描く(既定)と、文字はテーマの色になり、OnCustomDrawItem で設定した Canvas の Font の色が使われない
+        tree->Options = tree->Options & ~tvoThemedDraw;
+        tree->OnEditing = [](TObject*, TTreeNode* Node, bool& AllowEdit) {
+            std::printf("TreeView1 OnEditing: %s\n", std::string(Node->Text).c_str());
+            AllowEdit = Node->Level > 0 || std::string(Node->Text) != "Root 2";  // Root 2 は編集させない
+        };
+        tree->OnEdited = [](TObject*, TTreeNode* Node, std::string& S) {
+            std::printf("TreeView1 OnEdited: %s -> %s\n", std::string(Node->Text).c_str(), S.c_str());
+            if (S.empty())
+                S = Node->Text;  // 空にはさせない
+        };
+        tree->OnCustomDrawItem = [](TCustomTreeView* Sender, TTreeNode* Node, TCustomDrawState State, bool&) {
+            Sender->Canvas.Font.Color = (Node->Level == 0 && !(State & cdsSelected)) ? clBlue : clWindowText;
+        };
+    }
+
     // ステータスバーのパネル(docs/adr/0044)。StatusBar1 の上に、パネルを持つ 2 つ目のステータスバーを置く。
     {
         TStatusBar* panelBar = new TStatusBar(Form1);

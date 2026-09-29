@@ -71,6 +71,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0048](adr/0048-panel-bevel-scroll-border.md) | パネルの縁・スクロール・コントロールの枠(Tier B の B7・B9・B17) | 承認 |
 | [0049](adr/0049-range-controls-and-group-columns.md) | 範囲のコントロールの細部とグループの列(Tier B の B10・B11) | 承認 |
 | [0050](adr/0050-owner-draw.md) | オーナードロー(Tier B の B8) | 承認 |
+| [0051](adr/0051-treeview-details.md) | TTreeView の細部(Tier B の B12) | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。

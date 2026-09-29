@@ -15797,6 +15797,395 @@ begin
   end;
 end;
 
+{ ---------------- TTreeView の細部(docs/adr/0051) ----------------
+  Options・MultiSelectStyle・TCustomDrawState は Ord の位置のビットで受け渡す。 }
+
+type
+  TCustomTreeViewAccess051 = class(TCustomTreeView);
+
+  { OnCompare(TTVCompareEvent)用。 }
+  TBethTVCompareCallback = procedure(Sender, Node1, Node2: Pointer; Compare: PInteger; Data: Pointer); BETH_CALL;
+  { OnEdited(TTVEditedEvent)用。S は編集した文字列。Result に文字列を返すと、それを使う(nil なら S のまま)。 }
+  TBethTVEditedCallback = procedure(Sender, Node: Pointer; S: PChar; Result: PPChar; Data: Pointer); BETH_CALL;
+  { OnCustomDrawItem(TTVCustomDrawItemEvent)用。 }
+  TBethTVCustomDrawCallback = procedure(Sender, Node: Pointer; State: Cardinal; DefaultDraw: PInteger; Data: Pointer); BETH_CALL;
+
+  TTreeViewBridge051 = class(TComponent)
+  private
+    FCompare: TBethTVCompareCallback;
+    FEdited: TBethTVEditedCallback;
+    FCustomDraw: TBethTVCustomDrawCallback;
+    FData: Pointer;
+  public
+    procedure DoCompare(Sender: TObject; Node1, Node2: TTreeNode; var Compare: Integer);
+    procedure DoEdited(Sender: TObject; Node: TTreeNode; var S: AnsiString);
+    procedure DoCustomDraw(Sender: TCustomTreeView; Node: TTreeNode; State: TCustomDrawState; var DefaultDraw: Boolean);
+  end;
+
+procedure TTreeViewBridge051.DoCompare(Sender: TObject; Node1, Node2: TTreeNode; var Compare: Integer);
+var
+  C: Integer;
+begin
+  if not Assigned(FCompare) or GDetaching then
+    Exit;
+  WatchItem(Node1);
+  WatchItem(Node2);
+  C := Compare;
+  FCompare(Pointer(Sender), Pointer(Node1), Pointer(Node2), @C, FData);
+  Compare := C;
+  CheckCallbackError;
+end;
+
+procedure TTreeViewBridge051.DoEdited(Sender: TObject; Node: TTreeNode; var S: AnsiString);
+var
+  R: PChar;
+begin
+  if not Assigned(FEdited) or GDetaching then
+    Exit;
+  WatchItem(Node);
+  R := nil;
+  FEdited(Pointer(Sender), Pointer(Node), PChar(S), @R, FData);
+  if R <> nil then
+    S := AnsiString(R);
+  CheckCallbackError;
+end;
+
+procedure TTreeViewBridge051.DoCustomDraw(Sender: TCustomTreeView; Node: TTreeNode; State: TCustomDrawState;
+  var DefaultDraw: Boolean);
+var
+  F: TCustomDrawStateFlag;
+  Bits: Cardinal;
+  D: Integer;
+begin
+  if not Assigned(FCustomDraw) or GDetaching then
+    Exit;
+  WatchItem(Node);
+  Bits := 0;
+  for F := Low(TCustomDrawStateFlag) to High(TCustomDrawStateFlag) do
+    if F in State then
+      Bits := Bits or (Cardinal(1) shl Ord(F));
+  if DefaultDraw then D := -1 else D := 0;
+  FCustomDraw(Pointer(Sender), Pointer(Node), Bits, @D, FData);
+  DefaultDraw := D <> 0;
+  CheckCallbackError;
+end;
+
+function TreeViewBridge051For(Owner: TComponent; Current: Pointer; Data: Pointer): TTreeViewBridge051;
+begin
+  if (Current <> nil) and (TObject(Current) is TTreeViewBridge051) and (TTreeViewBridge051(Current).Owner = Owner) then
+    Result := TTreeViewBridge051(Current)
+  else
+    Result := TTreeViewBridge051.Create(Owner);
+  Result.FData := Data;
+end;
+
+function TreeViewOptionsBits(O: TTreeViewOptions): Cardinal;
+var
+  E: TTreeViewOption;
+begin
+  Result := 0;
+  for E := Low(TTreeViewOption) to High(TTreeViewOption) do
+    if E in O then
+      Result := Result or (Cardinal(1) shl Ord(E));
+end;
+
+function TreeViewOptionsOf(Bits: Cardinal): TTreeViewOptions;
+var
+  E: TTreeViewOption;
+begin
+  Result := [];
+  for E := Low(TTreeViewOption) to High(TTreeViewOption) do
+    if Bits and (Cardinal(1) shl Ord(E)) <> 0 then
+      Include(Result, E);
+end;
+
+function MultiSelectStyleBits(S: TMultiSelectStyle): Cardinal;
+var
+  E: TMultiSelectStyles;
+begin
+  Result := 0;
+  for E := Low(TMultiSelectStyles) to High(TMultiSelectStyles) do
+    if E in S then
+      Result := Result or (Cardinal(1) shl Ord(E));
+end;
+
+function MultiSelectStyleOf(Bits: Cardinal): TMultiSelectStyle;
+var
+  E: TMultiSelectStyles;
+begin
+  Result := [];
+  for E := Low(TMultiSelectStyles) to High(TMultiSelectStyles) do
+    if Bits and (Cardinal(1) shl Ord(E)) <> 0 then
+      Include(Result, E);
+end;
+
+function TCustomTreeView_GetOptions(Obj: Pointer): Cardinal; BETH_CALL;
+begin
+  try
+    Result := TreeViewOptionsBits(TCustomTreeView(Obj).Options);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomTreeView_SetOptions(Obj: Pointer; Value: Cardinal); BETH_CALL;
+begin
+  try
+    TCustomTreeView(Obj).Options := TreeViewOptionsOf(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomTreeView_GetMultiSelectStyle(Obj: Pointer): Cardinal; BETH_CALL;
+begin
+  try
+    Result := MultiSelectStyleBits(TCustomTreeView(Obj).MultiSelectStyle);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomTreeView_SetMultiSelectStyle(Obj: Pointer; Value: Cardinal); BETH_CALL;
+begin
+  try
+    TCustomTreeView(Obj).MultiSelectStyle := MultiSelectStyleOf(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomTreeView_GetSelectionCount(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomTreeView(Obj).SelectionCount;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function TCustomTreeView_GetSelections(Obj: Pointer; Index: Integer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TCustomTreeView(Obj).Selections[Index]);
+    WatchItem(TTreeNode(Result));
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+function TCustomTreeView_IsEditing(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomTreeView(Obj).IsEditing;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+function TTreeView_GetMultiSelect(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TTreeView(Obj).MultiSelect;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TTreeView_SetMultiSelect(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TTreeView(Obj).MultiSelect := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TTreeView_GetSortType(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TTreeView(Obj).SortType);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TTreeView_SetSortType(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TTreeView(Obj).SortType := TSortType(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TTreeView_GetIndent(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TTreeView(Obj).Indent;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TTreeView_SetIndent(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TTreeView(Obj).Indent := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TTreeView_GetHotTrack(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TTreeView(Obj).HotTrack;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TTreeView_SetHotTrack(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TTreeView(Obj).HotTrack := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TTreeView_GetRightClickSelect(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TTreeView(Obj).RightClickSelect;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TTreeView_SetRightClickSelect(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TTreeView(Obj).RightClickSelect := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TTreeView_GetToolTips(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TTreeView(Obj).ToolTips;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TTreeView_SetToolTips(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TTreeView(Obj).ToolTips := Value;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TTreeView_SetOnEditing(Obj: Pointer; Cb: TBethItemAllowCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TTreeView(Obj).OnEditing := @ItemAllowBridgeFor(TTreeView(Obj), TMethod(TTreeView(Obj).OnEditing).Data, Cb, Data).DoNodeAllow;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TTreeView_SetOnCompare(Obj: Pointer; Cb: TBethTVCompareCallback; Data: Pointer); BETH_CALL;
+var
+  B: TTreeViewBridge051;
+begin
+  try
+    B := TreeViewBridge051For(TTreeView(Obj), TMethod(TTreeView(Obj).OnCompare).Data, Data);
+    B.FCompare := Cb;
+    TTreeView(Obj).OnCompare := @B.DoCompare;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TTreeView_SetOnEdited(Obj: Pointer; Cb: TBethTVEditedCallback; Data: Pointer); BETH_CALL;
+var
+  B: TTreeViewBridge051;
+begin
+  try
+    B := TreeViewBridge051For(TTreeView(Obj), TMethod(TTreeView(Obj).OnEdited).Data, Data);
+    B.FEdited := Cb;
+    TTreeView(Obj).OnEdited := @B.DoEdited;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TTreeView_SetOnCustomDrawItem(Obj: Pointer; Cb: TBethTVCustomDrawCallback; Data: Pointer); BETH_CALL;
+var
+  B: TTreeViewBridge051;
+begin
+  try
+    B := TreeViewBridge051For(TTreeView(Obj), TMethod(TTreeView(Obj).OnCustomDrawItem).Data, Data);
+    B.FCustomDraw := Cb;
+    TTreeView(Obj).OnCustomDrawItem := @B.DoCustomDraw;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TTreeNode_DisplayRect(Obj: Pointer; TextOnly: LongBool; Left, Top, Right, Bottom: PInteger); BETH_CALL;
+var
+  R: TRect;
+begin
+  try
+    R := TTreeNode(Obj).DisplayRect(TextOnly);
+    Left^ := R.Left;
+    Top^ := R.Top;
+    Right^ := R.Right;
+    Bottom^ := R.Bottom;
+  except
+    ReportException;
+  end;
+end;
+
+{ LCL の TTreeNode.EditText は編集を始める前の状態を返す(始めても False)。VCL と同じく、編集を始めたら True を返す。 }
+function TTreeNode_EditText(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    TTreeNode(Obj).EditText;
+    Result := (TTreeNode(Obj).TreeView <> nil) and TTreeNode(Obj).TreeView.IsEditing;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TTreeNode_EndEdit(Obj: Pointer; Cancel: LongBool); BETH_CALL;
+begin
+  try
+    TTreeNode(Obj).EndEdit(Cancel);
+  except
+    ReportException;
+  end;
+end;
+
 exports
   FreeNotify_SetCallback,
   Error_SetCallback,
@@ -17291,7 +17680,33 @@ exports
   TMenu_GetOwnerDraw,
   TMenu_SetOwnerDraw,
   TMenuItem_SetOnDrawItem,
-  TMenuItem_SetOnMeasureItem;
+  TMenuItem_SetOnMeasureItem,
+  TCustomTreeView_GetOptions,
+  TCustomTreeView_SetOptions,
+  TCustomTreeView_GetMultiSelectStyle,
+  TCustomTreeView_SetMultiSelectStyle,
+  TCustomTreeView_GetSelectionCount,
+  TCustomTreeView_GetSelections,
+  TCustomTreeView_IsEditing,
+  TTreeView_GetMultiSelect,
+  TTreeView_SetMultiSelect,
+  TTreeView_GetSortType,
+  TTreeView_SetSortType,
+  TTreeView_GetIndent,
+  TTreeView_SetIndent,
+  TTreeView_GetHotTrack,
+  TTreeView_SetHotTrack,
+  TTreeView_GetRightClickSelect,
+  TTreeView_SetRightClickSelect,
+  TTreeView_GetToolTips,
+  TTreeView_SetToolTips,
+  TTreeView_SetOnEditing,
+  TTreeView_SetOnCompare,
+  TTreeView_SetOnEdited,
+  TTreeView_SetOnCustomDrawItem,
+  TTreeNode_DisplayRect,
+  TTreeNode_EditText,
+  TTreeNode_EndEdit;
 
 begin
   RequireDerivedFormResource := False;

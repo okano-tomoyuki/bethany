@@ -60,6 +60,11 @@ using draw_item_callback_t = void (BETH_CALL *)(obj_t sender, int_t index, int_t
 using measure_item_callback_t = void (BETH_CALL *)(obj_t sender, int_t index, int_t* height, void* data);
 using menu_draw_callback_t = void (BETH_CALL *)(obj_t sender, obj_t canvas, int_t left, int_t top, int_t right, int_t bottom, uint_t state, void* data);
 using menu_measure_callback_t = void (BETH_CALL *)(obj_t sender, obj_t canvas, int_t* width, int_t* height, void* data);
+// TTreeView の OnCompare・OnEdited・OnCustomDrawItem(docs/adr/0051)。OnEdited は *result に文字列を返すとそれを使う
+// (nil なら s のまま。返した文字列は DLL が写すまで有効であること)。state は TCustomDrawState のビット。
+using tv_compare_callback_t = void (BETH_CALL *)(obj_t sender, obj_t node1, obj_t node2, int_t* compare, void* data);
+using tv_edited_callback_t = void (BETH_CALL *)(obj_t sender, obj_t node, str_t s, str_t* result, void* data);
+using tv_custom_draw_callback_t = void (BETH_CALL *)(obj_t sender, obj_t node, uint_t state, bool_t* defaultDraw, void* data);
 
 #define BETH_DECLARE_FUNC(ret, name, params, args) ret name params;
 BETH_FUNCS(BETH_DECLARE_FUNC)

@@ -2673,6 +2673,10 @@ TCustomTreeView::TCustomTreeView(ObjectHandle handle)
     , Selected(this, &TCustomTreeView::GetSelectedImpl, &TCustomTreeView::SetSelectedImpl)
     , Images(this, &TCustomTreeView::GetImagesImpl, &TCustomTreeView::SetImagesImpl)
     , StateImages(this, &TCustomTreeView::GetStateImagesImpl, &TCustomTreeView::SetStateImagesImpl)
+    , Options(this, &TCustomTreeView::GetOptionsImpl, &TCustomTreeView::SetOptionsImpl)
+    , MultiSelectStyle(this, &TCustomTreeView::GetMultiSelectStyleImpl, &TCustomTreeView::SetMultiSelectStyleImpl)
+    , SelectionCount(this, &TCustomTreeView::GetSelectionCountImpl)
+    , Selections(this, &TCustomTreeView::GetSelectionsImpl)
     , items_(internal::TCustomTreeView_GetItems(handle))
 {}
 
@@ -2709,6 +2713,16 @@ TTreeView::TTreeView(TComponent* AOwner)
     , OnCollapsing(this, &TTreeView::GetOnCollapsingImpl, &TTreeView::SetOnCollapsingImpl)
     , OnCollapsed(this, &TTreeView::GetOnCollapsedImpl, &TTreeView::SetOnCollapsedImpl)
     , OnDeletion(this, &TTreeView::GetOnDeletionImpl, &TTreeView::SetOnDeletionImpl)
+    , MultiSelect(this, &TTreeView::GetMultiSelectImpl, &TTreeView::SetMultiSelectImpl)
+    , SortType(this, &TTreeView::GetSortTypeImpl, &TTreeView::SetSortTypeImpl)
+    , Indent(this, &TTreeView::GetIndentImpl, &TTreeView::SetIndentImpl)
+    , HotTrack(this, &TTreeView::GetHotTrackImpl, &TTreeView::SetHotTrackImpl)
+    , RightClickSelect(this, &TTreeView::GetRightClickSelectImpl, &TTreeView::SetRightClickSelectImpl)
+    , ToolTips(this, &TTreeView::GetToolTipsImpl, &TTreeView::SetToolTipsImpl)
+    , OnCompare(this, &TTreeView::GetOnCompareImpl, &TTreeView::SetOnCompareImpl)
+    , OnEditing(this, &TTreeView::GetOnEditingImpl, &TTreeView::SetOnEditingImpl)
+    , OnEdited(this, &TTreeView::GetOnEditedImpl, &TTreeView::SetOnEditedImpl)
+    , OnCustomDrawItem(this, &TTreeView::GetOnCustomDrawItemImpl, &TTreeView::SetOnCustomDrawItemImpl)
 {}
 
 bool TTreeView::GetReadOnlyImpl(TObject* owner)                     { return internal::TTreeView_GetReadOnly(owner->Handle()) != 0; }
@@ -6091,6 +6105,132 @@ void BETH_CALL TMenuItem::MeasureItemTrampoline(ObjectHandle sender, ObjectHandl
         handler(self, &wrapper, w, h);
         *width = w;
         *height = h;
+    });
+}
+
+/* ---------------- TTreeView の細部(docs/adr/0051) ---------------- */
+
+TTreeViewOptions TCustomTreeView::GetOptionsImpl(TObject* owner) { return internal::TCustomTreeView_GetOptions(owner->Handle()); }
+void TCustomTreeView::SetOptionsImpl(TObject* owner, const TTreeViewOptions& value)
+{
+    internal::TCustomTreeView_SetOptions(owner->Handle(), value);
+}
+TMultiSelectStyle TCustomTreeView::GetMultiSelectStyleImpl(TObject* owner)
+{
+    return internal::TCustomTreeView_GetMultiSelectStyle(owner->Handle());
+}
+void TCustomTreeView::SetMultiSelectStyleImpl(TObject* owner, const TMultiSelectStyle& value)
+{
+    internal::TCustomTreeView_SetMultiSelectStyle(owner->Handle(), value);
+}
+int TCustomTreeView::GetSelectionCountImpl(TObject* owner) { return internal::TCustomTreeView_GetSelectionCount(owner->Handle()); }
+TTreeNode* TCustomTreeView::GetSelectionsImpl(TObject* owner, int Index)
+{
+    return TTreeNode::Wrap(internal::TCustomTreeView_GetSelections(owner->Handle(), Index));
+}
+bool TCustomTreeView::IsEditing() const { return internal::TCustomTreeView_IsEditing(handle_) != 0; }
+
+TRect TTreeNode::DisplayRect(bool TextOnly) const
+{
+    internal::int_t l = 0, t = 0, r = 0, b = 0;
+    internal::TTreeNode_DisplayRect(handle_, TextOnly ? 1 : 0, &l, &t, &r, &b);
+    return TRect{l, t, r, b};
+}
+bool TTreeNode::EditText() { return internal::TTreeNode_EditText(handle_) != 0; }
+void TTreeNode::EndEdit(bool Cancel) { internal::TTreeNode_EndEdit(handle_, Cancel ? 1 : 0); }
+
+bool TTreeView::GetMultiSelectImpl(TObject* owner) { return internal::TTreeView_GetMultiSelect(owner->Handle()) != 0; }
+void TTreeView::SetMultiSelectImpl(TObject* owner, const bool& value) { internal::TTreeView_SetMultiSelect(owner->Handle(), value ? 1 : 0); }
+
+TSortType TTreeView::GetSortTypeImpl(TObject* owner) { return static_cast<TSortType>(internal::TTreeView_GetSortType(owner->Handle())); }
+void TTreeView::SetSortTypeImpl(TObject* owner, const TSortType& value) { internal::TTreeView_SetSortType(owner->Handle(), value); }
+
+int TTreeView::GetIndentImpl(TObject* owner) { return internal::TTreeView_GetIndent(owner->Handle()); }
+void TTreeView::SetIndentImpl(TObject* owner, const int& value) { internal::TTreeView_SetIndent(owner->Handle(), value); }
+
+bool TTreeView::GetHotTrackImpl(TObject* owner) { return internal::TTreeView_GetHotTrack(owner->Handle()) != 0; }
+void TTreeView::SetHotTrackImpl(TObject* owner, const bool& value) { internal::TTreeView_SetHotTrack(owner->Handle(), value ? 1 : 0); }
+
+bool TTreeView::GetRightClickSelectImpl(TObject* owner) { return internal::TTreeView_GetRightClickSelect(owner->Handle()) != 0; }
+void TTreeView::SetRightClickSelectImpl(TObject* owner, const bool& value) { internal::TTreeView_SetRightClickSelect(owner->Handle(), value ? 1 : 0); }
+
+bool TTreeView::GetToolTipsImpl(TObject* owner) { return internal::TTreeView_GetToolTips(owner->Handle()) != 0; }
+void TTreeView::SetToolTipsImpl(TObject* owner, const bool& value) { internal::TTreeView_SetToolTips(owner->Handle(), value ? 1 : 0); }
+
+TTVCompareEvent TTreeView::GetOnCompareImpl(TObject* owner) { return static_cast<TTreeView*>(owner)->onCompare_; }
+void TTreeView::SetOnCompareImpl(TObject* owner, const TTVCompareEvent& value)
+{
+    TTreeView* self = static_cast<TTreeView*>(owner);
+    SetSimpleEvent(self->handle_, self->onCompare_, self->onCompareHooked_, value, &internal::TTreeView_SetOnCompare, &TTreeView::CompareTrampoline);
+}
+
+TTVEditingEvent TTreeView::GetOnEditingImpl(TObject* owner) { return static_cast<TTreeView*>(owner)->onEditing_; }
+void TTreeView::SetOnEditingImpl(TObject* owner, const TTVEditingEvent& value)
+{
+    TTreeView* self = static_cast<TTreeView*>(owner);
+    SetSimpleEvent(self->handle_, self->onEditing_, self->onEditingHooked_, value, &internal::TTreeView_SetOnEditing, &TTreeView::EditingTrampoline);
+}
+
+TTVEditedEvent TTreeView::GetOnEditedImpl(TObject* owner) { return static_cast<TTreeView*>(owner)->onEdited_; }
+void TTreeView::SetOnEditedImpl(TObject* owner, const TTVEditedEvent& value)
+{
+    TTreeView* self = static_cast<TTreeView*>(owner);
+    SetSimpleEvent(self->handle_, self->onEdited_, self->onEditedHooked_, value, &internal::TTreeView_SetOnEdited, &TTreeView::EditedTrampoline);
+}
+
+TTVCustomDrawItemEvent TTreeView::GetOnCustomDrawItemImpl(TObject* owner) { return static_cast<TTreeView*>(owner)->onCustomDrawItem_; }
+void TTreeView::SetOnCustomDrawItemImpl(TObject* owner, const TTVCustomDrawItemEvent& value)
+{
+    TTreeView* self = static_cast<TTreeView*>(owner);
+    SetSimpleEvent(self->handle_, self->onCustomDrawItem_, self->onCustomDrawItemHooked_, value, &internal::TTreeView_SetOnCustomDrawItem, &TTreeView::CustomDrawItemTrampoline);
+}
+
+void BETH_CALL TTreeView::CompareTrampoline(ObjectHandle sender, ObjectHandle node1, ObjectHandle node2, internal::int_t* compare, void*)
+{
+    GuardCallback([&] {
+        TTreeView* self = static_cast<TTreeView*>(FromHandle(sender));
+        if (!self || !self->onCompare_)
+            return;
+        TTVCompareEvent handler = self->onCompare_;
+        int value = *compare;
+        handler(self, TTreeNode::Wrap(node1), TTreeNode::Wrap(node2), value);
+        *compare = value;
+    });
+}
+
+void BETH_CALL TTreeView::EditingTrampoline(ObjectHandle s, ObjectHandle n, internal::bool_t* a, void*)
+{
+    GuardCallback([&] {
+        DispatchNodeAllow(s, n, a, &TTreeView::onEditing_);
+    });
+}
+
+// 書き換えた文字列は、DLL が写すまで有効であるよう、スレッドごとの領域に置いて返す。
+void BETH_CALL TTreeView::EditedTrampoline(ObjectHandle sender, ObjectHandle node, internal::str_t s, internal::str_t* result, void*)
+{
+    GuardCallback([&] {
+        TTreeView* self = static_cast<TTreeView*>(FromHandle(sender));
+        if (!self || !self->onEdited_)
+            return;
+        TTVEditedEvent handler = self->onEdited_;
+        static thread_local std::string text;
+        text = s ? s : "";
+        handler(self, TTreeNode::Wrap(node), text);
+        *result = text.c_str();
+    });
+}
+
+void BETH_CALL TTreeView::CustomDrawItemTrampoline(ObjectHandle sender, ObjectHandle node, internal::uint_t state,
+                                                   internal::bool_t* defaultDraw, void*)
+{
+    GuardCallback([&] {
+        TTreeView* self = static_cast<TTreeView*>(FromHandle(sender));
+        if (!self || !self->onCustomDrawItem_)
+            return;
+        TTVCustomDrawItemEvent handler = self->onCustomDrawItem_;
+        bool value = *defaultDraw != 0;
+        handler(self, TTreeNode::Wrap(node), state, value);
+        *defaultDraw = value ? 1 : 0;
     });
 }
 

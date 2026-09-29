@@ -148,6 +148,7 @@ ${controls
     check(first, "groupColumns", std::to_string(f->RadioGroup1->Columns) + "/" + std::to_string((int)(TColumnLayout)f->RadioGroup1->ColumnLayout));
     check(first, "scrollChange", std::to_string(f->ScrollBar1->LargeChange) + "/" + std::to_string(f->ScrollBar1->SmallChange));
     check(first, "ownerDraw", std::to_string((int)(TListBoxStyle)f->ColorList->Style) + "/" + std::to_string(f->ColorList->ItemHeight));
+    check(first, "treeView", std::to_string((int)(TSortType)f->Tree1->SortType) + "/" + std::to_string(f->Tree1->Indent) + "/" + std::to_string((int)f->Tree1->MultiSelect));
     check(first, "memoBorder", std::to_string((int)(TBorderStyle)f->Memo1->BorderStyle) + "/" + std::to_string((int)(TScrollStyle)f->Memo1->ScrollBars));
     check(first, "timer", std::to_string((int)f->Timer1->Enabled) + "/" + std::to_string(f->Timer1->Interval));
     check(first, "caption", f->Caption);
@@ -174,6 +175,13 @@ ${controls
     TScrollEvent onScroll = f->ScrollBar1->OnScroll;
     int scrollPos = 5;
     if (onScroll) onScroll(f->ScrollBar1, scLineDown, scrollPos);
+    TTVEditedEvent onEdited = f->Tree1->OnEdited;
+    std::string edited = "x";
+    if (onEdited) { onEdited(f->Tree1, nullptr, edited); edited += "!"; }
+    check(first, "treeEdited", edited);
+    TTVCustomDrawItemEvent onCustomDraw = f->Tree1->OnCustomDrawItem;
+    bool defaultDraw = true;
+    if (onCustomDraw) onCustomDraw(f->Tree1, nullptr, cdsSelected, defaultDraw);
     TDropFilesEvent onDropFiles = f->OnDropFiles;
     if (onDropFiles) onDropFiles(f, {"C:/temp/a.txt"});
     f->Close();

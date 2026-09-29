@@ -381,6 +381,20 @@ _a_ref_bool = _a_ref(lambda raw: raw != 0, _b)
 _a_ref_char = _a_ref(lambda raw: chr(raw & 0xFF), _key)
 
 
+# 書き戻す文字列(TTreeView の OnEdited の S。docs/adr/0051)。DLL は文字列と、返す文字列を入れる場所(char**)を渡す。
+# 返す bytes は DLL が写すまで有効であるよう、次の呼び出しまで持っておく。
+_ref_str_kept = []
+
+
+def _put_ref_str(raws, ref):
+    data = _enc(ref.value if ref.value is not None else "")
+    _ref_str_kept[:] = [data]
+    raws[1][0] = data
+
+
+_a_ref_str = _Arg(lambda raws: Ref(_dec(raws[0])), n=2, put=_put_ref_str)
+
+
 def _a_ref_enum(name):
     return _a_ref(lambda raw: _to_enum(name, raw), int)
 
