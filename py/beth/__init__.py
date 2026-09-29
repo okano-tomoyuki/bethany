@@ -30,7 +30,7 @@ import ctypes
 import enum
 
 from ._core import (BethError, Ref, TRect, TPoint, TObject, TPersistent, TComponent,
-                   ShortCut, TextToShortCut, ShortCutToText,
+                   ShortCut, TextToShortCut, ShortCutToText, Clipboard, CF_Text, CF_Bitmap, CF_Picture,
                    ShowMessage, MessageDlg, InputBox, PasswordBox, InputQuery,
                    MB_OK, MB_OKCANCEL, MB_ABORTRETRYIGNORE, MB_YESNOCANCEL, MB_YESNO, MB_RETRYCANCEL,
                    MB_ICONERROR, MB_ICONQUESTION, MB_ICONWARNING, MB_ICONINFORMATION,
@@ -39,7 +39,7 @@ from ._core import (BethError, Ref, TRect, TPoint, TObject, TPersistent, TCompon
 from ._core import (lib, _mixins, _register, _event_types, _ItemMixin, _Prop, _Indexed, _Event,
                    _int, _float, _bool, _str, _char, _ptr, _rect_conv, _point_conv, _enum, _set, _comp, _existing, _item, _obj, _view,
                    _str_key, _enc, _dec, _h, _b, _rect, _point, _to_enum, _to_comp, _to_existing, _to_item, _to_obj,
-                   _a_int, _a_bool, _a_rect, _a_exception, _a_enum, _a_comp, _a_item, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_enum)
+                   _a_int, _a_bool, _a_rect, _a_exception, _a_strings, _a_enum, _a_comp, _a_item, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_enum)
 
 
 # ---------------- 列挙型 ----------------
@@ -936,6 +936,8 @@ mrNoToAll = 9
 mrYesToAll = 10
 mrClose = 11
 
+TClipboardFormat = int
+
 mbYesNo = frozenset({mbYes, mbNo})  # TMsgDlgButtons
 mbYesNoCancel = frozenset({mbYes, mbNo, mbCancel})  # TMsgDlgButtons
 mbOKCancel = frozenset({mbOK, mbCancel})  # TMsgDlgButtons
@@ -1123,9 +1125,6 @@ class TGraphic(_mixins["TGraphic"], TPersistent):
         lib.TGraphic_LoadFromFile(self._current(), _enc(FileName))
     def SaveToFile(self, FileName):
         lib.TGraphic_SaveToFile(self._current(), _enc(FileName))
-    # Source の内容で置き換える(別のクラスのグラフィックからは画素を写して変換する)。nullptr なら空にする。
-    def Assign(self, Source):
-        lib.TGraphic_Assign(self._current(), _h(Source))
     def Clear(self):
         lib.TGraphic_Clear(self._current())
 
@@ -1164,6 +1163,13 @@ class TJPEGImage(TCustomBitmap):
     CompressionQuality = _Prop("TJPEGImage_GetCompressionQuality", "TJPEGImage_SetCompressionQuality", _int)
 
 
+class TIcon(TRasterImage):
+    """アイコン(.ico。docs/adr/0047)。LCL の TIcon(TCustomIcon の派生)。new TIcon で生成して delete で破棄する(TBitmap と同じ)。
+    Form1->Icon・Application->Icon・Picture->Icon は所有者の中身のビュー。1 つのファイルに大きさの違う画像を複数持てる。"""
+    def __init__(self):
+        self._init_owned(lib.TIcon_Create())
+
+
 class TPicture(_mixins["TPicture"], TPersistent):
     """形式を問わない画像の入れ物(LCL の TPicture)。Image1->Picture のように画像コントロールが持つもの(コントロールと寿命が一致する)と、
     利用者が new TPicture で生成して delete で破棄するものがある。"""
@@ -1176,9 +1182,6 @@ class TPicture(_mixins["TPicture"], TPersistent):
         lib.TPicture_LoadFromFile(self._current(), _enc(FileName))
     def SaveToFile(self, FileName):
         lib.TPicture_SaveToFile(self._current(), _enc(FileName))
-    # Source の内容で置き換える。nullptr なら空にする。
-    def Assign(self, Source):
-        lib.TPicture_Assign(self._current(), _h(Source))
     def Clear(self):
         lib.TPicture_Clear(self._current())
 
@@ -1569,6 +1572,13 @@ class TCustomForm(_mixins["TCustomForm"], TScrollingWinControl):
     KeyPreview = _Prop("TCustomForm_GetKeyPreview", "TCustomForm_SetKeyPreview", _bool)
     # フォーカスを持つ(表示したときに持たせる)コントロール。
     ActiveControl = _Prop("TCustomForm_GetActiveControl", "TCustomForm_SetActiveControl", _comp("TWinControl"))
+    # ---- docs/adr/0047 ----
+    # タイトルバー・タスクバーのアイコン。空なら Application->Icon を使う。代入は内容のコピー(nullptr なら空にする)。
+    Icon = _Prop("TCustomForm_GetIcon", "TCustomForm_SetIcon", _view("TIcon"))
+    # true なら、エクスプローラー等からファイルをドロップできる(ドロップすると OnDropFiles が呼ばれる)。
+    AllowDropFiles = _Prop("TCustomForm_GetAllowDropFiles", "TCustomForm_SetAllowDropFiles", _bool)
+    # ファイルをドロップしたとき。FileNames はフルパス(UTF-8)。
+    OnDropFiles = _Event("TCustomForm_SetOnDropFiles", "TDropFilesEvent")
 
 
 class TForm(_mixins["TForm"], TCustomForm):
@@ -1603,6 +1613,8 @@ class TApplication(_mixins["TApplication"], TComponent):
     OnIdle = _Event("TApplication_SetOnIdle", "TIdleEvent")
     # イベントのハンドラから送出された例外を、既定のエラーのダイアログの代わりに受ける(docs/adr/0031)。
     OnException = _Event("TApplication_SetOnException", "TExceptionEvent")
+    # アプリケーションのアイコン(docs/adr/0047)。Icon が空のフォームは、これを使う。代入は内容のコピー。
+    Icon = _Prop("TApplication_GetIcon", "TApplication_SetIcon", _view("TIcon"))
     # CreateForm で最初に生成したフォーム。Run はこれを表示し、これが閉じられると戻る。
     MainForm = _Prop("TApplication_GetMainForm", None, _comp("TForm"))
     Terminated = _Prop("TApplication_GetTerminated", None, _bool)
@@ -1614,6 +1626,66 @@ class TApplication(_mixins["TApplication"], TComponent):
         lib.TApplication_ProcessMessages(self._current())
     def Terminate(self):
         lib.TApplication_Terminate(self._current())
+
+
+class TScreen(TComponent):
+    """画面(LCL の TScreen)。インスタンスはグローバル変数 Screen の 1 つだけ(LCL が持つもので、破棄しない)。"""
+    # crDefault 以外にすると、すべてのコントロールの上でそのカーソルになる(処理の間の crHourGlass 等。crDefault で戻す)。
+    Cursor = _Prop("TScreen_GetCursor", "TScreen_SetCursor", _int)
+    # 主モニタの大きさ。
+    Width = _Prop("TScreen_GetWidth", None, _int)
+    Height = _Prop("TScreen_GetHeight", None, _int)
+    # すべてのモニタを合わせた範囲。
+    DesktopLeft = _Prop("TScreen_GetDesktopLeft", None, _int)
+    DesktopTop = _Prop("TScreen_GetDesktopTop", None, _int)
+    DesktopWidth = _Prop("TScreen_GetDesktopWidth", None, _int)
+    DesktopHeight = _Prop("TScreen_GetDesktopHeight", None, _int)
+    # 主モニタの、タスクバーを除いた範囲。
+    WorkAreaLeft = _Prop("TScreen_GetWorkAreaLeft", None, _int)
+    WorkAreaTop = _Prop("TScreen_GetWorkAreaTop", None, _int)
+    WorkAreaWidth = _Prop("TScreen_GetWorkAreaWidth", None, _int)
+    WorkAreaHeight = _Prop("TScreen_GetWorkAreaHeight", None, _int)
+    WorkAreaRect = _Prop("TScreen_GetWorkAreaRect", None, _rect_conv)
+    # 画面の解像度(96 が 100%)。
+    PixelsPerInch = _Prop("TScreen_GetPixelsPerInch", None, _int)
+    MonitorCount = _Prop("TScreen_GetMonitorCount", None, _int)
+    # 開いている(生成済みの)フォーム(TForm の派生だけ)。プログラムが作ったものでないフォーム(MessageDlg のダイアログ等)は nullptr。
+    FormCount = _Prop("TScreen_GetFormCount", None, _int)
+    Forms = _Indexed("TScreen_GetForms", None, _comp("TForm"))
+    # アクティブなフォーム・フォーカスを持つコントロール(無いとき・プログラムが作ったものでないときは nullptr)。
+    ActiveForm = _Prop("TScreen_GetActiveForm", None, _comp("TForm"))
+    ActiveControl = _Prop("TScreen_GetActiveControl", None, _comp("TWinControl"))
+    # インストールされているフォントの名前。
+    Fonts = _Prop("TScreen_GetFonts", None, _view("TStrings"))
+    # アクティブなフォーム・フォーカスを持つコントロールが変わったとき(Sender は Screen)。
+    OnActiveFormChange = _Event("TScreen_SetOnActiveFormChange", "TNotifyEvent")
+    OnActiveControlChange = _Event("TScreen_SetOnActiveControlChange", "TNotifyEvent")
+
+
+class TClipboard(_mixins["TClipboard"], TPersistent):
+    """クリップボード(LCL の TClipboard)。Clipboard() で得る 1 つだけで、利用者は破棄しない。
+    画像を置くのは Clipboard()->Assign(Image1->Picture)、読むのは Image1->Picture->Assign(Clipboard())。"""
+    # クリップボードの文字列(UTF-8)。文字列が無ければ空文字列。代入するとクリップボードの内容を置き換える。
+    AsText = _Prop("TClipboard_GetAsText", "TClipboard_SetAsText", _str)
+    # 今の内容が持つ形式の数と番号。
+    FormatCount = _Prop("TClipboard_GetFormatCount", None, _int)
+    Formats = _Indexed("TClipboard_GetFormats", None, _int)
+    # その形式の内容があるか(Clipboard()->HasFormat(CF_Text()))。
+    def HasFormat(self, Format):
+        _r = lib.TClipboard_HasFormat(self._current(), int(Format))
+        return _r != 0
+    # 画像(読み込める形式のどれか)があるか。
+    def HasPictureFormat(self):
+        _r = lib.TClipboard_HasPictureFormat(self._current())
+        return _r != 0
+    # 内容を消す。
+    def Clear(self):
+        lib.TClipboard_Clear(self._current())
+    # Open から Close までの間に置いた内容(AsText と画像等)を、1 度にまとめて置く。
+    def Open(self):
+        lib.TClipboard_Open(self._current())
+    def Close(self):
+        lib.TClipboard_Close(self._current())
 
 
 class TCustomPanel(TCustomControl):
@@ -3074,6 +3146,7 @@ _event_types.update({
     "TSelectionChangeEvent": (_a_bool, ),  # (Sender, User)
     "TIdleEvent": (_a_ref_bool, ),  # (Sender, Done)
     "TExceptionEvent": (_a_exception, ),  # (Sender, E)
+    "TDropFilesEvent": (_a_strings, ),  # (Sender, FileNames)
     "TTabChangingEvent": (_a_ref_bool, ),  # (Sender, AllowChange)
     "TTVChangedEvent": (_a_item("TTreeNode"), ),  # (Sender, Node)
     "TTVChangingEvent": (_a_item("TTreeNode"), _a_ref_bool, ),  # (Sender, Node, AllowChange)
@@ -3098,15 +3171,18 @@ _register(globals())
 
 # C++Builder と同じく、アプリケーションに 1 つのグローバル変数として公開する。
 Application = TApplication._global()
+# 画面(LCL の Screen)。Application と同じく 1 つだけ(docs/adr/0047)。
+Screen = TScreen._wrap_existing(lib.GetScreen())
 
 __all__ = [
     "BethError", "Ref", "TRect", "TPoint", "TObject", "TPersistent", "TComponent", "ShortCut", "TextToShortCut",
-    "ShortCutToText", "Application", "ShowMessage", "MessageDlg", "InputBox", "PasswordBox", "InputQuery", "MB_OK",
-    "MB_OKCANCEL", "MB_ABORTRETRYIGNORE", "MB_YESNOCANCEL", "MB_YESNO", "MB_RETRYCANCEL", "MB_ICONERROR",
-    "MB_ICONQUESTION", "MB_ICONWARNING", "MB_ICONINFORMATION", "MB_DEFBUTTON1", "MB_DEFBUTTON2", "MB_DEFBUTTON3",
-    "IDOK", "IDCANCEL", "IDABORT", "IDRETRY", "IDIGNORE", "IDYES", "IDNO", "TCloseAction", "caNone", "caHide",
-    "caFree", "caMinimize", "TMouseButton", "mbLeft", "mbRight", "mbMiddle", "mbExtra1", "mbExtra2", "TDuplicates",
-    "dupIgnore", "dupAccept", "dupError", "TPenStyle", "psSolid", "psDash", "psDot", "psDashDot", "psDashDotDot",
+    "ShortCutToText", "Application", "Screen", "Clipboard", "CF_Text", "CF_Bitmap", "CF_Picture", "ShowMessage",
+    "MessageDlg", "InputBox", "PasswordBox", "InputQuery", "MB_OK", "MB_OKCANCEL", "MB_ABORTRETRYIGNORE",
+    "MB_YESNOCANCEL", "MB_YESNO", "MB_RETRYCANCEL", "MB_ICONERROR", "MB_ICONQUESTION", "MB_ICONWARNING",
+    "MB_ICONINFORMATION", "MB_DEFBUTTON1", "MB_DEFBUTTON2", "MB_DEFBUTTON3", "IDOK", "IDCANCEL", "IDABORT",
+    "IDRETRY", "IDIGNORE", "IDYES", "IDNO", "TCloseAction", "caNone", "caHide", "caFree", "caMinimize",
+    "TMouseButton", "mbLeft", "mbRight", "mbMiddle", "mbExtra1", "mbExtra2", "TDuplicates", "dupIgnore",
+    "dupAccept", "dupError", "TPenStyle", "psSolid", "psDash", "psDot", "psDashDot", "psDashDotDot",
     "psInsideFrame", "psPattern", "psClear", "TPenMode", "pmBlack", "pmWhite", "pmNop", "pmNot", "pmCopy",
     "pmNotCopy", "pmMergePenNot", "pmMaskPenNot", "pmMergeNotPen", "pmMaskNotPen", "pmMerge", "pmNotMerge",
     "pmMask", "pmNotMask", "pmXor", "pmNotXor", "TBrushStyle", "bsSolid", "bsClear", "bsHorizontal", "bsVertical",
@@ -3170,13 +3246,14 @@ __all__ = [
     "crNoDrop", "crHSplit", "crVSplit", "crMultiDrag", "crSQLWait", "crNo", "crAppStart", "crHelp", "crHandPoint",
     "crSizeAll", "crSize", "crSizeNW", "crSizeN", "crSizeNE", "crSizeW", "crSizeE", "crSizeSW", "crSizeS",
     "crSizeSE", "TModalResult", "mrNone", "mrOk", "mrCancel", "mrAbort", "mrRetry", "mrIgnore", "mrYes", "mrNo",
-    "mrAll", "mrNoToAll", "mrYesToAll", "mrClose", "mbYesNo", "mbYesNoCancel", "mbOKCancel", "mbAbortRetryIgnore",
-    "TStrings", "TStringList", "TPen", "TBrush", "TFont", "TCanvas", "TGraphic", "TRasterImage", "TCustomBitmap",
-    "TBitmap", "TPortableNetworkGraphic", "TJPEGImage", "TPicture", "TCustomImageList", "TImageList", "TMenuItem",
-    "TMenu", "TMainMenu", "TPopupMenu", "TSizeConstraints", "TControlBorderSpacing", "TControl", "TWinControl",
-    "TCustomScrollBar", "TScrollBar", "TCustomTrackBar", "TTrackBar", "TCustomProgressBar", "TProgressBar",
-    "TGraphicControl", "TCustomControl", "TUpDown", "TScrollingWinControl", "TScrollBox", "TCustomForm", "TForm",
-    "TApplication", "TCustomPanel", "TPanel", "TCustomGroupBox", "TGroupBox", "TCustomRadioGroup", "TRadioGroup",
+    "mrAll", "mrNoToAll", "mrYesToAll", "mrClose", "TClipboardFormat", "mbYesNo", "mbYesNoCancel", "mbOKCancel",
+    "mbAbortRetryIgnore", "TStrings", "TStringList", "TPen", "TBrush", "TFont", "TCanvas", "TGraphic",
+    "TRasterImage", "TCustomBitmap", "TBitmap", "TPortableNetworkGraphic", "TJPEGImage", "TIcon", "TPicture",
+    "TCustomImageList", "TImageList", "TMenuItem", "TMenu", "TMainMenu", "TPopupMenu", "TSizeConstraints",
+    "TControlBorderSpacing", "TControl", "TWinControl", "TCustomScrollBar", "TScrollBar", "TCustomTrackBar",
+    "TTrackBar", "TCustomProgressBar", "TProgressBar", "TGraphicControl", "TCustomControl", "TUpDown",
+    "TScrollingWinControl", "TScrollBox", "TCustomForm", "TForm", "TApplication", "TScreen", "TClipboard",
+    "TCustomPanel", "TPanel", "TCustomGroupBox", "TGroupBox", "TCustomRadioGroup", "TRadioGroup",
     "TCustomCheckGroup", "TCheckGroup", "TCustomLabel", "TLabel", "TBoundLabel", "TBevel", "TButtonControl",
     "TCustomButton", "TButton", "TCustomBitBtn", "TBitBtn", "TCustomCheckBox", "TCheckBox", "TRadioButton",
     "TToggleBox", "TCustomEdit", "TEdit", "TCustomFloatSpinEdit", "TFloatSpinEdit", "TCustomSpinEdit", "TSpinEdit",

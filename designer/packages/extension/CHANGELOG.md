@@ -21,6 +21,7 @@
 - Actions: put an action list (Standard palette) and add actions to it with "Add Action" in the structure tree. Actions appear
   under the action list, and the `Action` property of controls and menu items chooses one. The Object Inspector and the canvas
   show the values that come from the action, and a warning tells when a property or `OnClick` set on the control is overridden
+- New from the Bethany library 0.3.0: the `AllowDropFiles` property and the `OnDropFiles` event of forms (files dropped from Explorer)
 - The include guard macro does not repeat a namespace that is also the folder of the header
   (`APP_DIALOGS_ABOUT_HPP` instead of `APP_DIALOGS_DIALOGS_ABOUT_HPP` for `app::dialogs` and `dialogs/About.hpp`)
 

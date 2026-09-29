@@ -1275,6 +1275,53 @@
     X(obj_t,         TControl_GetAction,                    (obj_t o),                                                     (o)) \
     X(void,          TControl_SetAction,                    (obj_t o, obj_t v),                                            (o, v)) \
     X(obj_t,         TMenuItem_GetAction,                   (obj_t o),                                                     (o)) \
-    X(void,          TMenuItem_SetAction,                   (obj_t o, obj_t v),                                            (o, v))
+    X(void,          TMenuItem_SetAction,                   (obj_t o, obj_t v),                                            (o, v)) \
+    X(obj_t,         GetScreen,                             (void),                                                        ()) \
+    X(int_t,         TScreen_GetCursor,                     (obj_t o),                                                     (o)) \
+    X(void,          TScreen_SetCursor,                     (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TScreen_GetWidth,                      (obj_t o),                                                     (o)) \
+    X(int_t,         TScreen_GetHeight,                     (obj_t o),                                                     (o)) \
+    X(int_t,         TScreen_GetDesktopLeft,                (obj_t o),                                                     (o)) \
+    X(int_t,         TScreen_GetDesktopTop,                 (obj_t o),                                                     (o)) \
+    X(int_t,         TScreen_GetDesktopWidth,               (obj_t o),                                                     (o)) \
+    X(int_t,         TScreen_GetDesktopHeight,              (obj_t o),                                                     (o)) \
+    X(int_t,         TScreen_GetWorkAreaLeft,               (obj_t o),                                                     (o)) \
+    X(int_t,         TScreen_GetWorkAreaTop,                (obj_t o),                                                     (o)) \
+    X(int_t,         TScreen_GetWorkAreaWidth,              (obj_t o),                                                     (o)) \
+    X(int_t,         TScreen_GetWorkAreaHeight,             (obj_t o),                                                     (o)) \
+    X(int_t,         TScreen_GetPixelsPerInch,              (obj_t o),                                                     (o)) \
+    X(int_t,         TScreen_GetMonitorCount,               (obj_t o),                                                     (o)) \
+    X(int_t,         TScreen_GetFormCount,                  (obj_t o),                                                     (o)) \
+    X(void,          TScreen_GetWorkAreaRect,               (obj_t o, int_t* l, int_t* t, int_t* r, int_t* b),             (o, l, t, r, b)) \
+    X(obj_t,         TScreen_GetForms,                      (obj_t o, int_t i),                                            (o, i)) \
+    X(obj_t,         TScreen_GetActiveForm,                 (obj_t o),                                                     (o)) \
+    X(obj_t,         TScreen_GetActiveControl,              (obj_t o),                                                     (o)) \
+    X(obj_t,         TScreen_GetFonts,                      (obj_t o),                                                     (o)) \
+    X(void,          TScreen_SetOnActiveFormChange,         (obj_t o, callback_t cb, void* data),                          (o, cb, data)) \
+    X(void,          TScreen_SetOnActiveControlChange,      (obj_t o, callback_t cb, void* data),                          (o, cb, data)) \
+    X(obj_t,         GetClipboard,                          (void),                                                        ()) \
+    X(uint_t,        Clipboard_CF_Text,                     (void),                                                        ()) \
+    X(uint_t,        Clipboard_CF_Bitmap,                   (void),                                                        ()) \
+    X(uint_t,        Clipboard_CF_Picture,                  (void),                                                        ()) \
+    X(str_t,         TClipboard_GetAsText,                  (obj_t o),                                                     (o)) \
+    X(void,          TClipboard_SetAsText,                  (obj_t o, str_t v),                                            (o, v)) \
+    X(bool_t,        TClipboard_HasFormat,                  (obj_t o, uint_t format),                                      (o, format)) \
+    X(bool_t,        TClipboard_HasPictureFormat,           (obj_t o),                                                     (o)) \
+    X(void,          TClipboard_Clear,                      (obj_t o),                                                     (o)) \
+    X(void,          TClipboard_Open,                       (obj_t o),                                                     (o)) \
+    X(void,          TClipboard_Close,                      (obj_t o),                                                     (o)) \
+    X(int_t,         TClipboard_GetFormatCount,             (obj_t o),                                                     (o)) \
+    X(uint_t,        TClipboard_GetFormats,                 (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          TClipboard_Assign,                     (obj_t o, obj_t source),                                       (o, source)) \
+    X(obj_t,         TIcon_Create,                          (void),                                                        ()) \
+    X(obj_t,         TCustomForm_GetIcon,                   (obj_t o),                                                     (o)) \
+    X(void,          TCustomForm_SetIcon,                   (obj_t o, obj_t v),                                            (o, v)) \
+    X(obj_t,         TApplication_GetIcon,                  (obj_t o),                                                     (o)) \
+    X(void,          TApplication_SetIcon,                  (obj_t o, obj_t v),                                            (o, v)) \
+    X(obj_t,         TPicture_GetIcon,                      (obj_t o),                                                     (o)) \
+    X(void,          TPicture_SetIcon,                      (obj_t o, obj_t v),                                            (o, v)) \
+    X(bool_t,        TCustomForm_GetAllowDropFiles,         (obj_t o),                                                     (o)) \
+    X(void,          TCustomForm_SetAllowDropFiles,         (obj_t o, bool_t v),                                           (o, v)) \
+    X(void,          TCustomForm_SetOnDropFiles,            (obj_t o, drop_files_callback_t cb, void* data),               (o, cb, data))
 
 #endif

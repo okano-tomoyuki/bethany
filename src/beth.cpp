@@ -968,6 +968,10 @@ TCustomForm::TCustomForm(ObjectHandle handle)
     , FormStyle(this, &TCustomForm::GetFormStyleImpl, &TCustomForm::SetFormStyleImpl)
     , KeyPreview(this, &TCustomForm::GetKeyPreviewImpl, &TCustomForm::SetKeyPreviewImpl)
     , ActiveControl(this, &TCustomForm::GetActiveControlImpl, &TCustomForm::SetActiveControlImpl)
+    , Icon(this, &TCustomForm::GetIconImpl, &TCustomForm::SetIconImpl)
+    , AllowDropFiles(this, &TCustomForm::GetAllowDropFilesImpl, &TCustomForm::SetAllowDropFilesImpl)
+    , OnDropFiles(this, &TCustomForm::GetOnDropFilesImpl, &TCustomForm::SetOnDropFilesImpl)
+    , icon_(this, &internal::TCustomForm_GetIcon)
 {
     // OnShow のブリッジは常に登録する。new で直接生成したフォームの OnCreate を、最初の表示の直前に呼ぶため。
     internal::TCustomForm_SetOnShow(handle_, &TCustomForm::ShowTrampoline, nullptr);
@@ -1170,6 +1174,46 @@ void TCustomForm::SetActiveControlImpl(TObject* owner, TWinControl* const& value
     internal::TCustomForm_SetActiveControl(owner->Handle(), value ? value->Handle() : nullptr);
 }
 
+// ---- docs/adr/0047 ----
+
+TIcon* TCustomForm::GetIconImpl(TObject* owner) { return &static_cast<TCustomForm*>(owner)->icon_; }
+void TCustomForm::SetIconImpl(TObject* owner, TIcon* const& value)
+{
+    internal::TCustomForm_SetIcon(owner->Handle(), value ? value->Current() : nullptr);
+}
+
+bool TCustomForm::GetAllowDropFilesImpl(TObject* owner)
+{
+    return internal::TCustomForm_GetAllowDropFiles(owner->Handle()) != 0;
+}
+void TCustomForm::SetAllowDropFilesImpl(TObject* owner, const bool& value)
+{
+    internal::TCustomForm_SetAllowDropFiles(owner->Handle(), value ? 1 : 0);
+}
+
+TDropFilesEvent TCustomForm::GetOnDropFilesImpl(TObject* owner) { return static_cast<TCustomForm*>(owner)->onDropFiles_; }
+void TCustomForm::SetOnDropFilesImpl(TObject* owner, const TDropFilesEvent& value)
+{
+    TCustomForm* self = static_cast<TCustomForm*>(owner);
+    SetSimpleEvent(self->handle_, self->onDropFiles_, self->onDropFilesHooked_, value,
+                   &internal::TCustomForm_SetOnDropFiles, &TCustomForm::DropFilesTrampoline);
+}
+
+void BETH_CALL TCustomForm::DropFilesTrampoline(ObjectHandle sender, internal::int_t count, internal::str_t* fileNames, void*)
+{
+    GuardCallback([&] {
+        TCustomForm* self = static_cast<TCustomForm*>(FromHandle(sender));
+        if (!self || !self->onDropFiles_)
+            return;
+        TDropFilesEvent handler = self->onDropFiles_;
+        std::vector<std::string> names;
+        names.reserve(count);
+        for (int i = 0; i < count; ++i)
+            names.emplace_back(fileNames[i] ? fileNames[i] : "");
+        handler(self, names);
+    });
+}
+
 TMainMenu* TCustomForm::GetMenuImpl(TObject* owner)
 {
     return static_cast<TMainMenu*>(FromHandle(internal::TCustomForm_GetMenu(owner->Handle())));
@@ -1222,10 +1266,12 @@ TApplication::TApplication(ObjectHandle handle)
     , HintHidePause(this, &TApplication::GetHintHidePauseImpl, &TApplication::SetHintHidePauseImpl)
     , OnIdle(this, &TApplication::GetOnIdleImpl, &TApplication::SetOnIdleImpl)
     , OnException(this, &TApplication::GetOnExceptionImpl, &TApplication::SetOnExceptionImpl)
+    , Icon(this, &TApplication::GetIconImpl, &TApplication::SetIconImpl)
     , MainForm(this, &TApplication::GetMainFormImpl)
     , Terminated(this, &TApplication::GetTerminatedImpl)
     , Title(this, &TApplication::GetTitleImpl, &TApplication::SetTitleImpl)
     , ShowMainForm(this, &TApplication::GetShowMainFormImpl, &TApplication::SetShowMainFormImpl)
+    , icon_(this, &internal::TApplication_GetIcon)
 {
     // 基底の TComponent のコンストラクタでレジストリ(関数内 static)が構築済みのため、
     // ここで登録した終了処理はレジストリの破棄より先に呼ばれる。
@@ -1341,6 +1387,12 @@ void BETH_CALL TApplication::ExceptionTrampoline(ObjectHandle sender, internal::
     });
 }
 
+TIcon* TApplication::GetIconImpl(TObject* owner) { return &static_cast<TApplication*>(owner)->icon_; }
+void TApplication::SetIconImpl(TObject* owner, TIcon* const& value)
+{
+    internal::TApplication_SetIcon(owner->Handle(), value ? value->Current() : nullptr);
+}
+
 // main から戻った後(C++ の実行環境がまだ有効なうち)に、Application が所有するフォームを破棄する。
 // 破棄通知によってラッパーのデストラクタも呼ばれる。その後の DLL の切り離しでは通知は来ない。
 // Application 自身のラッパーは解放しない(LCL の Application は DLL の切り離しまで生きている)。
@@ -1350,6 +1402,164 @@ void TApplication::Shutdown()
         internal::TComponent_DestroyComponents(Application->handle_);
     internal::FreeNotify_SetCallback(nullptr, nullptr);
     internal::ItemFree_SetCallback(nullptr, nullptr);
+}
+
+/* ---------------- TScreen・TClipboard(docs/adr/0047) ---------------- */
+
+TScreen* NewScreen()
+{
+    return new TScreen(internal::GetScreen());
+}
+
+TScreen* Screen = NewScreen();
+
+TScreen::TScreen(ObjectHandle handle)
+    : TComponent(handle)
+    , Cursor(this, &TScreen::GetCursorImpl, &TScreen::SetCursorImpl)
+    , Width(this, &TScreen::GetWidthImpl)
+    , Height(this, &TScreen::GetHeightImpl)
+    , DesktopLeft(this, &TScreen::GetDesktopLeftImpl)
+    , DesktopTop(this, &TScreen::GetDesktopTopImpl)
+    , DesktopWidth(this, &TScreen::GetDesktopWidthImpl)
+    , DesktopHeight(this, &TScreen::GetDesktopHeightImpl)
+    , WorkAreaLeft(this, &TScreen::GetWorkAreaLeftImpl)
+    , WorkAreaTop(this, &TScreen::GetWorkAreaTopImpl)
+    , WorkAreaWidth(this, &TScreen::GetWorkAreaWidthImpl)
+    , WorkAreaHeight(this, &TScreen::GetWorkAreaHeightImpl)
+    , WorkAreaRect(this, &TScreen::GetWorkAreaRectImpl)
+    , PixelsPerInch(this, &TScreen::GetPixelsPerInchImpl)
+    , MonitorCount(this, &TScreen::GetMonitorCountImpl)
+    , FormCount(this, &TScreen::GetFormCountImpl)
+    , Forms(this, &TScreen::GetFormsImpl)
+    , ActiveForm(this, &TScreen::GetActiveFormImpl)
+    , ActiveControl(this, &TScreen::GetActiveControlImpl)
+    , Fonts(this, &TScreen::GetFontsImpl)
+    , OnActiveFormChange(this, &TScreen::GetOnActiveFormChangeImpl, &TScreen::SetOnActiveFormChangeImpl)
+    , OnActiveControlChange(this, &TScreen::GetOnActiveControlChangeImpl, &TScreen::SetOnActiveControlChangeImpl)
+    , fonts_(this, &internal::TScreen_GetFonts)
+{}
+
+TCursor TScreen::GetCursorImpl(TObject* owner) { return internal::TScreen_GetCursor(owner->Handle()); }
+void TScreen::SetCursorImpl(TObject* owner, const TCursor& value) { internal::TScreen_SetCursor(owner->Handle(), value); }
+int TScreen::GetWidthImpl(TObject* owner) { return internal::TScreen_GetWidth(owner->Handle()); }
+int TScreen::GetHeightImpl(TObject* owner) { return internal::TScreen_GetHeight(owner->Handle()); }
+int TScreen::GetDesktopLeftImpl(TObject* owner) { return internal::TScreen_GetDesktopLeft(owner->Handle()); }
+int TScreen::GetDesktopTopImpl(TObject* owner) { return internal::TScreen_GetDesktopTop(owner->Handle()); }
+int TScreen::GetDesktopWidthImpl(TObject* owner) { return internal::TScreen_GetDesktopWidth(owner->Handle()); }
+int TScreen::GetDesktopHeightImpl(TObject* owner) { return internal::TScreen_GetDesktopHeight(owner->Handle()); }
+int TScreen::GetWorkAreaLeftImpl(TObject* owner) { return internal::TScreen_GetWorkAreaLeft(owner->Handle()); }
+int TScreen::GetWorkAreaTopImpl(TObject* owner) { return internal::TScreen_GetWorkAreaTop(owner->Handle()); }
+int TScreen::GetWorkAreaWidthImpl(TObject* owner) { return internal::TScreen_GetWorkAreaWidth(owner->Handle()); }
+int TScreen::GetWorkAreaHeightImpl(TObject* owner) { return internal::TScreen_GetWorkAreaHeight(owner->Handle()); }
+int TScreen::GetPixelsPerInchImpl(TObject* owner) { return internal::TScreen_GetPixelsPerInch(owner->Handle()); }
+int TScreen::GetMonitorCountImpl(TObject* owner) { return internal::TScreen_GetMonitorCount(owner->Handle()); }
+int TScreen::GetFormCountImpl(TObject* owner) { return internal::TScreen_GetFormCount(owner->Handle()); }
+
+TRect TScreen::GetWorkAreaRectImpl(TObject* owner)
+{
+    internal::int_t l = 0, t = 0, r = 0, b = 0;
+    internal::TScreen_GetWorkAreaRect(owner->Handle(), &l, &t, &r, &b);
+    return TRect{l, t, r, b};
+}
+
+TForm* TScreen::GetFormsImpl(TObject* owner, int Index)
+{
+    return dynamic_cast<TForm*>(FromHandle(internal::TScreen_GetForms(owner->Handle(), Index)));
+}
+
+TForm* TScreen::GetActiveFormImpl(TObject* owner)
+{
+    return dynamic_cast<TForm*>(FromHandle(internal::TScreen_GetActiveForm(owner->Handle())));
+}
+
+TWinControl* TScreen::GetActiveControlImpl(TObject* owner)
+{
+    return dynamic_cast<TWinControl*>(FromHandle(internal::TScreen_GetActiveControl(owner->Handle())));
+}
+
+TStrings* TScreen::GetFontsImpl(TObject* owner) { return &static_cast<TScreen*>(owner)->fonts_; }
+
+TNotifyEvent TScreen::GetOnActiveFormChangeImpl(TObject* owner) { return static_cast<TScreen*>(owner)->onActiveFormChange_; }
+void TScreen::SetOnActiveFormChangeImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TScreen* self = static_cast<TScreen*>(owner);
+    SetSimpleEvent(self->handle_, self->onActiveFormChange_, self->onActiveFormChangeHooked_, value,
+                   &internal::TScreen_SetOnActiveFormChange, &TScreen::ActiveFormChangeTrampoline);
+}
+
+TNotifyEvent TScreen::GetOnActiveControlChangeImpl(TObject* owner) { return static_cast<TScreen*>(owner)->onActiveControlChange_; }
+void TScreen::SetOnActiveControlChangeImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TScreen* self = static_cast<TScreen*>(owner);
+    SetSimpleEvent(self->handle_, self->onActiveControlChange_, self->onActiveControlChangeHooked_, value,
+                   &internal::TScreen_SetOnActiveControlChange, &TScreen::ActiveControlChangeTrampoline);
+}
+
+void BETH_CALL TScreen::ActiveFormChangeTrampoline(ObjectHandle sender, void*)
+{
+    GuardCallback([&] {
+        TScreen* self = static_cast<TScreen*>(FromHandle(sender));
+        if (!self || !self->onActiveFormChange_)
+            return;
+        TNotifyEvent handler = self->onActiveFormChange_;
+        handler(self);
+    });
+}
+
+void BETH_CALL TScreen::ActiveControlChangeTrampoline(ObjectHandle sender, void*)
+{
+    GuardCallback([&] {
+        TScreen* self = static_cast<TScreen*>(FromHandle(sender));
+        if (!self || !self->onActiveControlChange_)
+            return;
+        TNotifyEvent handler = self->onActiveControlChange_;
+        handler(self);
+    });
+}
+
+TClipboardFormat CF_Text()    { return internal::Clipboard_CF_Text(); }
+TClipboardFormat CF_Bitmap()  { return internal::Clipboard_CF_Bitmap(); }
+TClipboardFormat CF_Picture() { return internal::Clipboard_CF_Picture(); }
+
+// LCL の Clipboard は最初に使うときに作られ、プログラムの終了まで同じもの。
+TClipboard* Clipboard()
+{
+    static TClipboard* clipboard = new TClipboard(internal::GetClipboard());
+    return clipboard;
+}
+
+TClipboard::TClipboard(ObjectHandle handle)
+    : TPersistent(handle)
+    , AsText(this, &TClipboard::GetAsTextImpl, &TClipboard::SetAsTextImpl)
+    , FormatCount(this, &TClipboard::GetFormatCountImpl)
+    , Formats(this, &TClipboard::GetFormatsImpl)
+{}
+
+bool TClipboard::HasFormat(TClipboardFormat Format) const { return internal::TClipboard_HasFormat(handle_, Format) != 0; }
+bool TClipboard::HasPictureFormat() const { return internal::TClipboard_HasPictureFormat(handle_) != 0; }
+void TClipboard::Clear() { internal::TClipboard_Clear(handle_); }
+void TClipboard::Open() { internal::TClipboard_Open(handle_); }
+void TClipboard::Close() { internal::TClipboard_Close(handle_); }
+void TClipboard::Assign(const TPicture* Source)
+{
+    if (Source)
+        internal::TClipboard_Assign(handle_, Source->Handle());
+}
+void TClipboard::Assign(const TGraphic* Source)
+{
+    if (Source)
+        internal::TClipboard_Assign(handle_, Source->Current());
+}
+
+std::string TClipboard::GetAsTextImpl(TObject* owner) { return internal::TClipboard_GetAsText(owner->Handle()); }
+void TClipboard::SetAsTextImpl(TObject* owner, const std::string& value)
+{
+    internal::TClipboard_SetAsText(owner->Handle(), value.c_str());
+}
+int TClipboard::GetFormatCountImpl(TObject* owner) { return internal::TClipboard_GetFormatCount(owner->Handle()); }
+TClipboardFormat TClipboard::GetFormatsImpl(TObject* owner, int Index)
+{
+    return internal::TClipboard_GetFormats(owner->Handle(), Index);
 }
 
 void TApplication::BeginCreateForm()
@@ -3690,6 +3900,11 @@ TGraphic::~TGraphic()
 void TGraphic::LoadFromFile(const std::string& FileName)     { internal::TGraphic_LoadFromFile(Current(), FileName.c_str()); }
 void TGraphic::SaveToFile(const std::string& FileName) const { internal::TGraphic_SaveToFile(Current(), FileName.c_str()); }
 void TGraphic::Assign(const TGraphic* Source)                { internal::TGraphic_Assign(Current(), Source ? Source->Current() : nullptr); }
+void TGraphic::Assign(const TClipboard* Source)
+{
+    if (Source)
+        internal::TGraphic_Assign(Current(), Source->Handle());
+}
 void TGraphic::Clear()                                       { internal::TGraphic_Clear(Current()); }
 
 int  TGraphic::GetWidthImpl(TObject* owner)                   { return internal::TGraphic_GetWidth(static_cast<TGraphic*>(owner)->Current()); }
@@ -3775,6 +3990,8 @@ void TJPEGImage::SetCompressionQualityImpl(TObject* owner, const int& value)
     internal::TJPEGImage_SetCompressionQuality(static_cast<TJPEGImage*>(owner)->Current(), value);
 }
 
+TIcon::TIcon() : TRasterImage(internal::TIcon_Create()) {}
+
 TPicture::TPicture() : TPicture(internal::TPicture_Create(), true) {}
 
 TPicture::TPicture(ObjectHandle handle, bool owns)
@@ -3783,6 +4000,7 @@ TPicture::TPicture(ObjectHandle handle, bool owns)
     , Bitmap(this, &TPicture::GetBitmapImpl, &TPicture::SetBitmapImpl)
     , PNG(this, &TPicture::GetPNGImpl, &TPicture::SetPNGImpl)
     , Jpeg(this, &TPicture::GetJpegImpl, &TPicture::SetJpegImpl)
+    , Icon(this, &TPicture::GetIconImpl, &TPicture::SetIconImpl)
     , Width(this, &TPicture::GetWidthImpl)
     , Height(this, &TPicture::GetHeightImpl)
     , owns_(owns)
@@ -3790,6 +4008,7 @@ TPicture::TPicture(ObjectHandle handle, bool owns)
     , bitmap_(this, &internal::TPicture_GetBitmap)
     , png_(this, &internal::TPicture_GetPNG)
     , jpeg_(this, &internal::TPicture_GetJpeg)
+    , icon_(this, &internal::TPicture_GetIcon)
 {}
 
 TPicture::~TPicture()
@@ -3801,6 +4020,11 @@ TPicture::~TPicture()
 void TPicture::LoadFromFile(const std::string& FileName)     { internal::TPicture_LoadFromFile(handle_, FileName.c_str()); }
 void TPicture::SaveToFile(const std::string& FileName) const { internal::TPicture_SaveToFile(handle_, FileName.c_str()); }
 void TPicture::Assign(const TPicture* Source)                { internal::TPicture_Assign(handle_, Source ? Source->Handle() : nullptr); }
+void TPicture::Assign(const TClipboard* Source)
+{
+    if (Source)
+        internal::TPicture_Assign(handle_, Source->Handle());
+}
 void TPicture::Clear()                                       { internal::TPicture_Clear(handle_); }
 
 // 空の TPicture の Graphic は nullptr(VCL と同じ)。それ以外は、クラスを問わないビューを返す。
@@ -3828,6 +4052,11 @@ TJPEGImage* TPicture::GetJpegImpl(TObject* owner) { return &static_cast<TPicture
 void TPicture::SetJpegImpl(TObject* owner, TJPEGImage* const& value)
 {
     internal::TPicture_SetGraphic(owner->Handle(), value ? value->Current() : nullptr);
+}
+TIcon* TPicture::GetIconImpl(TObject* owner) { return &static_cast<TPicture*>(owner)->icon_; }
+void TPicture::SetIconImpl(TObject* owner, TIcon* const& value)
+{
+    internal::TPicture_SetIcon(owner->Handle(), value ? value->Current() : nullptr);
 }
 int TPicture::GetWidthImpl(TObject* owner)  { return internal::TPicture_GetWidth(owner->Handle()); }
 int TPicture::GetHeightImpl(TObject* owner) { return internal::TPicture_GetHeight(owner->Handle()); }

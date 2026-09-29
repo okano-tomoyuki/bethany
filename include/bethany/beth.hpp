@@ -699,6 +699,7 @@ private:
 };
 
 class TGraphic;
+class TClipboard;
 
 class TCanvas : public TPersistent
 {
@@ -797,6 +798,8 @@ public:
     void SaveToFile(const std::string& FileName) const;
     // Source の内容で置き換える(別のクラスのグラフィックからは画素を写して変換する)。nullptr なら空にする。
     void Assign(const TGraphic* Source);
+    // クリップボードの画像で置き換える(Bitmap1->Assign(Clipboard())。docs/adr/0047)。画像が無ければ何もしない。
+    void Assign(const TClipboard* Source);
     void Clear();
 
     // 現在の中身のハンドル。
@@ -917,6 +920,20 @@ private:
     static void SetCompressionQualityImpl(TObject* owner, const int& value);
 };
 
+// アイコン(.ico。docs/adr/0047)。LCL の TIcon(TCustomIcon の派生)。new TIcon で生成して delete で破棄する(TBitmap と同じ)。
+// Form1->Icon・Application->Icon・Picture->Icon は所有者の中身のビュー。1 つのファイルに大きさの違う画像を複数持てる。
+class TIcon : public TRasterImage
+{
+public:
+    TIcon();
+
+private:
+    friend class TPicture;
+    friend class TCustomForm;
+    friend class TApplication;
+    TIcon(TObject* owner, Accessor accessor) : TRasterImage(owner, accessor) {}
+};
+
 class TCustomImage;
 
 // 形式を問わない画像の入れ物(LCL の TPicture)。Image1->Picture のように画像コントロールが持つもの(コントロールと寿命が一致する)と、
@@ -936,6 +953,7 @@ public:
     Property<TBitmap*>                 Bitmap;
     Property<TPortableNetworkGraphic*> PNG;
     Property<TJPEGImage*>              Jpeg;
+    Property<TIcon*>                   Icon;
     ReadOnlyProperty<int>              Width;
     ReadOnlyProperty<int>              Height;
 
@@ -944,6 +962,8 @@ public:
     void SaveToFile(const std::string& FileName) const;
     // Source の内容で置き換える。nullptr なら空にする。
     void Assign(const TPicture* Source);
+    // クリップボードの画像で置き換える(Image1->Picture->Assign(Clipboard())。docs/adr/0047)。画像が無ければ何もしない。
+    void Assign(const TClipboard* Source);
     void Clear();
 
 private:
@@ -956,6 +976,7 @@ private:
     TBitmap                 bitmap_;
     TPortableNetworkGraphic png_;
     TJPEGImage              jpeg_;
+    TIcon                   icon_;
 
     static TGraphic*                GetGraphicImpl(TObject* owner);
     static void                     SetGraphicImpl(TObject* owner, TGraphic* const& value);
@@ -965,6 +986,8 @@ private:
     static void                     SetPNGImpl(TObject* owner, TPortableNetworkGraphic* const& value);
     static TJPEGImage*              GetJpegImpl(TObject* owner);
     static void                     SetJpegImpl(TObject* owner, TJPEGImage* const& value);
+    static TIcon*                   GetIconImpl(TObject* owner);
+    static void                     SetIconImpl(TObject* owner, TIcon* const& value);
     static int                      GetWidthImpl(TObject* owner);
     static int                      GetHeightImpl(TObject* owner);
 };
@@ -1435,6 +1458,8 @@ using TSelectionChangeEvent = std::function<void(TObject* Sender, bool User)>;
 using TIdleEvent = std::function<void(TObject* Sender, bool& Done)>;
 // Application->OnException。ハンドラから送出された例外(E.ClassName()・E.Message)。
 using TExceptionEvent = std::function<void(TObject* Sender, const Exception& E)>;
+// フォームにファイルをドロップしたとき(docs/adr/0047)。FileNames はフルパス(UTF-8)。
+using TDropFilesEvent = std::function<void(TObject* Sender, const std::vector<std::string>& FileNames)>;
 
 // ---- テキストの表示・入力(docs/adr/0042。値の順は LCL と同じ) ----
 
@@ -1971,6 +1996,14 @@ public:
     // フォーカスを持つ(表示したときに持たせる)コントロール。
     Property<TWinControl*>     ActiveControl;
 
+    // ---- docs/adr/0047 ----
+    // タイトルバー・タスクバーのアイコン。空なら Application->Icon を使う。代入は内容のコピー(nullptr なら空にする)。
+    Property<TIcon*>           Icon;
+    // true なら、エクスプローラー等からファイルをドロップできる(ドロップすると OnDropFiles が呼ばれる)。
+    Property<bool>             AllowDropFiles;
+    // ファイルをドロップしたとき。FileNames はフルパス(UTF-8)。
+    Property<TDropFilesEvent>  OnDropFiles;
+
 protected:
     explicit TCustomForm(ObjectHandle handle);
     ~TCustomForm() override = default;
@@ -2021,6 +2054,17 @@ private:
     static void             SetKeyPreviewImpl(TObject* owner, const bool& value);
     static TWinControl*     GetActiveControlImpl(TObject* owner);
     static void             SetActiveControlImpl(TObject* owner, TWinControl* const& value);
+
+    TIcon                   icon_;
+    TDropFilesEvent         onDropFiles_;
+    bool                    onDropFilesHooked_ = false;
+    static TIcon*           GetIconImpl(TObject* owner);
+    static void             SetIconImpl(TObject* owner, TIcon* const& value);
+    static bool             GetAllowDropFilesImpl(TObject* owner);
+    static void             SetAllowDropFilesImpl(TObject* owner, const bool& value);
+    static TDropFilesEvent  GetOnDropFilesImpl(TObject* owner);
+    static void             SetOnDropFilesImpl(TObject* owner, const TDropFilesEvent& value);
+    static void BETH_CALL   DropFilesTrampoline(ObjectHandle sender, internal::int_t count, internal::str_t* fileNames, void* data);
 
     static TNotifyEvent     GetOnCreateImpl(TObject* owner);
     static void             SetOnCreateImpl(TObject* owner, const TNotifyEvent& value);
@@ -2087,6 +2131,8 @@ public:
     Property<TIdleEvent> OnIdle;
     // イベントのハンドラから送出された例外を、既定のエラーのダイアログの代わりに受ける(docs/adr/0031)。
     Property<TExceptionEvent> OnException;
+    // アプリケーションのアイコン(docs/adr/0047)。Icon が空のフォームは、これを使う。代入は内容のコピー。
+    Property<TIcon*> Icon;
 
     // CreateForm で最初に生成したフォーム。Run はこれを表示し、これが閉じられると戻る。
     ReadOnlyProperty<TForm*> MainForm;
@@ -2156,11 +2202,141 @@ private:
     static void BETH_CALL ExceptionTrampoline(ObjectHandle sender, internal::str_t className, internal::str_t message, void* data);
     static TExceptionEvent GetOnExceptionImpl(TObject* owner);
     static void SetOnExceptionImpl(TObject* owner, const TExceptionEvent& value);
+    TIcon icon_;
+    static TIcon* GetIconImpl(TObject* owner);
+    static void SetIconImpl(TObject* owner, TIcon* const& value);
 };
 
 // C++Builder と同じく、アプリケーションに 1 つのグローバル変数として公開する。
 // 静的初期化の順序は規定されないため、他の翻訳単位のグローバル変数の初期化子からは使わないこと。
 extern TApplication* Application;
+
+// ---- Screen・Clipboard(docs/adr/0047) ----
+
+// 画面(LCL の TScreen)。インスタンスはグローバル変数 Screen の 1 つだけ(LCL が持つもので、破棄しない)。
+class TScreen : public TComponent
+{
+public:
+    // crDefault 以外にすると、すべてのコントロールの上でそのカーソルになる(処理の間の crHourGlass 等。crDefault で戻す)。
+    Property<TCursor> Cursor;
+    // 主モニタの大きさ。
+    ReadOnlyProperty<int> Width;
+    ReadOnlyProperty<int> Height;
+    // すべてのモニタを合わせた範囲。
+    ReadOnlyProperty<int> DesktopLeft;
+    ReadOnlyProperty<int> DesktopTop;
+    ReadOnlyProperty<int> DesktopWidth;
+    ReadOnlyProperty<int> DesktopHeight;
+    // 主モニタの、タスクバーを除いた範囲。
+    ReadOnlyProperty<int>   WorkAreaLeft;
+    ReadOnlyProperty<int>   WorkAreaTop;
+    ReadOnlyProperty<int>   WorkAreaWidth;
+    ReadOnlyProperty<int>   WorkAreaHeight;
+    ReadOnlyProperty<TRect> WorkAreaRect;
+    // 画面の解像度(96 が 100%)。
+    ReadOnlyProperty<int> PixelsPerInch;
+    ReadOnlyProperty<int> MonitorCount;
+    // 開いている(生成済みの)フォーム(TForm の派生だけ)。プログラムが作ったものでないフォーム(MessageDlg のダイアログ等)は nullptr。
+    ReadOnlyProperty<int>                FormCount;
+    ReadOnlyIndexedProperty<TForm*>      Forms;
+    // アクティブなフォーム・フォーカスを持つコントロール(無いとき・プログラムが作ったものでないときは nullptr)。
+    ReadOnlyProperty<TForm*>       ActiveForm;
+    ReadOnlyProperty<TWinControl*> ActiveControl;
+    // インストールされているフォントの名前。
+    ReadOnlyProperty<TStrings*> Fonts;
+    // アクティブなフォーム・フォーカスを持つコントロールが変わったとき(Sender は Screen)。
+    Property<TNotifyEvent> OnActiveFormChange;
+    Property<TNotifyEvent> OnActiveControlChange;
+
+protected:
+    ~TScreen() override = default;
+
+private:
+    friend TScreen* NewScreen();
+    explicit TScreen(ObjectHandle handle);
+
+    TStrings     fonts_;
+    TNotifyEvent onActiveFormChange_;
+    TNotifyEvent onActiveControlChange_;
+    bool         onActiveFormChangeHooked_ = false;
+    bool         onActiveControlChangeHooked_ = false;
+
+    static TCursor      GetCursorImpl(TObject* owner);
+    static void         SetCursorImpl(TObject* owner, const TCursor& value);
+    static int          GetWidthImpl(TObject* owner);
+    static int          GetHeightImpl(TObject* owner);
+    static int          GetDesktopLeftImpl(TObject* owner);
+    static int          GetDesktopTopImpl(TObject* owner);
+    static int          GetDesktopWidthImpl(TObject* owner);
+    static int          GetDesktopHeightImpl(TObject* owner);
+    static int          GetWorkAreaLeftImpl(TObject* owner);
+    static int          GetWorkAreaTopImpl(TObject* owner);
+    static int          GetWorkAreaWidthImpl(TObject* owner);
+    static int          GetWorkAreaHeightImpl(TObject* owner);
+    static TRect        GetWorkAreaRectImpl(TObject* owner);
+    static int          GetPixelsPerInchImpl(TObject* owner);
+    static int          GetMonitorCountImpl(TObject* owner);
+    static int          GetFormCountImpl(TObject* owner);
+    static TForm*       GetFormsImpl(TObject* owner, int Index);
+    static TForm*       GetActiveFormImpl(TObject* owner);
+    static TWinControl* GetActiveControlImpl(TObject* owner);
+    static TStrings*    GetFontsImpl(TObject* owner);
+    static TNotifyEvent GetOnActiveFormChangeImpl(TObject* owner);
+    static void         SetOnActiveFormChangeImpl(TObject* owner, const TNotifyEvent& value);
+    static TNotifyEvent GetOnActiveControlChangeImpl(TObject* owner);
+    static void         SetOnActiveControlChangeImpl(TObject* owner, const TNotifyEvent& value);
+    static void BETH_CALL ActiveFormChangeTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL ActiveControlChangeTrampoline(ObjectHandle sender, void* data);
+};
+
+// Application と同じく、グローバル変数として公開する。
+extern TScreen* Screen;
+
+// クリップボードの形式(Windows の形式の番号)。LCL の値は実行時に決まるため、CF_Text() 等の関数で得る。
+using TClipboardFormat = std::uint32_t;
+// 文字列(Windows では CF_UNICODETEXT)。
+TClipboardFormat CF_Text();
+// ビットマップ(Windows の CF_BITMAP)。
+TClipboardFormat CF_Bitmap();
+// LCL が読み込める画像の形式のどれか(HasFormat(CF_Picture()) は HasPictureFormat() と同じ)。
+TClipboardFormat CF_Picture();
+
+// クリップボード(LCL の TClipboard)。Clipboard() で得る 1 つだけで、利用者は破棄しない。
+// 画像を置くのは Clipboard()->Assign(Image1->Picture)、読むのは Image1->Picture->Assign(Clipboard())。
+class TClipboard : public TPersistent
+{
+public:
+    // クリップボードの文字列(UTF-8)。文字列が無ければ空文字列。代入するとクリップボードの内容を置き換える。
+    Property<std::string> AsText;
+    // 今の内容が持つ形式の数と番号。
+    ReadOnlyProperty<int>                        FormatCount;
+    ReadOnlyIndexedProperty<TClipboardFormat>    Formats;
+
+    // その形式の内容があるか(Clipboard()->HasFormat(CF_Text()))。
+    bool HasFormat(TClipboardFormat Format) const;
+    // 画像(読み込める形式のどれか)があるか。
+    bool HasPictureFormat() const;
+    // 内容を消す。
+    void Clear();
+    // Open から Close までの間に置いた内容(AsText と画像等)を、1 度にまとめて置く。
+    void Open();
+    void Close();
+    // 画像をクリップボードに置く(内容を置き換える)。Source が nullptr なら何もしない。
+    void Assign(const TPicture* Source);
+    void Assign(const TGraphic* Source);
+
+private:
+    friend TClipboard* Clipboard();
+    explicit TClipboard(ObjectHandle handle);
+
+    static std::string      GetAsTextImpl(TObject* owner);
+    static void             SetAsTextImpl(TObject* owner, const std::string& value);
+    static int              GetFormatCountImpl(TObject* owner);
+    static TClipboardFormat GetFormatsImpl(TObject* owner, int Index);
+};
+
+// クリップボード(C++Builder と同じく関数)。
+TClipboard* Clipboard();
 
 // ---- メッセージのダイアログ(docs/adr/0041。LCL の Dialogs ユニットの関数) ----
 

@@ -61,6 +61,7 @@ export const EXPECTED_CALLS = [
   'OkButtonClick',
   'Timer1Timer',
   'FormCloseQuery',
+  'FormDropFiles',
 ];
 
 /** 参照・入れ子のオブジェクト・TStrings・メニュー等(検証のプログラムが読んだ値) */
@@ -76,6 +77,8 @@ export const EXPECTED_CHECKS: Readonly<Record<string, string>> = {
   menuCounts: '1/4/1',
   // Action(docs/adr/0046): Action を割り当てた項目の Caption/ShortCut/ActionList の Action の数
   actionLink: '&Save/Ctrl+S/1',
+  // ファイルのドロップ(docs/adr/0047)
+  allowDropFiles: '1',
   dialogOptions: String((1 << 20) | (1 << 23) | (1 << 9)),
   timer: '0/500',
   caption: 'Sample',

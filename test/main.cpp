@@ -2572,6 +2572,35 @@ int main()
                     std::string(demoButton->Caption).c_str(), ShortCutToText(demoItem->ShortCut).c_str());
     }
 
+    // Screen・Clipboard・アイコン・ファイルのドロップ(docs/adr/0047)
+    {
+        TRect wa = Screen->WorkAreaRect;
+        std::printf("Screen %dx%d, work area (%d,%d)-(%d,%d), %d dpi, %d fonts, %d forms\n", int(Screen->Width),
+                    int(Screen->Height), wa.Left, wa.Top, wa.Right, wa.Bottom, int(Screen->PixelsPerInch),
+                    int(Screen->Fonts->Count), int(Screen->FormCount));
+        // 青い丸のアイコンを描いて、アプリケーションのアイコンにする(タイトルバーとタスクバーに出る)
+        TBitmap* bmp = new TBitmap;
+        bmp->SetSize(32, 32);
+        bmp->Canvas->Brush.Color = clWhite;
+        bmp->Canvas->FillRect(TRect{0, 0, 32, 32});
+        bmp->Canvas->Brush.Color = clBlue;
+        bmp->Canvas->Ellipse(2, 2, 30, 30);
+        TIcon* icon = new TIcon;
+        icon->Assign(bmp);
+        Application->Icon = icon;
+        delete icon;
+        delete bmp;
+        // エクスプローラーからファイルをドロップすると、名前を表示し、最初の名前をクリップボードに置く
+        Form1->AllowDropFiles = true;
+        Form1->OnDropFiles = [](TObject*, const std::vector<std::string>& FileNames) {
+            for (const std::string& name : FileNames)
+                std::printf("dropped: %s\n", name.c_str());
+            Clipboard()->AsText = FileNames.front();
+            std::printf("clipboard: %s (HasFormat(CF_Text())=%s)\n", std::string(Clipboard()->AsText).c_str(),
+                        Clipboard()->HasFormat(CF_Text()) ? "true" : "false");
+        };
+    }
+
     // ステータスバーのパネル(docs/adr/0044)。StatusBar1 の上に、パネルを持つ 2 つ目のステータスバーを置く。
     {
         TStatusBar* panelBar = new TStatusBar(Form1);

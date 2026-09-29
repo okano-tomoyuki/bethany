@@ -34,7 +34,8 @@ uses
   Dialogs,
   ImgList,
   CustomTimer,
-  ActnList
+  ActnList,
+  Clipbrd
   {$ifdef LCLwin32}
   , Windows, InterfaceBase, WSControls
   {$endif};
@@ -13850,6 +13851,524 @@ begin
   end;
 end;
 
+{ ---------------- Screen・Clipboard・アイコン・ファイルのドロップ(docs/adr/0047) ----------------
+  Screen(Forms.Screen)と Clipboard(Clipbrd.Clipboard)は LCL が持つもので、利用者は破棄しない。
+  Windows ユニットの CF_TEXT 等(定数)と名前が重なるため、Clipbrd の関数は Clipbrd. で修飾する。 }
+
+type
+  { TCustomForm.OnDropFiles(TDropFilesEvent)用。ファイル名の数と UTF-8 の文字列の配列を渡す(呼び出しの間だけ有効)。 }
+  TBethDropFilesCallback = procedure(Sender: Pointer; Count: Integer; FileNames: PPChar; Data: Pointer); BETH_CALL;
+
+  TDropFilesBridge = class(TComponent)
+  private
+    FCallback: TBethDropFilesCallback;
+    FData: Pointer;
+  public
+    procedure DoDropFiles(Sender: TObject; const FileNames: array of AnsiString);
+  end;
+
+procedure TDropFilesBridge.DoDropFiles(Sender: TObject; const FileNames: array of AnsiString);
+var
+  Names: array of PChar;
+  I: Integer;
+begin
+  if not Assigned(FCallback) or GDetaching then
+    Exit;
+  Names := nil;
+  SetLength(Names, Length(FileNames) + 1);
+  for I := 0 to High(FileNames) do
+    Names[I] := PChar(FileNames[I]);
+  Names[Length(FileNames)] := nil;
+  FCallback(Pointer(Sender), Length(FileNames), @Names[0], FData);
+  CheckCallbackError;
+end;
+
+function DropFilesBridgeFor(Owner: TComponent; Current: Pointer; Cb: TBethDropFilesCallback; Data: Pointer): TDropFilesBridge;
+begin
+  if (Current <> nil) and (TObject(Current) is TDropFilesBridge) and (TDropFilesBridge(Current).Owner = Owner) then
+    Result := TDropFilesBridge(Current)
+  else
+    Result := TDropFilesBridge.Create(Owner);
+  Result.FCallback := Cb;
+  Result.FData := Data;
+end;
+
+function MethodData(const M: TDropFilesEvent): Pointer; overload;
+begin
+  Result := TMethod(M).Data;
+end;
+
+{ TScreen }
+
+function GetScreen: Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(Screen);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+function TScreen_GetCursor(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TScreen(Obj).Cursor;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TScreen_SetCursor(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TScreen(Obj).Cursor := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TScreen_GetWidth(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TScreen(Obj).Width;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function TScreen_GetHeight(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TScreen(Obj).Height;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function TScreen_GetDesktopLeft(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TScreen(Obj).DesktopLeft;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function TScreen_GetDesktopTop(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TScreen(Obj).DesktopTop;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function TScreen_GetDesktopWidth(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TScreen(Obj).DesktopWidth;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function TScreen_GetDesktopHeight(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TScreen(Obj).DesktopHeight;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function TScreen_GetWorkAreaLeft(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TScreen(Obj).WorkAreaLeft;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function TScreen_GetWorkAreaTop(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TScreen(Obj).WorkAreaTop;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function TScreen_GetWorkAreaWidth(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TScreen(Obj).WorkAreaWidth;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function TScreen_GetWorkAreaHeight(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TScreen(Obj).WorkAreaHeight;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function TScreen_GetPixelsPerInch(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TScreen(Obj).PixelsPerInch;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function TScreen_GetMonitorCount(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TScreen(Obj).MonitorCount;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function TScreen_GetFormCount(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TScreen(Obj).FormCount;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TScreen_GetWorkAreaRect(Obj: Pointer; Left, Top, Right, Bottom: PInteger); BETH_CALL;
+var
+  R: TRect;
+begin
+  try
+    R := TScreen(Obj).WorkAreaRect;
+    Left^ := R.Left;
+    Top^ := R.Top;
+    Right^ := R.Right;
+    Bottom^ := R.Bottom;
+  except
+    ReportException;
+  end;
+end;
+
+function TScreen_GetForms(Obj: Pointer; Index: Integer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TScreen(Obj).Forms[Index]);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+function TScreen_GetActiveForm(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TScreen(Obj).ActiveForm);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+function TScreen_GetActiveControl(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TScreen(Obj).ActiveControl);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+function TScreen_GetFonts(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TScreen(Obj).Fonts);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TScreen_SetOnActiveFormChange(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TScreen(Obj).OnActiveFormChange := @BridgeFor(TComponent(Obj), MethodData(TScreen(Obj).OnActiveFormChange), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TScreen_SetOnActiveControlChange(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TScreen(Obj).OnActiveControlChange := @BridgeFor(TComponent(Obj), MethodData(TScreen(Obj).OnActiveControlChange), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
+end;
+
+{ TClipboard }
+
+function GetClipboard: Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(Clipbrd.Clipboard);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+function Clipboard_CF_Text: Cardinal; BETH_CALL;
+begin
+  try
+    Result := Cardinal(Clipbrd.CF_Text);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function Clipboard_CF_Bitmap: Cardinal; BETH_CALL;
+begin
+  try
+    Result := Cardinal(Clipbrd.CF_Bitmap);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function Clipboard_CF_Picture: Cardinal; BETH_CALL;
+begin
+  try
+    Result := Cardinal(Clipbrd.CF_Picture);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function TClipboard_GetAsText(Obj: Pointer): PChar; BETH_CALL;
+begin
+  try
+    Result := ReturnStr(TClipboard(Obj).AsText);
+  except
+    Result := '';
+    ReportException;
+  end;
+end;
+
+procedure TClipboard_SetAsText(Obj: Pointer; Value: PChar); BETH_CALL;
+begin
+  try
+    TClipboard(Obj).AsText := AnsiString(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TClipboard_HasFormat(Obj: Pointer; Format: Cardinal): LongBool; BETH_CALL;
+begin
+  try
+    Result := TClipboard(Obj).HasFormat(PtrUInt(Format));
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+function TClipboard_HasPictureFormat(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TClipboard(Obj).HasPictureFormat;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TClipboard_Clear(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TClipboard(Obj).Clear;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TClipboard_Open(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TClipboard(Obj).Open;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TClipboard_Close(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TClipboard(Obj).Close;
+  except
+    ReportException;
+  end;
+end;
+
+function TClipboard_GetFormatCount(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TClipboard(Obj).FormatCount;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function TClipboard_GetFormats(Obj: Pointer; Index: Integer): Cardinal; BETH_CALL;
+begin
+  try
+    Result := Cardinal(TClipboard(Obj).Formats[Index]);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TClipboard_Assign(Obj: Pointer; Source: Pointer); BETH_CALL;
+begin
+  try
+    if Source <> nil then
+      TClipboard(Obj).Assign(TPersistent(Source));
+  except
+    ReportException;
+  end;
+end;
+
+{ TIcon }
+
+function TIcon_Create: Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(Graphics.TIcon.Create);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+function TCustomForm_GetIcon(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TCustomForm(Obj).Icon);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TCustomForm_SetIcon(Obj: Pointer; Value: Pointer); BETH_CALL;
+begin
+  try
+    TCustomForm(Obj).Icon := Graphics.TIcon(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TApplication_GetIcon(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TApplication(Obj).Icon);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TApplication_SetIcon(Obj: Pointer; Value: Pointer); BETH_CALL;
+begin
+  try
+    TApplication(Obj).Icon := Graphics.TIcon(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TPicture_GetIcon(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TPicture(Obj).Icon);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TPicture_SetIcon(Obj: Pointer; Value: Pointer); BETH_CALL;
+begin
+  try
+    TPicture(Obj).Icon := Graphics.TIcon(Value);
+  except
+    ReportException;
+  end;
+end;
+
+{ TCustomForm のファイルのドロップ }
+
+function TCustomForm_GetAllowDropFiles(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomForm(Obj).AllowDropFiles;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomForm_SetAllowDropFiles(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomForm(Obj).AllowDropFiles := Value;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomForm_SetOnDropFiles(Obj: Pointer; Cb: TBethDropFilesCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TCustomForm(Obj).OnDropFiles := @DropFilesBridgeFor(TComponent(Obj), MethodData(TCustomForm(Obj).OnDropFiles), Cb, Data).DoDropFiles;
+  except
+    ReportException;
+  end;
+end;
+
 exports
   FreeNotify_SetCallback,
   Error_SetCallback,
@@ -15171,7 +15690,54 @@ exports
   TControl_GetAction,
   TControl_SetAction,
   TMenuItem_GetAction,
-  TMenuItem_SetAction;
+  TMenuItem_SetAction,
+  GetScreen,
+  TScreen_GetCursor,
+  TScreen_SetCursor,
+  TScreen_GetWidth,
+  TScreen_GetHeight,
+  TScreen_GetDesktopLeft,
+  TScreen_GetDesktopTop,
+  TScreen_GetDesktopWidth,
+  TScreen_GetDesktopHeight,
+  TScreen_GetWorkAreaLeft,
+  TScreen_GetWorkAreaTop,
+  TScreen_GetWorkAreaWidth,
+  TScreen_GetWorkAreaHeight,
+  TScreen_GetPixelsPerInch,
+  TScreen_GetMonitorCount,
+  TScreen_GetFormCount,
+  TScreen_GetWorkAreaRect,
+  TScreen_GetForms,
+  TScreen_GetActiveForm,
+  TScreen_GetActiveControl,
+  TScreen_GetFonts,
+  TScreen_SetOnActiveFormChange,
+  TScreen_SetOnActiveControlChange,
+  GetClipboard,
+  Clipboard_CF_Text,
+  Clipboard_CF_Bitmap,
+  Clipboard_CF_Picture,
+  TClipboard_GetAsText,
+  TClipboard_SetAsText,
+  TClipboard_HasFormat,
+  TClipboard_HasPictureFormat,
+  TClipboard_Clear,
+  TClipboard_Open,
+  TClipboard_Close,
+  TClipboard_GetFormatCount,
+  TClipboard_GetFormats,
+  TClipboard_Assign,
+  TIcon_Create,
+  TCustomForm_GetIcon,
+  TCustomForm_SetIcon,
+  TApplication_GetIcon,
+  TApplication_SetIcon,
+  TPicture_GetIcon,
+  TPicture_SetIcon,
+  TCustomForm_GetAllowDropFiles,
+  TCustomForm_SetAllowDropFiles,
+  TCustomForm_SetOnDropFiles;
 
 begin
   RequireDerivedFormResource := False;

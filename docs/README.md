@@ -67,6 +67,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0044](adr/0044-statusbar-panels-and-designer-collections.md) | ステータスバーのパネルと、デザイナーのコレクション(Tier B の B1) | 承認 |
 | [0045](adr/0045-custom-control-canvas-and-drawing.md) | フォーム・パネルへの描画と Canvas の描画の関数(Tier B の B5・B6) | 承認 |
 | [0046](adr/0046-actions.md) | Action(Tier B の B4) | 承認 |
+| [0047](adr/0047-screen-clipboard-icon-drop-files.md) | Screen・Clipboard・アイコン・ファイルのドロップ(Tier B の B2・B3・B15・B16) | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。

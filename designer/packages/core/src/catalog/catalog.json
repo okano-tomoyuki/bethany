@@ -3,6 +3,7 @@
     "Action",
     "ActiveControl",
     "Align",
+    "AllowDropFiles",
     "Anchors",
     "AutoSize",
     "BorderIcons",
@@ -29,6 +30,7 @@
     "Height",
     "Hide",
     "Hint",
+    "Icon",
     "Invalidate",
     "KeyPreview",
     "Left",
@@ -42,6 +44,7 @@
     "OnDblClick",
     "OnDeactivate",
     "OnDestroy",
+    "OnDropFiles",
     "OnEnter",
     "OnExit",
     "OnHide",
@@ -2178,6 +2181,14 @@
           "declaredIn": "TCustomForm",
           "default": null,
           "doc": "フォーカスを持つ(表示したときに持たせる)コントロール。"
+        },
+        "AllowDropFiles": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomForm",
+          "default": false,
+          "doc": "true なら、エクスプローラー等からファイルをドロップできる(ドロップすると OnDropFiles が呼ばれる)。"
         }
       },
       "events": {
@@ -2277,6 +2288,11 @@
           "type": "TNotifyEvent",
           "declaredIn": "TCustomForm",
           "doc": "破棄の最初に呼ばれる(子コントロールはまだ有効)。このあとラッパーも delete される。"
+        },
+        "OnDropFiles": {
+          "type": "TDropFilesEvent",
+          "declaredIn": "TCustomForm",
+          "doc": "ファイルをドロップしたとき。FileNames はフルパス(UTF-8)。"
         }
       }
     },
@@ -17016,7 +17032,8 @@
       "mrNoToAll": 9,
       "mrYesToAll": 10,
       "mrClose": 11
-    }
+    },
+    "TClipboardFormat": {}
   },
   "eventTypes": {
     "TNotifyEvent": [
@@ -17163,6 +17180,16 @@
       {
         "name": "E",
         "type": "const Exception&"
+      }
+    ],
+    "TDropFilesEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "FileNames",
+        "type": "const std::vector<std::string>&"
       }
     ],
     "TTabChangingEvent": [

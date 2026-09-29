@@ -2078,6 +2078,31 @@ def main():
     pr(f"demoButton Caption={demo_button.Caption}, demoItem ShortCut={ShortCutToText(demo_item.ShortCut)} "
        f"(expected &Action demo, Ctrl+K)")
 
+    # Screen・Clipboard・アイコン・ファイルのドロップ(docs/adr/0047)
+    wa = Screen.WorkAreaRect
+    pr(f"Screen {Screen.Width}x{Screen.Height}, work area ({wa.Left},{wa.Top})-({wa.Right},{wa.Bottom}), "
+       f"{Screen.PixelsPerInch} dpi, {Screen.Fonts.Count} fonts, {Screen.FormCount} forms")
+    # 青い丸のアイコンを描いて、アプリケーションのアイコンにする(タイトルバーとタスクバーに出る)
+    bmp = TBitmap()
+    bmp.SetSize(32, 32)
+    bmp.Canvas.Brush.Color = clWhite
+    bmp.Canvas.FillRect(TRect(0, 0, 32, 32))
+    bmp.Canvas.Brush.Color = clBlue
+    bmp.Canvas.Ellipse(2, 2, 30, 30)
+    icon = TIcon()
+    icon.Assign(bmp)
+    Application.Icon = icon
+
+    # エクスプローラーからファイルをドロップすると、名前を表示し、最初の名前をクリップボードに置く
+    def form_drop_files(Sender, FileNames):
+        for name in FileNames:
+            pr(f"dropped: {name}")
+        Clipboard().AsText = FileNames[0]
+        pr(f"clipboard: {Clipboard().AsText} (HasFormat(CF_Text())={Clipboard().HasFormat(CF_Text())})")
+
+    Form1.AllowDropFiles = True
+    Form1.OnDropFiles = form_drop_files
+
     # ステータスバーのパネル(docs/adr/0044)。StatusBar1 の上に、パネルを持つ 2 つ目のステータスバーを置く。
     panel_bar = TStatusBar(Form1)
     panel_bar.Parent = Form1

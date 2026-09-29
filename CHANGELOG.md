@@ -34,6 +34,11 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
   `TPen` の `Style`・`Mode`、`TBrush` の `Style`、`TFont` の `Height`・`Orientation`・`Quality`
 - Action: `TActionList`・`TAction`(`Caption`・`Enabled`・`Checked`・`ShortCut`・`ImageIndex`・`Category`・`OnExecute`・`OnUpdate`・`Execute()` 等)と、
   コントロール・メニュー項目の `Action`([ADR 0046](docs/adr/0046-actions.md))
+- `Screen`(`TScreen`: `Cursor`・`Width`・`Height`・`Desktop…`・`WorkArea…`・`PixelsPerInch`・`MonitorCount`・`Forms[i]`・`FormCount`・`ActiveForm`・
+  `ActiveControl`・`Fonts`・`OnActiveFormChange`・`OnActiveControlChange`)と `Clipboard()`(`TClipboard`: `AsText`・`HasFormat`・`HasPictureFormat`・
+  `Clear`・`Open`・`Close`・`Formats[i]`・画像の `Assign`、`CF_Text()` 等)。クリップボードの画像は `Image1->Picture->Assign(Clipboard())` で読む
+  ([ADR 0047](docs/adr/0047-screen-clipboard-icon-drop-files.md))
+- アイコン(`TIcon`)と、フォーム・`Application`・`TPicture` の `Icon`、フォームのファイルのドロップ(`AllowDropFiles`・`OnDropFiles`)
 
 ### 変更
 

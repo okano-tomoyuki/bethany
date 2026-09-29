@@ -7,9 +7,14 @@
       "Width": 400,
       "Height": 300,
       "Caption": "Sample",
-      "Menu": "MainMenu1"
+      "Menu": "MainMenu1",
+      "AllowDropFiles": true
     },
-    "events": { "OnCreate": "FormCreate", "OnCloseQuery": "FormCloseQuery" },
+    "events": {
+      "OnCreate": "FormCreate",
+      "OnCloseQuery": "FormCloseQuery",
+      "OnDropFiles": "FormDropFiles"
+    },
     "controls": [
       {
         "name": "NameEdit",

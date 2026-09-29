@@ -224,7 +224,7 @@ def parse_hpp():
         if m:
             model.flags[m.group(1)] = []
             continue
-        m = re.fullmatch(r"using (\w+) = (?:std::int32_t|unsigned short)", t)
+        m = re.fullmatch(r"using (\w+) = (?:std::int32_t|std::uint32_t|unsigned short)", t)
         if m:
             model.int_aliases[m.group(1)] = []
             continue
@@ -368,6 +368,9 @@ class Gen:
         if t == "const Exception&":
             # 例外(Application->OnException)。DLL はクラス名とメッセージの 2 つの文字列で渡す
             return "_a_exception"
+        if t == "const std::vector<std::string>&":
+            # 文字列の配列(OnDropFiles の FileNames)。DLL は数と文字列の配列で渡す
+            return "_a_strings"
         if t.startswith("const ") and t.endswith("&"):
             # 読み取り専用の参照(OnDrawPanel の const TRect& 等)は値と同じに渡す
             t = t[len("const "):-1].strip()
@@ -419,7 +422,8 @@ class Gen:
 
     def public_names(self):
         names = ["BethError", "Ref", "TRect", "TPoint", "TObject", "TPersistent", "TComponent",
-                 "ShortCut", "TextToShortCut", "ShortCutToText", "Application",
+                 "ShortCut", "TextToShortCut", "ShortCutToText", "Application", "Screen", "Clipboard",
+                 "CF_Text", "CF_Bitmap", "CF_Picture",
                  "ShowMessage", "MessageDlg", "InputBox", "PasswordBox", "InputQuery"]
         names += MESSAGE_BOX_CONSTANTS
         for e, items in self.m.enums.items():
@@ -618,7 +622,7 @@ class Gen:
             if a is None:
                 self.err(f"{cls}.{name}: イベントの引数 {t} を変換できない")
                 return
-            n += 4 if a == "_a_rect" else 2 if a == "_a_exception" else 1
+            n += 4 if a == "_a_rect" else 2 if a in ("_a_exception", "_a_strings") else 1
         if n != raw:
             self.err(f"{cls}.{name}: {ev} の引数({n})と {cb} の引数({raw})が合わない")
 
@@ -768,7 +772,7 @@ import ctypes
 import enum
 
 from ._core import (BethError, Ref, TRect, TPoint, TObject, TPersistent, TComponent,
-                   ShortCut, TextToShortCut, ShortCutToText,
+                   ShortCut, TextToShortCut, ShortCutToText, Clipboard, CF_Text, CF_Bitmap, CF_Picture,
                    ShowMessage, MessageDlg, InputBox, PasswordBox, InputQuery,
                    MB_OK, MB_OKCANCEL, MB_ABORTRETRYIGNORE, MB_YESNOCANCEL, MB_YESNO, MB_RETRYCANCEL,
                    MB_ICONERROR, MB_ICONQUESTION, MB_ICONWARNING, MB_ICONINFORMATION,
@@ -777,7 +781,7 @@ from ._core import (BethError, Ref, TRect, TPoint, TObject, TPersistent, TCompon
 from ._core import (lib, _mixins, _register, _event_types, _ItemMixin, _Prop, _Indexed, _Event,
                    _int, _float, _bool, _str, _char, _ptr, _rect_conv, _point_conv, _enum, _set, _comp, _existing, _item, _obj, _view,
                    _str_key, _enc, _dec, _h, _b, _rect, _point, _to_enum, _to_comp, _to_existing, _to_item, _to_obj,
-                   _a_int, _a_bool, _a_rect, _a_exception, _a_enum, _a_comp, _a_item, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_enum)
+                   _a_int, _a_bool, _a_rect, _a_exception, _a_strings, _a_enum, _a_comp, _a_item, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_enum)
 '''
 
 FOOTER = '''\
@@ -785,6 +789,8 @@ _register(globals())
 
 # C++Builder と同じく、アプリケーションに 1 つのグローバル変数として公開する。
 Application = TApplication._global()
+# 画面(LCL の Screen)。Application と同じく 1 つだけ(docs/adr/0047)。
+Screen = TScreen._wrap_existing(lib.GetScreen())
 
 __all__ = [
 {names}

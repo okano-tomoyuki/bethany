@@ -203,7 +203,12 @@ describe('削除', () => {
       type: 'setProperties',
       changes: [{ node: 'MainForm', path: ['Caption'], value: undefined }],
     });
-    expect(Object.keys(doc.form.properties ?? {})).toEqual(['Width', 'Height', 'Menu']);
+    expect(Object.keys(doc.form.properties ?? {})).toEqual([
+      'Width',
+      'Height',
+      'Menu',
+      'AllowDropFiles',
+    ]);
   });
 
   it('親と子を同時に指定してもよい。フォームは削除できない', () => {

@@ -100,6 +100,7 @@ checks["shortCut"] = ShortCutToText(f.FileOpenItem.ShortCut)
 checks["menuCounts"] = f"{f.MainMenu1.Items.Count}/{f.FileMenu.Count}/{f.PopupMenu1.Items.Count}"
 checks["dialogOptions"] = str(int(f.OpenDialog1.Options))
 checks["actionLink"] = f"{f.FileSaveItem.Caption}/{ShortCutToText(f.FileSaveItem.ShortCut)}/{f.ActionList1.ActionCount}"
+checks["allowDropFiles"] = str(int(f.AllowDropFiles))
 checks["timer"] = f"{int(f.Timer1.Enabled)}/{f.Timer1.Interval}"
 checks["caption"] = f.Caption
 checks["spinValue"] = str(f.SizeSpin.Value)
@@ -121,6 +122,7 @@ f.ClearItem.Click()
 # TButton・TTimer はプログラムから発生させる手段が無いので、接続されたハンドラを呼ぶ
 f.OkButton.OnClick(f.OkButton)
 f.Timer1.OnTimer(f.Timer1)
+f.OnDropFiles(f, ["C:/temp/a.txt"])
 f.Close()
 for _ in range(5):
     Application.ProcessMessages()

@@ -351,6 +351,8 @@ _a_bool = _Arg(lambda raws: raws[0] != 0)
 _a_rect = _Arg(lambda raws: TRect(*raws), n=4)
 # 例外(Application.OnException の E)。DLL はクラス名とメッセージを渡す。C++ の beth::Exception と同じく E.Message・E.ClassName() で読む
 _a_exception = _Arg(lambda raws: BethError(_dec(raws[0]), _dec(raws[1])), n=2)
+# 文字列の配列(OnDropFiles の FileNames)。DLL は数と UTF-8 の文字列の配列を渡す(docs/adr/0047)
+_a_strings = _Arg(lambda raws: [_dec(raws[1][i]) for i in range(raws[0])], n=2)
 
 
 def _a_enum(name):
@@ -621,6 +623,11 @@ class TStringList:
 class TGraphic:
     _destroy = "TGraphic_Destroy"
 
+    def Assign(self, Source):
+        """Source(グラフィック・Clipboard())の内容で置き換える(別のクラスのグラフィックからは画素を写して変換する)。
+        None なら空にする。クリップボードに画像が無ければ何もしない。"""
+        lib.TGraphic_Assign(self._current(), _h(Source))
+
 
 class TPicture:
     _destroy = "TPicture_Destroy"
@@ -661,6 +668,25 @@ class TPicture:
     @Jpeg.setter
     def Jpeg(self, value):
         lib.TPicture_SetGraphic(self._current(), _h(value))
+
+    @property
+    def Icon(self):
+        return _types["TIcon"]._wrap_view(self, lib.TPicture_GetIcon)
+
+    @Icon.setter
+    def Icon(self, value):
+        lib.TPicture_SetIcon(self._current(), _h(value))
+
+    def Assign(self, Source):
+        """Source(TPicture・Clipboard())の内容で置き換える。None なら空にする。クリップボードに画像が無ければ何もしない。"""
+        lib.TPicture_Assign(self._current(), _h(Source))
+
+
+class TClipboard:
+    def Assign(self, Source):
+        """画像(TPicture・グラフィック)をクリップボードに置く(内容を置き換える)。None なら何もしない。"""
+        if Source is not None:
+            lib.TClipboard_Assign(self._current(), Source._current())
 
 
 class TCanvas:
@@ -900,15 +926,42 @@ def ShortCutToText(ShortCut):
     return _dec(lib.ShortCut_ToText(int(ShortCut)))
 
 
+_clipboard = None
+
+
+def Clipboard():
+    """クリップボード(C++Builder と同じく関数。docs/adr/0047)。LCL が持つ 1 つだけで、破棄しない。"""
+    global _clipboard
+    if _clipboard is None:
+        _clipboard = _types["TClipboard"]._wrap_handle(lib.GetClipboard())
+    return _clipboard
+
+
+def CF_Text():
+    """クリップボードの文字列の形式(Windows では CF_UNICODETEXT)。"""
+    return lib.Clipboard_CF_Text()
+
+
+def CF_Bitmap():
+    """クリップボードのビットマップの形式(Windows の CF_BITMAP)。"""
+    return lib.Clipboard_CF_Bitmap()
+
+
+def CF_Picture():
+    """LCL が読み込める画像の形式のどれか(HasFormat(CF_Picture()) は HasPictureFormat() と同じ)。"""
+    return lib.Clipboard_CF_Picture()
+
+
 # 生成したクラスに混ぜる手書きのメンバ(クラス名 → クラス)。
 _mixins = {
     "TStrings": TStrings,
     "TStringList": TStringList,
     "TGraphic": TGraphic,
     "TPicture": TPicture,
+    "TClipboard": TClipboard,
     "TCanvas": TCanvas,
     "TCustomForm": TCustomForm,
     "TForm": TForm,
     "TApplication": TApplication,
 }
-del TStrings, TStringList, TGraphic, TPicture, TCanvas, TCustomForm, TForm, TApplication
+del TStrings, TStringList, TGraphic, TPicture, TClipboard, TCanvas, TCustomForm, TForm, TApplication

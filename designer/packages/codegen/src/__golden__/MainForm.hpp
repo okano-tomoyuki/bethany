@@ -39,6 +39,7 @@ public:
 
     void FormCreate(beth::TObject* Sender);
     void FormCloseQuery(beth::TObject* Sender, bool& CanClose);
+    void FormDropFiles(beth::TObject* Sender, const std::vector<std::string>& FileNames);
     void NameEditChange(beth::TObject* Sender);
     void OkButtonClick(beth::TObject* Sender);
     void WrapCheckClick(beth::TObject* Sender);
@@ -47,7 +48,7 @@ public:
     void ClearItemClick(beth::TObject* Sender);
     void Timer1Timer(beth::TObject* Sender);
     void FileSaveActionExecute(beth::TObject* Sender);
-    // <bethany-designer:end id="declarations" hash="64ecd84e">
+    // <bethany-designer:end id="declarations" hash="ca882746">
 
     explicit TMainForm(beth::TComponent* AOwner);
 

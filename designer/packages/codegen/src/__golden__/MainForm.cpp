@@ -46,8 +46,10 @@ void TMainForm::beth_CreateComponents()
     Height = 300;
     Caption = "Sample";
     Menu = MainMenu1;
+    AllowDropFiles = true;
     OnCreate = [this](TObject* Sender) { FormCreate(Sender); };
     OnCloseQuery = [this](TObject* Sender, bool& CanClose) { FormCloseQuery(Sender, CanClose); };
+    OnDropFiles = [this](TObject* Sender, const std::vector<std::string>& FileNames) { FormDropFiles(Sender, FileNames); };
 
     NameEdit->Parent = this;
     NameEdit->Left = 16;
@@ -189,7 +191,7 @@ void TMainForm::beth_CreateComponents()
 
     FileSaveItem->Action = FileSaveAction;
 }
-// <bethany-designer:end id="beth_CreateComponents" hash="47c9e406">
+// <bethany-designer:end id="beth_CreateComponents" hash="c0efaec3">
 
 // <bethany-designer:handler-stubs>
 
@@ -199,6 +201,11 @@ void TMainForm::FormCreate(TObject* Sender)
 }
 
 void TMainForm::FormCloseQuery(TObject* Sender, bool& CanClose)
+{
+    // TODO: implement
+}
+
+void TMainForm::FormDropFiles(TObject* Sender, const std::vector<std::string>& FileNames)
 {
     // TODO: implement
 }

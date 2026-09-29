@@ -64,8 +64,10 @@ class TMainForm(TForm):
         self.Height = 300
         self.Caption = "Sample"
         self.Menu = self.MainMenu1
+        self.AllowDropFiles = True
         self.OnCreate = self.FormCreate
         self.OnCloseQuery = self.FormCloseQuery
+        self.OnDropFiles = self.FormDropFiles
 
         self.NameEdit.Parent = self
         self.NameEdit.Left = 16
@@ -200,7 +202,7 @@ class TMainForm(TForm):
         self.FileSaveAction.OnExecute = self.FileSaveActionExecute
 
         self.FileSaveItem.Action = self.FileSaveAction
-    # <bethany-designer:end id="beth_CreateComponents" hash="cca55aef">
+    # <bethany-designer:end id="beth_CreateComponents" hash="8846023b">
 
     # <bethany-designer:handler-stubs>
 
@@ -208,6 +210,9 @@ class TMainForm(TForm):
         pass
 
     def FormCloseQuery(self, Sender, CanClose):
+        pass
+
+    def FormDropFiles(self, Sender, FileNames):
         pass
 
     def NameEditChange(self, Sender):
