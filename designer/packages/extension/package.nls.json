@@ -19,5 +19,10 @@
   "command.removeFromProject.title": "Remove from Project",
   "command.openProjectFile.title": "Open Project File",
   "command.createAtStartup.title": "Create at Startup",
-  "command.dontCreateAtStartup.title": "Don't Create at Startup"
+  "command.dontCreateAtStartup.title": "Don't Create at Startup",
+  "config.goToHandler.language": "Language of the generated file opened when going to an event handler (double-click on the canvas, or the buttons on the Events tab) if both C++ and Python are generated.",
+  "config.goToHandler.language.auto": "Ask the first time and remember the answer in the workspace",
+  "config.goToHandler.language.ask": "Ask every time",
+  "config.goToHandler.language.cpp": "Open the C++ source",
+  "config.goToHandler.language.python": "Open the Python file"
 }

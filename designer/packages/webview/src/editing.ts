@@ -288,10 +288,20 @@ export function setEvent(
   return ok ? undefined : documentStore.getState().lastError;
 }
 
-/** 既定のハンドラ名(OkButtonClick)でイベントを設定する(既に設定されていれば何もしない) */
-export function setDefaultHandler(location: NodeLocation, event: string): void {
-  if (location.node.events?.[event] !== undefined) return;
-  setEvent([location.node.name], event, defaultHandlerName(location.node.name, event));
+/**
+ * イベントのハンドラへ移動する(editor-design.md §7)。未設定なら既定の名前(OkButtonClick)を設定してから移動する
+ * (C++Builder のダブルクリックと同じ)。拡張がコードを生成し、ハンドラの定義を開く。
+ */
+export function openHandler(location: NodeLocation, event: string): void {
+  const handler = location.node.events?.[event] ?? defaultHandlerName(location.node.name, event);
+  if (location.node.events?.[event] === undefined) {
+    if (setEvent([location.node.name], event, handler) !== undefined) return;
+  }
+  goToHandler(handler);
+}
+
+export function goToHandler(handler: string): void {
+  postMessage({ type: 'goToHandler', handler });
 }
 
 export function renameHandler(name: string, newName: string): string | undefined {

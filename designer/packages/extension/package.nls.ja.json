@@ -19,5 +19,10 @@
   "command.removeFromProject.title": "プロジェクトから外す",
   "command.openProjectFile.title": "プロジェクトファイルを開く",
   "command.createAtStartup.title": "起動時に作成する",
-  "command.dontCreateAtStartup.title": "起動時に作成しない"
+  "command.dontCreateAtStartup.title": "起動時に作成しない",
+  "config.goToHandler.language": "C++ と Python の両方を生成するときに、イベントハンドラへ移動する(キャンバスのダブルクリック・イベントのタブのボタン)と開く生成ファイルの言語。",
+  "config.goToHandler.language.auto": "最初に聞き、答えをワークスペースに覚える",
+  "config.goToHandler.language.ask": "毎回聞く",
+  "config.goToHandler.language.cpp": "C++ のソースを開く",
+  "config.goToHandler.language.python": "Python のファイルを開く"
 }

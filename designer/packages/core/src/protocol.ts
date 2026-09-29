@@ -41,4 +41,9 @@ export type WebviewToExtensionMessage =
   | { readonly type: 'ready' }
   | { readonly type: 'edit'; readonly requestId: number; readonly command: EditCommand }
   /** コード生成(tk-designer ADR 0010)。生成・書き込み・結果の通知は拡張が行う */
-  | { readonly type: 'generateCode' };
+  | { readonly type: 'generateCode' }
+  /**
+   * ハンドラの定義へ移動する(editor-design.md §7)。拡張はコードを生成し(足りない雛形を追記し)てから、定義を開く。
+   * 直前に送った edit(ハンドラ名の設定)の適用の後に処理する
+   */
+  | { readonly type: 'goToHandler'; readonly handler: string };

@@ -20,6 +20,7 @@ import { createFile, mergeFile, type GeneratedCode, type MergeResult } from './r
 import { findStaleNames, staleNamesWarning, type StaleCheck } from './stale.ts';
 
 export { regionHash } from './hash.ts';
+export { findHandler, type HandlerLanguage, type HandlerPosition } from './locate.ts';
 export {
   baseName,
   DEFAULT_FORM_CODEGEN,

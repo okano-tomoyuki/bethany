@@ -8,6 +8,7 @@ import { isJapanese } from '@bethany-designer/core';
 import * as vscode from 'vscode';
 import { applyEditCommand } from './applyEditCommand.ts';
 import { generateCode } from './generateCode.ts';
+import { goToHandler } from './goToHandler.ts';
 
 /**
  * *.bfm.json を開くデザイナー。TextDocument を唯一の正とする(tk-designer ADR 0006。docs/designer/editor-design.md §3)。
@@ -69,6 +70,22 @@ export class DesignerEditorProvider implements vscode.CustomTextEditorProvider {
           case 'generateCode':
             void generateCode(document);
             break;
+          case 'goToHandler': {
+            // 直前の編集(ハンドラ名の設定)が適用されてから生成する
+            const { handler } = message;
+            // 失敗しても後続の編集が止まらないよう、ここで通知に変える
+            editQueue = editQueue.then(() =>
+              goToHandler(this.context, document, handler).catch((e: unknown) => {
+                void vscode.window.showErrorMessage(
+                  vscode.l10n.t(
+                    'Unexpected error: {0}',
+                    e instanceof Error ? e.message : String(e),
+                  ),
+                );
+              }),
+            );
+            break;
+          }
         }
       }),
       // テキストエディタでの編集や Undo/Redo も、この経路で Webview に届く

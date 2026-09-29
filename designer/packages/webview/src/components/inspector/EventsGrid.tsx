@@ -1,6 +1,7 @@
 /**
  * イベントのタブ(docs/designer/editor-design.md §6)。欄には、同じイベントの型の既存のハンドラ名を候補に出す。
- * ダブルクリックで既定の名前(OkButtonClick)を設定する。
+ * 「+」(またはイベント名のダブルクリック)で既定の名前(OkButtonClick)を設定してコードのハンドラへ移動し、
+ * 「→」で設定済みのハンドラへ移動する(§7)。
  */
 import {
   classOf,
@@ -12,7 +13,7 @@ import {
   type BfmDocument,
 } from '@bethany-designer/core';
 import { useState } from 'react';
-import { renameHandler, setEvent } from '../../editing.ts';
+import { goToHandler, renameHandler, setEvent } from '../../editing.ts';
 import { useDocumentStore } from '../../store/stores.ts';
 import { messagesAt } from './diagnostics.ts';
 import { useCommittedDraft } from './fields.tsx';
@@ -92,15 +93,21 @@ function EventRow({
       : setEvent(names, event, handler === '' ? undefined : handler);
   });
   const [first] = nodes;
-  const setDefault = () => {
-    if (value !== '' || !first) return;
-    setEvent(names, event, defaultHandlerName(first.node.name, event));
+  const defaultName = first ? defaultHandlerName(first.node.name, event) : '';
+  /** ハンドラへ移動する。未設定なら既定の名前を設定してから(複数を選んでいれば、すべてに同じ名前) */
+  const open = () => {
+    if (mixed || !first) return;
+    if (value !== '') {
+      goToHandler(value);
+      return;
+    }
+    if (setEvent(names, event, defaultName) === undefined) goToHandler(defaultName);
   };
 
   return (
     <>
       <div className={value !== '' ? 'prop-row set' : 'prop-row'} role="row">
-        <span className="prop-name" role="cell" title={doc} onDoubleClick={setDefault}>
+        <span className="prop-name" role="cell" title={doc} onDoubleClick={open}>
           {event}
         </span>
         <span className="prop-value" role="cell">
@@ -110,14 +117,16 @@ function EventRow({
             placeholder={mixed ? l10n.t('(different values)') : ''}
             title={
               draft.error ??
-              l10n.t(
-                'Double-click to set the default handler name ({0})',
-                first ? defaultHandlerName(first.node.name, event) : '',
-              )
+              (value === '' && !mixed
+                ? l10n.t('Double-click to add the handler {0} and open it in the code', defaultName)
+                : undefined)
             }
             aria-invalid={draft.error !== undefined}
             {...draft.inputProps}
-            onDoubleClick={setDefault}
+            onDoubleClick={() => {
+              // 設定済みなら、文字の選択(入力欄の既定の動作)のままにする
+              if (value === '') open();
+            }}
             onBlur={() => {
               draft.inputProps.onBlur();
               setRenaming(false);
@@ -128,6 +137,20 @@ function EventRow({
               <option key={c} value={c} />
             ))}
           </datalist>
+          {!mixed && (
+            <button
+              type="button"
+              className="prop-reset"
+              title={
+                value === ''
+                  ? l10n.t('Add the handler {0} and open it in the code', defaultName)
+                  : l10n.t('Open the handler {0} in the code', value)
+              }
+              onClick={open}
+            >
+              {value === '' ? '+' : '→'}
+            </button>
+          )}
           {value !== '' && (
             <button
               type="button"

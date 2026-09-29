@@ -293,6 +293,23 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "%config.canvas.showGrid%"
+        },
+        "bethanyDesigner.goToHandler.language": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "ask",
+            "cpp",
+            "python"
+          ],
+          "enumDescriptions": [
+            "%config.goToHandler.language.auto%",
+            "%config.goToHandler.language.ask%",
+            "%config.goToHandler.language.cpp%",
+            "%config.goToHandler.language.python%"
+          ],
+          "default": "auto",
+          "markdownDescription": "%config.goToHandler.language%"
         }
       }
     }

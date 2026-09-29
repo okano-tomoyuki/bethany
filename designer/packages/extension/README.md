@@ -16,6 +16,8 @@ The form is stored in a JSON file (`*.bfm.json`) that you can also edit as text.
   menu items and event handler names.
 - **Code generation**: the _Generate Code_ command writes a form class (`class TMainForm : public TForm`) to your source files.
   Only the regions between the designer's markers are replaced, so your own code, including event handlers, is kept.
+- **Event handlers**: double-click a control on the canvas, or press **+** on the Events tab, to add a handler
+  (`OkButtonClick`) and jump to it in the generated code, as in C++Builder. **→** jumps to a handler that is already set.
 - **Forms view**: the Bethany Designer icon in the Activity Bar lists the forms in your workspace. Open a form with a click, create one with the **+** button, or generate code from the list.
 - **Projects**: a project file (`*.bfproj.json`) lists the forms of an application and its main form, and sets the languages to generate (`"codegen": { "cpp": {}, "python": {} }`). With projects, the Forms view groups the forms by project and marks the main form with a star. Renaming, moving or deleting a form in VS Code updates the projects that contain it.
 - **Application startup code**: _Generate Code_ on a project writes `Project1.cpp` / `Project1.py`, which initializes the application,
@@ -64,12 +66,13 @@ In Python, forms may import each other (MainForm imports Form2 and Form2 imports
 
 ## Settings
 
-| Setting                             | Default     | Description                                                      |
-| ----------------------------------- | ----------- | ---------------------------------------------------------------- |
-| `bethanyDesigner.canvas.fontFamily` | (automatic) | Typeface used on the canvas as the LCL default font              |
-| `bethanyDesigner.canvas.fontSize`   | `0` (9 pt)  | Size of that font                                                |
-| `bethanyDesigner.canvas.gridSize`   | `8`         | Spacing of the grid that controls snap to. `0` disables snapping |
-| `bethanyDesigner.canvas.showGrid`   | `true`      | Draw the grid dots on the form                                   |
+| Setting                                | Default     | Description                                                                                                     |
+| -------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------- |
+| `bethanyDesigner.canvas.fontFamily`    | (automatic) | Typeface used on the canvas as the LCL default font                                                             |
+| `bethanyDesigner.canvas.fontSize`      | `0` (9 pt)  | Size of that font                                                                                               |
+| `bethanyDesigner.canvas.gridSize`      | `8`         | Spacing of the grid that controls snap to. `0` disables snapping                                                |
+| `bethanyDesigner.canvas.showGrid`      | `true`      | Draw the grid dots on the form                                                                                  |
+| `bethanyDesigner.goToHandler.language` | `auto`      | Language opened when jumping to a handler and both C++ and Python are generated. `auto` asks once per workspace |
 
 ## Known limitations
 

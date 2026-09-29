@@ -12,6 +12,7 @@ import {
   type FormSource,
   type GenerateAllResult,
   type OutputFile,
+  type ResolvedTargets,
 } from '@bethany-designer/codegen';
 import {
   autoCreateForms,
@@ -32,6 +33,23 @@ export async function generateCode(document: vscode.TextDocument): Promise<void>
     await generateProjectCode(document);
     return;
   }
+  await generateFormCode(document, { quiet: false });
+}
+
+/** フォームのコードを生成した結果。出力先はフォームのフォルダからの相対パス */
+export interface FormCodeResult {
+  readonly directory: vscode.Uri;
+  readonly targets: ResolvedTargets;
+}
+
+/**
+ * フォームのコードを生成する。生成できなかった・取りやめたときは undefined。
+ * quiet なら、成功の通知(「生成しました」「最新です」)を出さない(ハンドラへの移動から呼ぶとき)。
+ */
+export async function generateFormCode(
+  document: vscode.TextDocument,
+  { quiet }: { readonly quiet: boolean },
+): Promise<FormCodeResult | undefined> {
   const parsed = parseDocument(document.getText());
   if (!parsed.document || hasErrors(parsed.diagnostics)) {
     void vscode.window.showErrorMessage(
@@ -39,7 +57,7 @@ export async function generateCode(document: vscode.TextDocument): Promise<void>
         'Cannot generate code because the form has validation errors. See the Problems panel.',
       ),
     );
-    return;
+    return undefined;
   }
 
   const fileName = document.uri.path.split('/').pop() ?? 'Form.bfm.json';
@@ -55,11 +73,13 @@ export async function generateCode(document: vscode.TextDocument): Promise<void>
     targets.cpp?.source,
     targets.python?.file,
   ]);
-  await writeGenerated(
+  const written = await writeGenerated(
     directory,
     generateAll(parsed.document, fileName, settings, (path) => existing.get(path)),
     existing,
+    quiet,
   );
+  return written ? { directory, targets } : undefined;
 }
 
 /** プロジェクトの起動部分(Project1.cpp・Project1.py)を生成する */
@@ -114,20 +134,24 @@ async function readAll(
   return existing;
 }
 
-/** 生成した結果を確かめて書き込む(手で編集された区間があれば上書きしてよいか聞く) */
+/**
+ * 生成した結果を確かめて書き込む(手で編集された区間があれば上書きしてよいか聞く)。
+ * 書き込んだ(変更が無かったときを含む)なら true、エラー・取りやめなら false。
+ */
 async function writeGenerated(
   directory: vscode.Uri,
   generated: GenerateAllResult | { readonly error: string },
   existing: ReadonlyMap<string, string | undefined>,
-): Promise<void> {
+  quiet = false,
+): Promise<boolean> {
   if ('error' in generated) {
     void vscode.window.showErrorMessage(generated.error);
-    return;
+    return false;
   }
   const failed = generated.files.find((f) => !f.result.ok);
   if (failed && !failed.result.ok) {
     void vscode.window.showErrorMessage(`${failed.path}: ${failed.result.error}`);
-    return;
+    return false;
   }
   if (generated.warnings.length > 0) {
     const channel = (output.channel ??= vscode.window.createOutputChannel('Bethany Designer'));
@@ -159,15 +183,16 @@ async function writeGenerated(
       { modal: true },
       overwrite,
     );
-    if (answer !== overwrite) return;
+    if (answer !== overwrite) return false;
   }
 
   const changed = files.filter((f) => existing.get(f.path) !== f.result.text);
   if (changed.length === 0) {
-    void vscode.window.showInformationMessage(
-      vscode.l10n.t('{0} is up to date.', files.map((f) => f.path).join(', ')),
-    );
-    return;
+    if (!quiet)
+      void vscode.window.showInformationMessage(
+        vscode.l10n.t('{0} is up to date.', files.map((f) => f.path).join(', ')),
+      );
+    return true;
   }
   for (const file of changed) {
     await writeText(
@@ -187,6 +212,11 @@ async function writeGenerated(
         : vscode.l10n.t('{0} (updated)', f.path),
     )
     .join(', ');
+  if (quiet) {
+    // 移動した先のエディタで結果は見えるので、ステータスバーに短く出すだけにする
+    vscode.window.setStatusBarMessage(vscode.l10n.t('Generated: {0}{1}', summary, details), 5000);
+    return true;
+  }
   const open = vscode.l10n.t('Open');
   const answer = await vscode.window.showInformationMessage(
     vscode.l10n.t('Generated: {0}{1}', summary, details),
@@ -199,6 +229,7 @@ async function writeGenerated(
       });
     }
   }
+  return true;
 }
 
 /** 開いている(未保存の変更を含む)内容、なければファイルの内容。ファイルがなければ undefined */

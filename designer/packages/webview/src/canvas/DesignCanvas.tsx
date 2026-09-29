@@ -37,9 +37,9 @@ import {
   addComponentAt,
   addControlAt,
   boundsOf,
+  openHandler,
   select,
   setBounds,
-  setDefaultHandler,
   setDesignPosition,
   setFormSize,
   type BoundsChange,
@@ -557,7 +557,9 @@ export function DesignCanvas() {
   };
 
   const onDoubleClick = (e: ReactMouseEvent) => {
-    const target = e.target as HTMLElement;
+    // 押したときにポインタを捕まえている(setPointerCapture)ので、e.target は常にこの要素になる。位置から指したものを求める
+    const target = (window.document.elementFromPoint(e.clientX, e.clientY) ??
+      e.target) as HTMLElement;
     const name =
       target.closest<HTMLElement>('[data-icon]')?.dataset.icon ??
       target.closest<HTMLElement>('[data-menu-item]')?.dataset.menuItem ??
@@ -566,8 +568,8 @@ export function DesignCanvas() {
     const location = findNode(document, name);
     const event = location ? defaultEventOf(classOf(location)) : undefined;
     if (!location || event === undefined) return;
-    setDefaultHandler(location, event);
     uiStore.getState().setInspectorTab('events');
+    openHandler(location, event);
   };
 
   // 右クリック: 指したものが選択に無ければ選び直してから、メニューを開く
