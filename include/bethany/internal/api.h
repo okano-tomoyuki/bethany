@@ -55,6 +55,11 @@ using drop_files_callback_t = void (BETH_CALL *)(obj_t sender, int_t count, str_
 // TScrollBar の OnScroll(操作の種類と、つまみの位置)・TCheckGroup の OnItemClick(docs/adr/0049)。
 using scroll_callback_t = void (BETH_CALL *)(obj_t sender, int_t scrollCode, int_t* scrollPos, void* data);
 using int_callback_t = void (BETH_CALL *)(obj_t sender, int_t value, void* data);
+// オーナードロー(docs/adr/0050)。state は TOwnerDrawState のビット。
+using draw_item_callback_t = void (BETH_CALL *)(obj_t sender, int_t index, int_t left, int_t top, int_t right, int_t bottom, uint_t state, void* data);
+using measure_item_callback_t = void (BETH_CALL *)(obj_t sender, int_t index, int_t* height, void* data);
+using menu_draw_callback_t = void (BETH_CALL *)(obj_t sender, obj_t canvas, int_t left, int_t top, int_t right, int_t bottom, uint_t state, void* data);
+using menu_measure_callback_t = void (BETH_CALL *)(obj_t sender, obj_t canvas, int_t* width, int_t* height, void* data);
 
 #define BETH_DECLARE_FUNC(ret, name, params, args) ret name params;
 BETH_FUNCS(BETH_DECLARE_FUNC)

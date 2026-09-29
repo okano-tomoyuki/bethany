@@ -280,6 +280,15 @@
         "OnClick": {
           "type": "TNotifyEvent",
           "declaredIn": "TMenuItem"
+        },
+        "OnDrawItem": {
+          "type": "TMenuDrawItemEvent",
+          "declaredIn": "TMenuItem",
+          "doc": "メニューの OwnerDraw が true のとき、この項目を描く・大きさを決める。"
+        },
+        "OnMeasureItem": {
+          "type": "TMenuMeasureItemEvent",
+          "declaredIn": "TMenuItem"
         }
       }
     },
@@ -310,6 +319,14 @@
           "declaredIn": "TMenu",
           "default": null,
           "doc": "項目の画像リスト(docs/adr/0030)。各項目の画像は TMenuItem::ImageIndex。"
+        },
+        "OwnerDraw": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TMenu",
+          "default": false,
+          "doc": "true なら、項目を各項目の OnDrawItem で描く(OnMeasureItem で大きさを決める)。"
         }
       },
       "events": {}
@@ -341,6 +358,14 @@
           "declaredIn": "TMenu",
           "default": null,
           "doc": "項目の画像リスト(docs/adr/0030)。各項目の画像は TMenuItem::ImageIndex。"
+        },
+        "OwnerDraw": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TMenu",
+          "default": false,
+          "doc": "true なら、項目を各項目の OnDrawItem で描く(OnMeasureItem で大きさを決める)。"
         },
         "AutoPopup": {
           "type": {
@@ -634,7 +659,7 @@
           },
           "declaredIn": "TCustomScrollBar",
           "default": 1,
-          "doc": "---- docs/adr/0049 ---- つまみの外を押したとき・矢印を押したときに動く量。"
+          "doc": "つまみの外を押したとき・矢印を押したときに動く量。"
         },
         "SmallChange": {
           "type": {
@@ -971,7 +996,7 @@
           },
           "declaredIn": "TCustomTrackBar",
           "default": "trHorizontal",
-          "doc": "---- docs/adr/0049 ---- 縦(trVertical)か横か。"
+          "doc": "縦(trVertical)か横か。"
         },
         "Frequency": {
           "type": {
@@ -1367,7 +1392,7 @@
           },
           "declaredIn": "TCustomProgressBar",
           "default": "pbHorizontal",
-          "doc": "---- docs/adr/0049 ---- 伸びる向き(pbVertical は下から上)。"
+          "doc": "伸びる向き(pbVertical は下から上)。"
         },
         "Smooth": {
           "type": {
@@ -1737,7 +1762,7 @@
           },
           "declaredIn": "TUpDown",
           "default": "udVertical",
-          "doc": "---- docs/adr/0049 ---- 矢印の向き(udVertical は上下、udHorizontal は左右)。"
+          "doc": "矢印の向き(udVertical は上下、udHorizontal は左右)。"
         },
         "AlignButton": {
           "type": {
@@ -2852,7 +2877,7 @@
           },
           "declaredIn": "TCustomPanel",
           "default": "taCenter",
-          "doc": "---- docs/adr/0048 ---- Caption の横・縦の揃えと折り返し(既定は中央)。"
+          "doc": "Caption の横・縦の揃えと折り返し(既定は中央)。"
         },
         "VerticalAlignment": {
           "type": {
@@ -3524,7 +3549,7 @@
           },
           "declaredIn": "TCustomRadioGroup",
           "default": 1,
-          "doc": "---- docs/adr/0049 ---- 項目を並べる列の数。"
+          "doc": "項目を並べる列の数。"
         },
         "ColumnLayout": {
           "type": {
@@ -3861,7 +3886,7 @@
           },
           "declaredIn": "TCustomCheckGroup",
           "default": 1,
-          "doc": "---- docs/adr/0049 ---- 項目を並べる列の数。"
+          "doc": "項目を並べる列の数。"
         },
         "ColumnLayout": {
           "type": {
@@ -9375,7 +9400,7 @@
             "alias": "TColor"
           },
           "declaredIn": "TControl",
-          "default": "#050000",
+          "default": "clWindow",
           "doc": "背景色(既定は clDefault。docs/adr/0033)。"
         },
         "Font": {
@@ -11170,6 +11195,14 @@
           "declaredIn": "TCustomComboBox",
           "default": [],
           "doc": "文字列の一覧(TStrings。ComboBox1->Items->Add(\"x\") のように使う)。"
+        },
+        "ItemHeight": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TCustomComboBox",
+          "default": 0,
+          "doc": "Style が csOwnerDrawFixed・csOwnerDrawVariable 等なら、一覧の項目を OnDrawItem で描く。 項目の高さ(lbOwnerDrawFixed 等で使う)。"
         }
       },
       "events": {
@@ -11245,6 +11278,14 @@
           "type": "TNotifyEvent",
           "declaredIn": "TCustomComboBox",
           "doc": "一覧を閉じたとき。"
+        },
+        "OnDrawItem": {
+          "type": "TDrawItemEvent",
+          "declaredIn": "TCustomComboBox"
+        },
+        "OnMeasureItem": {
+          "type": "TMeasureItemEvent",
+          "declaredIn": "TCustomComboBox"
         },
         "OnChange": {
           "type": "TNotifyEvent",
@@ -11533,6 +11574,23 @@
           "declaredIn": "TCustomListBox",
           "default": [],
           "doc": "文字列の一覧(TStrings。ListBox1->Items->Add(\"x\") のように使う)。"
+        },
+        "Style": {
+          "type": {
+            "kind": "enum",
+            "enum": "TListBoxStyle"
+          },
+          "declaredIn": "TCustomListBox",
+          "default": "lbStandard",
+          "doc": "描き方(lbOwnerDrawFixed・lbOwnerDrawVariable なら OnDrawItem で描く)。"
+        },
+        "ItemHeight": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TCustomListBox",
+          "default": 0,
+          "doc": "項目の高さ(lbOwnerDrawFixed 等で使う)。"
         }
       },
       "events": {
@@ -11598,6 +11656,14 @@
           "type": "TSelectionChangeEvent",
           "declaredIn": "TCustomListBox",
           "doc": "選択が変わったとき。User は利用者の操作によるものか(プログラムからの変更なら false)。"
+        },
+        "OnDrawItem": {
+          "type": "TDrawItemEvent",
+          "declaredIn": "TCustomListBox"
+        },
+        "OnMeasureItem": {
+          "type": "TMeasureItemEvent",
+          "declaredIn": "TCustomListBox"
         }
       }
     },
@@ -11882,6 +11948,23 @@
           "declaredIn": "TCustomListBox",
           "default": [],
           "doc": "文字列の一覧(TStrings。ListBox1->Items->Add(\"x\") のように使う)。"
+        },
+        "Style": {
+          "type": {
+            "kind": "enum",
+            "enum": "TListBoxStyle"
+          },
+          "declaredIn": "TCustomListBox",
+          "default": "lbStandard",
+          "doc": "描き方(lbOwnerDrawFixed・lbOwnerDrawVariable なら OnDrawItem で描く)。"
+        },
+        "ItemHeight": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TCustomListBox",
+          "default": 0,
+          "doc": "項目の高さ(lbOwnerDrawFixed 等で使う)。"
         }
       },
       "events": {
@@ -11947,6 +12030,14 @@
           "type": "TSelectionChangeEvent",
           "declaredIn": "TCustomListBox",
           "doc": "選択が変わったとき。User は利用者の操作によるものか(プログラムからの変更なら false)。"
+        },
+        "OnDrawItem": {
+          "type": "TDrawItemEvent",
+          "declaredIn": "TCustomListBox"
+        },
+        "OnMeasureItem": {
+          "type": "TMeasureItemEvent",
+          "declaredIn": "TCustomListBox"
         },
         "OnClickCheck": {
           "type": "TNotifyEvent",
@@ -12976,7 +13067,7 @@
             "alias": "TColor"
           },
           "declaredIn": "TControl",
-          "default": "#0F0000",
+          "default": "clBtnFace",
           "doc": "背景色(既定は clDefault。docs/adr/0033)。"
         },
         "Font": {
@@ -13884,7 +13975,7 @@
             "alias": "TColor"
           },
           "declaredIn": "TControl",
-          "default": "#050000",
+          "default": "clWindow",
           "doc": "背景色(既定は clDefault。docs/adr/0033)。"
         },
         "Font": {
@@ -14099,7 +14190,7 @@
             "alias": "TColor"
           },
           "declaredIn": "TCustomDrawGrid",
-          "default": "#0F0000"
+          "default": "clBtnFace"
         }
       },
       "events": {
@@ -14290,7 +14381,7 @@
             "alias": "TColor"
           },
           "declaredIn": "TControl",
-          "default": "#050000",
+          "default": "clWindow",
           "doc": "背景色(既定は clDefault。docs/adr/0033)。"
         },
         "Font": {
@@ -14505,7 +14596,7 @@
             "alias": "TColor"
           },
           "declaredIn": "TCustomDrawGrid",
-          "default": "#0F0000"
+          "default": "clBtnFace"
         }
       },
       "events": {
@@ -17263,6 +17354,12 @@
       "dsNormal",
       "dsTransparent"
     ],
+    "TListBoxStyle": [
+      "lbStandard",
+      "lbOwnerDrawFixed",
+      "lbOwnerDrawVariable",
+      "lbVirtual"
+    ],
     "TAlign": [
       "alNone",
       "alTop",
@@ -17616,6 +17713,22 @@
       "fsUnderline",
       "fsStrikeOut"
     ],
+    "TOwnerDrawState": [
+      "odSelected",
+      "odGrayed",
+      "odDisabled",
+      "odChecked",
+      "odFocused",
+      "odDefault",
+      "odHotLight",
+      "odInactive",
+      "odNoAccel",
+      "odNoFocusRect",
+      "odReserved1",
+      "odReserved2",
+      "odComboBoxEdit",
+      "odBackgroundPainted"
+    ],
     "TGridOptions": [
       "goFixedVertLine",
       "goFixedHorzLine",
@@ -17745,11 +17858,56 @@
   "constants": {
     "TColor": {
       "clBlack": 0,
-      "clWhite": 16777215,
-      "clRed": 255,
+      "clMaroon": 128,
       "clGreen": 32768,
-      "clBlue": 16711680,
+      "clOlive": 32896,
+      "clNavy": 8388608,
+      "clPurple": 8388736,
+      "clTeal": 8421376,
+      "clGray": 8421504,
+      "clSilver": 12632256,
+      "clRed": 255,
+      "clLime": 65280,
       "clYellow": 65535,
+      "clBlue": 16711680,
+      "clFuchsia": 16711935,
+      "clAqua": 16776960,
+      "clWhite": 16777215,
+      "clMoneyGreen": 12639424,
+      "clSkyBlue": 15780518,
+      "clCream": 15793151,
+      "clMedGray": 10789024,
+      "clScrollBar": -2147483648,
+      "clBackground": -2147483647,
+      "clActiveCaption": -2147483646,
+      "clInactiveCaption": -2147483645,
+      "clMenu": -2147483644,
+      "clWindow": -2147483643,
+      "clWindowFrame": -2147483642,
+      "clMenuText": -2147483641,
+      "clWindowText": -2147483640,
+      "clCaptionText": -2147483639,
+      "clActiveBorder": -2147483638,
+      "clInactiveBorder": -2147483637,
+      "clAppWorkspace": -2147483636,
+      "clHighlight": -2147483635,
+      "clHighlightText": -2147483634,
+      "clBtnFace": -2147483633,
+      "clBtnShadow": -2147483632,
+      "clGrayText": -2147483631,
+      "clBtnText": -2147483630,
+      "clInactiveCaptionText": -2147483629,
+      "clBtnHighlight": -2147483628,
+      "cl3DDkShadow": -2147483627,
+      "cl3DLight": -2147483626,
+      "clInfoText": -2147483625,
+      "clInfoBk": -2147483624,
+      "clHotLight": -2147483622,
+      "clGradientActiveCaption": -2147483621,
+      "clGradientInactiveCaption": -2147483620,
+      "clMenuHighlight": -2147483619,
+      "clMenuBar": -2147483618,
+      "clForm": -2147483617,
       "clNone": 536870911,
       "clDefault": 536870912
     },
@@ -17922,6 +18080,74 @@
       {
         "name": "Handled",
         "type": "bool&"
+      }
+    ],
+    "TDrawItemEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "Index",
+        "type": "int"
+      },
+      {
+        "name": "ARect",
+        "type": "TRect"
+      },
+      {
+        "name": "State",
+        "type": "TOwnerDrawState"
+      }
+    ],
+    "TMeasureItemEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "Index",
+        "type": "int"
+      },
+      {
+        "name": "AHeight",
+        "type": "int&"
+      }
+    ],
+    "TMenuDrawItemEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "ACanvas",
+        "type": "TCanvas*"
+      },
+      {
+        "name": "ARect",
+        "type": "TRect"
+      },
+      {
+        "name": "AState",
+        "type": "TOwnerDrawState"
+      }
+    ],
+    "TMenuMeasureItemEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "ACanvas",
+        "type": "TCanvas*"
+      },
+      {
+        "name": "AWidth",
+        "type": "int&"
+      },
+      {
+        "name": "AHeight",
+        "type": "int&"
       }
     ],
     "TSelectionChangeEvent": [

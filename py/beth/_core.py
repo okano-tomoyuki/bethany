@@ -367,6 +367,11 @@ def _a_item(name):
     return _Arg(lambda raws: _to_item(name, raws[0]))
 
 
+def _a_obj(name):
+    """呼び出しの間だけ有効な非所有のラッパー(TMenuItem の OnDrawItem の ACanvas。docs/adr/0050)。"""
+    return _Arg(lambda raws: _to_obj(name, raws[0]))
+
+
 def _a_ref(from_raw, to_raw):
     return _Arg(lambda raws: Ref(from_raw(raws[0][0])), put=lambda raws, ref: raws[0].__setitem__(0, to_raw(ref.value)))
 

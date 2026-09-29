@@ -206,6 +206,20 @@
             }
           }
         ]
+      },
+      {
+        "name": "ColorList",
+        "class": "TListBox",
+        "properties": {
+          "Left": 16,
+          "Top": 176,
+          "Width": 160,
+          "Height": 76,
+          "Items": ["Red", "Green", "Blue"],
+          "Style": "lbOwnerDrawFixed",
+          "ItemHeight": 20
+        },
+        "events": { "OnDrawItem": "ColorListDrawItem" }
       }
     ]
   },

@@ -21,6 +21,7 @@ class TMainForm(TForm):
         self.BottomPanel: TPanel
         self.StatusLabel: TLabel
         self.HintPanel: TPanel
+        self.ColorList: TListBox
         self.MainMenu1: TMainMenu
         self.FileMenu: TMenuItem
         self.FileOpenItem: TMenuItem
@@ -33,7 +34,7 @@ class TMainForm(TForm):
         self.Timer1: TTimer
         self.ActionList1: TActionList
         self.FileSaveAction: TAction
-        # <bethany-designer:end id="declarations" hash="0b488329">
+        # <bethany-designer:end id="declarations" hash="941b0b29">
         self.beth_CreateComponents()
 
     # <bethany-designer:begin id="beth_CreateComponents">
@@ -53,6 +54,7 @@ class TMainForm(TForm):
         self.BottomPanel = TPanel(self)
         self.StatusLabel = TLabel(self)
         self.HintPanel = TPanel(self)
+        self.ColorList = TListBox(self)
         self.MainMenu1 = TMainMenu(self)
         self.FileMenu = TMenuItem(self)
         self.FileOpenItem = TMenuItem(self)
@@ -211,6 +213,18 @@ class TMainForm(TForm):
         self.HintPanel.VerticalAlignment = taAlignTop
         self.HintPanel.BevelOuter = bvNone
 
+        self.ColorList.Parent = self
+        self.ColorList.Left = 16
+        self.ColorList.Top = 176
+        self.ColorList.Width = 160
+        self.ColorList.Height = 76
+        self.ColorList.Items.Add("Red")
+        self.ColorList.Items.Add("Green")
+        self.ColorList.Items.Add("Blue")
+        self.ColorList.Style = lbOwnerDrawFixed
+        self.ColorList.ItemHeight = 20
+        self.ColorList.OnDrawItem = self.ColorListDrawItem
+
         self.PageControl1.ActivePage = self.MemoSheet
 
         self.FileMenu.Caption = "&File"
@@ -248,7 +262,7 @@ class TMainForm(TForm):
         self.FileSaveAction.OnExecute = self.FileSaveActionExecute
 
         self.FileSaveItem.Action = self.FileSaveAction
-    # <bethany-designer:end id="beth_CreateComponents" hash="79b3fb1a">
+    # <bethany-designer:end id="beth_CreateComponents" hash="55cec535">
 
     # <bethany-designer:handler-stubs>
 
@@ -274,6 +288,9 @@ class TMainForm(TForm):
         pass
 
     def ScrollBar1Scroll(self, Sender, ScrollCode, ScrollPos):
+        pass
+
+    def ColorListDrawItem(self, Sender, Index, ARect, State):
         pass
 
     def FileOpenItemClick(self, Sender):

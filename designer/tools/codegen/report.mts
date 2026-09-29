@@ -64,6 +64,7 @@ export const EXPECTED_CALLS = [
   'FormDropFiles',
   'RadioGroup1SelectionChanged',
   'ScrollBar1Scroll',
+  'ColorListDrawItem',
 ];
 
 /** 参照・入れ子のオブジェクト・TStrings・メニュー等(検証のプログラムが読んだ値) */
@@ -87,6 +88,8 @@ export const EXPECTED_CHECKS: Readonly<Record<string, string>> = {
   // 範囲のコントロール・グループの列(docs/adr/0049): RadioGroup1 の Columns/ColumnLayout と、ScrollBar1 の LargeChange/SmallChange
   groupColumns: '2/1',
   scrollChange: '10/2',
+  // オーナードロー(docs/adr/0050): ColorList の Style(lbOwnerDrawFixed)/ItemHeight
+  ownerDraw: '1/20',
   dialogOptions: String((1 << 20) | (1 << 23) | (1 << 9)),
   timer: '0/500',
   caption: 'Sample',

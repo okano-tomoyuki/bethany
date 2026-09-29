@@ -46,6 +46,10 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
   TProgressBar の `Orientation`・`Smooth`・`Step`・`Style`・`BarShowText`・`StepIt()`・`StepBy()`、TScrollBar の `LargeChange`・`SmallChange`・`OnScroll`、
   TUpDown の `Orientation`・`AlignButton`・`Wrap`・`ArrowKeys`・`Thousands`、TRadioGroup・TCheckGroup の `Columns`・`ColumnLayout`・`AutoFill`と、
   TRadioGroup の `OnSelectionChanged`、TCheckGroup の `CheckEnabled[i]`・`OnItemClick`([ADR 0049](docs/adr/0049-range-controls-and-group-columns.md))
+- オーナードロー: リストボックスの `Style`(`lbOwnerDrawFixed` 等)・`ItemHeight`・`Canvas`・`OnDrawItem`・`OnMeasureItem`、コンボボックスの
+  `ItemHeight`・`Canvas`・`OnDrawItem`・`OnMeasureItem`、メニューの `OwnerDraw` と項目の `OnDrawItem`・`OnMeasureItem`(`TOwnerDrawState`)
+  ([ADR 0050](docs/adr/0050-owner-draw.md))
+- 色の定数: 標準の 16 色(`clNavy`・`clGray`・`clSilver` 等)と `clMoneyGreen` 等、システムの色(`clHighlight`・`clWindow`・`clBtnFace` 等)
 
 ### 変更
 

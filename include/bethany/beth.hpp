@@ -27,12 +27,60 @@ using ObjectHandle = internal::obj_t;
 // DelphiのTColorに合わせ $00BBGGRR 順のパック整数として表す。
 using TColor = std::int32_t;
 
-const TColor clBlack  = 0x000000;
-const TColor clWhite  = 0xFFFFFF;
-const TColor clRed    = 0x0000FF;
-const TColor clGreen  = 0x008000;
-const TColor clBlue   = 0xFF0000;
-const TColor clYellow = 0x00FFFF;
+// 色の定数(LCL・VCL と同じ値)。標準の 16 色と、LCL の追加の 4 色(docs/adr/0050 で加えた)。
+const TColor clBlack                   = 0x000000;
+const TColor clMaroon                  = 0x000080;
+const TColor clGreen                   = 0x008000;
+const TColor clOlive                   = 0x008080;
+const TColor clNavy                    = 0x800000;
+const TColor clPurple                  = 0x800080;
+const TColor clTeal                    = 0x808000;
+const TColor clGray                    = 0x808080;
+const TColor clSilver                  = 0xC0C0C0;
+const TColor clRed                     = 0x0000FF;
+const TColor clLime                    = 0x00FF00;
+const TColor clYellow                  = 0x00FFFF;
+const TColor clBlue                    = 0xFF0000;
+const TColor clFuchsia                 = 0xFF00FF;
+const TColor clAqua                    = 0xFFFF00;
+const TColor clWhite                   = 0xFFFFFF;
+const TColor clMoneyGreen              = 0xC0DCC0;
+const TColor clSkyBlue                 = 0xF0CAA6;
+const TColor clCream                   = 0xF0FBFF;
+const TColor clMedGray                 = 0xA4A0A0;
+// システムの色(docs/adr/0050)。Windows の設定の色(0x80000000 | Windows の COLOR_… の番号)。描くときに実際の色になる。
+// 選択された項目の地の色は clHighlight、文字は clHighlightText 等。TColor は符号付きのため、値は負の数で書く。
+const TColor clScrollBar               = -0x80000000;
+const TColor clBackground              = -0x7FFFFFFF;
+const TColor clActiveCaption           = -0x7FFFFFFE;
+const TColor clInactiveCaption         = -0x7FFFFFFD;
+const TColor clMenu                    = -0x7FFFFFFC;
+const TColor clWindow                  = -0x7FFFFFFB;
+const TColor clWindowFrame             = -0x7FFFFFFA;
+const TColor clMenuText                = -0x7FFFFFF9;
+const TColor clWindowText              = -0x7FFFFFF8;
+const TColor clCaptionText             = -0x7FFFFFF7;
+const TColor clActiveBorder            = -0x7FFFFFF6;
+const TColor clInactiveBorder          = -0x7FFFFFF5;
+const TColor clAppWorkspace            = -0x7FFFFFF4;
+const TColor clHighlight               = -0x7FFFFFF3;
+const TColor clHighlightText           = -0x7FFFFFF2;
+const TColor clBtnFace                 = -0x7FFFFFF1;
+const TColor clBtnShadow               = -0x7FFFFFF0;
+const TColor clGrayText                = -0x7FFFFFEF;
+const TColor clBtnText                 = -0x7FFFFFEE;
+const TColor clInactiveCaptionText     = -0x7FFFFFED;
+const TColor clBtnHighlight            = -0x7FFFFFEC;
+const TColor cl3DDkShadow              = -0x7FFFFFEB;
+const TColor cl3DLight                 = -0x7FFFFFEA;
+const TColor clInfoText                = -0x7FFFFFE9;
+const TColor clInfoBk                  = -0x7FFFFFE8;
+const TColor clHotLight                = -0x7FFFFFE6;
+const TColor clGradientActiveCaption   = -0x7FFFFFE5;
+const TColor clGradientInactiveCaption = -0x7FFFFFE4;
+const TColor clMenuHighlight           = -0x7FFFFFE3;
+const TColor clMenuBar                 = -0x7FFFFFE2;
+const TColor clForm                    = -0x7FFFFFE1;
 // 色を持たない(LCL の clNone)。
 const TColor clNone    = 0x1FFFFFFF;
 // 既定の色(LCL の clDefault)。コントロールの Color の既定値で、実際の色はウィジェットセットが決める。
@@ -1138,6 +1186,38 @@ protected:
 class TMenu;
 class TBasicAction;
 
+// ---- オーナードロー(docs/adr/0050。値の順は LCL と同じ) ----
+
+class TWinControl;
+
+// リストボックスの描き方(lbOwnerDrawFixed・lbOwnerDrawVariable なら OnDrawItem で描く。lbVirtual は対象外)。
+enum TListBoxStyle { lbStandard, lbOwnerDrawFixed, lbOwnerDrawVariable, lbVirtual };
+// 描く項目の状態(LCL の TOwnerDrawState)。ビットの集合(State & odSelected で調べる)。
+using TOwnerDrawState = unsigned int;
+const TOwnerDrawState odSelected          = 1u << 0;
+const TOwnerDrawState odGrayed            = 1u << 1;
+const TOwnerDrawState odDisabled          = 1u << 2;
+const TOwnerDrawState odChecked           = 1u << 3;
+const TOwnerDrawState odFocused           = 1u << 4;
+const TOwnerDrawState odDefault           = 1u << 5;
+const TOwnerDrawState odHotLight          = 1u << 6;
+const TOwnerDrawState odInactive          = 1u << 7;
+const TOwnerDrawState odNoAccel           = 1u << 8;
+const TOwnerDrawState odNoFocusRect       = 1u << 9;
+const TOwnerDrawState odReserved1         = 1u << 10;
+const TOwnerDrawState odReserved2         = 1u << 11;
+const TOwnerDrawState odComboBoxEdit      = 1u << 12;
+const TOwnerDrawState odBackgroundPainted = 1u << 13;
+
+// リストボックス・コンボボックスの項目を描くとき。Control の Canvas の ARect に描く。
+using TDrawItemEvent = std::function<void(TWinControl* Control, int Index, TRect ARect, TOwnerDrawState State)>;
+// 項目の高さを決めるとき(lbOwnerDrawVariable・csOwnerDrawVariable)。AHeight を項目の高さにする。
+using TMeasureItemEvent = std::function<void(TWinControl* Control, int Index, int& AHeight)>;
+// メニュー項目を描くとき(メニューの OwnerDraw が true)。ACanvas の ARect に描く(ACanvas はこの呼び出しの間だけ有効)。
+using TMenuDrawItemEvent = std::function<void(TObject* Sender, TCanvas* ACanvas, TRect ARect, TOwnerDrawState AState)>;
+// メニュー項目の大きさを決めるとき。AWidth・AHeight を項目の幅・高さにする。
+using TMenuMeasureItemEvent = std::function<void(TObject* Sender, TCanvas* ACanvas, int& AWidth, int& AHeight)>;
+
 // メニューの項目。TControl ではない(Parent/Left 等は無く、画面上の親子関係は Add/Insert で組む)。
 // 子の項目は LCL の Items[Index] / Count に合わせ、Items[Index] / Count で参照する。
 // 親の項目が破棄されると、子の項目も(Owner が別でも)一緒に破棄される(LCL の仕様。ラッパーも delete される)。
@@ -1190,6 +1270,11 @@ public:
     // 利用者が項目を選んだときと同じ処理(AutoCheck の反映と OnClick)を行う。
     void Click();
 
+    // ---- docs/adr/0050 ----
+    // メニューの OwnerDraw が true のとき、この項目を描く・大きさを決める。
+    Property<TMenuDrawItemEvent> OnDrawItem;
+    Property<TMenuMeasureItemEvent> OnMeasureItem;
+
 protected:
     ~TMenuItem() override = default;
 
@@ -1237,6 +1322,18 @@ private:
     static void SetSubMenuImagesImpl(TObject* owner, TCustomImageList* const& value);
     static TBitmap* GetBitmapImpl(TObject* owner);
     static void SetBitmapImpl(TObject* owner, TBitmap* const& value);
+
+    // ---- docs/adr/0050 ----
+    TMenuDrawItemEvent onDrawItem_;
+    bool onDrawItemHooked_ = false;
+    static TMenuDrawItemEvent GetOnDrawItemImpl(TObject* owner);
+    static void SetOnDrawItemImpl(TObject* owner, const TMenuDrawItemEvent& value);
+    static void BETH_CALL DrawItemTrampoline(ObjectHandle sender, ObjectHandle canvas, internal::int_t left, internal::int_t top, internal::int_t right, internal::int_t bottom, internal::uint_t state, void* data);
+    TMenuMeasureItemEvent onMeasureItem_;
+    bool onMeasureItemHooked_ = false;
+    static TMenuMeasureItemEvent GetOnMeasureItemImpl(TObject* owner);
+    static void SetOnMeasureItemImpl(TObject* owner, const TMenuMeasureItemEvent& value);
+    static void BETH_CALL MeasureItemTrampoline(ObjectHandle sender, ObjectHandle canvas, internal::int_t* width, internal::int_t* height, void* data);
 };
 
 // TMainMenu・TPopupMenu の共通の基底。Items はメニューのルートの項目で、メニュー自身が(LCL の内部で)生成・所有する。
@@ -1248,6 +1345,10 @@ public:
     // 項目の画像リスト(docs/adr/0030)。各項目の画像は TMenuItem::ImageIndex。
     Property<TCustomImageList*> Images;
 
+    // ---- docs/adr/0050 ----
+    // true なら、項目を各項目の OnDrawItem で描く(OnMeasureItem で大きさを決める)。
+    Property<bool> OwnerDraw;
+
 protected:
     explicit TMenu(ObjectHandle handle);
     ~TMenu() override = default;
@@ -1257,6 +1358,10 @@ private:
 
     static TCustomImageList* GetImagesImpl(TObject* owner);
     static void SetImagesImpl(TObject* owner, TCustomImageList* const& value);
+
+    // ---- docs/adr/0050 ----
+    static bool GetOwnerDrawImpl(TObject* owner);
+    static void SetOwnerDrawImpl(TObject* owner, const bool& value);
 };
 
 // フォームのメニューバー。TForm::Menu に割り当てると表示される。
@@ -4181,6 +4286,15 @@ public:
     // 文字列の一覧(TStrings。ComboBox1->Items->Add("x") のように使う)。
     ReadOnlyProperty<TStrings*> Items;
 
+    // ---- docs/adr/0050 ----
+    // Style が csOwnerDrawFixed・csOwnerDrawVariable 等なら、一覧の項目を OnDrawItem で描く。
+    // 項目の高さ(lbOwnerDrawFixed 等で使う)。
+    Property<int> ItemHeight;
+    // OnDrawItem の中で描く先。コントロールが所有する実体への非所有のビュー。
+    TCanvas Canvas;
+    Property<TDrawItemEvent> OnDrawItem;
+    Property<TMeasureItemEvent> OnMeasureItem;
+
 protected:
     explicit TCustomComboBox(ObjectHandle handle);
     ~TCustomComboBox() override = default;
@@ -4219,6 +4333,20 @@ private:
     static void BETH_CALL CloseUpTrampoline(ObjectHandle sender, void* data);
     static TNotifyEvent GetOnCloseUpImpl(TObject* owner);
     static void SetOnCloseUpImpl(TObject* owner, const TNotifyEvent& value);
+
+    // ---- docs/adr/0050 ----
+    static int GetItemHeightImpl(TObject* owner);
+    static void SetItemHeightImpl(TObject* owner, const int& value);
+    TDrawItemEvent onDrawItem_;
+    bool onDrawItemHooked_ = false;
+    static TDrawItemEvent GetOnDrawItemImpl(TObject* owner);
+    static void SetOnDrawItemImpl(TObject* owner, const TDrawItemEvent& value);
+    static void BETH_CALL DrawItemTrampoline(ObjectHandle sender, internal::int_t index, internal::int_t left, internal::int_t top, internal::int_t right, internal::int_t bottom, internal::uint_t state, void* data);
+    TMeasureItemEvent onMeasureItem_;
+    bool onMeasureItemHooked_ = false;
+    static TMeasureItemEvent GetOnMeasureItemImpl(TObject* owner);
+    static void SetOnMeasureItemImpl(TObject* owner, const TMeasureItemEvent& value);
+    static void BETH_CALL MeasureItemTrampoline(ObjectHandle sender, internal::int_t index, internal::int_t* height, void* data);
 };
 
 class TComboBox : public TCustomComboBox
@@ -4273,6 +4401,16 @@ public:
     // 文字列の一覧(TStrings。ListBox1->Items->Add("x") のように使う)。
     ReadOnlyProperty<TStrings*> Items;
 
+    // ---- docs/adr/0050 ----
+    // 描き方(lbOwnerDrawFixed・lbOwnerDrawVariable なら OnDrawItem で描く)。
+    Property<TListBoxStyle> Style;
+    // 項目の高さ(lbOwnerDrawFixed 等で使う)。
+    Property<int> ItemHeight;
+    // OnDrawItem の中で描く先。コントロールが所有する実体への非所有のビュー。
+    TCanvas Canvas;
+    Property<TDrawItemEvent> OnDrawItem;
+    Property<TMeasureItemEvent> OnMeasureItem;
+
 protected:
     explicit TCustomListBox(ObjectHandle handle);
     ~TCustomListBox() override = default;
@@ -4300,6 +4438,22 @@ private:
     static void BETH_CALL SelectionChangeTrampoline(ObjectHandle sender, internal::bool_t user, void* data);
     static TSelectionChangeEvent GetOnSelectionChangeImpl(TObject* owner);
     static void SetOnSelectionChangeImpl(TObject* owner, const TSelectionChangeEvent& value);
+
+    // ---- docs/adr/0050 ----
+    static TListBoxStyle GetStyleImpl(TObject* owner);
+    static void SetStyleImpl(TObject* owner, const TListBoxStyle& value);
+    static int GetItemHeightImpl(TObject* owner);
+    static void SetItemHeightImpl(TObject* owner, const int& value);
+    TDrawItemEvent onDrawItem_;
+    bool onDrawItemHooked_ = false;
+    static TDrawItemEvent GetOnDrawItemImpl(TObject* owner);
+    static void SetOnDrawItemImpl(TObject* owner, const TDrawItemEvent& value);
+    static void BETH_CALL DrawItemTrampoline(ObjectHandle sender, internal::int_t index, internal::int_t left, internal::int_t top, internal::int_t right, internal::int_t bottom, internal::uint_t state, void* data);
+    TMeasureItemEvent onMeasureItem_;
+    bool onMeasureItemHooked_ = false;
+    static TMeasureItemEvent GetOnMeasureItemImpl(TObject* owner);
+    static void SetOnMeasureItemImpl(TObject* owner, const TMeasureItemEvent& value);
+    static void BETH_CALL MeasureItemTrampoline(ObjectHandle sender, internal::int_t index, internal::int_t* height, void* data);
 };
 
 class TListBox : public TCustomListBox

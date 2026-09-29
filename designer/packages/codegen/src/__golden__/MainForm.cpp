@@ -32,6 +32,7 @@ void TMainForm::beth_CreateComponents()
     BottomPanel = new TPanel(this);
     StatusLabel = new TLabel(this);
     HintPanel = new TPanel(this);
+    ColorList = new TListBox(this);
     MainMenu1 = new TMainMenu(this);
     FileMenu = new TMenuItem(this);
     FileOpenItem = new TMenuItem(this);
@@ -196,6 +197,18 @@ void TMainForm::beth_CreateComponents()
     HintPanel->VerticalAlignment = taAlignTop;
     HintPanel->BevelOuter = bvNone;
 
+    ColorList->Parent = this;
+    ColorList->Left = 16;
+    ColorList->Top = 176;
+    ColorList->Width = 160;
+    ColorList->Height = 76;
+    ColorList->Items->Add("Red");
+    ColorList->Items->Add("Green");
+    ColorList->Items->Add("Blue");
+    ColorList->Style = lbOwnerDrawFixed;
+    ColorList->ItemHeight = 20;
+    ColorList->OnDrawItem = [this](TObject* Sender, int Index, TRect ARect, TOwnerDrawState State) { ColorListDrawItem(Sender, Index, ARect, State); };
+
     PageControl1->ActivePage = MemoSheet;
 
     FileMenu->Caption = "&File";
@@ -234,7 +247,7 @@ void TMainForm::beth_CreateComponents()
 
     FileSaveItem->Action = FileSaveAction;
 }
-// <bethany-designer:end id="beth_CreateComponents" hash="2f417dac">
+// <bethany-designer:end id="beth_CreateComponents" hash="1c357d5e">
 
 // <bethany-designer:handler-stubs>
 
@@ -274,6 +287,11 @@ void TMainForm::RadioGroup1SelectionChanged(TObject* Sender)
 }
 
 void TMainForm::ScrollBar1Scroll(TObject* Sender, TScrollCode ScrollCode, int& ScrollPos)
+{
+    // TODO: implement
+}
+
+void TMainForm::ColorListDrawItem(TObject* Sender, int Index, TRect ARect, TOwnerDrawState State)
 {
     // TODO: implement
 }

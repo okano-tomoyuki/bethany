@@ -127,7 +127,8 @@ class Extractor:
                 if not pm:
                     continue
                 readonly, indexed, two, targs, pname = pm.groups()
-                doc = " ".join(c for c in st.comments if c)
+                # 区切りのコメント(// ---- docs/adr/0049 ----)は説明に含めない
+                doc = " ".join(c for c in st.comments if c and not re.fullmatch(r"-+ .* -+", c))
                 if targs in self.event_types:
                     ev = self.m.event_aliases.get(targs, targs)
                     info = {"type": ev, "declaredIn": cls}

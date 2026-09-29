@@ -2630,6 +2630,37 @@ int main()
         Form1->TrackBar1->TickMarks = tmBoth;
     }
 
+    // オーナードロー(docs/adr/0050)。ListBox1 の各項目の左に色の見本を描き、Panel1 の右クリックのメニューを黄色の地で描く。
+    {
+        TListBox* list = Form1->ListBox1;
+        list->Style = lbOwnerDrawFixed;
+        list->ItemHeight = 22;
+        list->OnDrawItem = [list](TWinControl*, int Index, TRect ARect, TOwnerDrawState State) {
+            const TColor swatches[] = {clRed, clGreen, clBlue};
+            TCanvas& c = list->Canvas;
+            c.Brush.Color = (State & odSelected) ? clHighlight : clWindow;
+            c.FillRect(ARect);
+            c.Brush.Color = swatches[Index % 3];
+            c.Rectangle(ARect.Left + 3, ARect.Top + 3, ARect.Left + 19, ARect.Bottom - 3);
+            c.Brush.Style = bsClear;
+            c.Font.Color = (State & odSelected) ? clHighlightText : clWindowText;
+            c.TextOut(ARect.Left + 24, ARect.Top + 3, std::string(list->Items->Strings[Index]));
+            c.Brush.Style = bsSolid;
+        };
+        Form1->PopupMenu1->OwnerDraw = true;
+        Form1->PopupHelloItem->OnMeasureItem = [](TObject*, TCanvas* ACanvas, int& AWidth, int& AHeight) {
+            AWidth = ACanvas->TextWidth("Say hello (owner draw)") + 24;
+            AHeight = 26;
+        };
+        Form1->PopupHelloItem->OnDrawItem = [](TObject*, TCanvas* ACanvas, TRect ARect, TOwnerDrawState AState) {
+            ACanvas->Brush.Color = (AState & odSelected) ? clHighlight : clYellow;
+            ACanvas->FillRect(ARect);
+            ACanvas->Brush.Style = bsClear;
+            ACanvas->TextOut(ARect.Left + 12, ARect.Top + 5, "Say hello (owner draw)");
+            ACanvas->Brush.Style = bsSolid;
+        };
+    }
+
     // ステータスバーのパネル(docs/adr/0044)。StatusBar1 の上に、パネルを持つ 2 つ目のステータスバーを置く。
     {
         TStatusBar* panelBar = new TStatusBar(Form1);

@@ -31,6 +31,11 @@
   `LargeChange`, `SmallChange` and `OnScroll` of scroll bars, orientation and options of up-down buttons, and `Columns`,
   `ColumnLayout` and `AutoFill` of radio groups and check groups with the `OnSelectionChanged` and `OnItemClick` events. The canvas
   draws the orientation of progress bars, track bars and up-down buttons, and the columns of radio groups and check groups
+- Owner draw from the Bethany library 0.3.0: `Style` and `ItemHeight` of list boxes, `ItemHeight` of combo boxes, `OwnerDraw` of
+  menus, and the `OnDrawItem` and `OnMeasureItem` events. More color constants, including system colors such as `clBtnFace` and
+  `clHighlight`, which the canvas draws with the Windows 11 default colors
+- The default `Color` of tree views and grids and `FixedColor` of grids were wrong (almost black) in the catalog; they are now
+  `clWindow` and `clBtnFace`
 - The include guard macro does not repeat a namespace that is also the folder of the header
   (`APP_DIALOGS_ABOUT_HPP` instead of `APP_DIALOGS_DIALOGS_ABOUT_HPP` for `app::dialogs` and `dialogs/About.hpp`)
 

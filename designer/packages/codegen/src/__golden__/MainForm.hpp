@@ -27,6 +27,7 @@ public:
     beth::TPanel* BottomPanel;
     beth::TLabel* StatusLabel;
     beth::TPanel* HintPanel;
+    beth::TListBox* ColorList;
     beth::TMainMenu* MainMenu1;
     beth::TMenuItem* FileMenu;
     beth::TMenuItem* FileOpenItem;
@@ -48,12 +49,13 @@ public:
     void WrapCheckClick(beth::TObject* Sender);
     void RadioGroup1SelectionChanged(beth::TObject* Sender);
     void ScrollBar1Scroll(beth::TObject* Sender, beth::TScrollCode ScrollCode, int& ScrollPos);
+    void ColorListDrawItem(beth::TObject* Sender, int Index, beth::TRect ARect, beth::TOwnerDrawState State);
     void FileOpenItemClick(beth::TObject* Sender);
     void FileExitItemClick(beth::TObject* Sender);
     void ClearItemClick(beth::TObject* Sender);
     void Timer1Timer(beth::TObject* Sender);
     void FileSaveActionExecute(beth::TObject* Sender);
-    // <bethany-designer:end id="declarations" hash="a5136d77">
+    // <bethany-designer:end id="declarations" hash="59cf7773">
 
     explicit TMainForm(beth::TComponent* AOwner);
 

@@ -268,17 +268,26 @@ function Body({
         </div>
       );
     case 'TListBox':
-    case 'TCheckListBox':
+    case 'TCheckListBox': {
+      // オーナードロー(lbOwnerDraw…)で ItemHeight があれば、その高さで並べる(中身は OnDrawItem が描く。docs/adr/0050)
+      const ownerDraw = text(location, 'Style').startsWith('lbOwnerDraw');
+      const itemHeight = number(location, 'ItemHeight');
+      const itemStyle = ownerDraw && itemHeight > 0 ? { height: itemHeight } : undefined;
       return (
         <div className={bordered(location, 'look-box lines')} style={background}>
           {strings(location, 'Items').map((item, i) => (
-            <div key={i} className={i === number(location, 'ItemIndex') ? 'item selected' : 'item'}>
+            <div
+              key={i}
+              className={i === number(location, 'ItemIndex') ? 'item selected' : 'item'}
+              style={itemStyle}
+            >
               {node.class === 'TCheckListBox' && <span className="look-check small" />}
               {item}
             </div>
           ))}
         </div>
       );
+    }
     case 'TCheckBox':
     case 'TRadioButton':
       return (

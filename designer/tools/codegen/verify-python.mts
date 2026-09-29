@@ -104,6 +104,7 @@ checks["allowDropFiles"] = str(int(f.AllowDropFiles))
 checks["panelBevel"] = f"{int(f.BottomPanel.BevelOuter)}/{int(f.BottomPanel.BevelInner)}/{f.BottomPanel.BevelWidth}/{f.BottomPanel.BorderWidth}"
 checks["groupColumns"] = f"{f.RadioGroup1.Columns}/{int(f.RadioGroup1.ColumnLayout)}"
 checks["scrollChange"] = f"{f.ScrollBar1.LargeChange}/{f.ScrollBar1.SmallChange}"
+checks["ownerDraw"] = f"{int(f.ColorList.Style)}/{f.ColorList.ItemHeight}"
 checks["memoBorder"] = f"{int(f.Memo1.BorderStyle)}/{int(f.Memo1.ScrollBars)}"
 checks["timer"] = f"{int(f.Timer1.Enabled)}/{f.Timer1.Interval}"
 checks["caption"] = f.Caption

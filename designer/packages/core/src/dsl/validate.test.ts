@@ -75,7 +75,7 @@ describe('意味の検証', () => {
       ['wrong-class-kind', 'form.controls.0.class'],
       ['controls-not-allowed', 'form.controls.1.controls.0.class'],
       ['invalid-parent-class', 'form.controls.2.controls.0.controls.5.class'],
-      ['invalid-parent-class', 'form.controls.4.class'],
+      ['invalid-parent-class', 'form.controls.5.class'],
       ['items-not-allowed', 'components.2.items'],
       ['wrong-class-kind', 'components.3.class'],
     ]);

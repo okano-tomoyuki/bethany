@@ -3228,6 +3228,10 @@ TCustomComboBox::TCustomComboBox(ObjectHandle handle)
     , OnCloseUp(this, &TCustomComboBox::GetOnCloseUpImpl, &TCustomComboBox::SetOnCloseUpImpl)
     , ItemIndex(this, &TCustomComboBox::GetItemIndexImpl, &TCustomComboBox::SetItemIndexImpl)
     , Items(this, &TCustomComboBox::GetItemsImpl)
+    , ItemHeight(this, &TCustomComboBox::GetItemHeightImpl, &TCustomComboBox::SetItemHeightImpl)
+    , Canvas(internal::TCustomComboBox_GetCanvas(handle))
+    , OnDrawItem(this, &TCustomComboBox::GetOnDrawItemImpl, &TCustomComboBox::SetOnDrawItemImpl)
+    , OnMeasureItem(this, &TCustomComboBox::GetOnMeasureItemImpl, &TCustomComboBox::SetOnMeasureItemImpl)
     , items_(this, &internal::TCustomComboBox_GetItems)
 {}
 
@@ -3419,6 +3423,11 @@ TCustomListBox::TCustomListBox(ObjectHandle handle)
     , OnSelectionChange(this, &TCustomListBox::GetOnSelectionChangeImpl, &TCustomListBox::SetOnSelectionChangeImpl)
     , ItemIndex(this, &TCustomListBox::GetItemIndexImpl, &TCustomListBox::SetItemIndexImpl)
     , Items(this, &TCustomListBox::GetItemsImpl)
+    , Style(this, &TCustomListBox::GetStyleImpl, &TCustomListBox::SetStyleImpl)
+    , ItemHeight(this, &TCustomListBox::GetItemHeightImpl, &TCustomListBox::SetItemHeightImpl)
+    , Canvas(internal::TCustomListBox_GetCanvas(handle))
+    , OnDrawItem(this, &TCustomListBox::GetOnDrawItemImpl, &TCustomListBox::SetOnDrawItemImpl)
+    , OnMeasureItem(this, &TCustomListBox::GetOnMeasureItemImpl, &TCustomListBox::SetOnMeasureItemImpl)
     , items_(this, &internal::TCustomListBox_GetItems)
 {}
 
@@ -4571,6 +4580,8 @@ TMenuItem::TMenuItem(ObjectHandle handle)
     , SubMenuImages(this, &TMenuItem::GetSubMenuImagesImpl, &TMenuItem::SetSubMenuImagesImpl)
     , Bitmap(this, &TMenuItem::GetBitmapImpl, &TMenuItem::SetBitmapImpl)
     , Action(this, &TMenuItem::GetActionImpl, &TMenuItem::SetActionImpl)
+    , OnDrawItem(this, &TMenuItem::GetOnDrawItemImpl, &TMenuItem::SetOnDrawItemImpl)
+    , OnMeasureItem(this, &TMenuItem::GetOnMeasureItemImpl, &TMenuItem::SetOnMeasureItemImpl)
     , bitmap_(this, &internal::TMenuItem_GetBitmap)
 {}
 
@@ -4639,6 +4650,7 @@ TMenu::TMenu(ObjectHandle handle)
     : TComponent(handle)
     , Items(this, &TMenu::GetItemsImpl)
     , Images(this, &TMenu::GetImagesImpl, &TMenu::SetImagesImpl)
+    , OwnerDraw(this, &TMenu::GetOwnerDrawImpl, &TMenu::SetOwnerDrawImpl)
 {}
 
 TMenuItem* TMenu::GetItemsImpl(TObject* owner) { return WrapExisting<TMenuItem>(internal::TMenu_GetItems(owner->Handle())); }
@@ -5946,6 +5958,139 @@ void BETH_CALL TCustomCheckGroup::ItemClickTrampoline(ObjectHandle sender, inter
             return;
         TCheckGroupClicked handler = self->onItemClick_;
         handler(self, index);
+    });
+}
+
+/* ---------------- オーナードロー(docs/adr/0050) ---------------- */
+
+TListBoxStyle TCustomListBox::GetStyleImpl(TObject* owner)
+{
+    return static_cast<TListBoxStyle>(internal::TCustomListBox_GetStyle(owner->Handle()));
+}
+void TCustomListBox::SetStyleImpl(TObject* owner, const TListBoxStyle& value) { internal::TCustomListBox_SetStyle(owner->Handle(), value); }
+bool TMenu::GetOwnerDrawImpl(TObject* owner) { return internal::TMenu_GetOwnerDraw(owner->Handle()) != 0; }
+void TMenu::SetOwnerDrawImpl(TObject* owner, const bool& value) { internal::TMenu_SetOwnerDraw(owner->Handle(), value ? 1 : 0); }
+
+
+int TCustomListBox::GetItemHeightImpl(TObject* owner) { return internal::TCustomListBox_GetItemHeight(owner->Handle()); }
+void TCustomListBox::SetItemHeightImpl(TObject* owner, const int& value) { internal::TCustomListBox_SetItemHeight(owner->Handle(), value); }
+TDrawItemEvent TCustomListBox::GetOnDrawItemImpl(TObject* owner) { return static_cast<TCustomListBox*>(owner)->onDrawItem_; }
+void TCustomListBox::SetOnDrawItemImpl(TObject* owner, const TDrawItemEvent& value)
+{
+    TCustomListBox* self = static_cast<TCustomListBox*>(owner);
+    SetSimpleEvent(self->handle_, self->onDrawItem_, self->onDrawItemHooked_, value, &internal::TCustomListBox_SetOnDrawItem, &TCustomListBox::DrawItemTrampoline);
+}
+TMeasureItemEvent TCustomListBox::GetOnMeasureItemImpl(TObject* owner) { return static_cast<TCustomListBox*>(owner)->onMeasureItem_; }
+void TCustomListBox::SetOnMeasureItemImpl(TObject* owner, const TMeasureItemEvent& value)
+{
+    TCustomListBox* self = static_cast<TCustomListBox*>(owner);
+    SetSimpleEvent(self->handle_, self->onMeasureItem_, self->onMeasureItemHooked_, value, &internal::TCustomListBox_SetOnMeasureItem, &TCustomListBox::MeasureItemTrampoline);
+}
+
+void BETH_CALL TCustomListBox::DrawItemTrampoline(ObjectHandle sender, internal::int_t index, internal::int_t left, internal::int_t top,
+                                          internal::int_t right, internal::int_t bottom, internal::uint_t state, void*)
+{
+    GuardCallback([&] {
+        TCustomListBox* self = static_cast<TCustomListBox*>(FromHandle(sender));
+        if (!self || !self->onDrawItem_)
+            return;
+        TDrawItemEvent handler = self->onDrawItem_;
+        handler(self, index, TRect{left, top, right, bottom}, state);
+    });
+}
+void BETH_CALL TCustomListBox::MeasureItemTrampoline(ObjectHandle sender, internal::int_t index, internal::int_t* height, void*)
+{
+    GuardCallback([&] {
+        TCustomListBox* self = static_cast<TCustomListBox*>(FromHandle(sender));
+        if (!self || !self->onMeasureItem_)
+            return;
+        TMeasureItemEvent handler = self->onMeasureItem_;
+        int h = *height;
+        handler(self, index, h);
+        *height = h;
+    });
+}
+
+
+int TCustomComboBox::GetItemHeightImpl(TObject* owner) { return internal::TCustomComboBox_GetItemHeight(owner->Handle()); }
+void TCustomComboBox::SetItemHeightImpl(TObject* owner, const int& value) { internal::TCustomComboBox_SetItemHeight(owner->Handle(), value); }
+TDrawItemEvent TCustomComboBox::GetOnDrawItemImpl(TObject* owner) { return static_cast<TCustomComboBox*>(owner)->onDrawItem_; }
+void TCustomComboBox::SetOnDrawItemImpl(TObject* owner, const TDrawItemEvent& value)
+{
+    TCustomComboBox* self = static_cast<TCustomComboBox*>(owner);
+    SetSimpleEvent(self->handle_, self->onDrawItem_, self->onDrawItemHooked_, value, &internal::TCustomComboBox_SetOnDrawItem, &TCustomComboBox::DrawItemTrampoline);
+}
+TMeasureItemEvent TCustomComboBox::GetOnMeasureItemImpl(TObject* owner) { return static_cast<TCustomComboBox*>(owner)->onMeasureItem_; }
+void TCustomComboBox::SetOnMeasureItemImpl(TObject* owner, const TMeasureItemEvent& value)
+{
+    TCustomComboBox* self = static_cast<TCustomComboBox*>(owner);
+    SetSimpleEvent(self->handle_, self->onMeasureItem_, self->onMeasureItemHooked_, value, &internal::TCustomComboBox_SetOnMeasureItem, &TCustomComboBox::MeasureItemTrampoline);
+}
+
+void BETH_CALL TCustomComboBox::DrawItemTrampoline(ObjectHandle sender, internal::int_t index, internal::int_t left, internal::int_t top,
+                                          internal::int_t right, internal::int_t bottom, internal::uint_t state, void*)
+{
+    GuardCallback([&] {
+        TCustomComboBox* self = static_cast<TCustomComboBox*>(FromHandle(sender));
+        if (!self || !self->onDrawItem_)
+            return;
+        TDrawItemEvent handler = self->onDrawItem_;
+        handler(self, index, TRect{left, top, right, bottom}, state);
+    });
+}
+void BETH_CALL TCustomComboBox::MeasureItemTrampoline(ObjectHandle sender, internal::int_t index, internal::int_t* height, void*)
+{
+    GuardCallback([&] {
+        TCustomComboBox* self = static_cast<TCustomComboBox*>(FromHandle(sender));
+        if (!self || !self->onMeasureItem_)
+            return;
+        TMeasureItemEvent handler = self->onMeasureItem_;
+        int h = *height;
+        handler(self, index, h);
+        *height = h;
+    });
+}
+
+TMenuDrawItemEvent TMenuItem::GetOnDrawItemImpl(TObject* owner) { return static_cast<TMenuItem*>(owner)->onDrawItem_; }
+void TMenuItem::SetOnDrawItemImpl(TObject* owner, const TMenuDrawItemEvent& value)
+{
+    TMenuItem* self = static_cast<TMenuItem*>(owner);
+    SetSimpleEvent(self->handle_, self->onDrawItem_, self->onDrawItemHooked_, value, &internal::TMenuItem_SetOnDrawItem, &TMenuItem::DrawItemTrampoline);
+}
+TMenuMeasureItemEvent TMenuItem::GetOnMeasureItemImpl(TObject* owner) { return static_cast<TMenuItem*>(owner)->onMeasureItem_; }
+void TMenuItem::SetOnMeasureItemImpl(TObject* owner, const TMenuMeasureItemEvent& value)
+{
+    TMenuItem* self = static_cast<TMenuItem*>(owner);
+    SetSimpleEvent(self->handle_, self->onMeasureItem_, self->onMeasureItemHooked_, value, &internal::TMenuItem_SetOnMeasureItem, &TMenuItem::MeasureItemTrampoline);
+}
+
+// ACanvas は LCL がこの呼び出しのために渡すもの。呼び出しの間だけのラッパーで包む。
+void BETH_CALL TMenuItem::DrawItemTrampoline(ObjectHandle sender, ObjectHandle canvas, internal::int_t left, internal::int_t top,
+                                             internal::int_t right, internal::int_t bottom, internal::uint_t state, void*)
+{
+    GuardCallback([&] {
+        TMenuItem* self = static_cast<TMenuItem*>(FromHandle(sender));
+        if (!self || !self->onDrawItem_)
+            return;
+        TMenuDrawItemEvent handler = self->onDrawItem_;
+        TCanvas wrapper(canvas);
+        handler(self, &wrapper, TRect{left, top, right, bottom}, state);
+    });
+}
+void BETH_CALL TMenuItem::MeasureItemTrampoline(ObjectHandle sender, ObjectHandle canvas, internal::int_t* width,
+                                                internal::int_t* height, void*)
+{
+    GuardCallback([&] {
+        TMenuItem* self = static_cast<TMenuItem*>(FromHandle(sender));
+        if (!self || !self->onMeasureItem_)
+            return;
+        TMenuMeasureItemEvent handler = self->onMeasureItem_;
+        TCanvas wrapper(canvas);
+        int w = *width;
+        int h = *height;
+        handler(self, &wrapper, w, h);
+        *width = w;
+        *height = h;
     });
 }
 

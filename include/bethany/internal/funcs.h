@@ -1432,6 +1432,22 @@
     X(void,          TCustomRadioGroup_SetOnSelectionChanged, (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
     X(bool_t,        TCustomCheckGroup_GetCheckEnabled,     (obj_t o, int_t i),                                            (o, i)) \
     X(void,          TCustomCheckGroup_SetCheckEnabled,     (obj_t o, int_t i, bool_t v),                                  (o, i, v)) \
-    X(void,          TCustomCheckGroup_SetOnItemClick,      (obj_t o, int_callback_t cb, void* d),                         (o, cb, d))
+    X(void,          TCustomCheckGroup_SetOnItemClick,      (obj_t o, int_callback_t cb, void* d),                         (o, cb, d)) \
+    X(int_t,         TCustomListBox_GetStyle,               (obj_t o),                                                     (o)) \
+    X(void,          TCustomListBox_SetStyle,               (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomListBox_GetItemHeight,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomListBox_SetItemHeight,          (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TCustomListBox_GetCanvas,              (obj_t o),                                                     (o)) \
+    X(void,          TCustomListBox_SetOnDrawItem,          (obj_t o, draw_item_callback_t cb, void* d),                   (o, cb, d)) \
+    X(void,          TCustomListBox_SetOnMeasureItem,       (obj_t o, measure_item_callback_t cb, void* d),                (o, cb, d)) \
+    X(int_t,         TCustomComboBox_GetItemHeight,         (obj_t o),                                                     (o)) \
+    X(void,          TCustomComboBox_SetItemHeight,         (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TCustomComboBox_GetCanvas,             (obj_t o),                                                     (o)) \
+    X(void,          TCustomComboBox_SetOnDrawItem,         (obj_t o, draw_item_callback_t cb, void* d),                   (o, cb, d)) \
+    X(void,          TCustomComboBox_SetOnMeasureItem,      (obj_t o, measure_item_callback_t cb, void* d),                (o, cb, d)) \
+    X(bool_t,        TMenu_GetOwnerDraw,                    (obj_t o),                                                     (o)) \
+    X(void,          TMenu_SetOwnerDraw,                    (obj_t o, bool_t v),                                           (o, v)) \
+    X(void,          TMenuItem_SetOnDrawItem,               (obj_t o, menu_draw_callback_t cb, void* d),                   (o, cb, d)) \
+    X(void,          TMenuItem_SetOnMeasureItem,            (obj_t o, menu_measure_callback_t cb, void* d),                (o, cb, d))
 
 #endif

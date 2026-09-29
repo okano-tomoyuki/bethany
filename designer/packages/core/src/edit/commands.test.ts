@@ -240,7 +240,7 @@ describe('移動', () => {
       'StatusLabel',
       'HintPanel',
     ]);
-    expect(names(doc.form.controls)).toEqual(['PageControl1', 'BottomPanel']);
+    expect(names(doc.form.controls)).toEqual(['PageControl1', 'BottomPanel', 'ColorList']);
   });
 
   it('moveControls: 同じ親の中での並べ替え(index は取り除いた後の位置)', () => {
@@ -250,6 +250,7 @@ describe('移動', () => {
       'PageControl1',
       'NameEdit',
       'BottomPanel',
+      'ColorList',
     ]);
   });
 

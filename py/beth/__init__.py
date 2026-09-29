@@ -39,7 +39,7 @@ from ._core import (BethError, Ref, TRect, TPoint, TObject, TPersistent, TCompon
 from ._core import (lib, _mixins, _register, _event_types, _ItemMixin, _Prop, _Indexed, _Event,
                    _int, _float, _bool, _str, _char, _ptr, _rect_conv, _point_conv, _enum, _set, _comp, _existing, _item, _obj, _view,
                    _str_key, _enc, _dec, _h, _b, _rect, _point, _to_enum, _to_comp, _to_existing, _to_item, _to_obj,
-                   _a_int, _a_bool, _a_rect, _a_exception, _a_strings, _a_enum, _a_comp, _a_item, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_enum)
+                   _a_int, _a_bool, _a_rect, _a_exception, _a_strings, _a_enum, _a_comp, _a_item, _a_obj, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_enum)
 
 
 # ---------------- 列挙型 ----------------
@@ -170,6 +170,16 @@ class TDrawingStyle(enum.IntEnum):
     dsTransparent = 3
 
 dsFocus, dsSelected, dsNormal, dsTransparent = TDrawingStyle.dsFocus, TDrawingStyle.dsSelected, TDrawingStyle.dsNormal, TDrawingStyle.dsTransparent
+
+
+# リストボックスの描き方(lbOwnerDrawFixed・lbOwnerDrawVariable なら OnDrawItem で描く。lbVirtual は対象外)。
+class TListBoxStyle(enum.IntEnum):
+    lbStandard = 0
+    lbOwnerDrawFixed = 1
+    lbOwnerDrawVariable = 2
+    lbVirtual = 3
+
+lbStandard, lbOwnerDrawFixed, lbOwnerDrawVariable, lbVirtual = TListBoxStyle.lbStandard, TListBoxStyle.lbOwnerDrawFixed, TListBoxStyle.lbOwnerDrawVariable, TListBoxStyle.lbVirtual
 
 
 # 親のクライアント領域への寄せ方(LCL / VCL の TAlign と同じ値)。寄せた方向の位置・大きさは LCL が決める
@@ -739,6 +749,39 @@ fsUnderline = TFontStyles.fsUnderline
 fsStrikeOut = TFontStyles.fsStrikeOut
 
 
+class TOwnerDrawState(enum.IntFlag):
+    odSelected = 1 << 0
+    odGrayed = 1 << 1
+    odDisabled = 1 << 2
+    odChecked = 1 << 3
+    odFocused = 1 << 4
+    odDefault = 1 << 5
+    odHotLight = 1 << 6
+    odInactive = 1 << 7
+    odNoAccel = 1 << 8
+    odNoFocusRect = 1 << 9
+    odReserved1 = 1 << 10
+    odReserved2 = 1 << 11
+    odComboBoxEdit = 1 << 12
+    odBackgroundPainted = 1 << 13
+
+
+odSelected = TOwnerDrawState.odSelected
+odGrayed = TOwnerDrawState.odGrayed
+odDisabled = TOwnerDrawState.odDisabled
+odChecked = TOwnerDrawState.odChecked
+odFocused = TOwnerDrawState.odFocused
+odDefault = TOwnerDrawState.odDefault
+odHotLight = TOwnerDrawState.odHotLight
+odInactive = TOwnerDrawState.odInactive
+odNoAccel = TOwnerDrawState.odNoAccel
+odNoFocusRect = TOwnerDrawState.odNoFocusRect
+odReserved1 = TOwnerDrawState.odReserved1
+odReserved2 = TOwnerDrawState.odReserved2
+odComboBoxEdit = TOwnerDrawState.odComboBoxEdit
+odBackgroundPainted = TOwnerDrawState.odBackgroundPainted
+
+
 class TGridOptions(enum.IntFlag):
     goFixedVertLine = 1 << 0
     goFixedHorzLine = 1 << 1
@@ -987,12 +1030,57 @@ frButtonsAtBottom = TFindOptions.frButtonsAtBottom
 
 
 TColor = int
-clBlack = 0x000000
-clWhite = 0xFFFFFF
-clRed = 0x0000FF
+clBlack = 0x000000  # 色の定数(LCL・VCL と同じ値)。標準の 16 色と、LCL の追加の 4 色(docs/adr/0050 で加えた)。
+clMaroon = 0x000080
 clGreen = 0x008000
-clBlue = 0xFF0000
+clOlive = 0x008080
+clNavy = 0x800000
+clPurple = 0x800080
+clTeal = 0x808000
+clGray = 0x808080
+clSilver = 0xC0C0C0
+clRed = 0x0000FF
+clLime = 0x00FF00
 clYellow = 0x00FFFF
+clBlue = 0xFF0000
+clFuchsia = 0xFF00FF
+clAqua = 0xFFFF00
+clWhite = 0xFFFFFF
+clMoneyGreen = 0xC0DCC0
+clSkyBlue = 0xF0CAA6
+clCream = 0xF0FBFF
+clMedGray = 0xA4A0A0
+clScrollBar = -0x80000000  # システムの色(docs/adr/0050)。Windows の設定の色(0x80000000 | Windows の COLOR_… の番号)。描くときに実際の色になる。 選択された項目の地の色は clHighlight、文字は clHighlightText 等。TColor は符号付きのため、値は負の数で書く。
+clBackground = -0x7FFFFFFF
+clActiveCaption = -0x7FFFFFFE
+clInactiveCaption = -0x7FFFFFFD
+clMenu = -0x7FFFFFFC
+clWindow = -0x7FFFFFFB
+clWindowFrame = -0x7FFFFFFA
+clMenuText = -0x7FFFFFF9
+clWindowText = -0x7FFFFFF8
+clCaptionText = -0x7FFFFFF7
+clActiveBorder = -0x7FFFFFF6
+clInactiveBorder = -0x7FFFFFF5
+clAppWorkspace = -0x7FFFFFF4
+clHighlight = -0x7FFFFFF3
+clHighlightText = -0x7FFFFFF2
+clBtnFace = -0x7FFFFFF1
+clBtnShadow = -0x7FFFFFF0
+clGrayText = -0x7FFFFFEF
+clBtnText = -0x7FFFFFEE
+clInactiveCaptionText = -0x7FFFFFED
+clBtnHighlight = -0x7FFFFFEC
+cl3DDkShadow = -0x7FFFFFEB
+cl3DLight = -0x7FFFFFEA
+clInfoText = -0x7FFFFFE9
+clInfoBk = -0x7FFFFFE8
+clHotLight = -0x7FFFFFE6
+clGradientActiveCaption = -0x7FFFFFE5
+clGradientInactiveCaption = -0x7FFFFFE4
+clMenuHighlight = -0x7FFFFFE3
+clMenuBar = -0x7FFFFFE2
+clForm = -0x7FFFFFE1
 clNone = 0x1FFFFFFF  # 色を持たない(LCL の clNone)。
 clDefault = 0x20000000  # 既定の色(LCL の clDefault)。コントロールの Color の既定値で、実際の色はウィジェットセットが決める。
 
@@ -1412,6 +1500,10 @@ class TMenuItem(TComponent):
     # 利用者が項目を選んだときと同じ処理(AutoCheck の反映と OnClick)を行う。
     def Click(self):
         lib.TMenuItem_Click(self._current())
+    # ---- docs/adr/0050 ----
+    # メニューの OwnerDraw が true のとき、この項目を描く・大きさを決める。
+    OnDrawItem = _Event("TMenuItem_SetOnDrawItem", "TMenuDrawItemEvent")
+    OnMeasureItem = _Event("TMenuItem_SetOnMeasureItem", "TMenuMeasureItemEvent")
 
 
 class TMenu(TComponent):
@@ -1420,6 +1512,9 @@ class TMenu(TComponent):
     Items = _Prop("TMenu_GetItems", None, _existing("TMenuItem"))
     # 項目の画像リスト(docs/adr/0030)。各項目の画像は TMenuItem::ImageIndex。
     Images = _Prop("TMenu_GetImages", "TMenu_SetImages", _comp("TCustomImageList"))
+    # ---- docs/adr/0050 ----
+    # true なら、項目を各項目の OnDrawItem で描く(OnMeasureItem で大きさを決める)。
+    OwnerDraw = _Prop("TMenu_GetOwnerDraw", "TMenu_SetOwnerDraw", _bool)
 
 
 class TMainMenu(TMenu):
@@ -2638,6 +2733,14 @@ class TCustomComboBox(TWinControl):
     ItemIndex = _Prop("TCustomComboBox_GetItemIndex", "TCustomComboBox_SetItemIndex", _int)
     # 文字列の一覧(TStrings。ComboBox1->Items->Add("x") のように使う)。
     Items = _Prop("TCustomComboBox_GetItems", None, _view("TStrings"))
+    # ---- docs/adr/0050 ----
+    # Style が csOwnerDrawFixed・csOwnerDrawVariable 等なら、一覧の項目を OnDrawItem で描く。
+    # 項目の高さ(lbOwnerDrawFixed 等で使う)。
+    ItemHeight = _Prop("TCustomComboBox_GetItemHeight", "TCustomComboBox_SetItemHeight", _int)
+    # OnDrawItem の中で描く先。コントロールが所有する実体への非所有のビュー。
+    Canvas = _Prop("TCustomComboBox_GetCanvas", None, _obj("TCanvas"))
+    OnDrawItem = _Event("TCustomComboBox_SetOnDrawItem", "TDrawItemEvent")
+    OnMeasureItem = _Event("TCustomComboBox_SetOnMeasureItem", "TMeasureItemEvent")
 
 
 class TComboBox(TCustomComboBox):
@@ -2678,6 +2781,15 @@ class TCustomListBox(TWinControl):
     ItemIndex = _Prop("TCustomListBox_GetItemIndex", "TCustomListBox_SetItemIndex", _int)
     # 文字列の一覧(TStrings。ListBox1->Items->Add("x") のように使う)。
     Items = _Prop("TCustomListBox_GetItems", None, _view("TStrings"))
+    # ---- docs/adr/0050 ----
+    # 描き方(lbOwnerDrawFixed・lbOwnerDrawVariable なら OnDrawItem で描く)。
+    Style = _Prop("TCustomListBox_GetStyle", "TCustomListBox_SetStyle", _enum("TListBoxStyle"))
+    # 項目の高さ(lbOwnerDrawFixed 等で使う)。
+    ItemHeight = _Prop("TCustomListBox_GetItemHeight", "TCustomListBox_SetItemHeight", _int)
+    # OnDrawItem の中で描く先。コントロールが所有する実体への非所有のビュー。
+    Canvas = _Prop("TCustomListBox_GetCanvas", None, _obj("TCanvas"))
+    OnDrawItem = _Event("TCustomListBox_SetOnDrawItem", "TDrawItemEvent")
+    OnMeasureItem = _Event("TCustomListBox_SetOnMeasureItem", "TMeasureItemEvent")
 
 
 class TListBox(TCustomListBox):
@@ -3389,6 +3501,10 @@ _event_types.update({
     "TMouseEvent": (_a_enum("TMouseButton"), _a_enum("TShiftState"), _a_int, _a_int, ),  # (Sender, Button, Shift, X, Y)
     "TMouseMoveEvent": (_a_enum("TShiftState"), _a_int, _a_int, ),  # (Sender, Shift, X, Y)
     "TMouseWheelEvent": (_a_enum("TShiftState"), _a_int, _a_int, _a_int, _a_ref_bool, ),  # (Sender, Shift, WheelDelta, X, Y, Handled)
+    "TDrawItemEvent": (_a_int, _a_rect, _a_enum("TOwnerDrawState"), ),  # (Sender, Index, ARect, State)
+    "TMeasureItemEvent": (_a_int, _a_ref_int, ),  # (Sender, Index, AHeight)
+    "TMenuDrawItemEvent": (_a_obj("TCanvas"), _a_rect, _a_enum("TOwnerDrawState"), ),  # (Sender, ACanvas, ARect, AState)
+    "TMenuMeasureItemEvent": (_a_obj("TCanvas"), _a_ref_int, _a_ref_int, ),  # (Sender, ACanvas, AWidth, AHeight)
     "TSelectionChangeEvent": (_a_bool, ),  # (Sender, User)
     "TIdleEvent": (_a_ref_bool, ),  # (Sender, Done)
     "TExceptionEvent": (_a_exception, ),  # (Sender, E)
@@ -3438,92 +3554,101 @@ __all__ = [
     "fqDraft", "fqProof", "fqNonAntialiased", "fqAntialiased", "fqCleartype", "fqCleartypeNatural", "TPixelFormat",
     "pfDevice", "pf1bit", "pf4bit", "pf8bit", "pf15bit", "pf16bit", "pf24bit", "pf32bit", "pfCustom",
     "TTransparentMode", "tmAuto", "tmFixed", "TDrawingStyle", "dsFocus", "dsSelected", "dsNormal", "dsTransparent",
-    "TAlign", "alNone", "alTop", "alBottom", "alLeft", "alRight", "alClient", "alCustom", "TAnchorKind", "akTop",
-    "akLeft", "akRight", "akBottom", "TFormBorderStyle", "bsNone", "bsSingle", "bsSizeable", "bsDialog",
-    "bsToolWindow", "bsSizeToolWin", "TPanelBevel", "bvNone", "bvLowered", "bvRaised", "bvSpace",
-    "TVerticalAlignment", "taAlignTop", "taAlignBottom", "taVerticalCenter", "TScrollStyle", "ssNone",
-    "ssHorizontal", "ssVertical", "ssBoth", "ssAutoHorizontal", "ssAutoVertical", "ssAutoBoth", "TScrollBarKind",
-    "sbHorizontal", "sbVertical", "TComboBoxStyle", "csDropDown", "csSimple", "csDropDownList", "csOwnerDrawFixed",
-    "csOwnerDrawVariable", "csOwnerDrawEditableFixed", "csOwnerDrawEditableVariable", "TCheckBoxState",
-    "cbUnchecked", "cbChecked", "cbGrayed", "TAlignment", "taLeftJustify", "taRightJustify", "taCenter",
-    "TTextLayout", "tlTop", "tlCenter", "tlBottom", "TEchoMode", "emNormal", "emNone", "emPassword",
-    "TEditCharCase", "ecNormal", "ecUpperCase", "ecLowerCase", "TTrackBarOrientation", "trHorizontal",
-    "trVertical", "TTickMark", "tmBottomRight", "tmTopLeft", "tmBoth", "TTickStyle", "tsNone", "tsAuto",
-    "tsManual", "TProgressBarOrientation", "pbHorizontal", "pbVertical", "pbRightToLeft", "pbTopDown",
-    "TProgressBarStyle", "pbstNormal", "pbstMarquee", "TUDOrientation", "udHorizontal", "udVertical",
-    "TUDAlignButton", "udLeft", "udRight", "udTop", "udBottom", "TColumnLayout", "clHorizontalThenVertical",
-    "clVerticalThenHorizontal", "TScrollCode", "scLineUp", "scLineDown", "scPageUp", "scPageDown", "scPosition",
-    "scTrack", "scTop", "scBottom", "scEndScroll", "TPosition", "poDesigned", "poDefault", "poDefaultPosOnly",
-    "poDefaultSizeOnly", "poScreenCenter", "poDesktopCenter", "poMainFormCenter", "poOwnerFormCenter",
-    "poWorkAreaCenter", "TWindowState", "wsNormal", "wsMinimized", "wsMaximized", "wsFullScreen", "TBorderIcon",
-    "biSystemMenu", "biMinimize", "biMaximize", "biHelp", "TFormStyle", "fsNormal", "fsMDIChild", "fsMDIForm",
-    "fsStayOnTop", "fsSplash", "fsSystemStayOnTop", "TMsgDlgType", "mtWarning", "mtError", "mtInformation",
-    "mtConfirmation", "mtCustom", "TMsgDlgBtn", "mbYes", "mbNo", "mbOK", "mbCancel", "mbAbort", "mbRetry",
-    "mbIgnore", "mbAll", "mbNoToAll", "mbYesToAll", "mbHelp", "mbClose", "TBevelShape", "bsBox", "bsFrame",
-    "bsTopLine", "bsBottomLine", "bsLeftLine", "bsRightLine", "bsSpacer", "TBevelStyle", "bsLowered", "bsRaised",
-    "TBitBtnKind", "bkCustom", "bkOK", "bkCancel", "bkHelp", "bkYes", "bkNo", "bkClose", "bkAbort", "bkRetry",
-    "bkIgnore", "bkAll", "bkNoToAll", "bkYesToAll", "TButtonLayout", "blGlyphLeft", "blGlyphRight", "blGlyphTop",
-    "blGlyphBottom", "TLabelPosition", "lpAbove", "lpBelow", "lpLeft", "lpRight", "TTabPosition", "tpTop",
-    "tpBottom", "tpLeft", "tpRight", "TNodeAttachMode", "naAdd", "naAddFirst", "naAddChild", "naAddChildFirst",
-    "naInsert", "naInsertBehind", "TViewStyle", "vsIcon", "vsSmallIcon", "vsList", "vsReport", "TSortType",
-    "stNone", "stData", "stText", "stBoth", "TSortDirection", "sdAscending", "sdDescending", "TItemChange",
-    "ctText", "ctImage", "ctState", "TResizeStyle", "rsLine", "rsNone", "rsPattern", "rsUpdate",
-    "TStaticBorderStyle", "sbsNone", "sbsSingle", "sbsSunken", "TStatusPanelStyle", "psText", "psOwnerDraw",
-    "TStatusPanelBevel", "pbNone", "pbLowered", "pbRaised", "TShapeType", "stRectangle", "stSquare", "stRoundRect",
-    "stRoundSquare", "stEllipse", "stCircle", "stSquaredDiamond", "stDiamond", "stTriangle", "stTriangleLeft",
-    "stTriangleRight", "stTriangleDown", "stStar", "stStarDown", "stPolygon", "TSectionTrackState", "tsTrackBegin",
-    "tsTrackMove", "tsTrackEnd", "TEdgeStyle", "esNone", "esRaised", "esLowered", "TToolButtonStyle", "tbsButton",
-    "tbsCheck", "tbsDropDown", "tbsSeparator", "tbsDivider", "tbsButtonDrop", "TGrabStyle", "gsSimple", "gsDouble",
-    "gsHorLines", "gsVerLines", "gsGripper", "gsButton", "TActionListState", "asNormal", "asSuspended",
-    "asSuspendedEnabled", "TBorderStyle", "TShiftState", "ssShift", "ssAlt", "ssCtrl", "ssLeft", "ssRight",
-    "ssMiddle", "ssDouble", "ssMeta", "ssSuper", "ssHyper", "ssAltGr", "ssCaps", "ssNum", "ssScroll", "ssTriple",
-    "ssQuad", "ssExtra1", "ssExtra2", "TFontStyles", "fsBold", "fsItalic", "fsUnderline", "fsStrikeOut",
-    "TGridOptions", "goFixedVertLine", "goFixedHorzLine", "goVertLine", "goHorzLine", "goRangeSelect",
-    "goDrawFocusSelected", "goRowSizing", "goColSizing", "goRowMoving", "goColMoving", "goEditing",
-    "goAutoAddRows", "goTabs", "goRowSelect", "goAlwaysShowEditor", "goThumbTracking", "goColSpanning",
-    "goRelaxedRowSelect", "goDblClickAutoSize", "goSmoothScroll", "goFixedRowNumbering", "goScrollKeepVisible",
-    "goHeaderHotTracking", "goHeaderPushedLook", "goSelectionActive", "goFixedColSizing", "goDontScrollPartCell",
-    "goCellHints", "goTruncCellHints", "goCellEllipsis", "goAutoAddRowsSkipContentCheck", "goRowHighlight",
-    "TGridDrawState", "gdSelected", "gdFocused", "gdFixed", "gdHot", "gdPushed", "gdRowHighlight", "TEdgeBorders",
-    "ebLeft", "ebTop", "ebRight", "ebBottom", "TOpenOptions", "ofReadOnly", "ofOverwritePrompt", "ofHideReadOnly",
-    "ofNoChangeDir", "ofShowHelp", "ofNoValidate", "ofAllowMultiSelect", "ofExtensionDifferent", "ofPathMustExist",
-    "ofFileMustExist", "ofCreatePrompt", "ofShareAware", "ofNoReadOnlyReturn", "ofNoTestFileCreate",
-    "ofNoNetworkButton", "ofNoLongNames", "ofOldStyleDialog", "ofNoDereferenceLinks", "ofNoResolveLinks",
-    "ofEnableIncludeNotify", "ofEnableSizing", "ofDontAddToRecent", "ofForceShowHidden", "ofViewDetail",
-    "ofAutoPreview", "TColorDialogOptions", "cdFullOpen", "cdPreventFullOpen", "cdShowHelp", "cdSolidColor",
-    "cdAnyColor", "TFontDialogOptions", "fdAnsiOnly", "fdTrueTypeOnly", "fdEffects", "fdFixedPitchOnly",
-    "fdForceFontExist", "fdNoFaceSel", "fdNoOEMFonts", "fdNoSimulations", "fdNoSizeSel", "fdNoStyleSel",
-    "fdNoVectorFonts", "fdShowHelp", "fdWysiwyg", "fdLimitSize", "fdScalableOnly", "fdApplyButton", "TFindOptions",
-    "frDown", "frFindNext", "frHideMatchCase", "frHideWholeWord", "frHideUpDown", "frMatchCase",
-    "frDisableMatchCase", "frDisableUpDown", "frDisableWholeWord", "frReplace", "frReplaceAll", "frWholeWord",
-    "frShowHelp", "frEntireScope", "frHideEntireScope", "frPromptOnReplace", "frHidePromptOnReplace",
-    "frButtonsAtBottom", "TColor", "clBlack", "clWhite", "clRed", "clGreen", "clBlue", "clYellow", "clNone",
-    "clDefault", "TShortCut", "scShift", "scCtrl", "scAlt", "TCursor", "crDefault", "crNone", "crArrow", "crCross",
-    "crIBeam", "crSizeNESW", "crSizeNS", "crSizeNWSE", "crSizeWE", "crUpArrow", "crHourGlass", "crDrag",
-    "crNoDrop", "crHSplit", "crVSplit", "crMultiDrag", "crSQLWait", "crNo", "crAppStart", "crHelp", "crHandPoint",
-    "crSizeAll", "crSize", "crSizeNW", "crSizeN", "crSizeNE", "crSizeW", "crSizeE", "crSizeSW", "crSizeS",
-    "crSizeSE", "TModalResult", "mrNone", "mrOk", "mrCancel", "mrAbort", "mrRetry", "mrIgnore", "mrYes", "mrNo",
-    "mrAll", "mrNoToAll", "mrYesToAll", "mrClose", "TClipboardFormat", "mbYesNo", "mbYesNoCancel", "mbOKCancel",
-    "mbAbortRetryIgnore", "TStrings", "TStringList", "TPen", "TBrush", "TFont", "TCanvas", "TGraphic",
-    "TRasterImage", "TCustomBitmap", "TBitmap", "TPortableNetworkGraphic", "TJPEGImage", "TIcon", "TPicture",
-    "TCustomImageList", "TImageList", "TMenuItem", "TMenu", "TMainMenu", "TPopupMenu", "TSizeConstraints",
-    "TControlBorderSpacing", "TControlScrollBar", "TControl", "TWinControl", "TCustomScrollBar", "TScrollBar",
-    "TCustomTrackBar", "TTrackBar", "TCustomProgressBar", "TProgressBar", "TGraphicControl", "TCustomControl",
-    "TUpDown", "TScrollingWinControl", "TScrollBox", "TCustomForm", "TForm", "TApplication", "TScreen",
-    "TClipboard", "TCustomPanel", "TPanel", "TCustomGroupBox", "TGroupBox", "TCustomRadioGroup", "TRadioGroup",
-    "TCustomCheckGroup", "TCheckGroup", "TCustomLabel", "TLabel", "TBoundLabel", "TBevel", "TButtonControl",
-    "TCustomButton", "TButton", "TCustomBitBtn", "TBitBtn", "TCustomCheckBox", "TCheckBox", "TRadioButton",
-    "TToggleBox", "TCustomEdit", "TEdit", "TCustomFloatSpinEdit", "TFloatSpinEdit", "TCustomSpinEdit", "TSpinEdit",
-    "TMaskEdit", "TCustomLabeledEdit", "TLabeledEdit", "TCustomTabControl", "TTabControl", "TPageControl",
-    "TCustomPage", "TTabSheet", "TTreeNode", "TTreeNodes", "TCustomTreeView", "TTreeView", "TListItem",
-    "TListItems", "TListColumn", "TListColumns", "TCustomListView", "TListView", "TCustomSplitter", "TSplitter",
-    "TCustomMemo", "TMemo", "TCustomComboBox", "TComboBox", "TCustomListBox", "TListBox", "TCustomCheckListBox",
-    "TCheckListBox", "TCustomStaticText", "TStaticText", "TStatusPanel", "TStatusPanels", "TStatusBar",
-    "TCustomShape", "TShape", "TCustomSpeedButton", "TSpeedButton", "TPaintBox", "TCustomImage", "TImage",
-    "TCustomGrid", "TCustomDrawGrid", "TDrawGrid", "TCustomStringGrid", "TStringGrid", "THeaderSection",
-    "THeaderSections", "TCustomHeaderControl", "THeaderControl", "TToolWindow", "TToolBar", "TToolButton",
-    "TCoolBand", "TCoolBands", "TCustomCoolBar", "TCoolBar", "TCustomTimer", "TTimer", "TBasicAction",
-    "TContainedAction", "TCustomAction", "TAction", "TCustomActionList", "TActionList", "TCommonDialog",
-    "TFileDialog", "TOpenDialog", "TSaveDialog", "TSelectDirectoryDialog", "TColorDialog", "TFontDialog",
-    "TFindDialog", "TReplaceDialog",
+    "TListBoxStyle", "lbStandard", "lbOwnerDrawFixed", "lbOwnerDrawVariable", "lbVirtual", "TAlign", "alNone",
+    "alTop", "alBottom", "alLeft", "alRight", "alClient", "alCustom", "TAnchorKind", "akTop", "akLeft", "akRight",
+    "akBottom", "TFormBorderStyle", "bsNone", "bsSingle", "bsSizeable", "bsDialog", "bsToolWindow",
+    "bsSizeToolWin", "TPanelBevel", "bvNone", "bvLowered", "bvRaised", "bvSpace", "TVerticalAlignment",
+    "taAlignTop", "taAlignBottom", "taVerticalCenter", "TScrollStyle", "ssNone", "ssHorizontal", "ssVertical",
+    "ssBoth", "ssAutoHorizontal", "ssAutoVertical", "ssAutoBoth", "TScrollBarKind", "sbHorizontal", "sbVertical",
+    "TComboBoxStyle", "csDropDown", "csSimple", "csDropDownList", "csOwnerDrawFixed", "csOwnerDrawVariable",
+    "csOwnerDrawEditableFixed", "csOwnerDrawEditableVariable", "TCheckBoxState", "cbUnchecked", "cbChecked",
+    "cbGrayed", "TAlignment", "taLeftJustify", "taRightJustify", "taCenter", "TTextLayout", "tlTop", "tlCenter",
+    "tlBottom", "TEchoMode", "emNormal", "emNone", "emPassword", "TEditCharCase", "ecNormal", "ecUpperCase",
+    "ecLowerCase", "TTrackBarOrientation", "trHorizontal", "trVertical", "TTickMark", "tmBottomRight", "tmTopLeft",
+    "tmBoth", "TTickStyle", "tsNone", "tsAuto", "tsManual", "TProgressBarOrientation", "pbHorizontal",
+    "pbVertical", "pbRightToLeft", "pbTopDown", "TProgressBarStyle", "pbstNormal", "pbstMarquee", "TUDOrientation",
+    "udHorizontal", "udVertical", "TUDAlignButton", "udLeft", "udRight", "udTop", "udBottom", "TColumnLayout",
+    "clHorizontalThenVertical", "clVerticalThenHorizontal", "TScrollCode", "scLineUp", "scLineDown", "scPageUp",
+    "scPageDown", "scPosition", "scTrack", "scTop", "scBottom", "scEndScroll", "TPosition", "poDesigned",
+    "poDefault", "poDefaultPosOnly", "poDefaultSizeOnly", "poScreenCenter", "poDesktopCenter", "poMainFormCenter",
+    "poOwnerFormCenter", "poWorkAreaCenter", "TWindowState", "wsNormal", "wsMinimized", "wsMaximized",
+    "wsFullScreen", "TBorderIcon", "biSystemMenu", "biMinimize", "biMaximize", "biHelp", "TFormStyle", "fsNormal",
+    "fsMDIChild", "fsMDIForm", "fsStayOnTop", "fsSplash", "fsSystemStayOnTop", "TMsgDlgType", "mtWarning",
+    "mtError", "mtInformation", "mtConfirmation", "mtCustom", "TMsgDlgBtn", "mbYes", "mbNo", "mbOK", "mbCancel",
+    "mbAbort", "mbRetry", "mbIgnore", "mbAll", "mbNoToAll", "mbYesToAll", "mbHelp", "mbClose", "TBevelShape",
+    "bsBox", "bsFrame", "bsTopLine", "bsBottomLine", "bsLeftLine", "bsRightLine", "bsSpacer", "TBevelStyle",
+    "bsLowered", "bsRaised", "TBitBtnKind", "bkCustom", "bkOK", "bkCancel", "bkHelp", "bkYes", "bkNo", "bkClose",
+    "bkAbort", "bkRetry", "bkIgnore", "bkAll", "bkNoToAll", "bkYesToAll", "TButtonLayout", "blGlyphLeft",
+    "blGlyphRight", "blGlyphTop", "blGlyphBottom", "TLabelPosition", "lpAbove", "lpBelow", "lpLeft", "lpRight",
+    "TTabPosition", "tpTop", "tpBottom", "tpLeft", "tpRight", "TNodeAttachMode", "naAdd", "naAddFirst",
+    "naAddChild", "naAddChildFirst", "naInsert", "naInsertBehind", "TViewStyle", "vsIcon", "vsSmallIcon", "vsList",
+    "vsReport", "TSortType", "stNone", "stData", "stText", "stBoth", "TSortDirection", "sdAscending",
+    "sdDescending", "TItemChange", "ctText", "ctImage", "ctState", "TResizeStyle", "rsLine", "rsNone", "rsPattern",
+    "rsUpdate", "TStaticBorderStyle", "sbsNone", "sbsSingle", "sbsSunken", "TStatusPanelStyle", "psText",
+    "psOwnerDraw", "TStatusPanelBevel", "pbNone", "pbLowered", "pbRaised", "TShapeType", "stRectangle", "stSquare",
+    "stRoundRect", "stRoundSquare", "stEllipse", "stCircle", "stSquaredDiamond", "stDiamond", "stTriangle",
+    "stTriangleLeft", "stTriangleRight", "stTriangleDown", "stStar", "stStarDown", "stPolygon",
+    "TSectionTrackState", "tsTrackBegin", "tsTrackMove", "tsTrackEnd", "TEdgeStyle", "esNone", "esRaised",
+    "esLowered", "TToolButtonStyle", "tbsButton", "tbsCheck", "tbsDropDown", "tbsSeparator", "tbsDivider",
+    "tbsButtonDrop", "TGrabStyle", "gsSimple", "gsDouble", "gsHorLines", "gsVerLines", "gsGripper", "gsButton",
+    "TActionListState", "asNormal", "asSuspended", "asSuspendedEnabled", "TBorderStyle", "TShiftState", "ssShift",
+    "ssAlt", "ssCtrl", "ssLeft", "ssRight", "ssMiddle", "ssDouble", "ssMeta", "ssSuper", "ssHyper", "ssAltGr",
+    "ssCaps", "ssNum", "ssScroll", "ssTriple", "ssQuad", "ssExtra1", "ssExtra2", "TFontStyles", "fsBold",
+    "fsItalic", "fsUnderline", "fsStrikeOut", "TOwnerDrawState", "odSelected", "odGrayed", "odDisabled",
+    "odChecked", "odFocused", "odDefault", "odHotLight", "odInactive", "odNoAccel", "odNoFocusRect", "odReserved1",
+    "odReserved2", "odComboBoxEdit", "odBackgroundPainted", "TGridOptions", "goFixedVertLine", "goFixedHorzLine",
+    "goVertLine", "goHorzLine", "goRangeSelect", "goDrawFocusSelected", "goRowSizing", "goColSizing",
+    "goRowMoving", "goColMoving", "goEditing", "goAutoAddRows", "goTabs", "goRowSelect", "goAlwaysShowEditor",
+    "goThumbTracking", "goColSpanning", "goRelaxedRowSelect", "goDblClickAutoSize", "goSmoothScroll",
+    "goFixedRowNumbering", "goScrollKeepVisible", "goHeaderHotTracking", "goHeaderPushedLook", "goSelectionActive",
+    "goFixedColSizing", "goDontScrollPartCell", "goCellHints", "goTruncCellHints", "goCellEllipsis",
+    "goAutoAddRowsSkipContentCheck", "goRowHighlight", "TGridDrawState", "gdSelected", "gdFocused", "gdFixed",
+    "gdHot", "gdPushed", "gdRowHighlight", "TEdgeBorders", "ebLeft", "ebTop", "ebRight", "ebBottom",
+    "TOpenOptions", "ofReadOnly", "ofOverwritePrompt", "ofHideReadOnly", "ofNoChangeDir", "ofShowHelp",
+    "ofNoValidate", "ofAllowMultiSelect", "ofExtensionDifferent", "ofPathMustExist", "ofFileMustExist",
+    "ofCreatePrompt", "ofShareAware", "ofNoReadOnlyReturn", "ofNoTestFileCreate", "ofNoNetworkButton",
+    "ofNoLongNames", "ofOldStyleDialog", "ofNoDereferenceLinks", "ofNoResolveLinks", "ofEnableIncludeNotify",
+    "ofEnableSizing", "ofDontAddToRecent", "ofForceShowHidden", "ofViewDetail", "ofAutoPreview",
+    "TColorDialogOptions", "cdFullOpen", "cdPreventFullOpen", "cdShowHelp", "cdSolidColor", "cdAnyColor",
+    "TFontDialogOptions", "fdAnsiOnly", "fdTrueTypeOnly", "fdEffects", "fdFixedPitchOnly", "fdForceFontExist",
+    "fdNoFaceSel", "fdNoOEMFonts", "fdNoSimulations", "fdNoSizeSel", "fdNoStyleSel", "fdNoVectorFonts",
+    "fdShowHelp", "fdWysiwyg", "fdLimitSize", "fdScalableOnly", "fdApplyButton", "TFindOptions", "frDown",
+    "frFindNext", "frHideMatchCase", "frHideWholeWord", "frHideUpDown", "frMatchCase", "frDisableMatchCase",
+    "frDisableUpDown", "frDisableWholeWord", "frReplace", "frReplaceAll", "frWholeWord", "frShowHelp",
+    "frEntireScope", "frHideEntireScope", "frPromptOnReplace", "frHidePromptOnReplace", "frButtonsAtBottom",
+    "TColor", "clBlack", "clMaroon", "clGreen", "clOlive", "clNavy", "clPurple", "clTeal", "clGray", "clSilver",
+    "clRed", "clLime", "clYellow", "clBlue", "clFuchsia", "clAqua", "clWhite", "clMoneyGreen", "clSkyBlue",
+    "clCream", "clMedGray", "clScrollBar", "clBackground", "clActiveCaption", "clInactiveCaption", "clMenu",
+    "clWindow", "clWindowFrame", "clMenuText", "clWindowText", "clCaptionText", "clActiveBorder",
+    "clInactiveBorder", "clAppWorkspace", "clHighlight", "clHighlightText", "clBtnFace", "clBtnShadow",
+    "clGrayText", "clBtnText", "clInactiveCaptionText", "clBtnHighlight", "cl3DDkShadow", "cl3DLight",
+    "clInfoText", "clInfoBk", "clHotLight", "clGradientActiveCaption", "clGradientInactiveCaption",
+    "clMenuHighlight", "clMenuBar", "clForm", "clNone", "clDefault", "TShortCut", "scShift", "scCtrl", "scAlt",
+    "TCursor", "crDefault", "crNone", "crArrow", "crCross", "crIBeam", "crSizeNESW", "crSizeNS", "crSizeNWSE",
+    "crSizeWE", "crUpArrow", "crHourGlass", "crDrag", "crNoDrop", "crHSplit", "crVSplit", "crMultiDrag",
+    "crSQLWait", "crNo", "crAppStart", "crHelp", "crHandPoint", "crSizeAll", "crSize", "crSizeNW", "crSizeN",
+    "crSizeNE", "crSizeW", "crSizeE", "crSizeSW", "crSizeS", "crSizeSE", "TModalResult", "mrNone", "mrOk",
+    "mrCancel", "mrAbort", "mrRetry", "mrIgnore", "mrYes", "mrNo", "mrAll", "mrNoToAll", "mrYesToAll", "mrClose",
+    "TClipboardFormat", "mbYesNo", "mbYesNoCancel", "mbOKCancel", "mbAbortRetryIgnore", "TStrings", "TStringList",
+    "TPen", "TBrush", "TFont", "TCanvas", "TGraphic", "TRasterImage", "TCustomBitmap", "TBitmap",
+    "TPortableNetworkGraphic", "TJPEGImage", "TIcon", "TPicture", "TCustomImageList", "TImageList", "TMenuItem",
+    "TMenu", "TMainMenu", "TPopupMenu", "TSizeConstraints", "TControlBorderSpacing", "TControlScrollBar",
+    "TControl", "TWinControl", "TCustomScrollBar", "TScrollBar", "TCustomTrackBar", "TTrackBar",
+    "TCustomProgressBar", "TProgressBar", "TGraphicControl", "TCustomControl", "TUpDown", "TScrollingWinControl",
+    "TScrollBox", "TCustomForm", "TForm", "TApplication", "TScreen", "TClipboard", "TCustomPanel", "TPanel",
+    "TCustomGroupBox", "TGroupBox", "TCustomRadioGroup", "TRadioGroup", "TCustomCheckGroup", "TCheckGroup",
+    "TCustomLabel", "TLabel", "TBoundLabel", "TBevel", "TButtonControl", "TCustomButton", "TButton",
+    "TCustomBitBtn", "TBitBtn", "TCustomCheckBox", "TCheckBox", "TRadioButton", "TToggleBox", "TCustomEdit",
+    "TEdit", "TCustomFloatSpinEdit", "TFloatSpinEdit", "TCustomSpinEdit", "TSpinEdit", "TMaskEdit",
+    "TCustomLabeledEdit", "TLabeledEdit", "TCustomTabControl", "TTabControl", "TPageControl", "TCustomPage",
+    "TTabSheet", "TTreeNode", "TTreeNodes", "TCustomTreeView", "TTreeView", "TListItem", "TListItems",
+    "TListColumn", "TListColumns", "TCustomListView", "TListView", "TCustomSplitter", "TSplitter", "TCustomMemo",
+    "TMemo", "TCustomComboBox", "TComboBox", "TCustomListBox", "TListBox", "TCustomCheckListBox", "TCheckListBox",
+    "TCustomStaticText", "TStaticText", "TStatusPanel", "TStatusPanels", "TStatusBar", "TCustomShape", "TShape",
+    "TCustomSpeedButton", "TSpeedButton", "TPaintBox", "TCustomImage", "TImage", "TCustomGrid", "TCustomDrawGrid",
+    "TDrawGrid", "TCustomStringGrid", "TStringGrid", "THeaderSection", "THeaderSections", "TCustomHeaderControl",
+    "THeaderControl", "TToolWindow", "TToolBar", "TToolButton", "TCoolBand", "TCoolBands", "TCustomCoolBar",
+    "TCoolBar", "TCustomTimer", "TTimer", "TBasicAction", "TContainedAction", "TCustomAction", "TAction",
+    "TCustomActionList", "TActionList", "TCommonDialog", "TFileDialog", "TOpenDialog", "TSaveDialog",
+    "TSelectDirectoryDialog", "TColorDialog", "TFontDialog", "TFindDialog", "TReplaceDialog",
 ]

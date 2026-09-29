@@ -147,6 +147,7 @@ ${controls
     check(first, "panelBevel", std::to_string((int)(TPanelBevel)f->BottomPanel->BevelOuter) + "/" + std::to_string((int)(TPanelBevel)f->BottomPanel->BevelInner) + "/" + std::to_string(f->BottomPanel->BevelWidth) + "/" + std::to_string(f->BottomPanel->BorderWidth));
     check(first, "groupColumns", std::to_string(f->RadioGroup1->Columns) + "/" + std::to_string((int)(TColumnLayout)f->RadioGroup1->ColumnLayout));
     check(first, "scrollChange", std::to_string(f->ScrollBar1->LargeChange) + "/" + std::to_string(f->ScrollBar1->SmallChange));
+    check(first, "ownerDraw", std::to_string((int)(TListBoxStyle)f->ColorList->Style) + "/" + std::to_string(f->ColorList->ItemHeight));
     check(first, "memoBorder", std::to_string((int)(TBorderStyle)f->Memo1->BorderStyle) + "/" + std::to_string((int)(TScrollStyle)f->Memo1->ScrollBars));
     check(first, "timer", std::to_string((int)f->Timer1->Enabled) + "/" + std::to_string(f->Timer1->Interval));
     check(first, "caption", f->Caption);

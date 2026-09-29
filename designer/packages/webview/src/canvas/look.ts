@@ -70,6 +70,41 @@ export function rootInherited(settings: CanvasSettings): Inherited {
   };
 }
 
+/** Windows の COLOR_… の番号 → Windows 11(ライト)の既定の色 */
+const SYSTEM_COLORS: Readonly<Record<number, string>> = {
+  0: '#c8c8c8', // clScrollBar
+  1: '#000000', // clBackground
+  2: '#99b4d1', // clActiveCaption
+  3: '#bfcddb', // clInactiveCaption
+  4: '#f0f0f0', // clMenu
+  5: '#ffffff', // clWindow
+  6: '#646464', // clWindowFrame
+  7: '#000000', // clMenuText
+  8: '#000000', // clWindowText
+  9: '#000000', // clCaptionText
+  10: '#b4b4b4', // clActiveBorder
+  11: '#f4f7fc', // clInactiveBorder
+  12: '#ababab', // clAppWorkspace
+  13: '#0078d7', // clHighlight
+  14: '#ffffff', // clHighlightText
+  15: '#f0f0f0', // clBtnFace
+  16: '#a0a0a0', // clBtnShadow
+  17: '#6d6d6d', // clGrayText
+  18: '#000000', // clBtnText
+  19: '#000000', // clInactiveCaptionText
+  20: '#ffffff', // clBtnHighlight
+  21: '#696969', // cl3DDkShadow
+  22: '#e3e3e3', // cl3DLight
+  23: '#000000', // clInfoText
+  24: '#ffffe1', // clInfoBk
+  26: '#0066cc', // clHotLight
+  27: '#b9d1ea', // clGradientActiveCaption
+  28: '#d7e4f2', // clGradientInactiveCaption
+  29: '#3399ff', // clMenuHighlight
+  30: '#f0f0f0', // clMenuBar
+  31: '#f0f0f0', // clForm
+};
+
 /** TColor の値を CSS の色にする。clDefault・clNone・解釈できない値は undefined */
 export function colorToCss(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
@@ -78,6 +113,8 @@ export function colorToCss(value: unknown): string | undefined {
   if (value === 'clDefault' || value === 'clNone' || !Object.hasOwn(constants, value))
     return undefined;
   const bgr = constants[value] ?? 0;
+  // システムの色(clBtnFace 等。0x80000000 | Windows の COLOR_… の番号)は、Windows 11 の既定の色で描く(docs/adr/0050)
+  if (bgr < 0) return SYSTEM_COLORS[bgr & 0xff];
   const r = bgr & 0xff;
   const g = (bgr >> 8) & 0xff;
   const b = (bgr >> 16) & 0xff;

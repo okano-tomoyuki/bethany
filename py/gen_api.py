@@ -405,6 +405,8 @@ class Gen:
             kind = self.class_kind(m.group(1))
             if kind == "item":
                 return f'_a_item("{m.group(1)}")'
+            if kind in ("obj", "view"):
+                return f'_a_obj("{m.group(1)}")'
             return f'_a_comp("{m.group(1)}")'
         return None
 
@@ -791,7 +793,7 @@ from ._core import (BethError, Ref, TRect, TPoint, TObject, TPersistent, TCompon
 from ._core import (lib, _mixins, _register, _event_types, _ItemMixin, _Prop, _Indexed, _Event,
                    _int, _float, _bool, _str, _char, _ptr, _rect_conv, _point_conv, _enum, _set, _comp, _existing, _item, _obj, _view,
                    _str_key, _enc, _dec, _h, _b, _rect, _point, _to_enum, _to_comp, _to_existing, _to_item, _to_obj,
-                   _a_int, _a_bool, _a_rect, _a_exception, _a_strings, _a_enum, _a_comp, _a_item, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_enum)
+                   _a_int, _a_bool, _a_rect, _a_exception, _a_strings, _a_enum, _a_comp, _a_item, _a_obj, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_enum)
 '''
 
 FOOTER = '''\

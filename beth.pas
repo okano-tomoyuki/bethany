@@ -35,7 +35,8 @@ uses
   ImgList,
   CustomTimer,
   ActnList,
-  Clipbrd
+  Clipbrd,
+  LCLType
   {$ifdef LCLwin32}
   , Windows, InterfaceBase, WSControls
   {$endif};
@@ -15513,6 +15514,289 @@ begin
   end;
 end;
 
+{ ---------------- オーナードロー(docs/adr/0050) ---------------- }
+
+type
+  { TListBox・TComboBox の OnDrawItem(TDrawItemEvent)用。項目の矩形と状態(TOwnerDrawState のビット)を渡す。 }
+  TBethDrawItemCallback = procedure(Sender: Pointer; Index: Integer; Left, Top, Right, Bottom: Integer; State: Cardinal;
+    Data: Pointer); BETH_CALL;
+  { OnMeasureItem(TMeasureItemEvent)用。 }
+  TBethMeasureItemCallback = procedure(Sender: Pointer; Index: Integer; Height: PInteger; Data: Pointer); BETH_CALL;
+  { TMenuItem の OnDrawItem(TMenuDrawItemEvent)・OnMeasureItem(TMenuMeasureItemEvent)用。 }
+  TBethMenuDrawCallback = procedure(Sender: Pointer; ACanvas: Pointer; Left, Top, Right, Bottom: Integer; State: Cardinal;
+    Data: Pointer); BETH_CALL;
+  TBethMenuMeasureCallback = procedure(Sender: Pointer; ACanvas: Pointer; Width, Height: PInteger; Data: Pointer); BETH_CALL;
+
+  TOwnerDrawBridge = class(TComponent)
+  private
+    FDraw: TBethDrawItemCallback;
+    FMeasure: TBethMeasureItemCallback;
+    FMenuDraw: TBethMenuDrawCallback;
+    FMenuMeasure: TBethMenuMeasureCallback;
+    FData: Pointer;
+  public
+    procedure DoDrawItem(Control: TWinControl; Index: Integer; ARect: TRect; State: LCLType.TOwnerDrawState);
+    procedure DoMeasureItem(Control: TWinControl; Index: Integer; var AHeight: Integer);
+    procedure DoMenuDraw(Sender: TObject; ACanvas: TCanvas; ARect: TRect; AState: LCLType.TOwnerDrawState);
+    procedure DoMenuMeasure(Sender: TObject; ACanvas: TCanvas; var AWidth, AHeight: Integer);
+  end;
+
+function OwnerDrawStateBits(State: LCLType.TOwnerDrawState): Cardinal;
+var
+  S: LCLType.TOwnerDrawStateType;
+begin
+  Result := 0;
+  for S := Low(LCLType.TOwnerDrawStateType) to High(LCLType.TOwnerDrawStateType) do
+    if S in State then
+      Result := Result or (Cardinal(1) shl Ord(S));
+end;
+
+procedure TOwnerDrawBridge.DoDrawItem(Control: TWinControl; Index: Integer; ARect: TRect; State: LCLType.TOwnerDrawState);
+begin
+  if not Assigned(FDraw) or GDetaching then
+    Exit;
+  FDraw(Pointer(Control), Index, ARect.Left, ARect.Top, ARect.Right, ARect.Bottom, OwnerDrawStateBits(State), FData);
+  CheckCallbackError;
+end;
+
+procedure TOwnerDrawBridge.DoMeasureItem(Control: TWinControl; Index: Integer; var AHeight: Integer);
+var
+  H: Integer;
+begin
+  if not Assigned(FMeasure) or GDetaching then
+    Exit;
+  H := AHeight;
+  FMeasure(Pointer(Control), Index, @H, FData);
+  AHeight := H;
+  CheckCallbackError;
+end;
+
+procedure TOwnerDrawBridge.DoMenuDraw(Sender: TObject; ACanvas: TCanvas; ARect: TRect; AState: LCLType.TOwnerDrawState);
+begin
+  if not Assigned(FMenuDraw) or GDetaching then
+    Exit;
+  FMenuDraw(Pointer(Sender), Pointer(ACanvas), ARect.Left, ARect.Top, ARect.Right, ARect.Bottom, OwnerDrawStateBits(AState), FData);
+  CheckCallbackError;
+end;
+
+procedure TOwnerDrawBridge.DoMenuMeasure(Sender: TObject; ACanvas: TCanvas; var AWidth, AHeight: Integer);
+var
+  W, H: Integer;
+begin
+  if not Assigned(FMenuMeasure) or GDetaching then
+    Exit;
+  W := AWidth;
+  H := AHeight;
+  FMenuMeasure(Pointer(Sender), Pointer(ACanvas), @W, @H, FData);
+  AWidth := W;
+  AHeight := H;
+  CheckCallbackError;
+end;
+
+{ 1 つのコンポーネントの 1 つのイベントに 1 つのブリッジ(既にあるものは使い回す)。 }
+function OwnerDrawBridgeFor(Owner: TComponent; Current: Pointer; Data: Pointer): TOwnerDrawBridge;
+begin
+  if (Current <> nil) and (TObject(Current) is TOwnerDrawBridge) and (TOwnerDrawBridge(Current).Owner = Owner) then
+    Result := TOwnerDrawBridge(Current)
+  else
+    Result := TOwnerDrawBridge.Create(Owner);
+  Result.FData := Data;
+end;
+
+function MethodData(const M: TDrawItemEvent): Pointer; overload;
+begin
+  Result := TMethod(M).Data;
+end;
+
+function MethodData(const M: TMeasureItemEvent): Pointer; overload;
+begin
+  Result := TMethod(M).Data;
+end;
+
+function MethodData(const M: TMenuDrawItemEvent): Pointer; overload;
+begin
+  Result := TMethod(M).Data;
+end;
+
+function MethodData(const M: TMenuMeasureItemEvent): Pointer; overload;
+begin
+  Result := TMethod(M).Data;
+end;
+
+function TCustomListBox_GetStyle(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomListBox(Obj).Style);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomListBox_SetStyle(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomListBox(Obj).Style := TListBoxStyle(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomListBox_GetItemHeight(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomListBox(Obj).ItemHeight;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomListBox_SetItemHeight(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomListBox(Obj).ItemHeight := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomListBox_GetCanvas(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TCustomListBox(Obj).Canvas);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TCustomListBox_SetOnDrawItem(Obj: Pointer; Cb: TBethDrawItemCallback; Data: Pointer); BETH_CALL;
+var
+  B: TOwnerDrawBridge;
+begin
+  try
+    B := OwnerDrawBridgeFor(TComponent(Obj), MethodData(TCustomListBox(Obj).OnDrawItem), Data);
+    B.FDraw := Cb;
+    TCustomListBox(Obj).OnDrawItem := @B.DoDrawItem;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomListBox_SetOnMeasureItem(Obj: Pointer; Cb: TBethMeasureItemCallback; Data: Pointer); BETH_CALL;
+var
+  B: TOwnerDrawBridge;
+begin
+  try
+    B := OwnerDrawBridgeFor(TComponent(Obj), MethodData(TCustomListBox(Obj).OnMeasureItem), Data);
+    B.FMeasure := Cb;
+    TCustomListBox(Obj).OnMeasureItem := @B.DoMeasureItem;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomComboBox_GetItemHeight(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomComboBoxAccess(Obj).ItemHeight;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomComboBox_SetItemHeight(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomComboBoxAccess(Obj).ItemHeight := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomComboBox_GetCanvas(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TCustomComboBoxAccess(Obj).Canvas);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TCustomComboBox_SetOnDrawItem(Obj: Pointer; Cb: TBethDrawItemCallback; Data: Pointer); BETH_CALL;
+var
+  B: TOwnerDrawBridge;
+begin
+  try
+    B := OwnerDrawBridgeFor(TComponent(Obj), MethodData(TCustomComboBoxAccess(Obj).OnDrawItem), Data);
+    B.FDraw := Cb;
+    TCustomComboBoxAccess(Obj).OnDrawItem := @B.DoDrawItem;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomComboBox_SetOnMeasureItem(Obj: Pointer; Cb: TBethMeasureItemCallback; Data: Pointer); BETH_CALL;
+var
+  B: TOwnerDrawBridge;
+begin
+  try
+    B := OwnerDrawBridgeFor(TComponent(Obj), MethodData(TCustomComboBoxAccess(Obj).OnMeasureItem), Data);
+    B.FMeasure := Cb;
+    TCustomComboBoxAccess(Obj).OnMeasureItem := @B.DoMeasureItem;
+  except
+    ReportException;
+  end;
+end;
+
+function TMenu_GetOwnerDraw(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TMenu(Obj).OwnerDraw;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TMenu_SetOwnerDraw(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TMenu(Obj).OwnerDraw := Value;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TMenuItem_SetOnDrawItem(Obj: Pointer; Cb: TBethMenuDrawCallback; Data: Pointer); BETH_CALL;
+var
+  B: TOwnerDrawBridge;
+begin
+  try
+    B := OwnerDrawBridgeFor(TComponent(Obj), MethodData(TMenuItem(Obj).OnDrawItem), Data);
+    B.FMenuDraw := Cb;
+    TMenuItem(Obj).OnDrawItem := @B.DoMenuDraw;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TMenuItem_SetOnMeasureItem(Obj: Pointer; Cb: TBethMenuMeasureCallback; Data: Pointer); BETH_CALL;
+var
+  B: TOwnerDrawBridge;
+begin
+  try
+    B := OwnerDrawBridgeFor(TComponent(Obj), MethodData(TMenuItem(Obj).OnMeasureItem), Data);
+    B.FMenuMeasure := Cb;
+    TMenuItem(Obj).OnMeasureItem := @B.DoMenuMeasure;
+  except
+    ReportException;
+  end;
+end;
+
 exports
   FreeNotify_SetCallback,
   Error_SetCallback,
@@ -16991,7 +17275,23 @@ exports
   TCustomRadioGroup_SetOnSelectionChanged,
   TCustomCheckGroup_GetCheckEnabled,
   TCustomCheckGroup_SetCheckEnabled,
-  TCustomCheckGroup_SetOnItemClick;
+  TCustomCheckGroup_SetOnItemClick,
+  TCustomListBox_GetStyle,
+  TCustomListBox_SetStyle,
+  TCustomListBox_GetItemHeight,
+  TCustomListBox_SetItemHeight,
+  TCustomListBox_GetCanvas,
+  TCustomListBox_SetOnDrawItem,
+  TCustomListBox_SetOnMeasureItem,
+  TCustomComboBox_GetItemHeight,
+  TCustomComboBox_SetItemHeight,
+  TCustomComboBox_GetCanvas,
+  TCustomComboBox_SetOnDrawItem,
+  TCustomComboBox_SetOnMeasureItem,
+  TMenu_GetOwnerDraw,
+  TMenu_SetOwnerDraw,
+  TMenuItem_SetOnDrawItem,
+  TMenuItem_SetOnMeasureItem;
 
 begin
   RequireDerivedFormResource := False;

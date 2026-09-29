@@ -2121,6 +2121,40 @@ def main():
     Form1.ScrollBar1.OnScroll = lambda Sender, ScrollCode, ScrollPos: pr(
         f"ScrollBar1 OnScroll: ScrollCode={int(ScrollCode)} ScrollPos={ScrollPos.value}")
     Form1.TrackBar1.TickMarks = tmBoth
+
+    # オーナードロー(docs/adr/0050)。ListBox1 の各項目の左に色の見本を描き、Panel1 の右クリックのメニューを黄色の地で描く。
+    lb = Form1.ListBox1
+    lb.Style = lbOwnerDrawFixed
+    lb.ItemHeight = 22
+
+    def list_draw_item(Control, Index, ARect, State):
+        c = lb.Canvas
+        selected = bool(State & odSelected)
+        c.Brush.Color = clHighlight if selected else clWindow
+        c.FillRect(ARect)
+        c.Brush.Color = (clRed, clGreen, clBlue)[Index % 3]
+        c.Rectangle(ARect.Left + 3, ARect.Top + 3, ARect.Left + 19, ARect.Bottom - 3)
+        c.Brush.Style = bsClear
+        c.Font.Color = clHighlightText if selected else clWindowText
+        c.TextOut(ARect.Left + 24, ARect.Top + 3, lb.Items.Strings[Index])
+        c.Brush.Style = bsSolid
+
+    lb.OnDrawItem = list_draw_item
+    Form1.PopupMenu1.OwnerDraw = True
+
+    def popup_measure(Sender, ACanvas, AWidth, AHeight):
+        AWidth.value = ACanvas.TextWidth("Say hello (owner draw)") + 24
+        AHeight.value = 26
+
+    def popup_draw(Sender, ACanvas, ARect, AState):
+        ACanvas.Brush.Color = clHighlight if AState & odSelected else clYellow
+        ACanvas.FillRect(ARect)
+        ACanvas.Brush.Style = bsClear
+        ACanvas.TextOut(ARect.Left + 12, ARect.Top + 5, "Say hello (owner draw)")
+        ACanvas.Brush.Style = bsSolid
+
+    Form1.PopupHelloItem.OnMeasureItem = popup_measure
+    Form1.PopupHelloItem.OnDrawItem = popup_draw
     pr(f"AlignClientPanel BevelOuter/BevelInner={int(Form1.AlignClientPanel.BevelOuter)}/{int(Form1.AlignClientPanel.BevelInner)} "
        f"(expected 1/2), TreeView ScrollBars={int(Form1.TreeView1.ScrollBars)} (expected 3 = ssBoth)")
 
