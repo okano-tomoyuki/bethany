@@ -19,6 +19,12 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
   `PasswordChar`・`EchoMode`・`CharCase`・`Alignment`・`TextHint`・`NumbersOnly`・`AutoSelect`・`HideSelection`・`CaretPos`)。
   VCL と同じく、フォームを表示する前でも選択の置き換えやクリップボードが効く
 - TMemo の `WordWrap`・`WantReturns`・`WantTabs`・`Append`、TLabel の `Alignment`・`Layout`・`WordWrap`・`Transparent`・`FocusControl`・`ShowAccelChar`
+- リストボックスの複数選択(`MultiSelect`・`ExtendedSelect`・`Selected[i]`・`SelCount`・`SelectAll`・`ClearSelection`)・`Sorted`・`TopIndex`・`ItemAtPos`・
+  `OnSelectionChange`、コンボボックスの `Style`(`csDropDownList` 等)・`DropDownCount`・`Sorted`・`ReadOnly`・`DroppedDown`・`AutoComplete`・
+  `OnSelect`・`OnDropDown`・`OnCloseUp`([ADR 0043](docs/adr/0043-list-combo-check-application.md))
+- チェックボックスの `State`(`cbGrayed`)・`AllowGrayed`・`OnChange`
+- `Application` の `ExeName`・`ShowHint`・`HintPause`・`HintHidePause`・`Minimize`・`Restore`・`BringToFront`・`OnIdle`・`OnException`
+  (ハンドラから送出された例外を、既定のエラーのダイアログの代わりに受ける)
 
 ### 変更
 

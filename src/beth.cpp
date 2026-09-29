@@ -1175,6 +1175,12 @@ TApplication* Application = NewApplication();
 
 TApplication::TApplication(ObjectHandle handle)
     : TComponent(handle)
+    , ExeName(this, &TApplication::GetExeNameImpl)
+    , ShowHint(this, &TApplication::GetShowHintImpl, &TApplication::SetShowHintImpl)
+    , HintPause(this, &TApplication::GetHintPauseImpl, &TApplication::SetHintPauseImpl)
+    , HintHidePause(this, &TApplication::GetHintHidePauseImpl, &TApplication::SetHintHidePauseImpl)
+    , OnIdle(this, &TApplication::GetOnIdleImpl, &TApplication::SetOnIdleImpl)
+    , OnException(this, &TApplication::GetOnExceptionImpl, &TApplication::SetOnExceptionImpl)
     , MainForm(this, &TApplication::GetMainFormImpl)
     , Terminated(this, &TApplication::GetTerminatedImpl)
     , Title(this, &TApplication::GetTitleImpl, &TApplication::SetTitleImpl)
@@ -1183,6 +1189,105 @@ TApplication::TApplication(ObjectHandle handle)
     // 基底の TComponent のコンストラクタでレジストリ(関数内 static)が構築済みのため、
     // ここで登録した終了処理はレジストリの破棄より先に呼ばれる。
     std::atexit(&TApplication::Shutdown);
+}
+
+// ---- docs/adr/0043 ----
+
+std::string TApplication::GetExeNameImpl(TObject* owner)
+{
+    return internal::TApplication_GetExeName(owner->Handle());
+}
+
+bool TApplication::GetShowHintImpl(TObject* owner)
+{
+    return internal::TApplication_GetShowHint(owner->Handle()) != 0;
+}
+
+void TApplication::SetShowHintImpl(TObject* owner, const bool& value)
+{
+    internal::TApplication_SetShowHint(owner->Handle(), value ? 1 : 0);
+}
+
+int TApplication::GetHintPauseImpl(TObject* owner)
+{
+    return internal::TApplication_GetHintPause(owner->Handle());
+}
+
+void TApplication::SetHintPauseImpl(TObject* owner, const int& value)
+{
+    internal::TApplication_SetHintPause(owner->Handle(), value);
+}
+
+int TApplication::GetHintHidePauseImpl(TObject* owner)
+{
+    return internal::TApplication_GetHintHidePause(owner->Handle());
+}
+
+void TApplication::SetHintHidePauseImpl(TObject* owner, const int& value)
+{
+    internal::TApplication_SetHintHidePause(owner->Handle(), value);
+}
+
+void TApplication::Minimize() { internal::TApplication_Minimize(handle_); }
+
+void TApplication::Restore() { internal::TApplication_Restore(handle_); }
+
+void TApplication::BringToFront() { internal::TApplication_BringToFront(handle_); }
+
+TIdleEvent TApplication::GetOnIdleImpl(TObject* owner)
+{
+    return static_cast<TApplication*>(owner)->onIdle_;
+}
+void TApplication::SetOnIdleImpl(TObject* owner, const TIdleEvent& value)
+{
+    TApplication* self = static_cast<TApplication*>(owner);
+    self->onIdle_ = value;
+    if (value && !self->onIdleHooked_)
+    {
+        internal::TApplication_SetOnIdle(self->handle_, &TApplication::IdleTrampoline, nullptr);
+        self->onIdleHooked_ = true;
+    }
+}
+
+void BETH_CALL TApplication::IdleTrampoline(ObjectHandle, internal::bool_t* done, void*)
+{
+    GuardCallback([&] {
+        TApplication* self = Application;
+        if (!self || !self->onIdle_)
+            return;
+        TIdleEvent handler = self->onIdle_;
+        bool d = *done != 0;
+        handler(self, d);
+        *done = d ? 1 : 0;
+    });
+}
+
+TExceptionEvent TApplication::GetOnExceptionImpl(TObject* owner)
+{
+    return static_cast<TApplication*>(owner)->onException_;
+}
+void TApplication::SetOnExceptionImpl(TObject* owner, const TExceptionEvent& value)
+{
+    TApplication* self = static_cast<TApplication*>(owner);
+    self->onException_ = value;
+    if (value && !self->onExceptionHooked_)
+    {
+        internal::TApplication_SetOnException(self->handle_, &TApplication::ExceptionTrampoline, nullptr);
+        self->onExceptionHooked_ = true;
+    }
+}
+
+void BETH_CALL TApplication::ExceptionTrampoline(ObjectHandle sender, internal::str_t className, internal::str_t message, void*)
+{
+    GuardCallback([&] {
+        // Sender は例外を渡したもの(LCL のタイマーの例外では nil)なので、ハンドラは Application のものを呼ぶ
+        TApplication* self = Application;
+        if (!self || !self->onException_)
+            return;
+        TExceptionEvent handler = self->onException_;
+        const Exception e(className ? className : "", message ? message : "");
+        handler(sender ? FromHandle(sender) : nullptr, e);
+    });
 }
 
 // main から戻った後(C++ の実行環境がまだ有効なうち)に、Application が所有するフォームを破棄する。
@@ -1584,6 +1689,59 @@ void TCustomBitBtn::SetSpacingImpl(TObject* owner, const int& value) { internal:
 TBitBtn::TBitBtn(TComponent* AOwner)
     : TCustomBitBtn(internal::TBitBtn_Create(HandleOf(AOwner)))
 {}
+
+TCustomCheckBox::TCustomCheckBox(ObjectHandle handle)
+    : TButtonControl(handle)
+    , State(this, &TCustomCheckBox::GetStateImpl, &TCustomCheckBox::SetStateImpl)
+    , AllowGrayed(this, &TCustomCheckBox::GetAllowGrayedImpl, &TCustomCheckBox::SetAllowGrayedImpl)
+    , OnChange(this, &TCustomCheckBox::GetOnChangeImpl, &TCustomCheckBox::SetOnChangeImpl)
+{}
+
+TCheckBoxState TCustomCheckBox::GetStateImpl(TObject* owner)
+{
+    return static_cast<TCheckBoxState>(internal::TCustomCheckBox_GetState(owner->Handle()));
+}
+
+void TCustomCheckBox::SetStateImpl(TObject* owner, const TCheckBoxState& value)
+{
+    internal::TCustomCheckBox_SetState(owner->Handle(), value);
+}
+
+bool TCustomCheckBox::GetAllowGrayedImpl(TObject* owner)
+{
+    return internal::TCustomCheckBox_GetAllowGrayed(owner->Handle()) != 0;
+}
+
+void TCustomCheckBox::SetAllowGrayedImpl(TObject* owner, const bool& value)
+{
+    internal::TCustomCheckBox_SetAllowGrayed(owner->Handle(), value ? 1 : 0);
+}
+
+TNotifyEvent TCustomCheckBox::GetOnChangeImpl(TObject* owner)
+{
+    return static_cast<TCustomCheckBox*>(owner)->onChange_;
+}
+void TCustomCheckBox::SetOnChangeImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCustomCheckBox* self = static_cast<TCustomCheckBox*>(owner);
+    self->onChange_ = value;
+    if (value && !self->onChangeHooked_)
+    {
+        internal::TCustomCheckBox_SetOnChange(self->handle_, &TCustomCheckBox::ChangeTrampoline, nullptr);
+        self->onChangeHooked_ = true;
+    }
+}
+
+void BETH_CALL TCustomCheckBox::ChangeTrampoline(ObjectHandle sender, void*)
+{
+    GuardCallback([&] {
+        TCustomCheckBox* self = static_cast<TCustomCheckBox*>(FromHandle(sender));
+        if (!self || !self->onChange_)
+            return;
+        TNotifyEvent handler = self->onChange_;
+        handler(self);
+    });
+}
 
 TCheckBox::TCheckBox(TComponent* AOwner)
     : TCustomCheckBox(internal::TCheckBox_Create(HandleOf(AOwner)))
@@ -2756,10 +2914,159 @@ TMemo::TMemo(TComponent* AOwner)
 
 TCustomComboBox::TCustomComboBox(ObjectHandle handle)
     : TWinControl(handle)
+    , Style(this, &TCustomComboBox::GetStyleImpl, &TCustomComboBox::SetStyleImpl)
+    , DropDownCount(this, &TCustomComboBox::GetDropDownCountImpl, &TCustomComboBox::SetDropDownCountImpl)
+    , Sorted(this, &TCustomComboBox::GetSortedImpl, &TCustomComboBox::SetSortedImpl)
+    , ReadOnly(this, &TCustomComboBox::GetReadOnlyImpl, &TCustomComboBox::SetReadOnlyImpl)
+    , DroppedDown(this, &TCustomComboBox::GetDroppedDownImpl, &TCustomComboBox::SetDroppedDownImpl)
+    , AutoComplete(this, &TCustomComboBox::GetAutoCompleteImpl, &TCustomComboBox::SetAutoCompleteImpl)
+    , OnSelect(this, &TCustomComboBox::GetOnSelectImpl, &TCustomComboBox::SetOnSelectImpl)
+    , OnDropDown(this, &TCustomComboBox::GetOnDropDownImpl, &TCustomComboBox::SetOnDropDownImpl)
+    , OnCloseUp(this, &TCustomComboBox::GetOnCloseUpImpl, &TCustomComboBox::SetOnCloseUpImpl)
     , ItemIndex(this, &TCustomComboBox::GetItemIndexImpl, &TCustomComboBox::SetItemIndexImpl)
     , Items(this, &TCustomComboBox::GetItemsImpl)
     , items_(this, &internal::TCustomComboBox_GetItems)
 {}
+
+// ---- docs/adr/0043 ----
+
+TComboBoxStyle TCustomComboBox::GetStyleImpl(TObject* owner)
+{
+    return static_cast<TComboBoxStyle>(internal::TCustomComboBox_GetStyle(owner->Handle()));
+}
+
+void TCustomComboBox::SetStyleImpl(TObject* owner, const TComboBoxStyle& value)
+{
+    internal::TCustomComboBox_SetStyle(owner->Handle(), value);
+}
+
+int TCustomComboBox::GetDropDownCountImpl(TObject* owner)
+{
+    return internal::TCustomComboBox_GetDropDownCount(owner->Handle());
+}
+
+void TCustomComboBox::SetDropDownCountImpl(TObject* owner, const int& value)
+{
+    internal::TCustomComboBox_SetDropDownCount(owner->Handle(), value);
+}
+
+bool TCustomComboBox::GetSortedImpl(TObject* owner)
+{
+    return internal::TCustomComboBox_GetSorted(owner->Handle()) != 0;
+}
+
+void TCustomComboBox::SetSortedImpl(TObject* owner, const bool& value)
+{
+    internal::TCustomComboBox_SetSorted(owner->Handle(), value ? 1 : 0);
+}
+
+bool TCustomComboBox::GetReadOnlyImpl(TObject* owner)
+{
+    return internal::TCustomComboBox_GetReadOnly(owner->Handle()) != 0;
+}
+
+void TCustomComboBox::SetReadOnlyImpl(TObject* owner, const bool& value)
+{
+    internal::TCustomComboBox_SetReadOnly(owner->Handle(), value ? 1 : 0);
+}
+
+bool TCustomComboBox::GetDroppedDownImpl(TObject* owner)
+{
+    return internal::TCustomComboBox_GetDroppedDown(owner->Handle()) != 0;
+}
+
+void TCustomComboBox::SetDroppedDownImpl(TObject* owner, const bool& value)
+{
+    internal::TCustomComboBox_SetDroppedDown(owner->Handle(), value ? 1 : 0);
+}
+
+bool TCustomComboBox::GetAutoCompleteImpl(TObject* owner)
+{
+    return internal::TCustomComboBox_GetAutoComplete(owner->Handle()) != 0;
+}
+
+void TCustomComboBox::SetAutoCompleteImpl(TObject* owner, const bool& value)
+{
+    internal::TCustomComboBox_SetAutoComplete(owner->Handle(), value ? 1 : 0);
+}
+
+TNotifyEvent TCustomComboBox::GetOnSelectImpl(TObject* owner)
+{
+    return static_cast<TCustomComboBox*>(owner)->onSelect_;
+}
+void TCustomComboBox::SetOnSelectImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCustomComboBox* self = static_cast<TCustomComboBox*>(owner);
+    self->onSelect_ = value;
+    if (value && !self->onSelectHooked_)
+    {
+        internal::TCustomComboBox_SetOnSelect(self->handle_, &TCustomComboBox::SelectTrampoline, nullptr);
+        self->onSelectHooked_ = true;
+    }
+}
+
+void BETH_CALL TCustomComboBox::SelectTrampoline(ObjectHandle sender, void*)
+{
+    GuardCallback([&] {
+        TCustomComboBox* self = static_cast<TCustomComboBox*>(FromHandle(sender));
+        if (!self || !self->onSelect_)
+            return;
+        TNotifyEvent handler = self->onSelect_;
+        handler(self);
+    });
+}
+
+TNotifyEvent TCustomComboBox::GetOnDropDownImpl(TObject* owner)
+{
+    return static_cast<TCustomComboBox*>(owner)->onDropDown_;
+}
+void TCustomComboBox::SetOnDropDownImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCustomComboBox* self = static_cast<TCustomComboBox*>(owner);
+    self->onDropDown_ = value;
+    if (value && !self->onDropDownHooked_)
+    {
+        internal::TCustomComboBox_SetOnDropDown(self->handle_, &TCustomComboBox::DropDownTrampoline, nullptr);
+        self->onDropDownHooked_ = true;
+    }
+}
+
+void BETH_CALL TCustomComboBox::DropDownTrampoline(ObjectHandle sender, void*)
+{
+    GuardCallback([&] {
+        TCustomComboBox* self = static_cast<TCustomComboBox*>(FromHandle(sender));
+        if (!self || !self->onDropDown_)
+            return;
+        TNotifyEvent handler = self->onDropDown_;
+        handler(self);
+    });
+}
+
+TNotifyEvent TCustomComboBox::GetOnCloseUpImpl(TObject* owner)
+{
+    return static_cast<TCustomComboBox*>(owner)->onCloseUp_;
+}
+void TCustomComboBox::SetOnCloseUpImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCustomComboBox* self = static_cast<TCustomComboBox*>(owner);
+    self->onCloseUp_ = value;
+    if (value && !self->onCloseUpHooked_)
+    {
+        internal::TCustomComboBox_SetOnCloseUp(self->handle_, &TCustomComboBox::CloseUpTrampoline, nullptr);
+        self->onCloseUpHooked_ = true;
+    }
+}
+
+void BETH_CALL TCustomComboBox::CloseUpTrampoline(ObjectHandle sender, void*)
+{
+    GuardCallback([&] {
+        TCustomComboBox* self = static_cast<TCustomComboBox*>(FromHandle(sender));
+        if (!self || !self->onCloseUp_)
+            return;
+        TNotifyEvent handler = self->onCloseUp_;
+        handler(self);
+    });
+}
 
 TStrings* TCustomComboBox::GetItemsImpl(TObject* owner) { return &static_cast<TCustomComboBox*>(owner)->items_; }
 
@@ -2800,10 +3107,109 @@ void BETH_CALL TComboBox::ChangeTrampoline(ObjectHandle sender, void*)
 
 TCustomListBox::TCustomListBox(ObjectHandle handle)
     : TWinControl(handle)
+    , MultiSelect(this, &TCustomListBox::GetMultiSelectImpl, &TCustomListBox::SetMultiSelectImpl)
+    , ExtendedSelect(this, &TCustomListBox::GetExtendedSelectImpl, &TCustomListBox::SetExtendedSelectImpl)
+    , Sorted(this, &TCustomListBox::GetSortedImpl, &TCustomListBox::SetSortedImpl)
+    , TopIndex(this, &TCustomListBox::GetTopIndexImpl, &TCustomListBox::SetTopIndexImpl)
+    , SelCount(this, &TCustomListBox::GetSelCountImpl)
+    , Selected(this, &TCustomListBox::GetSelectedImpl, &TCustomListBox::SetSelectedImpl)
+    , OnSelectionChange(this, &TCustomListBox::GetOnSelectionChangeImpl, &TCustomListBox::SetOnSelectionChangeImpl)
     , ItemIndex(this, &TCustomListBox::GetItemIndexImpl, &TCustomListBox::SetItemIndexImpl)
     , Items(this, &TCustomListBox::GetItemsImpl)
     , items_(this, &internal::TCustomListBox_GetItems)
 {}
+
+// ---- docs/adr/0043 ----
+
+bool TCustomListBox::GetMultiSelectImpl(TObject* owner)
+{
+    return internal::TCustomListBox_GetMultiSelect(owner->Handle()) != 0;
+}
+
+void TCustomListBox::SetMultiSelectImpl(TObject* owner, const bool& value)
+{
+    internal::TCustomListBox_SetMultiSelect(owner->Handle(), value ? 1 : 0);
+}
+
+bool TCustomListBox::GetExtendedSelectImpl(TObject* owner)
+{
+    return internal::TCustomListBox_GetExtendedSelect(owner->Handle()) != 0;
+}
+
+void TCustomListBox::SetExtendedSelectImpl(TObject* owner, const bool& value)
+{
+    internal::TCustomListBox_SetExtendedSelect(owner->Handle(), value ? 1 : 0);
+}
+
+bool TCustomListBox::GetSortedImpl(TObject* owner)
+{
+    return internal::TCustomListBox_GetSorted(owner->Handle()) != 0;
+}
+
+void TCustomListBox::SetSortedImpl(TObject* owner, const bool& value)
+{
+    internal::TCustomListBox_SetSorted(owner->Handle(), value ? 1 : 0);
+}
+
+int TCustomListBox::GetTopIndexImpl(TObject* owner)
+{
+    return internal::TCustomListBox_GetTopIndex(owner->Handle());
+}
+
+void TCustomListBox::SetTopIndexImpl(TObject* owner, const int& value)
+{
+    internal::TCustomListBox_SetTopIndex(owner->Handle(), value);
+}
+
+int TCustomListBox::GetSelCountImpl(TObject* owner)
+{
+    return internal::TCustomListBox_GetSelCount(owner->Handle());
+}
+
+bool TCustomListBox::GetSelectedImpl(TObject* owner, int index)
+{
+    return internal::TCustomListBox_GetSelected(owner->Handle(), index) != 0;
+}
+
+void TCustomListBox::SetSelectedImpl(TObject* owner, int index, const bool& value)
+{
+    internal::TCustomListBox_SetSelected(owner->Handle(), index, value ? 1 : 0);
+}
+
+void TCustomListBox::ClearSelection() { internal::TCustomListBox_ClearSelection(handle_); }
+
+void TCustomListBox::SelectAll() { internal::TCustomListBox_SelectAll(handle_); }
+
+int TCustomListBox::ItemAtPos(const TPoint& Pos, bool Existing) const
+{
+    return internal::TCustomListBox_ItemAtPos(handle_, Pos.X, Pos.Y, Existing ? 1 : 0);
+}
+
+TSelectionChangeEvent TCustomListBox::GetOnSelectionChangeImpl(TObject* owner)
+{
+    return static_cast<TCustomListBox*>(owner)->onSelectionChange_;
+}
+void TCustomListBox::SetOnSelectionChangeImpl(TObject* owner, const TSelectionChangeEvent& value)
+{
+    TCustomListBox* self = static_cast<TCustomListBox*>(owner);
+    self->onSelectionChange_ = value;
+    if (value && !self->onSelectionChangeHooked_)
+    {
+        internal::TCustomListBox_SetOnSelectionChange(self->handle_, &TCustomListBox::SelectionChangeTrampoline, nullptr);
+        self->onSelectionChangeHooked_ = true;
+    }
+}
+
+void BETH_CALL TCustomListBox::SelectionChangeTrampoline(ObjectHandle sender, internal::bool_t user, void*)
+{
+    GuardCallback([&] {
+        TCustomListBox* self = static_cast<TCustomListBox*>(FromHandle(sender));
+        if (!self || !self->onSelectionChange_)
+            return;
+        TSelectionChangeEvent handler = self->onSelectionChange_;
+        handler(self, user != 0);
+    });
+}
 
 TStrings* TCustomListBox::GetItemsImpl(TObject* owner) { return &static_cast<TCustomListBox*>(owner)->items_; }
 

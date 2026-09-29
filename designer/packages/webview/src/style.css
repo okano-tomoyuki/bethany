@@ -835,6 +835,12 @@ input[aria-invalid='true'] {
   border-color: #0078d4;
 }
 
+/* 中間の状態(State = cbGrayed)は、中央に短い線 */
+.look-check.grayed {
+  background: linear-gradient(#0078d4, #0078d4) center / 7px 2px no-repeat #fff;
+  border-color: #0078d4;
+}
+
 .look-check.radio.checked {
   background: radial-gradient(#fff 0 2.5px, #0078d4 3px);
 }

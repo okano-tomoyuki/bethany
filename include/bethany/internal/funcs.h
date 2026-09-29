@@ -1126,6 +1126,53 @@
     X(bool_t,        TCustomLabel_GetShowAccelChar,         (obj_t o),                                                     (o)) \
     X(void,          TCustomLabel_SetShowAccelChar,         (obj_t o, bool_t v),                                           (o, v)) \
     X(void,          TWinControl_SetOnEnter,                (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
-    X(void,          TWinControl_SetOnExit,                 (obj_t o, callback_t cb, void* d),                             (o, cb, d))
+    X(void,          TWinControl_SetOnExit,                 (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(bool_t,        TCustomListBox_GetMultiSelect,         (obj_t o),                                                     (o)) \
+    X(void,          TCustomListBox_SetMultiSelect,         (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomListBox_GetExtendedSelect,      (obj_t o),                                                     (o)) \
+    X(void,          TCustomListBox_SetExtendedSelect,      (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomListBox_GetSorted,              (obj_t o),                                                     (o)) \
+    X(void,          TCustomListBox_SetSorted,              (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TCustomListBox_GetTopIndex,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomListBox_SetTopIndex,            (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomListBox_GetSelCount,            (obj_t o),                                                     (o)) \
+    X(bool_t,        TCustomListBox_GetSelected,            (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          TCustomListBox_SetSelected,            (obj_t o, int_t i, bool_t v),                                  (o, i, v)) \
+    X(void,          TCustomListBox_ClearSelection,         (obj_t o),                                                     (o)) \
+    X(void,          TCustomListBox_SelectAll,              (obj_t o),                                                     (o)) \
+    X(int_t,         TCustomListBox_ItemAtPos,              (obj_t o, int_t x, int_t y, bool_t e),                         (o, x, y, e)) \
+    X(void,          TCustomListBox_SetOnSelectionChange,   (obj_t o, bool_callback_t cb, void* d),                        (o, cb, d)) \
+    X(int_t,         TCustomComboBox_GetStyle,              (obj_t o),                                                     (o)) \
+    X(void,          TCustomComboBox_SetStyle,              (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomComboBox_GetDropDownCount,      (obj_t o),                                                     (o)) \
+    X(void,          TCustomComboBox_SetDropDownCount,      (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TCustomComboBox_GetSorted,             (obj_t o),                                                     (o)) \
+    X(void,          TCustomComboBox_SetSorted,             (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomComboBox_GetReadOnly,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomComboBox_SetReadOnly,           (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomComboBox_GetDroppedDown,        (obj_t o),                                                     (o)) \
+    X(void,          TCustomComboBox_SetDroppedDown,        (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomComboBox_GetAutoComplete,       (obj_t o),                                                     (o)) \
+    X(void,          TCustomComboBox_SetAutoComplete,       (obj_t o, bool_t v),                                           (o, v)) \
+    X(void,          TCustomComboBox_SetOnSelect,           (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(void,          TCustomComboBox_SetOnDropDown,         (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(void,          TCustomComboBox_SetOnCloseUp,          (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(int_t,         TCustomCheckBox_GetState,              (obj_t o),                                                     (o)) \
+    X(void,          TCustomCheckBox_SetState,              (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TCustomCheckBox_GetAllowGrayed,        (obj_t o),                                                     (o)) \
+    X(void,          TCustomCheckBox_SetAllowGrayed,        (obj_t o, bool_t v),                                           (o, v)) \
+    X(void,          TCustomCheckBox_SetOnChange,           (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(str_t,         TApplication_GetExeName,               (obj_t o),                                                     (o)) \
+    X(bool_t,        TApplication_GetShowHint,              (obj_t o),                                                     (o)) \
+    X(void,          TApplication_SetShowHint,              (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TApplication_GetHintPause,             (obj_t o),                                                     (o)) \
+    X(void,          TApplication_SetHintPause,             (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TApplication_GetHintHidePause,         (obj_t o),                                                     (o)) \
+    X(void,          TApplication_SetHintHidePause,         (obj_t o, int_t v),                                            (o, v)) \
+    X(void,          TApplication_Minimize,                 (obj_t o),                                                     (o)) \
+    X(void,          TApplication_Restore,                  (obj_t o),                                                     (o)) \
+    X(void,          TApplication_BringToFront,             (obj_t o),                                                     (o)) \
+    X(void,          TApplication_SetOnIdle,                (obj_t o, close_query_callback_t cb, void* d),                 (o, cb, d)) \
+    X(void,          TApplication_SetOnException,           (obj_t o, exception_callback_t cb, void* d),                   (o, cb, d))
 
 #endif

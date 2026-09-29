@@ -8,6 +8,9 @@
   `AutoSelect` and `HideSelection` of edits, `WordWrap`, `WantReturns` and `WantTabs` of memos, `Alignment`, `Layout`, `WordWrap`,
   `Transparent`, `FocusControl` and `ShowAccelChar` of labels, and the `OnEnter` and `OnExit` events. The canvas shows the alignment and
   word wrap of labels and memos, and the text hint and password characters of edits
+- New properties from the Bethany library 0.3.0: `MultiSelect`, `ExtendedSelect` and `Sorted` of list boxes, `Style`, `DropDownCount`,
+  `Sorted`, `ReadOnly` and `AutoComplete` of combo boxes, `State` and `AllowGrayed` of check boxes, and the `OnSelectionChange`,
+  `OnSelect`, `OnDropDown`, `OnCloseUp` and `OnChange` (check boxes) events. The canvas draws the grayed state of check boxes
 - Integer properties with named constants (`ModalResult`, `Cursor`) are chosen from a list in the Object Inspector
 - The include guard macro does not repeat a namespace that is also the folder of the header
   (`APP_DIALOGS_ABOUT_HPP` instead of `APP_DIALOGS_DIALOGS_ABOUT_HPP` for `app::dialogs` and `dialogs/About.hpp`)

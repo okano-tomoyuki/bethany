@@ -131,12 +131,37 @@ type
 
   { protected メンバへアクセスするための派生クラス(protected hack)。
     同一ユニット内で宣言した派生クラス経由なら、基底の protected メンバに触れられる。 }
+  { OnSelectionChange(TSelectionChangeEvent)用。User は利用者の操作による変更か(0 = False、0 以外 = True)。 }
+  TBethBoolCallback = procedure(Sender: Pointer; Value: LongBool; Data: Pointer); BETH_CALL;
+
+  TBoolCallbackBridge = class(TComponent)
+  private
+    FCallback: TBethBoolCallback;
+    FData: Pointer;
+  public
+    procedure DoSelectionChange(Sender: TObject; User: Boolean);
+  end;
+
+  { Application.OnException(TExceptionEvent)用。例外のクラス名とメッセージを渡す(docs/adr/0043)。 }
+  TBethExceptionCallback = procedure(Sender: Pointer; ClassName, Message: PChar; Data: Pointer); BETH_CALL;
+
+  TExceptionCallbackBridge = class(TComponent)
+  private
+    FCallback: TBethExceptionCallback;
+    FData: Pointer;
+  public
+    procedure DoException(Sender: TObject; E: Exception);
+  end;
+
   TControlAccess = class(TControl);
   TButtonControlAccess = class(TButtonControl);
   TWinControlAccess = class(TWinControl);
   TCustomEditAccess = class(TCustomEdit);
   TCustomMemoAccess = class(TCustomMemo);
   TCustomLabelAccess = class(TCustomLabel);
+  TCustomListBoxAccess = class(TCustomListBox);
+  TCustomComboBoxAccess = class(TCustomComboBox);
+  TCustomCheckBoxAccess = class(TCustomCheckBox);
 
   { *_Create で生成したすべてのコンポーネントの破棄を受け取り、C/C++ 側へ通知する。
     Owner による連鎖破棄など、呼び出し側が知らないところで起きる破棄も検知できる。 }
@@ -429,6 +454,64 @@ begin
     Result := TVarCallbackBridge.Create(Owner);
   Result.FCallback := Cb;
   Result.FData := Data;
+end;
+
+procedure TBoolCallbackBridge.DoSelectionChange(Sender: TObject; User: Boolean);
+begin
+  if Assigned(FCallback) and not GDetaching then
+    FCallback(Pointer(Sender), User, FData);
+  CheckCallbackError;
+end;
+
+procedure TExceptionCallbackBridge.DoException(Sender: TObject; E: Exception);
+var
+  C, M: AnsiString;
+begin
+  if not Assigned(FCallback) or GDetaching then
+    Exit;
+  { ハンドラから送出された例外(DLL が送出し直したもの)は、元の例外のクラス名を渡す(docs/adr/0031) }
+  if E is EBethCallbackError then
+    C := EBethCallbackError(E).OriginalClassName
+  else
+    C := E.ClassName;
+  M := E.Message;
+  FCallback(Pointer(Sender), PChar(C), PChar(M), FData);
+  CheckCallbackError;
+end;
+
+function BoolBridgeFor(Owner: TComponent; Current: Pointer; Cb: TBethBoolCallback; Data: Pointer): TBoolCallbackBridge;
+begin
+  if (Current <> nil) and (TObject(Current) is TBoolCallbackBridge) and (TBoolCallbackBridge(Current).Owner = Owner) then
+    Result := TBoolCallbackBridge(Current)
+  else
+    Result := TBoolCallbackBridge.Create(Owner);
+  Result.FCallback := Cb;
+  Result.FData := Data;
+end;
+
+function ExceptionBridgeFor(Owner: TComponent; Current: Pointer; Cb: TBethExceptionCallback; Data: Pointer): TExceptionCallbackBridge;
+begin
+  if (Current <> nil) and (TObject(Current) is TExceptionCallbackBridge) and (TExceptionCallbackBridge(Current).Owner = Owner) then
+    Result := TExceptionCallbackBridge(Current)
+  else
+    Result := TExceptionCallbackBridge.Create(Owner);
+  Result.FCallback := Cb;
+  Result.FData := Data;
+end;
+
+function MethodData(const M: TSelectionChangeEvent): Pointer; overload;
+begin
+  Result := TMethod(M).Data;
+end;
+
+function MethodData(const M: TIdleEvent): Pointer; overload;
+begin
+  Result := TMethod(M).Data;
+end;
+
+function MethodData(const M: TExceptionEvent): Pointer; overload;
+begin
+  Result := TMethod(M).Data;
 end;
 
 procedure TFreeNotifier.Notification(AComponent: TComponent; Operation: TOperation);
@@ -12222,6 +12305,456 @@ begin
   end;
 end;
 
+{ ---------------- リスト・コンボの選択・チェックの 3 状態・Application(docs/adr/0043) ---------------- }
+
+function TCustomListBox_GetMultiSelect(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomListBoxAccess(Obj).MultiSelect;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomListBox_SetMultiSelect(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomListBoxAccess(Obj).MultiSelect := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomListBox_GetExtendedSelect(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomListBoxAccess(Obj).ExtendedSelect;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomListBox_SetExtendedSelect(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomListBoxAccess(Obj).ExtendedSelect := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomListBox_GetSorted(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomListBoxAccess(Obj).Sorted;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomListBox_SetSorted(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomListBoxAccess(Obj).Sorted := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomListBox_GetTopIndex(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomListBoxAccess(Obj).TopIndex;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomListBox_SetTopIndex(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomListBoxAccess(Obj).TopIndex := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomListBox_GetSelCount(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomListBoxAccess(Obj).SelCount;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function TCustomListBox_GetSelected(Obj: Pointer; Index: Integer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomListBoxAccess(Obj).Selected[Index];
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomListBox_SetSelected(Obj: Pointer; Index: Integer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomListBoxAccess(Obj).Selected[Index] := Value;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomListBox_ClearSelection(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TCustomListBoxAccess(Obj).ClearSelection;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomListBox_SelectAll(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TCustomListBoxAccess(Obj).SelectAll;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomListBox_ItemAtPos(Obj: Pointer; X, Y: Integer; Existing: LongBool): Integer; BETH_CALL;
+var
+  P: TPoint;
+begin
+  try
+    P.X := X;
+    P.Y := Y;
+    { 項目の位置はウィンドウのハンドルが無いと求まらない(表示の前でも使えるよう、先に作る) }
+    TCustomListBoxAccess(Obj).HandleNeeded;
+    Result := TCustomListBoxAccess(Obj).ItemAtPos(P, Existing);
+  except
+    Result := -1;
+    ReportException;
+  end;
+end;
+
+procedure TCustomListBox_SetOnSelectionChange(Obj: Pointer; Cb: TBethBoolCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TCustomListBoxAccess(Obj).OnSelectionChange := @BoolBridgeFor(TComponent(Obj), MethodData(TCustomListBoxAccess(Obj).OnSelectionChange), Cb, Data).DoSelectionChange;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomComboBox_GetStyle(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomComboBoxAccess(Obj).Style);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomComboBox_SetStyle(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomComboBoxAccess(Obj).Style := TComboBoxStyle(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomComboBox_GetDropDownCount(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomComboBoxAccess(Obj).DropDownCount;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomComboBox_SetDropDownCount(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomComboBoxAccess(Obj).DropDownCount := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomComboBox_GetSorted(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomComboBoxAccess(Obj).Sorted;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomComboBox_SetSorted(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomComboBoxAccess(Obj).Sorted := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomComboBox_GetReadOnly(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomComboBoxAccess(Obj).ReadOnly;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomComboBox_SetReadOnly(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomComboBoxAccess(Obj).ReadOnly := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomComboBox_GetDroppedDown(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomComboBoxAccess(Obj).DroppedDown;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomComboBox_SetDroppedDown(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomComboBoxAccess(Obj).DroppedDown := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomComboBox_GetAutoComplete(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomComboBoxAccess(Obj).AutoComplete;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomComboBox_SetAutoComplete(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomComboBoxAccess(Obj).AutoComplete := Value;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomComboBox_SetOnSelect(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TCustomComboBoxAccess(Obj).OnSelect := @BridgeFor(TComponent(Obj), MethodData(TCustomComboBoxAccess(Obj).OnSelect), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomComboBox_SetOnDropDown(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TCustomComboBoxAccess(Obj).OnDropDown := @BridgeFor(TComponent(Obj), MethodData(TCustomComboBoxAccess(Obj).OnDropDown), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomComboBox_SetOnCloseUp(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TCustomComboBoxAccess(Obj).OnCloseUp := @BridgeFor(TComponent(Obj), MethodData(TCustomComboBoxAccess(Obj).OnCloseUp), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomCheckBox_GetState(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomCheckBoxAccess(Obj).State);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomCheckBox_SetState(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomCheckBoxAccess(Obj).State := TCheckBoxState(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomCheckBox_GetAllowGrayed(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomCheckBoxAccess(Obj).AllowGrayed;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomCheckBox_SetAllowGrayed(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomCheckBoxAccess(Obj).AllowGrayed := Value;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomCheckBox_SetOnChange(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TCustomCheckBoxAccess(Obj).OnChange := @BridgeFor(TComponent(Obj), MethodData(TCustomCheckBoxAccess(Obj).OnChange), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
+end;
+
+function TApplication_GetExeName(Obj: Pointer): PChar; BETH_CALL;
+begin
+  try
+    Result := ReturnStr(TApplication(Obj).ExeName);
+  except
+    Result := '';
+    ReportException;
+  end;
+end;
+
+function TApplication_GetShowHint(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TApplication(Obj).ShowHint;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TApplication_SetShowHint(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TApplication(Obj).ShowHint := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TApplication_GetHintPause(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TApplication(Obj).HintPause;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TApplication_SetHintPause(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TApplication(Obj).HintPause := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TApplication_GetHintHidePause(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TApplication(Obj).HintHidePause;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TApplication_SetHintHidePause(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TApplication(Obj).HintHidePause := Value;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TApplication_Minimize(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TApplication(Obj).Minimize;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TApplication_Restore(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TApplication(Obj).Restore;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TApplication_BringToFront(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TApplication(Obj).BringToFront;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TApplication_SetOnIdle(Obj: Pointer; Cb: TBethVarCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TApplication(Obj).OnIdle := @VarBridgeFor(TComponent(Obj), MethodData(TApplication(Obj).OnIdle), Cb, Data).DoCloseQuery;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TApplication_SetOnException(Obj: Pointer; Cb: TBethExceptionCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TApplication(Obj).OnException := @ExceptionBridgeFor(TComponent(Obj), MethodData(TApplication(Obj).OnException), Cb, Data).DoException;
+  except
+    ReportException;
+  end;
+end;
+
 exports
   FreeNotify_SetCallback,
   Error_SetCallback,
@@ -13393,7 +13926,55 @@ exports
   TCustomLabel_GetShowAccelChar,
   TCustomLabel_SetShowAccelChar,
   TWinControl_SetOnEnter,
-  TWinControl_SetOnExit;
+  TWinControl_SetOnExit,
+
+  TCustomListBox_GetMultiSelect,
+  TCustomListBox_SetMultiSelect,
+  TCustomListBox_GetExtendedSelect,
+  TCustomListBox_SetExtendedSelect,
+  TCustomListBox_GetSorted,
+  TCustomListBox_SetSorted,
+  TCustomListBox_GetTopIndex,
+  TCustomListBox_SetTopIndex,
+  TCustomListBox_GetSelCount,
+  TCustomListBox_GetSelected,
+  TCustomListBox_SetSelected,
+  TCustomListBox_ClearSelection,
+  TCustomListBox_SelectAll,
+  TCustomListBox_ItemAtPos,
+  TCustomListBox_SetOnSelectionChange,
+  TCustomComboBox_GetStyle,
+  TCustomComboBox_SetStyle,
+  TCustomComboBox_GetDropDownCount,
+  TCustomComboBox_SetDropDownCount,
+  TCustomComboBox_GetSorted,
+  TCustomComboBox_SetSorted,
+  TCustomComboBox_GetReadOnly,
+  TCustomComboBox_SetReadOnly,
+  TCustomComboBox_GetDroppedDown,
+  TCustomComboBox_SetDroppedDown,
+  TCustomComboBox_GetAutoComplete,
+  TCustomComboBox_SetAutoComplete,
+  TCustomComboBox_SetOnSelect,
+  TCustomComboBox_SetOnDropDown,
+  TCustomComboBox_SetOnCloseUp,
+  TCustomCheckBox_GetState,
+  TCustomCheckBox_SetState,
+  TCustomCheckBox_GetAllowGrayed,
+  TCustomCheckBox_SetAllowGrayed,
+  TCustomCheckBox_SetOnChange,
+  TApplication_GetExeName,
+  TApplication_GetShowHint,
+  TApplication_SetShowHint,
+  TApplication_GetHintPause,
+  TApplication_SetHintPause,
+  TApplication_GetHintHidePause,
+  TApplication_SetHintHidePause,
+  TApplication_Minimize,
+  TApplication_Restore,
+  TApplication_BringToFront,
+  TApplication_SetOnIdle,
+  TApplication_SetOnException;
 
 begin
   RequireDerivedFormResource := False;

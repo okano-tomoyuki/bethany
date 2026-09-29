@@ -4830,6 +4830,23 @@
           "declaredIn": "TWinControl",
           "default": true
         },
+        "State": {
+          "type": {
+            "kind": "enum",
+            "enum": "TCheckBoxState"
+          },
+          "declaredIn": "TCustomCheckBox",
+          "default": "cbUnchecked",
+          "doc": "チェックの状態(cbGrayed は AllowGrayed のときだけ、利用者の操作でもなる)。"
+        },
+        "AllowGrayed": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomCheckBox",
+          "default": false,
+          "doc": "クリックで cbUnchecked → cbChecked → cbGrayed と 3 つの状態を切り替える。"
+        },
         "Checked": {
           "type": {
             "kind": "bool"
@@ -4897,6 +4914,11 @@
         "OnKeyPress": {
           "type": "TKeyPressEvent",
           "declaredIn": "TWinControl"
+        },
+        "OnChange": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TCustomCheckBox",
+          "doc": "State(Checked)が変わったとき(プログラムからの変更でも呼ばれる)。"
         }
       }
     },
@@ -5192,6 +5214,11 @@
         "OnKeyPress": {
           "type": "TKeyPressEvent",
           "declaredIn": "TWinControl"
+        },
+        "OnChange": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TCustomCheckBox",
+          "doc": "State(Checked)が変わったとき(プログラムからの変更でも呼ばれる)。"
         }
       }
     },
@@ -5420,6 +5447,23 @@
           "declaredIn": "TWinControl",
           "default": true
         },
+        "State": {
+          "type": {
+            "kind": "enum",
+            "enum": "TCheckBoxState"
+          },
+          "declaredIn": "TCustomCheckBox",
+          "default": "cbUnchecked",
+          "doc": "チェックの状態(cbGrayed は AllowGrayed のときだけ、利用者の操作でもなる)。"
+        },
+        "AllowGrayed": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomCheckBox",
+          "default": false,
+          "doc": "クリックで cbUnchecked → cbChecked → cbGrayed と 3 つの状態を切り替える。"
+        },
         "Checked": {
           "type": {
             "kind": "bool"
@@ -5487,6 +5531,11 @@
         "OnKeyPress": {
           "type": "TKeyPressEvent",
           "declaredIn": "TWinControl"
+        },
+        "OnChange": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TCustomCheckBox",
+          "doc": "State(Checked)が変わったとき(プログラムからの変更でも呼ばれる)。"
         }
       }
     },
@@ -10083,6 +10132,47 @@
           "declaredIn": "TWinControl",
           "default": true
         },
+        "Style": {
+          "type": {
+            "kind": "enum",
+            "enum": "TComboBoxStyle"
+          },
+          "declaredIn": "TCustomComboBox",
+          "default": "csDropDown",
+          "doc": "見た目と入力(csDropDownList は一覧から選ぶだけで、文字を入力できない)。"
+        },
+        "DropDownCount": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TCustomComboBox",
+          "default": 8,
+          "doc": "一覧を開いたときに表示する項目の数。"
+        },
+        "Sorted": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomComboBox",
+          "default": false,
+          "doc": "項目を並べ替えて表示する。"
+        },
+        "ReadOnly": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomComboBox",
+          "default": false,
+          "doc": "文字を入力できない(一覧から選ぶことはできる)。"
+        },
+        "AutoComplete": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomComboBox",
+          "default": false,
+          "doc": "入力した文字で始まる項目を補う。"
+        },
         "Text": {
           "type": {
             "kind": "string"
@@ -10165,6 +10255,21 @@
         "OnKeyPress": {
           "type": "TKeyPressEvent",
           "declaredIn": "TWinControl"
+        },
+        "OnSelect": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TCustomComboBox",
+          "doc": "一覧から項目を選んだとき(文字の入力では呼ばれない)。"
+        },
+        "OnDropDown": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TCustomComboBox",
+          "doc": "一覧を開く直前。"
+        },
+        "OnCloseUp": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TCustomComboBox",
+          "doc": "一覧を閉じたとき。"
         },
         "OnChange": {
           "type": "TNotifyEvent",
@@ -10390,6 +10495,30 @@
           "declaredIn": "TWinControl",
           "default": true
         },
+        "MultiSelect": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomListBox",
+          "default": false,
+          "doc": "複数の項目を選べるようにする(選んだ項目は Selected[i])。"
+        },
+        "ExtendedSelect": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomListBox",
+          "default": true,
+          "doc": "MultiSelect のとき、Shift・Ctrl で範囲・追加の選択をする(false なら、クリックのたびに選択を切り替える)。"
+        },
+        "Sorted": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomListBox",
+          "default": false,
+          "doc": "項目を並べ替えて表示する(Items への追加も並べ替えた位置に入る)。"
+        },
         "ItemIndex": {
           "type": {
             "kind": "int"
@@ -10464,6 +10593,11 @@
         "OnKeyPress": {
           "type": "TKeyPressEvent",
           "declaredIn": "TWinControl"
+        },
+        "OnSelectionChange": {
+          "type": "TSelectionChangeEvent",
+          "declaredIn": "TCustomListBox",
+          "doc": "選択が変わったとき。User は利用者の操作によるものか(プログラムからの変更なら false)。"
         }
       }
     },
@@ -10685,6 +10819,30 @@
           "declaredIn": "TWinControl",
           "default": true
         },
+        "MultiSelect": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomListBox",
+          "default": false,
+          "doc": "複数の項目を選べるようにする(選んだ項目は Selected[i])。"
+        },
+        "ExtendedSelect": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomListBox",
+          "default": true,
+          "doc": "MultiSelect のとき、Shift・Ctrl で範囲・追加の選択をする(false なら、クリックのたびに選択を切り替える)。"
+        },
+        "Sorted": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomListBox",
+          "default": false,
+          "doc": "項目を並べ替えて表示する(Items への追加も並べ替えた位置に入る)。"
+        },
         "ItemIndex": {
           "type": {
             "kind": "int"
@@ -10759,6 +10917,11 @@
         "OnKeyPress": {
           "type": "TKeyPressEvent",
           "declaredIn": "TWinControl"
+        },
+        "OnSelectionChange": {
+          "type": "TSelectionChangeEvent",
+          "declaredIn": "TCustomListBox",
+          "doc": "選択が変わったとき。User は利用者の操作によるものか(プログラムからの変更なら false)。"
         },
         "OnClickCheck": {
           "type": "TNotifyEvent",
@@ -15533,6 +15696,20 @@
       "akRight",
       "akBottom"
     ],
+    "TComboBoxStyle": [
+      "csDropDown",
+      "csSimple",
+      "csDropDownList",
+      "csOwnerDrawFixed",
+      "csOwnerDrawVariable",
+      "csOwnerDrawEditableFixed",
+      "csOwnerDrawEditableVariable"
+    ],
+    "TCheckBoxState": [
+      "cbUnchecked",
+      "cbChecked",
+      "cbGrayed"
+    ],
     "TAlignment": [
       "taLeftJustify",
       "taRightJustify",
@@ -16079,6 +16256,36 @@
       {
         "name": "Handled",
         "type": "bool&"
+      }
+    ],
+    "TSelectionChangeEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "User",
+        "type": "bool"
+      }
+    ],
+    "TIdleEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "Done",
+        "type": "bool&"
+      }
+    ],
+    "TExceptionEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "E",
+        "type": "const Exception&"
       }
     ],
     "TTabChangingEvent": [

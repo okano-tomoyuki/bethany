@@ -273,7 +273,9 @@ function Body({
             className={[
               'look-check',
               node.class === 'TRadioButton' ? 'radio' : '',
-              flag(location, 'Checked') ? 'checked' : '',
+              // Checked と State(cbChecked・cbGrayed)のどちらで設定しても描く
+              flag(location, 'Checked') || text(location, 'State') === 'cbChecked' ? 'checked' : '',
+              text(location, 'State') === 'cbGrayed' ? 'grayed' : '',
             ].join(' ')}
           />
           <span>{caption}</span>

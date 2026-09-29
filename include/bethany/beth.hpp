@@ -1352,6 +1352,24 @@ private:
     static void SetInnerBorderImpl(TObject* owner, const int& value);
 };
 
+// ---- リスト・コンボの選択・チェックの 3 状態・Application(docs/adr/0043。値の順は LCL と同じ) ----
+
+// コンボボックスの見た目と入力(csDropDownList は一覧から選ぶだけ。csOwnerDraw… は Tier B のオーナードロー)。
+enum TComboBoxStyle
+{
+    csDropDown, csSimple, csDropDownList, csOwnerDrawFixed, csOwnerDrawVariable,
+    csOwnerDrawEditableFixed, csOwnerDrawEditableVariable
+};
+// チェックボックスの状態。
+enum TCheckBoxState { cbUnchecked, cbChecked, cbGrayed };
+
+// リストボックスの選択が変わったとき(User は利用者の操作によるものか)。
+using TSelectionChangeEvent = std::function<void(TObject* Sender, bool User)>;
+// Application->OnIdle。Done を false にすると、すぐにもう一度呼ばれる。
+using TIdleEvent = std::function<void(TObject* Sender, bool& Done)>;
+// Application->OnException。ハンドラから送出された例外(E.ClassName()・E.Message)。
+using TExceptionEvent = std::function<void(TObject* Sender, const Exception& E)>;
+
 // ---- テキストの表示・入力(docs/adr/0042。値の順は LCL と同じ) ----
 
 // 文字の横の揃え(LCL の TAlignment)。
@@ -1956,6 +1974,25 @@ private:
 class TApplication : public TComponent
 {
 public:
+    // 実行ファイルのフルパス。
+    ReadOnlyProperty<std::string> ExeName;
+    // false なら、アプリケーションのすべてのヒントを表示しない。
+    Property<bool> ShowHint;
+    // マウスを止めてからヒントを表示するまでの時間(ミリ秒)。
+    Property<int> HintPause;
+    // ヒントを表示してから消すまでの時間(ミリ秒)。
+    Property<int> HintHidePause;
+    // アプリケーション(のすべてのフォーム)を最小化する。
+    void Minimize();
+    // 最小化したアプリケーションを元に戻す。
+    void Restore();
+    // アプリケーションを手前に出す。
+    void BringToFront();
+    // メッセージの処理が終わり、待ちに入るとき。Done を false にすると、すぐにもう一度呼ばれる(既定は true)。
+    Property<TIdleEvent> OnIdle;
+    // イベントのハンドラから送出された例外を、既定のエラーのダイアログの代わりに受ける(docs/adr/0031)。
+    Property<TExceptionEvent> OnException;
+
     // CreateForm で最初に生成したフォーム。Run はこれを表示し、これが閉じられると戻る。
     ReadOnlyProperty<TForm*> MainForm;
     ReadOnlyProperty<bool>   Terminated;
@@ -2003,6 +2040,25 @@ private:
     static void        SetTitleImpl(TObject* owner, const std::string& value);
     static bool        GetShowMainFormImpl(TObject* owner);
     static void        SetShowMainFormImpl(TObject* owner, const bool& value);
+
+private:
+    static std::string GetExeNameImpl(TObject* owner);
+    static bool GetShowHintImpl(TObject* owner);
+    static void SetShowHintImpl(TObject* owner, const bool& value);
+    static int GetHintPauseImpl(TObject* owner);
+    static void SetHintPauseImpl(TObject* owner, const int& value);
+    static int GetHintHidePauseImpl(TObject* owner);
+    static void SetHintHidePauseImpl(TObject* owner, const int& value);
+    TIdleEvent onIdle_;
+    bool onIdleHooked_ = false;
+    static void BETH_CALL IdleTrampoline(ObjectHandle sender, internal::bool_t* done, void* data);
+    static TIdleEvent GetOnIdleImpl(TObject* owner);
+    static void SetOnIdleImpl(TObject* owner, const TIdleEvent& value);
+    TExceptionEvent onException_;
+    bool onExceptionHooked_ = false;
+    static void BETH_CALL ExceptionTrampoline(ObjectHandle sender, internal::str_t className, internal::str_t message, void* data);
+    static TExceptionEvent GetOnExceptionImpl(TObject* owner);
+    static void SetOnExceptionImpl(TObject* owner, const TExceptionEvent& value);
 };
 
 // C++Builder と同じく、アプリケーションに 1 つのグローバル変数として公開する。
@@ -2350,9 +2406,28 @@ protected:
 
 class TCustomCheckBox : public TButtonControl
 {
+public:
+    // チェックの状態(cbGrayed は AllowGrayed のときだけ、利用者の操作でもなる)。
+    Property<TCheckBoxState> State;
+    // クリックで cbUnchecked → cbChecked → cbGrayed と 3 つの状態を切り替える。
+    Property<bool> AllowGrayed;
+    // State(Checked)が変わったとき(プログラムからの変更でも呼ばれる)。
+    Property<TNotifyEvent> OnChange;
+
 protected:
-    explicit TCustomCheckBox(ObjectHandle handle) : TButtonControl(handle) {}
+    explicit TCustomCheckBox(ObjectHandle handle);
     ~TCustomCheckBox() override = default;
+
+private:
+    static TCheckBoxState GetStateImpl(TObject* owner);
+    static void SetStateImpl(TObject* owner, const TCheckBoxState& value);
+    static bool GetAllowGrayedImpl(TObject* owner);
+    static void SetAllowGrayedImpl(TObject* owner, const bool& value);
+    TNotifyEvent onChange_;
+    bool onChangeHooked_ = false;
+    static void BETH_CALL ChangeTrampoline(ObjectHandle sender, void* data);
+    static TNotifyEvent GetOnChangeImpl(TObject* owner);
+    static void SetOnChangeImpl(TObject* owner, const TNotifyEvent& value);
 };
 
 class TCheckBox : public TCustomCheckBox
@@ -3479,6 +3554,25 @@ protected:
 class TCustomComboBox : public TWinControl
 {
 public:
+    // 見た目と入力(csDropDownList は一覧から選ぶだけで、文字を入力できない)。
+    Property<TComboBoxStyle> Style;
+    // 一覧を開いたときに表示する項目の数。
+    Property<int> DropDownCount;
+    // 項目を並べ替えて表示する。
+    Property<bool> Sorted;
+    // 文字を入力できない(一覧から選ぶことはできる)。
+    Property<bool> ReadOnly;
+    // 一覧が開いているか。設定すると開く・閉じる。
+    Property<bool> DroppedDown;
+    // 入力した文字で始まる項目を補う。
+    Property<bool> AutoComplete;
+    // 一覧から項目を選んだとき(文字の入力では呼ばれない)。
+    Property<TNotifyEvent> OnSelect;
+    // 一覧を開く直前。
+    Property<TNotifyEvent> OnDropDown;
+    // 一覧を閉じたとき。
+    Property<TNotifyEvent> OnCloseUp;
+
     using TControl::Text;
     Property<int> ItemIndex;
 
@@ -3494,6 +3588,35 @@ private:
     static TStrings* GetItemsImpl(TObject* owner);
     static int  GetItemIndexImpl(TObject* owner);
     static void SetItemIndexImpl(TObject* owner, const int& value);
+
+private:
+    static TComboBoxStyle GetStyleImpl(TObject* owner);
+    static void SetStyleImpl(TObject* owner, const TComboBoxStyle& value);
+    static int GetDropDownCountImpl(TObject* owner);
+    static void SetDropDownCountImpl(TObject* owner, const int& value);
+    static bool GetSortedImpl(TObject* owner);
+    static void SetSortedImpl(TObject* owner, const bool& value);
+    static bool GetReadOnlyImpl(TObject* owner);
+    static void SetReadOnlyImpl(TObject* owner, const bool& value);
+    static bool GetDroppedDownImpl(TObject* owner);
+    static void SetDroppedDownImpl(TObject* owner, const bool& value);
+    static bool GetAutoCompleteImpl(TObject* owner);
+    static void SetAutoCompleteImpl(TObject* owner, const bool& value);
+    TNotifyEvent onSelect_;
+    bool onSelectHooked_ = false;
+    static void BETH_CALL SelectTrampoline(ObjectHandle sender, void* data);
+    static TNotifyEvent GetOnSelectImpl(TObject* owner);
+    static void SetOnSelectImpl(TObject* owner, const TNotifyEvent& value);
+    TNotifyEvent onDropDown_;
+    bool onDropDownHooked_ = false;
+    static void BETH_CALL DropDownTrampoline(ObjectHandle sender, void* data);
+    static TNotifyEvent GetOnDropDownImpl(TObject* owner);
+    static void SetOnDropDownImpl(TObject* owner, const TNotifyEvent& value);
+    TNotifyEvent onCloseUp_;
+    bool onCloseUpHooked_ = false;
+    static void BETH_CALL CloseUpTrampoline(ObjectHandle sender, void* data);
+    static TNotifyEvent GetOnCloseUpImpl(TObject* owner);
+    static void SetOnCloseUpImpl(TObject* owner, const TNotifyEvent& value);
 };
 
 class TComboBox : public TCustomComboBox
@@ -3520,6 +3643,27 @@ private:
 class TCustomListBox : public TWinControl
 {
 public:
+    // 複数の項目を選べるようにする(選んだ項目は Selected[i])。
+    Property<bool> MultiSelect;
+    // MultiSelect のとき、Shift・Ctrl で範囲・追加の選択をする(false なら、クリックのたびに選択を切り替える)。
+    Property<bool> ExtendedSelect;
+    // 項目を並べ替えて表示する(Items への追加も並べ替えた位置に入る)。
+    Property<bool> Sorted;
+    // 一番上に表示している項目。
+    Property<int> TopIndex;
+    // 選んでいる項目の数(MultiSelect のとき)。
+    ReadOnlyProperty<int> SelCount;
+    // 項目が選ばれているか(ListBox1->Selected[i])。
+    IndexedProperty<bool> Selected;
+    // 選択をすべて外す。
+    void ClearSelection();
+    // すべての項目を選ぶ(MultiSelect のとき)。
+    void SelectAll();
+    // クライアント領域の座標にある項目。無ければ -1(LCL では Existing によらない。VCL との互換のために受け取る)。
+    int ItemAtPos(const TPoint& Pos, bool Existing) const;
+    // 選択が変わったとき。User は利用者の操作によるものか(プログラムからの変更なら false)。
+    Property<TSelectionChangeEvent> OnSelectionChange;
+
     Property<int> ItemIndex;
 
     // 文字列の一覧(TStrings。ListBox1->Items->Add("x") のように使う)。
@@ -3534,6 +3678,24 @@ private:
     static TStrings* GetItemsImpl(TObject* owner);
     static int  GetItemIndexImpl(TObject* owner);
     static void SetItemIndexImpl(TObject* owner, const int& value);
+
+private:
+    static bool GetMultiSelectImpl(TObject* owner);
+    static void SetMultiSelectImpl(TObject* owner, const bool& value);
+    static bool GetExtendedSelectImpl(TObject* owner);
+    static void SetExtendedSelectImpl(TObject* owner, const bool& value);
+    static bool GetSortedImpl(TObject* owner);
+    static void SetSortedImpl(TObject* owner, const bool& value);
+    static int GetTopIndexImpl(TObject* owner);
+    static void SetTopIndexImpl(TObject* owner, const int& value);
+    static int GetSelCountImpl(TObject* owner);
+    static bool GetSelectedImpl(TObject* owner, int index);
+    static void SetSelectedImpl(TObject* owner, int index, const bool& value);
+    TSelectionChangeEvent onSelectionChange_;
+    bool onSelectionChangeHooked_ = false;
+    static void BETH_CALL SelectionChangeTrampoline(ObjectHandle sender, internal::bool_t user, void* data);
+    static TSelectionChangeEvent GetOnSelectionChangeImpl(TObject* owner);
+    static void SetOnSelectionChangeImpl(TObject* owner, const TSelectionChangeEvent& value);
 };
 
 class TListBox : public TCustomListBox

@@ -2495,6 +2495,37 @@ int main()
         selEdit->OnExit = [](TObject*) { std::printf("selEdit OnExit\n"); };
     }
 
+    // リストの複数選択・チェックの 3 状態・Application(docs/adr/0043)。
+    {
+        TListBox* multiList = new TListBox(Form1);
+        multiList->Parent = Form1;
+        multiList->Left = 340;
+        multiList->Top = 320;
+        multiList->Height = 60;
+        multiList->Items->Add("one");
+        multiList->Items->Add("two");
+        multiList->Items->Add("three");
+        multiList->MultiSelect = true;
+        multiList->Selected[0] = true;
+        multiList->Selected[2] = true;
+        multiList->OnSelectionChange = [multiList](TObject*, bool User) {
+            std::printf("multiList OnSelectionChange User=%s SelCount=%d\n", User ? "true" : "false", (int)multiList->SelCount);
+        };
+        std::printf("multiList SelCount=%d (expected 2), Selected[1]=%s (expected false)\n", (int)multiList->SelCount,
+                    multiList->Selected[1] ? "true" : "false");
+        TCheckBox* grayCheck = new TCheckBox(Form1);
+        grayCheck->Parent = Form1;
+        grayCheck->Caption = "3 states";
+        grayCheck->Left = 340;
+        grayCheck->Top = 390;
+        grayCheck->AllowGrayed = true;
+        grayCheck->State = cbGrayed;
+        grayCheck->OnChange = [grayCheck](TObject*) { std::printf("grayCheck State=%d\n", (int)(TCheckBoxState)grayCheck->State); };
+        std::printf("grayCheck State=%d (expected cbGrayed=%d), ExeName ends with test_cpp.exe: %s\n",
+                    (int)(TCheckBoxState)grayCheck->State, (int)cbGrayed,
+                    std::string(Application->ExeName).find("test_cpp.exe") != std::string::npos ? "yes" : "no");
+    }
+
     std::printf("Running (click the buttons, then close the window three times: the first two closes are blocked, or press Quit)...\n");
     std::fflush(stdout);
     Application->Run();

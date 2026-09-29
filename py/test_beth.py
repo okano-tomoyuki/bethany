@@ -2008,6 +2008,29 @@ def main():
        f"CanFocus before Show={'true' if sel_edit.CanFocus() else 'false'}")
     sel_edit.OnEnter = lambda Sender: pr("selEdit OnEnter")
     sel_edit.OnExit = lambda Sender: pr("selEdit OnExit")
+
+    # リストの複数選択・チェックの 3 状態・Application(docs/adr/0043)。
+    multi_list = TListBox(Form1)
+    multi_list.Parent = Form1
+    multi_list.Left, multi_list.Top, multi_list.Height = 340, 320, 60
+    for s in ("one", "two", "three"):
+        multi_list.Items.Add(s)
+    multi_list.MultiSelect = True
+    multi_list.Selected[0] = True
+    multi_list.Selected[2] = True
+    multi_list.OnSelectionChange = lambda Sender, User: pr(
+        f"multiList OnSelectionChange User={'true' if User else 'false'} SelCount={multi_list.SelCount}")
+    pr(f"multiList SelCount={multi_list.SelCount} (expected 2), "
+       f"Selected[1]={'true' if multi_list.Selected[1] else 'false'} (expected false)")
+    gray_check = TCheckBox(Form1)
+    gray_check.Parent = Form1
+    gray_check.Caption = "3 states"
+    gray_check.Left, gray_check.Top = 340, 390
+    gray_check.AllowGrayed = True
+    gray_check.State = cbGrayed
+    gray_check.OnChange = lambda Sender: pr(f"grayCheck State={int(gray_check.State)}")
+    pr(f"grayCheck State={int(gray_check.State)} (expected cbGrayed={int(cbGrayed)}), "
+       f"ExeName is python: {'yes' if Application.ExeName.lower().endswith('python.exe') else 'no'}")
     try:
         tempLabel.Caption
         pr("must not be reached")

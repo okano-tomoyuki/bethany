@@ -349,6 +349,8 @@ class _Arg:
 _a_int = _Arg(lambda raws: raws[0])
 _a_bool = _Arg(lambda raws: raws[0] != 0)
 _a_rect = _Arg(lambda raws: TRect(*raws), n=4)
+# 例外(Application.OnException の E)。DLL はクラス名とメッセージを渡す。C++ の beth::Exception と同じく E.Message・E.ClassName() で読む
+_a_exception = _Arg(lambda raws: BethError(_dec(raws[0]), _dec(raws[1])), n=2)
 
 
 def _a_enum(name):
@@ -408,6 +410,9 @@ class _Event:
     def _trampoline(self, sender, *raws):
         # 例外は _internal が SetCallbackError で DLL へ知らせる(docs/adr/0031)。
         self_ = _components.get(sender)
+        if self_ is None and self.setter.startswith("TApplication_"):
+            # Application のイベント(OnException 等)の Sender は nil のことがある(LCL のタイマーの例外等)
+            self_ = _types["TApplication"]._instance
         if self_ is None:
             return
         self._dispatch(self_, raws[:-1])

@@ -39,7 +39,7 @@ from ._core import (BethError, Ref, TRect, TPoint, TObject, TPersistent, TCompon
 from ._core import (lib, _mixins, _register, _event_types, _ItemMixin, _Prop, _Indexed, _Event,
                    _int, _float, _bool, _str, _char, _ptr, _rect_conv, _point_conv, _enum, _set, _comp, _existing, _item, _obj, _view,
                    _str_key, _enc, _dec, _h, _b, _rect, _point, _to_enum, _to_comp, _to_existing, _to_item, _to_obj,
-                   _a_int, _a_bool, _a_rect, _a_enum, _a_comp, _a_item, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_enum)
+                   _a_int, _a_bool, _a_rect, _a_exception, _a_enum, _a_comp, _a_item, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_enum)
 
 
 # ---------------- 列挙型 ----------------
@@ -129,6 +129,28 @@ class TAnchorKind(enum.IntEnum):
     akBottom = 3
 
 akTop, akLeft, akRight, akBottom = TAnchorKind.akTop, TAnchorKind.akLeft, TAnchorKind.akRight, TAnchorKind.akBottom
+
+
+# コンボボックスの見た目と入力(csDropDownList は一覧から選ぶだけ。csOwnerDraw… は Tier B のオーナードロー)。
+class TComboBoxStyle(enum.IntEnum):
+    csDropDown = 0
+    csSimple = 1
+    csDropDownList = 2
+    csOwnerDrawFixed = 3
+    csOwnerDrawVariable = 4
+    csOwnerDrawEditableFixed = 5
+    csOwnerDrawEditableVariable = 6
+
+csDropDown, csSimple, csDropDownList, csOwnerDrawFixed, csOwnerDrawVariable, csOwnerDrawEditableFixed, csOwnerDrawEditableVariable = TComboBoxStyle.csDropDown, TComboBoxStyle.csSimple, TComboBoxStyle.csDropDownList, TComboBoxStyle.csOwnerDrawFixed, TComboBoxStyle.csOwnerDrawVariable, TComboBoxStyle.csOwnerDrawEditableFixed, TComboBoxStyle.csOwnerDrawEditableVariable
+
+
+# チェックボックスの状態。
+class TCheckBoxState(enum.IntEnum):
+    cbUnchecked = 0
+    cbChecked = 1
+    cbGrayed = 2
+
+cbUnchecked, cbChecked, cbGrayed = TCheckBoxState.cbUnchecked, TCheckBoxState.cbChecked, TCheckBoxState.cbGrayed
 
 
 # 文字の横の揃え(LCL の TAlignment)。
@@ -1421,6 +1443,27 @@ class TApplication(_mixins["TApplication"], TComponent):
     C++Builder に合わせて TComponent 直下に置く。インスタンスはグローバル変数 Application の 1 つだけ。
     Application が所有するフォーム(CreateForm や new TForm(Application) で生成したもの)は、
     プログラムの終了時(main から戻った後)にまとめて破棄され、ラッパーのデストラクタも呼ばれる。"""
+    # 実行ファイルのフルパス。
+    ExeName = _Prop("TApplication_GetExeName", None, _str)
+    # false なら、アプリケーションのすべてのヒントを表示しない。
+    ShowHint = _Prop("TApplication_GetShowHint", "TApplication_SetShowHint", _bool)
+    # マウスを止めてからヒントを表示するまでの時間(ミリ秒)。
+    HintPause = _Prop("TApplication_GetHintPause", "TApplication_SetHintPause", _int)
+    # ヒントを表示してから消すまでの時間(ミリ秒)。
+    HintHidePause = _Prop("TApplication_GetHintHidePause", "TApplication_SetHintHidePause", _int)
+    # アプリケーション(のすべてのフォーム)を最小化する。
+    def Minimize(self):
+        lib.TApplication_Minimize(self._current())
+    # 最小化したアプリケーションを元に戻す。
+    def Restore(self):
+        lib.TApplication_Restore(self._current())
+    # アプリケーションを手前に出す。
+    def BringToFront(self):
+        lib.TApplication_BringToFront(self._current())
+    # メッセージの処理が終わり、待ちに入るとき。Done を false にすると、すぐにもう一度呼ばれる(既定は true)。
+    OnIdle = _Event("TApplication_SetOnIdle", "TIdleEvent")
+    # イベントのハンドラから送出された例外を、既定のエラーのダイアログの代わりに受ける(docs/adr/0031)。
+    OnException = _Event("TApplication_SetOnException", "TExceptionEvent")
     # CreateForm で最初に生成したフォーム。Run はこれを表示し、これが閉じられると戻る。
     MainForm = _Prop("TApplication_GetMainForm", None, _comp("TForm"))
     Terminated = _Prop("TApplication_GetTerminated", None, _bool)
@@ -1553,7 +1596,12 @@ class TBitBtn(TCustomBitBtn):
 
 
 class TCustomCheckBox(TButtonControl):
-    pass
+    # チェックの状態(cbGrayed は AllowGrayed のときだけ、利用者の操作でもなる)。
+    State = _Prop("TCustomCheckBox_GetState", "TCustomCheckBox_SetState", _enum("TCheckBoxState"))
+    # クリックで cbUnchecked → cbChecked → cbGrayed と 3 つの状態を切り替える。
+    AllowGrayed = _Prop("TCustomCheckBox_GetAllowGrayed", "TCustomCheckBox_SetAllowGrayed", _bool)
+    # State(Checked)が変わったとき(プログラムからの変更でも呼ばれる)。
+    OnChange = _Event("TCustomCheckBox_SetOnChange", "TNotifyEvent")
 
 
 class TCheckBox(TCustomCheckBox):
@@ -2113,6 +2161,24 @@ class TMemo(TCustomMemo):
 
 
 class TCustomComboBox(TWinControl):
+    # 見た目と入力(csDropDownList は一覧から選ぶだけで、文字を入力できない)。
+    Style = _Prop("TCustomComboBox_GetStyle", "TCustomComboBox_SetStyle", _enum("TComboBoxStyle"))
+    # 一覧を開いたときに表示する項目の数。
+    DropDownCount = _Prop("TCustomComboBox_GetDropDownCount", "TCustomComboBox_SetDropDownCount", _int)
+    # 項目を並べ替えて表示する。
+    Sorted = _Prop("TCustomComboBox_GetSorted", "TCustomComboBox_SetSorted", _bool)
+    # 文字を入力できない(一覧から選ぶことはできる)。
+    ReadOnly = _Prop("TCustomComboBox_GetReadOnly", "TCustomComboBox_SetReadOnly", _bool)
+    # 一覧が開いているか。設定すると開く・閉じる。
+    DroppedDown = _Prop("TCustomComboBox_GetDroppedDown", "TCustomComboBox_SetDroppedDown", _bool)
+    # 入力した文字で始まる項目を補う。
+    AutoComplete = _Prop("TCustomComboBox_GetAutoComplete", "TCustomComboBox_SetAutoComplete", _bool)
+    # 一覧から項目を選んだとき(文字の入力では呼ばれない)。
+    OnSelect = _Event("TCustomComboBox_SetOnSelect", "TNotifyEvent")
+    # 一覧を開く直前。
+    OnDropDown = _Event("TCustomComboBox_SetOnDropDown", "TNotifyEvent")
+    # 一覧を閉じたとき。
+    OnCloseUp = _Event("TCustomComboBox_SetOnCloseUp", "TNotifyEvent")
     Text = TControl._Text
     ItemIndex = _Prop("TCustomComboBox_GetItemIndex", "TCustomComboBox_SetItemIndex", _int)
     # 文字列の一覧(TStrings。ComboBox1->Items->Add("x") のように使う)。
@@ -2129,6 +2195,30 @@ class TComboBox(TCustomComboBox):
 class TCustomListBox(TWinControl):
     """利用者による選択の変更(マウス・キー操作とも)では OnClick が呼ばれる(VCL と同じ)。
     プログラムからの ItemIndex の変更では呼ばれない。"""
+    # 複数の項目を選べるようにする(選んだ項目は Selected[i])。
+    MultiSelect = _Prop("TCustomListBox_GetMultiSelect", "TCustomListBox_SetMultiSelect", _bool)
+    # MultiSelect のとき、Shift・Ctrl で範囲・追加の選択をする(false なら、クリックのたびに選択を切り替える)。
+    ExtendedSelect = _Prop("TCustomListBox_GetExtendedSelect", "TCustomListBox_SetExtendedSelect", _bool)
+    # 項目を並べ替えて表示する(Items への追加も並べ替えた位置に入る)。
+    Sorted = _Prop("TCustomListBox_GetSorted", "TCustomListBox_SetSorted", _bool)
+    # 一番上に表示している項目。
+    TopIndex = _Prop("TCustomListBox_GetTopIndex", "TCustomListBox_SetTopIndex", _int)
+    # 選んでいる項目の数(MultiSelect のとき)。
+    SelCount = _Prop("TCustomListBox_GetSelCount", None, _int)
+    # 項目が選ばれているか(ListBox1->Selected[i])。
+    Selected = _Indexed("TCustomListBox_GetSelected", "TCustomListBox_SetSelected", _bool)
+    # 選択をすべて外す。
+    def ClearSelection(self):
+        lib.TCustomListBox_ClearSelection(self._current())
+    # すべての項目を選ぶ(MultiSelect のとき)。
+    def SelectAll(self):
+        lib.TCustomListBox_SelectAll(self._current())
+    # クライアント領域の座標にある項目。無ければ -1(LCL では Existing によらない。VCL との互換のために受け取る)。
+    def ItemAtPos(self, Pos, Existing):
+        _r = lib.TCustomListBox_ItemAtPos(self._current(), *_point(Pos), _b(Existing))
+        return _r
+    # 選択が変わったとき。User は利用者の操作によるものか(プログラムからの変更なら false)。
+    OnSelectionChange = _Event("TCustomListBox_SetOnSelectionChange", "TSelectionChangeEvent")
     ItemIndex = _Prop("TCustomListBox_GetItemIndex", "TCustomListBox_SetItemIndex", _int)
     # 文字列の一覧(TStrings。ListBox1->Items->Add("x") のように使う)。
     Items = _Prop("TCustomListBox_GetItems", None, _view("TStrings"))
@@ -2715,6 +2805,9 @@ _event_types.update({
     "TMouseEvent": (_a_enum("TMouseButton"), _a_enum("TShiftState"), _a_int, _a_int, ),  # (Sender, Button, Shift, X, Y)
     "TMouseMoveEvent": (_a_enum("TShiftState"), _a_int, _a_int, ),  # (Sender, Shift, X, Y)
     "TMouseWheelEvent": (_a_enum("TShiftState"), _a_int, _a_int, _a_int, _a_ref_bool, ),  # (Sender, Shift, WheelDelta, X, Y, Handled)
+    "TSelectionChangeEvent": (_a_bool, ),  # (Sender, User)
+    "TIdleEvent": (_a_ref_bool, ),  # (Sender, Done)
+    "TExceptionEvent": (_a_exception, ),  # (Sender, E)
     "TTabChangingEvent": (_a_ref_bool, ),  # (Sender, AllowChange)
     "TTVChangedEvent": (_a_item("TTreeNode"), ),  # (Sender, Node)
     "TTVChangingEvent": (_a_item("TTreeNode"), _a_ref_bool, ),  # (Sender, Node, AllowChange)
@@ -2748,26 +2841,28 @@ __all__ = [
     "dupIgnore", "dupAccept", "dupError", "TPixelFormat", "pfDevice", "pf1bit", "pf4bit", "pf8bit", "pf15bit",
     "pf16bit", "pf24bit", "pf32bit", "pfCustom", "TTransparentMode", "tmAuto", "tmFixed", "TDrawingStyle",
     "dsFocus", "dsSelected", "dsNormal", "dsTransparent", "TAlign", "alNone", "alTop", "alBottom", "alLeft",
-    "alRight", "alClient", "alCustom", "TAnchorKind", "akTop", "akLeft", "akRight", "akBottom", "TAlignment",
-    "taLeftJustify", "taRightJustify", "taCenter", "TTextLayout", "tlTop", "tlCenter", "tlBottom", "TEchoMode",
-    "emNormal", "emNone", "emPassword", "TEditCharCase", "ecNormal", "ecUpperCase", "ecLowerCase",
-    "TScrollBarKind", "sbHorizontal", "sbVertical", "TFormBorderStyle", "bsNone", "bsSingle", "bsSizeable",
-    "bsDialog", "bsToolWindow", "bsSizeToolWin", "TPosition", "poDesigned", "poDefault", "poDefaultPosOnly",
-    "poDefaultSizeOnly", "poScreenCenter", "poDesktopCenter", "poMainFormCenter", "poOwnerFormCenter",
-    "poWorkAreaCenter", "TWindowState", "wsNormal", "wsMinimized", "wsMaximized", "wsFullScreen", "TBorderIcon",
-    "biSystemMenu", "biMinimize", "biMaximize", "biHelp", "TFormStyle", "fsNormal", "fsMDIChild", "fsMDIForm",
-    "fsStayOnTop", "fsSplash", "fsSystemStayOnTop", "TMsgDlgType", "mtWarning", "mtError", "mtInformation",
-    "mtConfirmation", "mtCustom", "TMsgDlgBtn", "mbYes", "mbNo", "mbOK", "mbCancel", "mbAbort", "mbRetry",
-    "mbIgnore", "mbAll", "mbNoToAll", "mbYesToAll", "mbHelp", "mbClose", "TBevelShape", "bsBox", "bsFrame",
-    "bsTopLine", "bsBottomLine", "bsLeftLine", "bsRightLine", "bsSpacer", "TBevelStyle", "bsLowered", "bsRaised",
-    "TBitBtnKind", "bkCustom", "bkOK", "bkCancel", "bkHelp", "bkYes", "bkNo", "bkClose", "bkAbort", "bkRetry",
-    "bkIgnore", "bkAll", "bkNoToAll", "bkYesToAll", "TButtonLayout", "blGlyphLeft", "blGlyphRight", "blGlyphTop",
-    "blGlyphBottom", "TLabelPosition", "lpAbove", "lpBelow", "lpLeft", "lpRight", "TTabPosition", "tpTop",
-    "tpBottom", "tpLeft", "tpRight", "TNodeAttachMode", "naAdd", "naAddFirst", "naAddChild", "naAddChildFirst",
-    "naInsert", "naInsertBehind", "TViewStyle", "vsIcon", "vsSmallIcon", "vsList", "vsReport", "TSortType",
-    "stNone", "stData", "stText", "stBoth", "TSortDirection", "sdAscending", "sdDescending", "TItemChange",
-    "ctText", "ctImage", "ctState", "TResizeStyle", "rsLine", "rsNone", "rsPattern", "rsUpdate",
-    "TStaticBorderStyle", "sbsNone", "sbsSingle", "sbsSunken", "TShapeType", "stRectangle", "stSquare",
+    "alRight", "alClient", "alCustom", "TAnchorKind", "akTop", "akLeft", "akRight", "akBottom", "TComboBoxStyle",
+    "csDropDown", "csSimple", "csDropDownList", "csOwnerDrawFixed", "csOwnerDrawVariable",
+    "csOwnerDrawEditableFixed", "csOwnerDrawEditableVariable", "TCheckBoxState", "cbUnchecked", "cbChecked",
+    "cbGrayed", "TAlignment", "taLeftJustify", "taRightJustify", "taCenter", "TTextLayout", "tlTop", "tlCenter",
+    "tlBottom", "TEchoMode", "emNormal", "emNone", "emPassword", "TEditCharCase", "ecNormal", "ecUpperCase",
+    "ecLowerCase", "TScrollBarKind", "sbHorizontal", "sbVertical", "TFormBorderStyle", "bsNone", "bsSingle",
+    "bsSizeable", "bsDialog", "bsToolWindow", "bsSizeToolWin", "TPosition", "poDesigned", "poDefault",
+    "poDefaultPosOnly", "poDefaultSizeOnly", "poScreenCenter", "poDesktopCenter", "poMainFormCenter",
+    "poOwnerFormCenter", "poWorkAreaCenter", "TWindowState", "wsNormal", "wsMinimized", "wsMaximized",
+    "wsFullScreen", "TBorderIcon", "biSystemMenu", "biMinimize", "biMaximize", "biHelp", "TFormStyle", "fsNormal",
+    "fsMDIChild", "fsMDIForm", "fsStayOnTop", "fsSplash", "fsSystemStayOnTop", "TMsgDlgType", "mtWarning",
+    "mtError", "mtInformation", "mtConfirmation", "mtCustom", "TMsgDlgBtn", "mbYes", "mbNo", "mbOK", "mbCancel",
+    "mbAbort", "mbRetry", "mbIgnore", "mbAll", "mbNoToAll", "mbYesToAll", "mbHelp", "mbClose", "TBevelShape",
+    "bsBox", "bsFrame", "bsTopLine", "bsBottomLine", "bsLeftLine", "bsRightLine", "bsSpacer", "TBevelStyle",
+    "bsLowered", "bsRaised", "TBitBtnKind", "bkCustom", "bkOK", "bkCancel", "bkHelp", "bkYes", "bkNo", "bkClose",
+    "bkAbort", "bkRetry", "bkIgnore", "bkAll", "bkNoToAll", "bkYesToAll", "TButtonLayout", "blGlyphLeft",
+    "blGlyphRight", "blGlyphTop", "blGlyphBottom", "TLabelPosition", "lpAbove", "lpBelow", "lpLeft", "lpRight",
+    "TTabPosition", "tpTop", "tpBottom", "tpLeft", "tpRight", "TNodeAttachMode", "naAdd", "naAddFirst",
+    "naAddChild", "naAddChildFirst", "naInsert", "naInsertBehind", "TViewStyle", "vsIcon", "vsSmallIcon", "vsList",
+    "vsReport", "TSortType", "stNone", "stData", "stText", "stBoth", "TSortDirection", "sdAscending",
+    "sdDescending", "TItemChange", "ctText", "ctImage", "ctState", "TResizeStyle", "rsLine", "rsNone", "rsPattern",
+    "rsUpdate", "TStaticBorderStyle", "sbsNone", "sbsSingle", "sbsSunken", "TShapeType", "stRectangle", "stSquare",
     "stRoundRect", "stRoundSquare", "stEllipse", "stCircle", "stSquaredDiamond", "stDiamond", "stTriangle",
     "stTriangleLeft", "stTriangleRight", "stTriangleDown", "stStar", "stStarDown", "stPolygon",
     "TSectionTrackState", "tsTrackBegin", "tsTrackMove", "tsTrackEnd", "TEdgeStyle", "esNone", "esRaised",
