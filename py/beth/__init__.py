@@ -74,6 +74,71 @@ class TDuplicates(enum.IntEnum):
 dupIgnore, dupAccept, dupError = TDuplicates.dupIgnore, TDuplicates.dupAccept, TDuplicates.dupError
 
 
+# 線の種類(LCL の TPenStyle と同じ値。docs/adr/0045)。psClear は線を描かない。
+class TPenStyle(enum.IntEnum):
+    psSolid = 0
+    psDash = 1
+    psDot = 2
+    psDashDot = 3
+    psDashDotDot = 4
+    psInsideFrame = 5
+    psPattern = 6
+    psClear = 7
+
+psSolid, psDash, psDot, psDashDot, psDashDotDot, psInsideFrame, psPattern, psClear = TPenStyle.psSolid, TPenStyle.psDash, TPenStyle.psDot, TPenStyle.psDashDot, TPenStyle.psDashDotDot, TPenStyle.psInsideFrame, TPenStyle.psPattern, TPenStyle.psClear
+
+
+# 線の描き方(ラスタ演算。LCL の TPenMode と同じ値)。pmXor で 2 度描くと元に戻る(ラバーバンド等)。
+class TPenMode(enum.IntEnum):
+    pmBlack = 0
+    pmWhite = 1
+    pmNop = 2
+    pmNot = 3
+    pmCopy = 4
+    pmNotCopy = 5
+    pmMergePenNot = 6
+    pmMaskPenNot = 7
+    pmMergeNotPen = 8
+    pmMaskNotPen = 9
+    pmMerge = 10
+    pmNotMerge = 11
+    pmMask = 12
+    pmNotMask = 13
+    pmXor = 14
+    pmNotXor = 15
+
+pmBlack, pmWhite, pmNop, pmNot, pmCopy, pmNotCopy, pmMergePenNot, pmMaskPenNot, pmMergeNotPen, pmMaskNotPen, pmMerge, pmNotMerge, pmMask, pmNotMask, pmXor, pmNotXor = TPenMode.pmBlack, TPenMode.pmWhite, TPenMode.pmNop, TPenMode.pmNot, TPenMode.pmCopy, TPenMode.pmNotCopy, TPenMode.pmMergePenNot, TPenMode.pmMaskPenNot, TPenMode.pmMergeNotPen, TPenMode.pmMaskNotPen, TPenMode.pmMerge, TPenMode.pmNotMerge, TPenMode.pmMask, TPenMode.pmNotMask, TPenMode.pmXor, TPenMode.pmNotXor
+
+
+# 塗りつぶしの種類(LCL の TBrushStyle と同じ値)。bsClear は塗りつぶさない(TextOut の背景も透明になる)。
+class TBrushStyle(enum.IntEnum):
+    bsSolid = 0
+    bsClear = 1
+    bsHorizontal = 2
+    bsVertical = 3
+    bsFDiagonal = 4
+    bsBDiagonal = 5
+    bsCross = 6
+    bsDiagCross = 7
+    bsImage = 8
+    bsPattern = 9
+
+bsSolid, bsClear, bsHorizontal, bsVertical, bsFDiagonal, bsBDiagonal, bsCross, bsDiagCross, bsImage, bsPattern = TBrushStyle.bsSolid, TBrushStyle.bsClear, TBrushStyle.bsHorizontal, TBrushStyle.bsVertical, TBrushStyle.bsFDiagonal, TBrushStyle.bsBDiagonal, TBrushStyle.bsCross, TBrushStyle.bsDiagCross, TBrushStyle.bsImage, TBrushStyle.bsPattern
+
+
+# 文字の描き方(アンチエイリアス等。LCL の TFontQuality と同じ値)。
+class TFontQuality(enum.IntEnum):
+    fqDefault = 0
+    fqDraft = 1
+    fqProof = 2
+    fqNonAntialiased = 3
+    fqAntialiased = 4
+    fqCleartype = 5
+    fqCleartypeNatural = 6
+
+fqDefault, fqDraft, fqProof, fqNonAntialiased, fqAntialiased, fqCleartype, fqCleartypeNatural = TFontQuality.fqDefault, TFontQuality.fqDraft, TFontQuality.fqProof, TFontQuality.fqNonAntialiased, TFontQuality.fqAntialiased, TFontQuality.fqCleartype, TFontQuality.fqCleartypeNatural
+
+
 # 画素の形式(LCL の TPixelFormat と同じ値)。
 class TPixelFormat(enum.IntEnum):
     pfDevice = 0
@@ -960,10 +1025,13 @@ class TStringList(_mixins["TStringList"], TStrings):
 class TPen(TPersistent):
     Color = _Prop("TPen_GetColor", "TPen_SetColor", _int)
     Width = _Prop("TPen_GetWidth", "TPen_SetWidth", _int)
+    Style = _Prop("TPen_GetStyle", "TPen_SetStyle", _enum("TPenStyle"))
+    Mode = _Prop("TPen_GetMode", "TPen_SetMode", _enum("TPenMode"))
 
 
 class TBrush(TPersistent):
     Color = _Prop("TBrush_GetColor", "TBrush_SetColor", _int)
+    Style = _Prop("TBrush_GetStyle", "TBrush_SetStyle", _enum("TBrushStyle"))
 
 
 class TFont(TPersistent):
@@ -972,6 +1040,11 @@ class TFont(TPersistent):
     Size = _Prop("TFont_GetSize", "TFont_SetSize", _int)
     Color = _Prop("TFont_GetColor", "TFont_SetColor", _int)
     Style = _Prop("TFont_GetStyle", "TFont_SetStyle", _enum("TFontStyles"))
+    # 文字の高さ(ピクセル)。負の値は文字の高さ、正の値はセルの高さ(内部の余白を含む)。0 は既定。Size と連動する。
+    Height = _Prop("TFont_GetHeight", "TFont_SetHeight", _int)
+    # 文字の傾き(0.1 度単位。反時計回り。900 で縦書きの向き)。
+    Orientation = _Prop("TFont_GetOrientation", "TFont_SetOrientation", _int)
+    Quality = _Prop("TFont_GetQuality", "TFont_SetQuality", _enum("TFontQuality"))
     # Source の内容(Name・Size・Color・Style 等)を写す(VCL の Font->Assign)。nullptr なら何もしない。
     def Assign(self, Source):
         lib.TFont_Assign(self._current(), _h(Source))
@@ -996,6 +1069,30 @@ class TCanvas(_mixins["TCanvas"], TPersistent):
     # Brush で塗りつぶす(枠は描かない)。
     def FillRect(self, Rect):
         lib.TCanvas_FillRect(self._current(), *_rect(Rect))
+    # ---- docs/adr/0045 ----
+    # Text を今の Font で描いたときの幅・高さ(ピクセル)。
+    def TextWidth(self, Text):
+        _r = lib.TCanvas_TextWidth(self._current(), _enc(Text))
+        return _r
+    def TextHeight(self, Text):
+        _r = lib.TCanvas_TextHeight(self._current(), _enc(Text))
+        return _r
+    # Rect の中だけに、(X, Y) から Text を描く(はみ出した部分は切り取る)。
+    def TextRect(self, Rect, X, Y, Text):
+        lib.TCanvas_TextRect(self._current(), *_rect(Rect), int(X), int(Y), _enc(Text))
+    # 角の丸い矩形(RX・RY は角の楕円の幅・高さ)。
+    def RoundRect(self, X1, Y1, X2, Y2, RX, RY):
+        lib.TCanvas_RoundRect(self._current(), int(X1), int(Y1), int(X2), int(Y2), int(RX), int(RY))
+    # (X1, Y1)-(X2, Y2) に内接する楕円の、中心から (X3, Y3) の方向から (X4, Y4) の方向まで(反時計回り)の弧・扇形・弓形。
+    def Arc(self, X1, Y1, X2, Y2, X3, Y3, X4, Y4):
+        lib.TCanvas_Arc(self._current(), int(X1), int(Y1), int(X2), int(Y2), int(X3), int(Y3), int(X4), int(Y4))
+    def Pie(self, X1, Y1, X2, Y2, X3, Y3, X4, Y4):
+        lib.TCanvas_Pie(self._current(), int(X1), int(Y1), int(X2), int(Y2), int(X3), int(Y3), int(X4), int(Y4))
+    def Chord(self, X1, Y1, X2, Y2, X3, Y3, X4, Y4):
+        lib.TCanvas_Chord(self._current(), int(X1), int(Y1), int(X2), int(Y2), int(X3), int(Y3), int(X4), int(Y4))
+    # Rect の縁を Brush の色で 1 ピクセルの幅で描く(中は描かない)。
+    def FrameRect(self, Rect):
+        lib.TCanvas_FrameRect(self._current(), *_rect(Rect))
 
 
 class TGraphic(_mixins["TGraphic"], TPersistent):
@@ -1386,7 +1483,13 @@ class TGraphicControl(TControl):
 
 
 class TCustomControl(TWinControl):
-    pass
+    """自分で描くことのできるウィンドウのコントロール(TForm・TPanel・TScrollBox・グリッド等の基底)。"""
+    # 描く先(docs/adr/0045)。OnPaint(グリッドは OnDrawCell)の中で描く。コントロールが所有する実体への非所有のビュー
+    # (TPaintBox::Canvas と同じ)。OnPaint の外で描いたものは、次の再描画で消える。
+    Canvas = _Prop("TCustomControl_GetCanvas", None, _obj("TCanvas"))
+    # 描き直すとき(LCL では protected。TForm・TPanel・TScrollBox が公開する)。描くのは Canvas に。
+    # 描き直させるには Invalidate() を呼ぶ。
+    _OnPaint = _Event("TCustomControl_SetOnPaint", "TNotifyEvent")
 
 
 class TUpDown(TCustomControl):
@@ -1409,11 +1512,13 @@ class TScrollingWinControl(TCustomControl):
 
 class TScrollBox(TScrollingWinControl):
     """スクロール可能な汎用コンテナ。TScrollingWinControl の直接の派生で、追加のメンバは無い。"""
+    OnPaint = TCustomControl._OnPaint
     def __init__(self, AOwner):
         self._attach(lib.TScrollBox_Create(_h(AOwner)))
 
 
 class TCustomForm(_mixins["TCustomForm"], TScrollingWinControl):
+    OnPaint = TCustomControl._OnPaint
     # LCL の TCustomForm は Show/Hide を独自に宣言している(TControl のものを隠す)。
     def Show(self):
         lib.TCustomForm_Show(self._current())
@@ -1501,6 +1606,7 @@ class TCustomPanel(TCustomControl):
 
 
 class TPanel(TCustomPanel):
+    OnPaint = TCustomControl._OnPaint
     def __init__(self, AOwner):
         self._attach(lib.TPanel_Create(_h(AOwner)))
 
@@ -2432,8 +2538,6 @@ class TCustomGrid(TCustomControl):
 
 class TCustomDrawGrid(TCustomGrid):
     """以下のメンバは LCL では TCustomGrid の protected で、TCustomDrawGrid が public にしている。"""
-    # OnDrawCell の中で描画する先。グリッドが所有する実体への非所有のビュー(TPaintBox::Canvas と同じ)。
-    Canvas = _Prop("TCustomDrawGrid_GetCanvas", None, _obj("TCanvas"))
     ColCount = _Prop("TCustomDrawGrid_GetColCount", "TCustomDrawGrid_SetColCount", _int)
     RowCount = _Prop("TCustomDrawGrid_GetRowCount", "TCustomDrawGrid_SetRowCount", _int)
     # 固定列・固定行(見出し)の数。既定は 1。
@@ -2915,39 +3019,44 @@ __all__ = [
     "MB_ICONQUESTION", "MB_ICONWARNING", "MB_ICONINFORMATION", "MB_DEFBUTTON1", "MB_DEFBUTTON2", "MB_DEFBUTTON3",
     "IDOK", "IDCANCEL", "IDABORT", "IDRETRY", "IDIGNORE", "IDYES", "IDNO", "TCloseAction", "caNone", "caHide",
     "caFree", "caMinimize", "TMouseButton", "mbLeft", "mbRight", "mbMiddle", "mbExtra1", "mbExtra2", "TDuplicates",
-    "dupIgnore", "dupAccept", "dupError", "TPixelFormat", "pfDevice", "pf1bit", "pf4bit", "pf8bit", "pf15bit",
-    "pf16bit", "pf24bit", "pf32bit", "pfCustom", "TTransparentMode", "tmAuto", "tmFixed", "TDrawingStyle",
-    "dsFocus", "dsSelected", "dsNormal", "dsTransparent", "TAlign", "alNone", "alTop", "alBottom", "alLeft",
-    "alRight", "alClient", "alCustom", "TAnchorKind", "akTop", "akLeft", "akRight", "akBottom", "TComboBoxStyle",
-    "csDropDown", "csSimple", "csDropDownList", "csOwnerDrawFixed", "csOwnerDrawVariable",
-    "csOwnerDrawEditableFixed", "csOwnerDrawEditableVariable", "TCheckBoxState", "cbUnchecked", "cbChecked",
-    "cbGrayed", "TAlignment", "taLeftJustify", "taRightJustify", "taCenter", "TTextLayout", "tlTop", "tlCenter",
-    "tlBottom", "TEchoMode", "emNormal", "emNone", "emPassword", "TEditCharCase", "ecNormal", "ecUpperCase",
-    "ecLowerCase", "TScrollBarKind", "sbHorizontal", "sbVertical", "TFormBorderStyle", "bsNone", "bsSingle",
-    "bsSizeable", "bsDialog", "bsToolWindow", "bsSizeToolWin", "TPosition", "poDesigned", "poDefault",
-    "poDefaultPosOnly", "poDefaultSizeOnly", "poScreenCenter", "poDesktopCenter", "poMainFormCenter",
-    "poOwnerFormCenter", "poWorkAreaCenter", "TWindowState", "wsNormal", "wsMinimized", "wsMaximized",
-    "wsFullScreen", "TBorderIcon", "biSystemMenu", "biMinimize", "biMaximize", "biHelp", "TFormStyle", "fsNormal",
-    "fsMDIChild", "fsMDIForm", "fsStayOnTop", "fsSplash", "fsSystemStayOnTop", "TMsgDlgType", "mtWarning",
-    "mtError", "mtInformation", "mtConfirmation", "mtCustom", "TMsgDlgBtn", "mbYes", "mbNo", "mbOK", "mbCancel",
-    "mbAbort", "mbRetry", "mbIgnore", "mbAll", "mbNoToAll", "mbYesToAll", "mbHelp", "mbClose", "TBevelShape",
-    "bsBox", "bsFrame", "bsTopLine", "bsBottomLine", "bsLeftLine", "bsRightLine", "bsSpacer", "TBevelStyle",
-    "bsLowered", "bsRaised", "TBitBtnKind", "bkCustom", "bkOK", "bkCancel", "bkHelp", "bkYes", "bkNo", "bkClose",
-    "bkAbort", "bkRetry", "bkIgnore", "bkAll", "bkNoToAll", "bkYesToAll", "TButtonLayout", "blGlyphLeft",
-    "blGlyphRight", "blGlyphTop", "blGlyphBottom", "TLabelPosition", "lpAbove", "lpBelow", "lpLeft", "lpRight",
-    "TTabPosition", "tpTop", "tpBottom", "tpLeft", "tpRight", "TNodeAttachMode", "naAdd", "naAddFirst",
-    "naAddChild", "naAddChildFirst", "naInsert", "naInsertBehind", "TViewStyle", "vsIcon", "vsSmallIcon", "vsList",
-    "vsReport", "TSortType", "stNone", "stData", "stText", "stBoth", "TSortDirection", "sdAscending",
-    "sdDescending", "TItemChange", "ctText", "ctImage", "ctState", "TResizeStyle", "rsLine", "rsNone", "rsPattern",
-    "rsUpdate", "TStaticBorderStyle", "sbsNone", "sbsSingle", "sbsSunken", "TStatusPanelStyle", "psText",
-    "psOwnerDraw", "TStatusPanelBevel", "pbNone", "pbLowered", "pbRaised", "TShapeType", "stRectangle", "stSquare",
-    "stRoundRect", "stRoundSquare", "stEllipse", "stCircle", "stSquaredDiamond", "stDiamond", "stTriangle",
-    "stTriangleLeft", "stTriangleRight", "stTriangleDown", "stStar", "stStarDown", "stPolygon",
-    "TSectionTrackState", "tsTrackBegin", "tsTrackMove", "tsTrackEnd", "TEdgeStyle", "esNone", "esRaised",
-    "esLowered", "TToolButtonStyle", "tbsButton", "tbsCheck", "tbsDropDown", "tbsSeparator", "tbsDivider",
-    "tbsButtonDrop", "TGrabStyle", "gsSimple", "gsDouble", "gsHorLines", "gsVerLines", "gsGripper", "gsButton",
-    "TShiftState", "ssShift", "ssAlt", "ssCtrl", "ssLeft", "ssRight", "ssMiddle", "ssDouble", "ssMeta", "ssSuper",
-    "ssHyper", "ssAltGr", "ssCaps", "ssNum", "ssScroll", "ssTriple", "ssQuad", "ssExtra1", "ssExtra2",
+    "dupIgnore", "dupAccept", "dupError", "TPenStyle", "psSolid", "psDash", "psDot", "psDashDot", "psDashDotDot",
+    "psInsideFrame", "psPattern", "psClear", "TPenMode", "pmBlack", "pmWhite", "pmNop", "pmNot", "pmCopy",
+    "pmNotCopy", "pmMergePenNot", "pmMaskPenNot", "pmMergeNotPen", "pmMaskNotPen", "pmMerge", "pmNotMerge",
+    "pmMask", "pmNotMask", "pmXor", "pmNotXor", "TBrushStyle", "bsSolid", "bsClear", "bsHorizontal", "bsVertical",
+    "bsFDiagonal", "bsBDiagonal", "bsCross", "bsDiagCross", "bsImage", "bsPattern", "TFontQuality", "fqDefault",
+    "fqDraft", "fqProof", "fqNonAntialiased", "fqAntialiased", "fqCleartype", "fqCleartypeNatural", "TPixelFormat",
+    "pfDevice", "pf1bit", "pf4bit", "pf8bit", "pf15bit", "pf16bit", "pf24bit", "pf32bit", "pfCustom",
+    "TTransparentMode", "tmAuto", "tmFixed", "TDrawingStyle", "dsFocus", "dsSelected", "dsNormal", "dsTransparent",
+    "TAlign", "alNone", "alTop", "alBottom", "alLeft", "alRight", "alClient", "alCustom", "TAnchorKind", "akTop",
+    "akLeft", "akRight", "akBottom", "TComboBoxStyle", "csDropDown", "csSimple", "csDropDownList",
+    "csOwnerDrawFixed", "csOwnerDrawVariable", "csOwnerDrawEditableFixed", "csOwnerDrawEditableVariable",
+    "TCheckBoxState", "cbUnchecked", "cbChecked", "cbGrayed", "TAlignment", "taLeftJustify", "taRightJustify",
+    "taCenter", "TTextLayout", "tlTop", "tlCenter", "tlBottom", "TEchoMode", "emNormal", "emNone", "emPassword",
+    "TEditCharCase", "ecNormal", "ecUpperCase", "ecLowerCase", "TScrollBarKind", "sbHorizontal", "sbVertical",
+    "TFormBorderStyle", "bsNone", "bsSingle", "bsSizeable", "bsDialog", "bsToolWindow", "bsSizeToolWin",
+    "TPosition", "poDesigned", "poDefault", "poDefaultPosOnly", "poDefaultSizeOnly", "poScreenCenter",
+    "poDesktopCenter", "poMainFormCenter", "poOwnerFormCenter", "poWorkAreaCenter", "TWindowState", "wsNormal",
+    "wsMinimized", "wsMaximized", "wsFullScreen", "TBorderIcon", "biSystemMenu", "biMinimize", "biMaximize",
+    "biHelp", "TFormStyle", "fsNormal", "fsMDIChild", "fsMDIForm", "fsStayOnTop", "fsSplash", "fsSystemStayOnTop",
+    "TMsgDlgType", "mtWarning", "mtError", "mtInformation", "mtConfirmation", "mtCustom", "TMsgDlgBtn", "mbYes",
+    "mbNo", "mbOK", "mbCancel", "mbAbort", "mbRetry", "mbIgnore", "mbAll", "mbNoToAll", "mbYesToAll", "mbHelp",
+    "mbClose", "TBevelShape", "bsBox", "bsFrame", "bsTopLine", "bsBottomLine", "bsLeftLine", "bsRightLine",
+    "bsSpacer", "TBevelStyle", "bsLowered", "bsRaised", "TBitBtnKind", "bkCustom", "bkOK", "bkCancel", "bkHelp",
+    "bkYes", "bkNo", "bkClose", "bkAbort", "bkRetry", "bkIgnore", "bkAll", "bkNoToAll", "bkYesToAll",
+    "TButtonLayout", "blGlyphLeft", "blGlyphRight", "blGlyphTop", "blGlyphBottom", "TLabelPosition", "lpAbove",
+    "lpBelow", "lpLeft", "lpRight", "TTabPosition", "tpTop", "tpBottom", "tpLeft", "tpRight", "TNodeAttachMode",
+    "naAdd", "naAddFirst", "naAddChild", "naAddChildFirst", "naInsert", "naInsertBehind", "TViewStyle", "vsIcon",
+    "vsSmallIcon", "vsList", "vsReport", "TSortType", "stNone", "stData", "stText", "stBoth", "TSortDirection",
+    "sdAscending", "sdDescending", "TItemChange", "ctText", "ctImage", "ctState", "TResizeStyle", "rsLine",
+    "rsNone", "rsPattern", "rsUpdate", "TStaticBorderStyle", "sbsNone", "sbsSingle", "sbsSunken",
+    "TStatusPanelStyle", "psText", "psOwnerDraw", "TStatusPanelBevel", "pbNone", "pbLowered", "pbRaised",
+    "TShapeType", "stRectangle", "stSquare", "stRoundRect", "stRoundSquare", "stEllipse", "stCircle",
+    "stSquaredDiamond", "stDiamond", "stTriangle", "stTriangleLeft", "stTriangleRight", "stTriangleDown", "stStar",
+    "stStarDown", "stPolygon", "TSectionTrackState", "tsTrackBegin", "tsTrackMove", "tsTrackEnd", "TEdgeStyle",
+    "esNone", "esRaised", "esLowered", "TToolButtonStyle", "tbsButton", "tbsCheck", "tbsDropDown", "tbsSeparator",
+    "tbsDivider", "tbsButtonDrop", "TGrabStyle", "gsSimple", "gsDouble", "gsHorLines", "gsVerLines", "gsGripper",
+    "gsButton", "TShiftState", "ssShift", "ssAlt", "ssCtrl", "ssLeft", "ssRight", "ssMiddle", "ssDouble", "ssMeta",
+    "ssSuper", "ssHyper", "ssAltGr", "ssCaps", "ssNum", "ssScroll", "ssTriple", "ssQuad", "ssExtra1", "ssExtra2",
     "TFontStyles", "fsBold", "fsItalic", "fsUnderline", "fsStrikeOut", "TGridOptions", "goFixedVertLine",
     "goFixedHorzLine", "goVertLine", "goHorzLine", "goRangeSelect", "goDrawFocusSelected", "goRowSizing",
     "goColSizing", "goRowMoving", "goColMoving", "goEditing", "goAutoAddRows", "goTabs", "goRowSelect",

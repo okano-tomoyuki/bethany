@@ -16,6 +16,8 @@
   reorder panels and set their `Text`, `Width`, `Alignment`, `Bevel` and `Style`. The canvas draws the panels when `SimplePanel` is off.
   Also new: `SizeGrip` and `AutoHint`, and the `OnDrawPanel` and `OnHint` events
 - The C++ header declares handler parameters of const reference types with the namespace (`const beth::TRect& Rect`)
+- New from the Bethany library 0.3.0: the `OnPaint` event of forms, panels and scroll boxes, and `Height`, `Orientation` and `Quality`
+  of fonts. The canvas uses the font `Height` for the text size
 - The include guard macro does not repeat a namespace that is also the folder of the header
   (`APP_DIALOGS_ABOUT_HPP` instead of `APP_DIALOGS_DIALOGS_ABOUT_HPP` for `app::dialogs` and `dialogs/About.hpp`)
 

@@ -65,7 +65,7 @@ C++Builder の入門的なアプリ(ダイアログ・入力のフォーム・�
 
 ### Tier B — よく使う(中〜高コスト)
 
-実用的なアプリでよく使うが、新しい型やコレクション・グローバルなオブジェクトの設計が要るもの。✅ は実装済み(B1 は [ADR 0044](adr/0044-statusbar-panels-and-designer-collections.md))。
+実用的なアプリでよく使うが、新しい型やコレクション・グローバルなオブジェクトの設計が要るもの。✅ は実装済み(B1 は [ADR 0044](adr/0044-statusbar-panels-and-designer-collections.md)、B5・B6 は [ADR 0045](adr/0045-custom-control-canvas-and-drawing.md))。
 
 | # | 項目 | 対象 | コスト | 備考 |
 |---|---|---|---|---|
@@ -73,8 +73,8 @@ C++Builder の入門的なアプリ(ダイアログ・入力のフォーム・�
 | B2 | **Screen** | `TScreen`(`Screen`)の `Cursor`・`Width`・`Height`・`WorkArea…`・`Forms`・`FormCount`・`ActiveForm`・`ActiveControl` | L | グローバルなオブジェクト。`Application` と同じく DLL の読み込み時に作る |
 | B3 | **Clipboard** | `TClipboard`(`Clipboard()`)の `AsText`・`HasFormat`・`Clear`、画像の `Assign` | M〜L | A7 の `CopyToClipboard` 等とは別に、プログラムからクリップボードを読み書きするもの |
 | B4 | **Action** | `TActionList`・`TAction`(`Caption`・`Enabled`・`Checked`・`ShortCut`・`OnExecute`・`OnUpdate`)と、コントロール・メニュー項目の `Action` | L | C++Builder のアプリでよく使う(メニューとツールボタンの状態をまとめる)。デザイナーにも非ビジュアルコンポーネントとして要る。ADR を書く |
-| B5 | **フォームへの描画** | `TCustomControl`(TForm・TPanel 等)の `Canvas`・`OnPaint` | M | 今は `TPaintBox`・`TImage` にだけ Canvas がある |
-| B6 | **Canvas の描画の関数** | `TCanvas` の `TextWidth`・`TextHeight`・`TextRect`・`Polygon`・`Polyline`・`RoundRect`・`Arc`・`Pie`・`FrameRect`・`CopyRect`、`TPen.Style`・`Mode`、`TBrush.Style`、`TFont.Height`・`Orientation`・`Quality` | S〜M | 配列(Polygon の点)を渡す形を決める |
+| B5 | ✅ **フォームへの描画** | `TCustomControl`(TForm・TPanel 等)の `Canvas`・`OnPaint` | M | 今は `TPaintBox`・`TImage` にだけ Canvas がある |
+| B6 | ✅ **Canvas の描画の関数** | `TCanvas` の `TextWidth`・`TextHeight`・`TextRect`・`Polygon`・`Polyline`・`RoundRect`・`Arc`・`Pie`・`FrameRect`・`CopyRect`、`TPen.Style`・`Mode`、`TBrush.Style`、`TFont.Height`・`Orientation`・`Quality` | S〜M | 配列(Polygon の点)を渡す形を決める |
 | B7 | **TPanel の縁** | `BevelOuter`・`BevelInner`・`BevelWidth`・`BevelColor`・`Alignment`・`VerticalAlignment`・`WordWrap` | S〜M | `TPanelBevel` は新しい列挙型。デザイナーに出す |
 | B8 | **オーナードロー** | `TListBox`・`TComboBox` の `Style`(lbOwnerDrawFixed 等)・`ItemHeight`・`OnDrawItem`・`OnMeasureItem`、メニューの `OwnerDraw`・`OnDrawItem` | M | `TOwnerDrawState`(集合)と TRect を受けるイベント |
 | B9 | **スクロール** | `ScrollBars`(`TScrollStyle`: `ssNone`・`ssHorizontal`・`ssVertical`・`ssBoth`・`ssAutoHorizontal`・`ssAutoVertical`・`ssAutoBoth`)を TStringGrid・TDrawGrid・TTreeView に加え、実装済みの TMemo の `ScrollBars`(今は `int`)も `TScrollStyle` にする。`TScrollingWinControl` の `HorzScrollBar`・`VertScrollBar`(`TControlScrollBar`)、TForm・TScrollBox の `AutoScroll` | M | グリッドの既定は `ssAutoBoth`(必要なときだけ出る)なので、今も既定の動作では使える。TMemo の型を変えるとデザイナーのフォームのファイルの値(`"ScrollBars": 3`)も `"ssBoth"` に変わるため、古い数値も読めるようにする |

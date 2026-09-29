@@ -869,6 +869,35 @@ TProgressBar::TProgressBar(TComponent* AOwner)
     : TCustomProgressBar(internal::TProgressBar_Create(HandleOf(AOwner)))
 {}
 
+TCustomControl::TCustomControl(ObjectHandle handle)
+    : TWinControl(handle)
+    , Canvas(internal::TCustomControl_GetCanvas(handle))
+    , OnPaint(this, &TCustomControl::GetOnPaintImpl, &TCustomControl::SetOnPaintImpl)
+{}
+
+TNotifyEvent TCustomControl::GetOnPaintImpl(TObject* owner)
+{
+    return static_cast<TCustomControl*>(owner)->onPaint_;
+}
+
+void TCustomControl::SetOnPaintImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCustomControl* self = static_cast<TCustomControl*>(owner);
+    SetSimpleEvent(self->handle_, self->onPaint_, self->onPaintHooked_, value,
+                   &internal::TCustomControl_SetOnPaint, &TCustomControl::PaintTrampoline);
+}
+
+void BETH_CALL TCustomControl::PaintTrampoline(ObjectHandle sender, void*)
+{
+    GuardCallback([&] {
+        TCustomControl* self = static_cast<TCustomControl*>(FromHandle(sender));
+        if (!self || !self->onPaint_)
+            return;
+        TNotifyEvent handler = self->onPaint_;
+        handler(self);
+    });
+}
+
 TScrollBox::TScrollBox(TComponent* AOwner)
     : TScrollingWinControl(internal::TScrollBox_Create(HandleOf(AOwner)))
 {}
@@ -3399,7 +3428,14 @@ TPen::TPen(ObjectHandle handle)
     : TPersistent(handle)
     , Color(this, &TPen::GetColorImpl, &TPen::SetColorImpl)
     , Width(this, &TPen::GetWidthImpl, &TPen::SetWidthImpl)
+    , Style(this, &TPen::GetStyleImpl, &TPen::SetStyleImpl)
+    , Mode(this, &TPen::GetModeImpl, &TPen::SetModeImpl)
 {}
+
+TPenStyle TPen::GetStyleImpl(TObject* owner) { return static_cast<TPenStyle>(internal::TPen_GetStyle(owner->Handle())); }
+void TPen::SetStyleImpl(TObject* owner, const TPenStyle& value) { internal::TPen_SetStyle(owner->Handle(), value); }
+TPenMode TPen::GetModeImpl(TObject* owner) { return static_cast<TPenMode>(internal::TPen_GetMode(owner->Handle())); }
+void TPen::SetModeImpl(TObject* owner, const TPenMode& value) { internal::TPen_SetMode(owner->Handle(), value); }
 
 TColor TPen::GetColorImpl(TObject* owner)                      { return static_cast<TColor>(internal::TPen_GetColor(owner->Handle())); }
 void   TPen::SetColorImpl(TObject* owner, const TColor& value) { internal::TPen_SetColor(owner->Handle(), value); }
@@ -3409,7 +3445,11 @@ void   TPen::SetWidthImpl(TObject* owner, const int& value)    { internal::TPen_
 TBrush::TBrush(ObjectHandle handle)
     : TPersistent(handle)
     , Color(this, &TBrush::GetColorImpl, &TBrush::SetColorImpl)
+    , Style(this, &TBrush::GetStyleImpl, &TBrush::SetStyleImpl)
 {}
+
+TBrushStyle TBrush::GetStyleImpl(TObject* owner) { return static_cast<TBrushStyle>(internal::TBrush_GetStyle(owner->Handle())); }
+void TBrush::SetStyleImpl(TObject* owner, const TBrushStyle& value) { internal::TBrush_SetStyle(owner->Handle(), value); }
 
 TColor TBrush::GetColorImpl(TObject* owner)                      { return static_cast<TColor>(internal::TBrush_GetColor(owner->Handle())); }
 void   TBrush::SetColorImpl(TObject* owner, const TColor& value) { internal::TBrush_SetColor(owner->Handle(), value); }
@@ -3462,7 +3502,17 @@ TFont::TFont(ObjectHandle handle)
     , Size(this, &TFont::GetSizeImpl, &TFont::SetSizeImpl)
     , Color(this, &TFont::GetColorImpl, &TFont::SetColorImpl)
     , Style(this, &TFont::GetStyleImpl, &TFont::SetStyleImpl)
+    , Height(this, &TFont::GetHeightImpl, &TFont::SetHeightImpl)
+    , Orientation(this, &TFont::GetOrientationImpl, &TFont::SetOrientationImpl)
+    , Quality(this, &TFont::GetQualityImpl, &TFont::SetQualityImpl)
 {}
+
+int  TFont::GetHeightImpl(TObject* owner) { return internal::TFont_GetHeight(owner->Handle()); }
+void TFont::SetHeightImpl(TObject* owner, const int& value) { internal::TFont_SetHeight(owner->Handle(), value); }
+int  TFont::GetOrientationImpl(TObject* owner) { return internal::TFont_GetOrientation(owner->Handle()); }
+void TFont::SetOrientationImpl(TObject* owner, const int& value) { internal::TFont_SetOrientation(owner->Handle(), value); }
+TFontQuality TFont::GetQualityImpl(TObject* owner) { return static_cast<TFontQuality>(internal::TFont_GetQuality(owner->Handle())); }
+void TFont::SetQualityImpl(TObject* owner, const TFontQuality& value) { internal::TFont_SetQuality(owner->Handle(), value); }
 
 std::string TFont::GetNameImpl(TObject* owner)
 {
@@ -3511,6 +3561,77 @@ void TCanvas::StretchDraw(const TRect& Rect, const TGraphic* Graphic)
 {
     if (Graphic)
         internal::TCanvas_StretchDraw(handle_, Rect.Left, Rect.Top, Rect.Right, Rect.Bottom, Graphic->Current());
+}
+
+// ---- docs/adr/0045 ----
+
+namespace
+{
+
+// 点の並びを DLL に渡す形((X, Y) を並べた整数の配列)にする。
+std::vector<internal::int_t> FlattenPoints(const TPoint* Points, int Count)
+{
+    std::vector<internal::int_t> flat;
+    if (!Points || Count <= 0)
+        return flat;
+    flat.reserve(static_cast<size_t>(Count) * 2);
+    for (int i = 0; i < Count; ++i)
+    {
+        flat.push_back(Points[i].X);
+        flat.push_back(Points[i].Y);
+    }
+    return flat;
+}
+
+} // namespace
+
+int TCanvas::TextWidth(const std::string& Text) const { return internal::TCanvas_TextWidth(handle_, Text.c_str()); }
+int TCanvas::TextHeight(const std::string& Text) const { return internal::TCanvas_TextHeight(handle_, Text.c_str()); }
+
+void TCanvas::TextRect(const TRect& Rect, int X, int Y, const std::string& Text)
+{
+    internal::TCanvas_TextRect(handle_, Rect.Left, Rect.Top, Rect.Right, Rect.Bottom, X, Y, Text.c_str());
+}
+
+void TCanvas::Polygon(const std::vector<TPoint>& Points)
+{
+    Polygon(Points.data(), static_cast<int>(Points.size()));
+}
+
+void TCanvas::Polygon(const TPoint* Points, int Count)
+{
+    std::vector<internal::int_t> flat = FlattenPoints(Points, Count);
+    if (!flat.empty())
+        internal::TCanvas_Polygon(handle_, flat.data(), Count);
+}
+
+void TCanvas::Polyline(const std::vector<TPoint>& Points)
+{
+    Polyline(Points.data(), static_cast<int>(Points.size()));
+}
+
+void TCanvas::Polyline(const TPoint* Points, int Count)
+{
+    std::vector<internal::int_t> flat = FlattenPoints(Points, Count);
+    if (!flat.empty())
+        internal::TCanvas_Polyline(handle_, flat.data(), Count);
+}
+
+void TCanvas::RoundRect(int X1, int Y1, int X2, int Y2, int RX, int RY) { internal::TCanvas_RoundRect(handle_, X1, Y1, X2, Y2, RX, RY); }
+void TCanvas::Arc(int X1, int Y1, int X2, int Y2, int X3, int Y3, int X4, int Y4) { internal::TCanvas_Arc(handle_, X1, Y1, X2, Y2, X3, Y3, X4, Y4); }
+void TCanvas::Pie(int X1, int Y1, int X2, int Y2, int X3, int Y3, int X4, int Y4) { internal::TCanvas_Pie(handle_, X1, Y1, X2, Y2, X3, Y3, X4, Y4); }
+void TCanvas::Chord(int X1, int Y1, int X2, int Y2, int X3, int Y3, int X4, int Y4) { internal::TCanvas_Chord(handle_, X1, Y1, X2, Y2, X3, Y3, X4, Y4); }
+
+void TCanvas::FrameRect(const TRect& Rect)
+{
+    internal::TCanvas_FrameRect(handle_, Rect.Left, Rect.Top, Rect.Right, Rect.Bottom);
+}
+
+void TCanvas::CopyRect(const TRect& Dest, const TCanvas* Canvas, const TRect& Source)
+{
+    if (Canvas)
+        internal::TCanvas_CopyRect(handle_, Dest.Left, Dest.Top, Dest.Right, Dest.Bottom, Canvas->Handle(), Source.Left,
+                                   Source.Top, Source.Right, Source.Bottom);
 }
 
 TColor TCanvas::GetPixelsImpl(TObject* owner, int X, int Y) { return static_cast<TColor>(internal::TCanvas_GetPixels(owner->Handle(), X, Y)); }
@@ -4110,7 +4231,6 @@ void TCustomGrid::MouseToCell(int X, int Y, int& ACol, int& ARow) const
 
 TCustomDrawGrid::TCustomDrawGrid(ObjectHandle handle)
     : TCustomGrid(handle)
-    , Canvas(internal::TCustomDrawGrid_GetCanvas(handle))
     , ColCount(this, &TCustomDrawGrid::GetColCountImpl, &TCustomDrawGrid::SetColCountImpl)
     , RowCount(this, &TCustomDrawGrid::GetRowCountImpl, &TCustomDrawGrid::SetRowCountImpl)
     , FixedCols(this, &TCustomDrawGrid::GetFixedColsImpl, &TCustomDrawGrid::SetFixedColsImpl)

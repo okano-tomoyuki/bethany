@@ -278,6 +278,23 @@ public:
         PanelButton->Top = 15;
         PanelButton->OnClick = [this](TObject* Sender) { PanelButtonClick(Sender); };
 
+        // パネルへの描画(TCustomControl::Canvas・OnPaint。docs/adr/0045)。ボタンの右の空きに図形を描く
+        Panel1->OnPaint = [this](TObject*) {
+            TCanvas& c = Panel1->Canvas;
+            c.Pen.Color = clBlack;
+            c.Brush.Color = clYellow;
+            c.Polygon({{100, 50}, {125, 8}, {150, 50}});
+            c.Pen.Style = psDot;
+            c.Brush.Style = bsClear;
+            c.RoundRect(95, 4, 176, 56, 12, 12);
+            c.Pen.Style = psSolid;
+            c.Brush.Style = bsSolid;
+            c.Font.Orientation = 900;
+            c.Font.Color = clBlue;
+            c.TextOut(158, 50, "Paint");
+            c.Font.Orientation = 0;
+        };
+
         GroupBox1 = new TGroupBox(this);
         GroupBox1->Parent = this;
         GroupBox1->Caption = "Group";

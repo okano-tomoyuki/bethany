@@ -8,6 +8,7 @@
 #include <string>
 #include <type_traits>
 #include <unordered_map>
+#include <vector>
 
 #include "internal/api.h"
 
@@ -599,33 +600,58 @@ struct TPoint
 // 自前で Create/Destroy は行わない(取得元のコントロールが破棄されれば一緒に破棄される)。
 // TPaintBox::Canvas のように値メンバとして持つため、これらのデストラクタは public にしている。
 
+// 線の種類(LCL の TPenStyle と同じ値。docs/adr/0045)。psClear は線を描かない。
+enum TPenStyle { psSolid, psDash, psDot, psDashDot, psDashDotDot, psInsideFrame, psPattern, psClear };
+// 線の描き方(ラスタ演算。LCL の TPenMode と同じ値)。pmXor で 2 度描くと元に戻る(ラバーバンド等)。
+enum TPenMode
+{
+    pmBlack, pmWhite, pmNop, pmNot, pmCopy, pmNotCopy, pmMergePenNot, pmMaskPenNot,
+    pmMergeNotPen, pmMaskNotPen, pmMerge, pmNotMerge, pmMask, pmNotMask, pmXor, pmNotXor
+};
+// 塗りつぶしの種類(LCL の TBrushStyle と同じ値)。bsClear は塗りつぶさない(TextOut の背景も透明になる)。
+enum TBrushStyle
+{
+    bsSolid, bsClear, bsHorizontal, bsVertical, bsFDiagonal, bsBDiagonal, bsCross, bsDiagCross, bsImage, bsPattern
+};
+// 文字の描き方(アンチエイリアス等。LCL の TFontQuality と同じ値)。
+enum TFontQuality { fqDefault, fqDraft, fqProof, fqNonAntialiased, fqAntialiased, fqCleartype, fqCleartypeNatural };
+
 class TPen : public TPersistent
 {
 public:
-    Property<TColor> Color;
-    Property<int>    Width;
+    Property<TColor>    Color;
+    Property<int>       Width;
+    Property<TPenStyle> Style;
+    Property<TPenMode>  Mode;
 
     explicit TPen(ObjectHandle handle);
     ~TPen() override = default;
 
 private:
-    static TColor GetColorImpl(TObject* owner);
-    static void   SetColorImpl(TObject* owner, const TColor& value);
-    static int    GetWidthImpl(TObject* owner);
-    static void   SetWidthImpl(TObject* owner, const int& value);
+    static TColor    GetColorImpl(TObject* owner);
+    static void      SetColorImpl(TObject* owner, const TColor& value);
+    static int       GetWidthImpl(TObject* owner);
+    static void      SetWidthImpl(TObject* owner, const int& value);
+    static TPenStyle GetStyleImpl(TObject* owner);
+    static void      SetStyleImpl(TObject* owner, const TPenStyle& value);
+    static TPenMode  GetModeImpl(TObject* owner);
+    static void      SetModeImpl(TObject* owner, const TPenMode& value);
 };
 
 class TBrush : public TPersistent
 {
 public:
-    Property<TColor> Color;
+    Property<TColor>      Color;
+    Property<TBrushStyle> Style;
 
     explicit TBrush(ObjectHandle handle);
     ~TBrush() override = default;
 
 private:
-    static TColor GetColorImpl(TObject* owner);
-    static void   SetColorImpl(TObject* owner, const TColor& value);
+    static TColor      GetColorImpl(TObject* owner);
+    static void        SetColorImpl(TObject* owner, const TColor& value);
+    static TBrushStyle GetStyleImpl(TObject* owner);
+    static void        SetStyleImpl(TObject* owner, const TBrushStyle& value);
 };
 
 // フォントの修飾(LCL の TFontStyles)。TShiftState と同じく、ビットを OR した集合として扱う。
@@ -643,6 +669,11 @@ public:
     Property<int>         Size;
     Property<TColor>      Color;
     Property<TFontStyles> Style;
+    // 文字の高さ(ピクセル)。負の値は文字の高さ、正の値はセルの高さ(内部の余白を含む)。0 は既定。Size と連動する。
+    Property<int>          Height;
+    // 文字の傾き(0.1 度単位。反時計回り。900 で縦書きの向き)。
+    Property<int>          Orientation;
+    Property<TFontQuality> Quality;
 
     explicit TFont(ObjectHandle handle);
     ~TFont() override = default;
@@ -659,6 +690,12 @@ private:
     static void        SetSizeImpl(TObject* owner, const int& value);
     static TColor      GetColorImpl(TObject* owner);
     static void        SetColorImpl(TObject* owner, const TColor& value);
+    static int          GetHeightImpl(TObject* owner);
+    static void         SetHeightImpl(TObject* owner, const int& value);
+    static int          GetOrientationImpl(TObject* owner);
+    static void         SetOrientationImpl(TObject* owner, const int& value);
+    static TFontQuality GetQualityImpl(TObject* owner);
+    static void         SetQualityImpl(TObject* owner, const TFontQuality& value);
 };
 
 class TGraphic;
@@ -685,6 +722,28 @@ public:
     // グラフィックを描く(docs/adr/0029)。Graphic が nullptr なら何もしない。StretchDraw は Rect に合わせて伸縮する。
     void Draw(int X, int Y, const TGraphic* Graphic);
     void StretchDraw(const TRect& Rect, const TGraphic* Graphic);
+
+    // ---- docs/adr/0045 ----
+    // Text を今の Font で描いたときの幅・高さ(ピクセル)。
+    int  TextWidth(const std::string& Text) const;
+    int  TextHeight(const std::string& Text) const;
+    // Rect の中だけに、(X, Y) から Text を描く(はみ出した部分は切り取る)。
+    void TextRect(const TRect& Rect, int X, int Y, const std::string& Text);
+    // 点を結んだ多角形(Pen で縁を、Brush で中を描く)・折れ線(Pen だけ)。Points は {{0, 0}, {10, 0}, {5, 8}} のようにも書ける。
+    void Polygon(const std::vector<TPoint>& Points);
+    void Polygon(const TPoint* Points, int Count);
+    void Polyline(const std::vector<TPoint>& Points);
+    void Polyline(const TPoint* Points, int Count);
+    // 角の丸い矩形(RX・RY は角の楕円の幅・高さ)。
+    void RoundRect(int X1, int Y1, int X2, int Y2, int RX, int RY);
+    // (X1, Y1)-(X2, Y2) に内接する楕円の、中心から (X3, Y3) の方向から (X4, Y4) の方向まで(反時計回り)の弧・扇形・弓形。
+    void Arc(int X1, int Y1, int X2, int Y2, int X3, int Y3, int X4, int Y4);
+    void Pie(int X1, int Y1, int X2, int Y2, int X3, int Y3, int X4, int Y4);
+    void Chord(int X1, int Y1, int X2, int Y2, int X3, int Y3, int X4, int Y4);
+    // Rect の縁を Brush の色で 1 ピクセルの幅で描く(中は描かない)。
+    void FrameRect(const TRect& Rect);
+    // Canvas の Source の範囲を、この Canvas の Dest に写す(大きさが違えば伸縮する)。Canvas が nullptr なら何もしない。
+    void CopyRect(const TRect& Dest, const TCanvas* Canvas, const TRect& Source);
 
 private:
     static TColor GetPixelsImpl(TObject* owner, int X, int Y);
@@ -1746,11 +1805,28 @@ protected:
     ~TGraphicControl() override = default;
 };
 
+// 自分で描くことのできるウィンドウのコントロール(TForm・TPanel・TScrollBox・グリッド等の基底)。
 class TCustomControl : public TWinControl
 {
+public:
+    // 描く先(docs/adr/0045)。OnPaint(グリッドは OnDrawCell)の中で描く。コントロールが所有する実体への非所有のビュー
+    // (TPaintBox::Canvas と同じ)。OnPaint の外で描いたものは、次の再描画で消える。
+    TCanvas Canvas;
+
 protected:
-    explicit TCustomControl(ObjectHandle handle) : TWinControl(handle) {}
+    explicit TCustomControl(ObjectHandle handle);
     ~TCustomControl() override = default;
+
+    // 描き直すとき(LCL では protected。TForm・TPanel・TScrollBox が公開する)。描くのは Canvas に。
+    // 描き直させるには Invalidate() を呼ぶ。
+    Property<TNotifyEvent> OnPaint;
+
+private:
+    TNotifyEvent onPaint_;
+    bool         onPaintHooked_ = false;
+    static void BETH_CALL PaintTrampoline(ObjectHandle sender, void* data);
+    static TNotifyEvent GetOnPaintImpl(TObject* owner);
+    static void         SetOnPaintImpl(TObject* owner, const TNotifyEvent& value);
 };
 
 // Edit 等に付属する上下矢印。Min/Max/Position/Increment/Associate は LCL では TCustomUpDown の
@@ -1797,6 +1873,8 @@ protected:
 class TScrollBox : public TScrollingWinControl
 {
 public:
+    using TCustomControl::OnPaint;
+
     explicit TScrollBox(TComponent* AOwner);
 
 protected:
@@ -1839,6 +1917,8 @@ enum TFormStyle { fsNormal, fsMDIChild, fsMDIForm, fsStayOnTop, fsSplash, fsSyst
 class TCustomForm : public TScrollingWinControl
 {
 public:
+    using TCustomControl::OnPaint;
+
     // LCL の TCustomForm は Show/Hide を独自に宣言している(TControl のものを隠す)。
     void Show();
     void Hide();
@@ -2130,6 +2210,8 @@ protected:
 class TPanel : public TCustomPanel
 {
 public:
+    using TCustomControl::OnPaint;
+
     explicit TPanel(TComponent* AOwner);
 
 protected:
@@ -4179,8 +4261,7 @@ protected:
 class TCustomDrawGrid : public TCustomGrid
 {
 public:
-    // OnDrawCell の中で描画する先。グリッドが所有する実体への非所有のビュー(TPaintBox::Canvas と同じ)。
-    TCanvas Canvas;
+    // OnDrawCell の中で描画する先は、TCustomControl::Canvas。
 
     Property<int>          ColCount;
     Property<int>          RowCount;

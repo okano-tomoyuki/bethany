@@ -28,13 +28,20 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
 - ステータスバーのパネル(`TStatusPanel`・`TStatusPanels`。`Panels->Add()` 等)と、ステータスバーの `SizeGrip`・`AutoHint`・`Canvas`・
   `OnDrawPanel`・`OnHint`・`GetPanelIndexAt`・`BeginUpdate`・`EndUpdate`、`Application->Hint`
   ([ADR 0044](docs/adr/0044-statusbar-panels-and-designer-collections.md))。パネルを表示するには `SimplePanel` を false にする(LCL の既定は true)
+- フォーム・パネル等への描画: `TCustomControl` の `Canvas` と、TForm・TPanel・TScrollBox の `OnPaint`
+  ([ADR 0045](docs/adr/0045-custom-control-canvas-and-drawing.md))
+- Canvas の `TextWidth`・`TextHeight`・`TextRect`・`Polygon`・`Polyline`・`RoundRect`・`Arc`・`Pie`・`Chord`・`FrameRect`・`CopyRect`、
+  `TPen` の `Style`・`Mode`、`TBrush` の `Style`、`TFont` の `Height`・`Orientation`・`Quality`
 
 ### 変更
 
+- グリッドの `Canvas` は `TCustomControl` のものになった(使い方は変わらない)
 - `ShowModal()` の戻り値の型を `TModalResult`(中身は同じ int)にした
 
 ### 修正
 
+- メインフォームを最小化すると、フォームが隠れたままタスクバーのボタンも消え、元に戻せなかった(`Application->Minimize()` も同じ)。
+  DLL では LCL のアプリケーションのウィンドウが作られないため、メインフォームがタスクバーのボタンを持つ(`MainFormOnTaskBar`)ようにした
 - FetchContent の取り込み先を変えた(`FETCHCONTENT_SOURCE_DIR_BETH` 等)後も、以前の取り込み先の `beth.dll` を exe の隣に写し続けていた。
   `BETH_DLL` の既定の値をキャッシュに保存しないようにし、以前の版が保存した値(別の Bethany のソースの DLL)は捨てる
 - `beth.dll` が見つからない・`beth.dll` に関数が無い(ヘッダより古い)ときに、assert(Release のビルドではヌルポインタの呼び出し)で落ちていた。

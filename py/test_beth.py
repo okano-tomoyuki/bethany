@@ -166,6 +166,8 @@ class TMainForm(TForm):
         # Panel の中にボタンを置く(Parent が TWinControl なので Panel も親にできる)。
         self.PanelButton = TButton(self)
         self.PanelButton.Parent = self.Panel1
+        # パネルへの描画(TCustomControl.Canvas・OnPaint。docs/adr/0045)。ボタンの右の空きに図形を描く
+        self.Panel1.OnPaint = self.Panel1Paint
         self.PanelButton.Caption = "In panel"
         self.PanelButton.Left = 10
         self.PanelButton.Top = 15
@@ -1269,6 +1271,21 @@ class TMainForm(TForm):
 
     def PanelButtonClick(self, Sender):
         pr(f"PanelButtonClick: Parent is Panel1: {yn(Sender.Parent is self.Panel1)}")
+
+    def Panel1Paint(self, Sender):
+        c = self.Panel1.Canvas
+        c.Pen.Color = clBlack
+        c.Brush.Color = clYellow
+        c.Polygon([(100, 50), (125, 8), (150, 50)])
+        c.Pen.Style = psDot
+        c.Brush.Style = bsClear
+        c.RoundRect(95, 4, 176, 56, 12, 12)
+        c.Pen.Style = psSolid
+        c.Brush.Style = bsSolid
+        c.Font.Orientation = 900
+        c.Font.Color = clBlue
+        c.TextOut(158, 50, "Paint")
+        c.Font.Orientation = 0
 
     # Edit1 / Memo1 / ComboBox1 で共有する。isinstance で Sender の種類を判定する。
     def TextChange(self, Sender):

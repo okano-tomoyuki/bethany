@@ -9,6 +9,7 @@
     "BorderStyle",
     "BringToFront",
     "CanFocus",
+    "Canvas",
     "Caption",
     "ClientHeight",
     "ClientWidth",
@@ -52,6 +53,7 @@
     "OnMouseMove",
     "OnMouseUp",
     "OnMouseWheel",
+    "OnPaint",
     "OnResize",
     "OnShow",
     "Parent",
@@ -456,7 +458,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -775,7 +780,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -1079,7 +1087,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -1379,7 +1390,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -1696,7 +1710,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -1860,6 +1877,11 @@
         "OnKeyPress": {
           "type": "TKeyPressEvent",
           "declaredIn": "TWinControl"
+        },
+        "OnPaint": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TCustomControl",
+          "doc": "描き直すとき(LCL では protected。TForm・TPanel・TScrollBox が公開する)。描くのは Canvas に。 描き直させるには Invalidate() を呼ぶ。"
         }
       }
     },
@@ -1967,7 +1989,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -2159,6 +2184,11 @@
           "type": "TKeyPressEvent",
           "declaredIn": "TWinControl"
         },
+        "OnPaint": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TCustomControl",
+          "doc": "描き直すとき(LCL では protected。TForm・TPanel・TScrollBox が公開する)。描くのは Canvas に。 描き直させるには Invalidate() を呼ぶ。"
+        },
         "OnCreate": {
           "type": "TNotifyEvent",
           "declaredIn": "TCustomForm",
@@ -2315,7 +2345,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -2479,6 +2512,11 @@
         "OnKeyPress": {
           "type": "TKeyPressEvent",
           "declaredIn": "TWinControl"
+        },
+        "OnPaint": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TCustomControl",
+          "doc": "描き直すとき(LCL では protected。TForm・TPanel・TScrollBox が公開する)。描くのは Canvas に。 描き直させるには Invalidate() を呼ぶ。"
         }
       }
     },
@@ -2601,7 +2639,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -2888,7 +2929,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -3190,7 +3234,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -3484,7 +3531,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -3777,7 +3827,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -4044,7 +4097,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -4357,7 +4413,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -4725,7 +4784,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -5042,7 +5104,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -5342,7 +5407,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -5651,7 +5719,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -6024,7 +6095,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -6418,7 +6492,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -6803,7 +6880,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -7183,7 +7263,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -7571,7 +7654,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -7908,7 +7994,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -8246,7 +8335,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -8552,7 +8644,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -8929,7 +9024,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -9334,7 +9432,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -9657,7 +9758,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -10027,7 +10131,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -10390,7 +10497,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -10714,7 +10824,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -11048,7 +11161,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -11334,7 +11450,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -11661,7 +11780,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -11919,7 +12041,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -12234,7 +12359,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -12481,7 +12609,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -12791,7 +12922,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -13163,7 +13297,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -13533,7 +13670,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -13863,7 +14003,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -14270,7 +14413,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -14609,7 +14755,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "文字のフォント。コントロールが所有する TFont のビューで、コントロールと寿命が一致する(docs/adr/0033)。 代入は内容のコピー(nullptr なら何もしない)。Font->Assign(FontDialog1->Font) と同じ。"
         },
@@ -15348,7 +15497,10 @@
             "Name": "default",
             "Size": 0,
             "Color": "clDefault",
-            "Style": []
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
           },
           "doc": "選択したフォント。ダイアログが所有する TFont のビューで、ダイアログと寿命が一致する。 代入は内容のコピー(nullptr なら何もしない)。FontDialog1->Font = Memo1->Font; で初期のフォントにする。"
         },
@@ -15602,6 +15754,27 @@
             "flags": "TFontStyles"
           },
           "declaredIn": "TFont"
+        },
+        "Height": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TFont",
+          "doc": "文字の高さ(ピクセル)。負の値は文字の高さ、正の値はセルの高さ(内部の余白を含む)。0 は既定。Size と連動する。"
+        },
+        "Orientation": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TFont",
+          "doc": "文字の傾き(0.1 度単位。反時計回り。900 で縦書きの向き)。"
+        },
+        "Quality": {
+          "type": {
+            "kind": "enum",
+            "enum": "TFontQuality"
+          },
+          "declaredIn": "TFont"
         }
       }
     },
@@ -15735,6 +15908,55 @@
       "dupIgnore",
       "dupAccept",
       "dupError"
+    ],
+    "TPenStyle": [
+      "psSolid",
+      "psDash",
+      "psDot",
+      "psDashDot",
+      "psDashDotDot",
+      "psInsideFrame",
+      "psPattern",
+      "psClear"
+    ],
+    "TPenMode": [
+      "pmBlack",
+      "pmWhite",
+      "pmNop",
+      "pmNot",
+      "pmCopy",
+      "pmNotCopy",
+      "pmMergePenNot",
+      "pmMaskPenNot",
+      "pmMergeNotPen",
+      "pmMaskNotPen",
+      "pmMerge",
+      "pmNotMerge",
+      "pmMask",
+      "pmNotMask",
+      "pmXor",
+      "pmNotXor"
+    ],
+    "TBrushStyle": [
+      "bsSolid",
+      "bsClear",
+      "bsHorizontal",
+      "bsVertical",
+      "bsFDiagonal",
+      "bsBDiagonal",
+      "bsCross",
+      "bsDiagCross",
+      "bsImage",
+      "bsPattern"
+    ],
+    "TFontQuality": [
+      "fqDefault",
+      "fqDraft",
+      "fqProof",
+      "fqNonAntialiased",
+      "fqAntialiased",
+      "fqCleartype",
+      "fqCleartypeNatural"
     ],
     "TPixelFormat": [
       "pfDevice",

@@ -145,7 +145,7 @@ describe('意味の検証', () => {
   it('イベントとハンドラ', () => {
     expect(
       diagnose((doc) => {
-        doc.form.events.OnPaint = 'FormPaint';
+        doc.form.events.OnDrawCell = 'FormDrawCell';
         doc.form.controls[0].events.OnChange = 'OkButton';
         doc.form.controls[1].events.OnClick = 'FormCloseQuery';
         doc.form.controls[1].events.OnMouseDown = 'Show';

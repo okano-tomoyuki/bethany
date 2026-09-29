@@ -674,6 +674,36 @@ class TCanvas:
         if Graphic is not None:
             lib.TCanvas_StretchDraw(self._current(), *_rect(Rect), Graphic._current())
 
+    def Polygon(self, Points):
+        """点を結んだ多角形(Pen で縁を、Brush で中を描く)。Points は TPoint か (x, y) の並び。"""
+        flat, count = _points(Points)
+        if count > 0:
+            lib.TCanvas_Polygon(self._current(), flat, count)
+
+    def Polyline(self, Points):
+        """点を結んだ折れ線(Pen だけで描く)。Points は TPoint か (x, y) の並び。"""
+        flat, count = _points(Points)
+        if count > 0:
+            lib.TCanvas_Polyline(self._current(), flat, count)
+
+    def CopyRect(self, Dest, Canvas, Source):
+        """Canvas の Source の範囲を、この Canvas の Dest に写す(大きさが違えば伸縮する)。Canvas が None なら何もしない。"""
+        if Canvas is not None:
+            lib.TCanvas_CopyRect(self._current(), *_rect(Dest), Canvas._current(), *_rect(Source))
+
+
+def _points(points):
+    """点の並びを DLL に渡す形((X, Y) を並べた整数の配列と点の数)にする。"""
+    coords = []
+    for p in points:
+        if isinstance(p, TPoint):
+            coords += [int(p.X), int(p.Y)]
+        else:
+            x, y = p
+            coords += [int(x), int(y)]
+    count = len(coords) // 2
+    return (ctypes.c_int * len(coords))(*coords), count
+
 
 class _FormCreateEvent:
     """TCustomForm.OnCreate。DLL のイベントではなく、DoCreate で呼ぶ。"""

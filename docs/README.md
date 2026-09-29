@@ -65,6 +65,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0042](adr/0042-focus-edit-memo-label.md) | フォーカス・表示の更新・テキストの編集・TMemo・TLabel(Tier A の 2 バッチ目) | 承認 |
 | [0043](adr/0043-list-combo-check-application.md) | リスト・コンボの選択・チェックの 3 状態・Application(Tier A の 3 バッチ目) | 承認 |
 | [0044](adr/0044-statusbar-panels-and-designer-collections.md) | ステータスバーのパネルと、デザイナーのコレクション(Tier B の B1) | 承認 |
+| [0045](adr/0045-custom-control-canvas-and-drawing.md) | フォーム・パネルへの描画と Canvas の描画の関数(Tier B の B5・B6) | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。

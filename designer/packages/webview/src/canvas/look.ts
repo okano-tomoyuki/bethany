@@ -112,9 +112,18 @@ function fontOf(location: NodeLocation, base: ResolvedFont): ResolvedFont {
   const size = propertyValue(location, ['Font', 'Size']);
   const style = propertyValue(location, ['Font', 'Style']);
   const styles = Array.isArray(style) ? (style as unknown[]) : [];
+  // Height(ADR 0045)は Size の後に設定される(コード生成はカタログの順)ので、0 でなければ Height を使う。
+  // 負の値は文字の高さ(CSS の font-size)、正の値は行の高さ(内部の余白を含む。およそ font-size の 1.33 倍)
+  const height = propertyValue(location, ['Font', 'Height']);
+  const fromHeight =
+    typeof height === 'number' && height !== 0
+      ? height < 0
+        ? -height
+        : Math.round(height / 1.33)
+      : undefined;
   return {
     family: typeof name === 'string' && name !== '' && name !== 'default' ? name : base.family,
-    size: typeof size === 'number' && size > 0 ? (size * 96) / 72 : base.size,
+    size: fromHeight ?? (typeof size === 'number' && size > 0 ? (size * 96) / 72 : base.size),
     color: colorToCss(propertyValue(location, ['Font', 'Color'])) ?? base.color,
     bold: styles.includes('fsBold'),
     italic: styles.includes('fsItalic'),

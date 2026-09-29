@@ -508,7 +508,6 @@
     X(void,          TCustomGrid_Clear,                     (obj_t o),                                                     (o)) \
     X(void,          TCustomGrid_CellRect,                  (obj_t o, int_t c, int_t r, int_t* l, int_t* t, int_t* rt, int_t* b), (o, c, r, l, t, rt, b)) \
     X(void,          TCustomGrid_MouseToCell,               (obj_t o, int_t x, int_t y, int_t* c, int_t* r),               (o, x, y, c, r)) \
-    X(obj_t,         TCustomDrawGrid_GetCanvas,             (obj_t o),                                                     (o)) \
     X(int_t,         TCustomDrawGrid_GetColCount,           (obj_t o),                                                     (o)) \
     X(void,          TCustomDrawGrid_SetColCount,           (obj_t o, int_t v),                                            (o, v)) \
     X(int_t,         TCustomDrawGrid_GetRowCount,           (obj_t o),                                                     (o)) \
@@ -1206,6 +1205,31 @@
     X(int_t,         TStatusPanel_GetStyle,                 (obj_t o),                                                     (o)) \
     X(void,          TStatusPanel_SetStyle,                 (obj_t o, int_t v),                                            (o, v)) \
     X(int_t,         TStatusPanel_GetIndex,                 (obj_t o),                                                     (o)) \
-    X(void,          TStatusPanel_SetIndex,                 (obj_t o, int_t v),                                            (o, v))
+    X(void,          TStatusPanel_SetIndex,                 (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TCustomControl_GetCanvas,              (obj_t o),                                                     (o)) \
+    X(void,          TCustomControl_SetOnPaint,             (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(int_t,         TCanvas_TextWidth,                     (obj_t o, str_t s),                                            (o, s)) \
+    X(int_t,         TCanvas_TextHeight,                    (obj_t o, str_t s),                                            (o, s)) \
+    X(void,          TCanvas_TextRect,                      (obj_t o, int_t x1, int_t y1, int_t x2, int_t y2, int_t x, int_t y, str_t s), (o, x1, y1, x2, y2, x, y, s)) \
+    X(void,          TCanvas_Polygon,                       (obj_t o, int_t* points, int_t count),                         (o, points, count)) \
+    X(void,          TCanvas_Polyline,                      (obj_t o, int_t* points, int_t count),                         (o, points, count)) \
+    X(void,          TCanvas_RoundRect,                     (obj_t o, int_t x1, int_t y1, int_t x2, int_t y2, int_t rx, int_t ry), (o, x1, y1, x2, y2, rx, ry)) \
+    X(void,          TCanvas_Arc,                           (obj_t o, int_t x1, int_t y1, int_t x2, int_t y2, int_t x3, int_t y3, int_t x4, int_t y4), (o, x1, y1, x2, y2, x3, y3, x4, y4)) \
+    X(void,          TCanvas_Pie,                           (obj_t o, int_t x1, int_t y1, int_t x2, int_t y2, int_t x3, int_t y3, int_t x4, int_t y4), (o, x1, y1, x2, y2, x3, y3, x4, y4)) \
+    X(void,          TCanvas_Chord,                         (obj_t o, int_t x1, int_t y1, int_t x2, int_t y2, int_t x3, int_t y3, int_t x4, int_t y4), (o, x1, y1, x2, y2, x3, y3, x4, y4)) \
+    X(void,          TCanvas_FrameRect,                     (obj_t o, int_t x1, int_t y1, int_t x2, int_t y2),             (o, x1, y1, x2, y2)) \
+    X(void,          TCanvas_CopyRect,                      (obj_t o, int_t x1, int_t y1, int_t x2, int_t y2, obj_t source, int_t sx1, int_t sy1, int_t sx2, int_t sy2), (o, x1, y1, x2, y2, source, sx1, sy1, sx2, sy2)) \
+    X(int_t,         TPen_GetStyle,                         (obj_t o),                                                     (o)) \
+    X(void,          TPen_SetStyle,                         (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TPen_GetMode,                          (obj_t o),                                                     (o)) \
+    X(void,          TPen_SetMode,                          (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TBrush_GetStyle,                       (obj_t o),                                                     (o)) \
+    X(void,          TBrush_SetStyle,                       (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TFont_GetHeight,                       (obj_t o),                                                     (o)) \
+    X(void,          TFont_SetHeight,                       (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TFont_GetOrientation,                  (obj_t o),                                                     (o)) \
+    X(void,          TFont_SetOrientation,                  (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TFont_GetQuality,                      (obj_t o),                                                     (o)) \
+    X(void,          TFont_SetQuality,                      (obj_t o, int_t v),                                            (o, v))
 
 #endif

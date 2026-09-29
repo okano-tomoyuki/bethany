@@ -5983,16 +5983,6 @@ end;
 
 { TCustomDrawGrid の public(LCL では TCustomGrid の protected を公開したもの)。 }
 
-function TCustomDrawGrid_GetCanvas(Obj: Pointer): Pointer; BETH_CALL;
-begin
-  try
-    Result := Pointer(TCustomDrawGrid(Obj).Canvas);
-  except
-    Result := nil;
-    ReportException;
-  end;
-end;
-
 function TCustomDrawGrid_GetColCount(Obj: Pointer): Integer; BETH_CALL;
 begin
   try
@@ -13111,6 +13101,275 @@ begin
   end;
 end;
 
+{ ---------------- フォーム・パネルへの描画と Canvas の描画の関数(docs/adr/0045) ----------------
+  TCustomControl の Canvas は public、OnPaint は protected(TForm・TPanel・TScrollBox 等が published にする)。
+  Canvas はコントロールの生成時に作られ、コントロールと寿命が一致する。 }
+
+type
+  TCustomControlAccess = class(TCustomControl);
+  TBethPoints = array of TPoint;
+
+function TCustomControl_GetCanvas(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TCustomControl(Obj).Canvas);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TCustomControl_SetOnPaint(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TCustomControlAccess(Obj).OnPaint := @BridgeFor(TComponent(Obj), MethodData(TCustomControlAccess(Obj).OnPaint), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
+end;
+
+{ 点の配列: 呼び出し側は (X, Y) を並べた Integer の配列と点の数を渡す。 }
+function PointsOf(Points: PInteger; Count: Integer): TBethPoints;
+var
+  I: Integer;
+begin
+  Result := nil;
+  if Count <= 0 then
+    Exit;
+  SetLength(Result, Count);
+  for I := 0 to Count - 1 do
+  begin
+    Result[I].X := Points[I * 2];
+    Result[I].Y := Points[I * 2 + 1];
+  end;
+end;
+
+function RectOf(X1, Y1, X2, Y2: Integer): TRect;
+begin
+  Result.Left := X1;
+  Result.Top := Y1;
+  Result.Right := X2;
+  Result.Bottom := Y2;
+end;
+
+function TCanvas_TextWidth(Obj: Pointer; Text: PChar): Integer; BETH_CALL;
+begin
+  try
+    Result := TCanvas(Obj).TextWidth(Text);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function TCanvas_TextHeight(Obj: Pointer; Text: PChar): Integer; BETH_CALL;
+begin
+  try
+    Result := TCanvas(Obj).TextHeight(Text);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCanvas_TextRect(Obj: Pointer; X1, Y1, X2, Y2, X, Y: Integer; Text: PChar); BETH_CALL;
+begin
+  try
+    TCanvas(Obj).TextRect(RectOf(X1, Y1, X2, Y2), X, Y, Text);
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCanvas_Polygon(Obj: Pointer; Points: PInteger; Count: Integer); BETH_CALL;
+begin
+  try
+    if Count > 0 then
+      TCanvas(Obj).Polygon(PointsOf(Points, Count));
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCanvas_Polyline(Obj: Pointer; Points: PInteger; Count: Integer); BETH_CALL;
+begin
+  try
+    if Count > 0 then
+      TCanvas(Obj).Polyline(PointsOf(Points, Count));
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCanvas_RoundRect(Obj: Pointer; X1, Y1, X2, Y2, RX, RY: Integer); BETH_CALL;
+begin
+  try
+    TCanvas(Obj).RoundRect(X1, Y1, X2, Y2, RX, RY);
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCanvas_Arc(Obj: Pointer; X1, Y1, X2, Y2, X3, Y3, X4, Y4: Integer); BETH_CALL;
+begin
+  try
+    TCanvas(Obj).Arc(X1, Y1, X2, Y2, X3, Y3, X4, Y4);
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCanvas_Pie(Obj: Pointer; X1, Y1, X2, Y2, X3, Y3, X4, Y4: Integer); BETH_CALL;
+begin
+  try
+    TCanvas(Obj).Pie(X1, Y1, X2, Y2, X3, Y3, X4, Y4);
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCanvas_Chord(Obj: Pointer; X1, Y1, X2, Y2, X3, Y3, X4, Y4: Integer); BETH_CALL;
+begin
+  try
+    TCanvas(Obj).Chord(X1, Y1, X2, Y2, X3, Y3, X4, Y4);
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCanvas_FrameRect(Obj: Pointer; X1, Y1, X2, Y2: Integer); BETH_CALL;
+begin
+  try
+    TCanvas(Obj).FrameRect(RectOf(X1, Y1, X2, Y2));
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCanvas_CopyRect(Obj: Pointer; X1, Y1, X2, Y2: Integer; Source: Pointer; SX1, SY1, SX2, SY2: Integer); BETH_CALL;
+begin
+  try
+    if Source <> nil then
+      TCanvas(Obj).CopyRect(RectOf(X1, Y1, X2, Y2), TCanvas(Source), RectOf(SX1, SY1, SX2, SY2));
+  except
+    ReportException;
+  end;
+end;
+
+function TPen_GetStyle(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TPen(Obj).Style);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TPen_SetStyle(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TPen(Obj).Style := TPenStyle(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TPen_GetMode(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TPen(Obj).Mode);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TPen_SetMode(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TPen(Obj).Mode := TPenMode(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TBrush_GetStyle(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TBrush(Obj).Style);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TBrush_SetStyle(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TBrush(Obj).Style := TBrushStyle(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TFont_GetHeight(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TFont(Obj).Height;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TFont_SetHeight(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TFont(Obj).Height := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TFont_GetOrientation(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TFont(Obj).Orientation;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TFont_SetOrientation(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TFont(Obj).Orientation := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TFont_GetQuality(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TFont(Obj).Quality);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TFont_SetQuality(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TFont(Obj).Quality := TFontQuality(Value);
+  except
+    ReportException;
+  end;
+end;
+
 exports
   FreeNotify_SetCallback,
   Error_SetCallback,
@@ -13648,7 +13907,6 @@ exports
   TCustomGrid_Clear,
   TCustomGrid_CellRect,
   TCustomGrid_MouseToCell,
-  TCustomDrawGrid_GetCanvas,
   TCustomDrawGrid_GetColCount,
   TCustomDrawGrid_SetColCount,
   TCustomDrawGrid_GetRowCount,
@@ -14363,11 +14621,40 @@ exports
   TStatusPanel_GetStyle,
   TStatusPanel_SetStyle,
   TStatusPanel_GetIndex,
-  TStatusPanel_SetIndex;
+  TStatusPanel_SetIndex,
+  TCustomControl_GetCanvas,
+  TCustomControl_SetOnPaint,
+  TCanvas_TextWidth,
+  TCanvas_TextHeight,
+  TCanvas_TextRect,
+  TCanvas_Polygon,
+  TCanvas_Polyline,
+  TCanvas_RoundRect,
+  TCanvas_Arc,
+  TCanvas_Pie,
+  TCanvas_Chord,
+  TCanvas_FrameRect,
+  TCanvas_CopyRect,
+  TPen_GetStyle,
+  TPen_SetStyle,
+  TPen_GetMode,
+  TPen_SetMode,
+  TBrush_GetStyle,
+  TBrush_SetStyle,
+  TFont_GetHeight,
+  TFont_SetHeight,
+  TFont_GetOrientation,
+  TFont_SetOrientation,
+  TFont_GetQuality,
+  TFont_SetQuality;
 
 begin
   RequireDerivedFormResource := False;
   Application.Initialize;
+  { DLL(IsLibrary)ではアプリケーションのウィンドウ(AppHandle)が作られないため、タスクバーのボタンはメインフォームが持つ。
+    MainFormOnTaskBar が False(既定)だと、LCL はメインフォームの最小化を AppHandle の最小化に置き換えてメインフォームを隠すため、
+    AppHandle が 0 の DLL ではフォームが隠れたまま、タスクバーのボタンも消えていた(Application.Minimize・Restore も同じ)。 }
+  Application.MainFormOnTaskBar := True;
   GFreeNotifier := TFreeNotifier.Create(nil);
   { Dll_Process_Detach_Hook は Windows の DLL_PROCESS_DETACH 通知専用のフックで、
     Linux の共有ライブラリ(.so)には存在しない。 }
