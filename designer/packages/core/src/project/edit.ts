@@ -5,7 +5,7 @@
 import * as z from 'zod';
 import type { CommentLocale } from '../dsl/schema.ts';
 import { normalizePath, sameFormPath } from './paths.ts';
-import { BfprojDocument, PROJECT_FORMAT_VERSION } from './schema.ts';
+import { BfprojDocument, PROJECT_FORMAT_VERSION, type ProjectCppSettings } from './schema.ts';
 
 /**
  * 新しいプロジェクト。起動部分は C++ と Python の両方を生成する設定にする(新しいフォームと同じ)。
@@ -114,11 +114,28 @@ export function mapFormPaths(
   return result;
 }
 
+/** codegen.cpp のキーを決まった順に並べる(スキーマの順) */
+function orderCpp(cpp: ProjectCppSettings): ProjectCppSettings {
+  const keys = [
+    'main',
+    'namespace',
+    'includeGuard',
+    'includeGuardPrefix',
+    'headerExtension',
+    'sourceExtension',
+    'headerDir',
+    'sourceDir',
+  ] as const satisfies readonly (keyof ProjectCppSettings)[];
+  return Object.fromEntries(
+    keys.flatMap((key) => (cpp[key] === undefined ? [] : [[key, cpp[key]]])),
+  );
+}
+
 /** 決まった形で書き出す(キーの順は $schema・formatVersion・codegen・mainForm・forms・autoCreate。一覧は 1 行に 1 つ) */
 export function serializeProject(doc: BfprojDocument): string {
   const codegen = doc.codegen && {
     ...(doc.codegen.commentLocale !== undefined && { commentLocale: doc.codegen.commentLocale }),
-    ...(doc.codegen.cpp && { cpp: doc.codegen.cpp }),
+    ...(doc.codegen.cpp && { cpp: orderCpp(doc.codegen.cpp) }),
     ...(doc.codegen.python && { python: doc.codegen.python }),
   };
   const ordered = {

@@ -218,12 +218,13 @@
 ## 9. コード生成の設定
 
 **フォームのファイルは、画面の設計だけを持つ。** 生成する言語とコメントの言語は、フォームが属するプロジェクトファイルの
-`codegen` で決める([project-spec.md](project-spec.md) §5)。出力先とクラス名は決まった規則で決まり、設定はできない。
+`codegen` で決める([project-spec.md](project-spec.md) §5)。クラス名とファイル名は決まった規則で決まり、設定はできない。
+C++ の拡張子と置き場所のフォルダは、プロジェクトの `codegen.cpp` で変えられる。
 
 | 生成するもの | 決まり方(`form.name` が `MainForm`、ファイルが `MainForm.bfm.json` の場合) |
 |---|---|
 | クラス名 | `T` + フォームの名前(`TMainForm`) |
-| C++ のヘッダ・ソース | DSL と同じフォルダの `MainForm.hpp`・`MainForm.cpp` |
+| C++ のヘッダ・ソース | DSL と同じフォルダの `MainForm.hpp`・`MainForm.cpp`(拡張子は `headerExtension`・`sourceExtension`、フォルダは `headerDir`・`sourceDir`) |
 | Python のファイル | DSL と同じフォルダの `MainForm.py` |
 
 以前は `codegen`(`commentLocale`・`cpp.className`・`cpp.header` 等)をフォームのファイルに書いていた。

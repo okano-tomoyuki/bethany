@@ -1,6 +1,10 @@
+// <bethany-designer:begin id="beth_SourceBegin">
 #include "MainForm.hpp"
+// <bethany-designer:end id="beth_SourceBegin" hash="209f96a1">
 
+// <bethany-designer:begin id="beth_NamespaceBegin">
 using namespace beth;
+// <bethany-designer:end id="beth_NamespaceBegin" hash="40a01aa8">
 
 TMainForm* MainForm = nullptr;
 
@@ -196,3 +200,6 @@ void TMainForm::Timer1Timer(TObject* Sender)
 {
     // TODO: implement
 }
+
+// <bethany-designer:begin id="beth_NamespaceEnd">
+// <bethany-designer:end id="beth_NamespaceEnd" hash="811c9dc5">

@@ -1,6 +1,12 @@
-#pragma once
+// <bethany-designer:begin id="beth_HeaderBegin">
+#ifndef MAINFORM_HPP
+#define MAINFORM_HPP
 
 #include <bethany/beth.hpp>
+// <bethany-designer:end id="beth_HeaderBegin" hash="f2acc4f8">
+
+// <bethany-designer:begin id="beth_NamespaceBegin">
+// <bethany-designer:end id="beth_NamespaceBegin" hash="811c9dc5">
 
 /** Form created with the Bethany designer (MainForm.bfm.json). Regions enclosed in markers are overwritten when regenerated. */
 class TMainForm : public beth::TForm
@@ -48,3 +54,7 @@ private:
 };
 
 extern TMainForm* MainForm;
+
+// <bethany-designer:begin id="beth_HeaderEnd">
+#endif // MAINFORM_HPP
+// <bethany-designer:end id="beth_HeaderEnd" hash="6ce5221e">

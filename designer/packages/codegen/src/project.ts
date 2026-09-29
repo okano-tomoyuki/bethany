@@ -12,7 +12,13 @@ import { l10n, normalizePath, type BfmDocument, type BfprojDocument } from '@bet
 import { generatedComments } from './comments.ts';
 import { cppSyntax } from './cpp/syntax.ts';
 import type { GenerateAllResult, OutputFile } from './index.ts';
-import { fileNameOf, relativePath, resolveTargets } from './names.ts';
+import {
+  cppOptions,
+  DEFAULT_CPP_OPTIONS,
+  fileNameOf,
+  relativePath,
+  resolveTargets,
+} from './names.ts';
 import { PYTHON_SYNTAX } from './python/syntax.ts';
 import { createFile, mergeFile, type GeneratedCode, type LanguageSyntax } from './region.ts';
 
@@ -50,8 +56,12 @@ interface CreatedForm {
   /** フォームの名前(グローバル変数・モジュールの変数の名前) */
   readonly name: string;
   readonly className: string;
+  /** C++ の名前空間で修飾したフォームの変数(app::MainForm) */
+  readonly qualifiedName: string;
   /** プロジェクトファイルのあるフォルダからの相対パス */
   readonly header: string;
+  /** headerDir を使うときの、headerDir からのヘッダのパス(起動部分からはこれで include する) */
+  readonly includePath: string | undefined;
   readonly source: string;
   readonly python: string;
 }
@@ -77,14 +87,17 @@ export function generateProject(
   const sourceName = fileNameOf(projectFileName);
   const comments = generatedComments(project.codegen?.commentLocale);
   // フォームの出力先・クラス名は決まった規則で決まる(dsl-spec.md §9)
+  const cpp = project.codegen?.cpp ? cppOptions(project.codegen.cpp) : DEFAULT_CPP_OPTIONS;
   const created: CreatedForm[] = forms.map((form) => {
     const path = normalizePath(form.path);
     const dir = path.slice(0, path.lastIndexOf('/') + 1);
-    const t = resolveTargets(form.doc, fileNameOf(path));
+    const t = resolveTargets(form.doc, fileNameOf(path), { cpp, python: true, formPath: path });
     return {
       name: form.doc.form.name,
       className: t.cpp?.className ?? `T${form.doc.form.name}`,
+      qualifiedName: [...cpp.namespace, form.doc.form.name].join('::'),
       header: normalizePath(dir + (t.cpp?.header ?? '')),
+      includePath: t.cpp?.includePath,
       source: normalizePath(dir + (t.cpp?.source ?? '')),
       python: normalizePath(dir + (t.python?.file ?? '')),
     };
@@ -109,7 +122,7 @@ export function generateProject(
       targets.cpp.main,
       emitCppMain(
         comments.projectDoc(sourceName),
-        created.map((f) => ({ ...f, header: relativePath(main, f.header) })),
+        created.map((f) => ({ ...f, header: f.includePath ?? relativePath(main, f.header) })),
       ),
       cppSyntax(''),
     );
@@ -138,7 +151,10 @@ export function generateProject(
       PYTHON_SYNTAX,
     );
   }
-  return { files, warnings: [] };
+  const warnings = files.flatMap((f) =>
+    f.result.ok ? (f.result.warnings ?? []).map((w) => `${f.path}: ${w}`) : [],
+  );
+  return { files, warnings };
 }
 
 /** プロジェクトファイルの名前か */
@@ -148,10 +164,21 @@ export function isProjectFileName(fileName: string): boolean {
 
 function emitCppMain(
   doc: string,
-  forms: readonly { readonly header: string; readonly name: string }[],
+  forms: readonly { readonly header: string; readonly qualifiedName: string }[],
 ): GeneratedCode {
   return {
     regions: [
+      {
+        id: 'beth_Include',
+        indent: 0,
+        content: '#include <bethany/beth.hpp>',
+        // 以前の生成物の beth.hpp の include(区間の外にあった)
+        ifMissing: (lines) => {
+          const at = lines.findIndex((l) => /^#include ["<](bethany\/)?beth\.hpp[">]$/.test(l));
+          return at < 0 ? undefined : { start: at, end: at + 1 };
+        },
+        group: '#include <bethany/beth.hpp>',
+      },
       {
         id: 'includes',
         indent: 0,
@@ -160,14 +187,16 @@ function emitCppMain(
       {
         id: 'beth_CreateForms',
         indent: 1,
-        content: forms.map((f) => `${INDENT}Application->CreateForm(&${f.name});`).join('\n'),
+        content: forms
+          .map((f) => `${INDENT}Application->CreateForm(&${f.qualifiedName});`)
+          .join('\n'),
       },
     ],
     stubs: [],
     scaffold: (rendered) =>
       [
         `// ${doc}`,
-        '#include <bethany/beth.hpp>',
+        rendered('beth_Include'),
         rendered('includes'),
         '',
         'using namespace beth;',

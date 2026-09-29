@@ -6,10 +6,15 @@ export function cppSyntax(className: string): LanguageSyntax {
   return {
     comment: '//',
     indentUnit: '    ',
+    blankLinesBeforeAppended: 1,
     // className とハンドラ名は識別子の検証を通っているため、正規表現の特殊文字を含まない
     hasHandler: (text, name) => new RegExp(`\\b${className}::${name}\\s*\\(`).test(text),
-    // stubs マーカーがなければ末尾に追記する
-    fallbackStubLine: (lines) => (lines[lines.length - 1] === '' ? lines.length - 1 : lines.length),
+    // stubs マーカーがなければ、名前空間の終わりの区間の前(なければ末尾)に追記する
+    fallbackStubLine: (lines) => {
+      const end = lines.findIndex((l) => /<bethany-designer:begin id="beth_NamespaceEnd">/.test(l));
+      if (end >= 0) return end;
+      return lines[lines.length - 1] === '' ? lines.length - 1 : lines.length;
+    },
   };
 }
 

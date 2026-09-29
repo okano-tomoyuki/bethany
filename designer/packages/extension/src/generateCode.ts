@@ -65,7 +65,13 @@ export async function generateFormCode(
   const projects = (await findProjects()).filter((p) =>
     p.forms.some((form) => samePath(form, document.uri)),
   );
-  const settings = formCodegenSettings(projects.flatMap((p) => (p.doc ? [p.doc] : [])));
+  // 各プロジェクトの forms に書かれた、このフォームのパス(headerDir・sourceDir の下の置き場所を決める)
+  const settings = formCodegenSettings(
+    projects.flatMap((p) => {
+      const formPath = p.doc?.forms?.[p.forms.findIndex((form) => samePath(form, document.uri))];
+      return p.doc && formPath !== undefined ? [{ doc: p.doc, formPath }] : [];
+    }),
+  );
   // 出力先の既存の内容を先に読んでおく(生成は同期的に行う)
   const targets = resolveTargets(parsed.document, fileName, settings);
   const existing = await readAll(directory, [
@@ -159,9 +165,7 @@ async function writeGenerated(
     const show = vscode.l10n.t('Show Details');
     void vscode.window
       .showWarningMessage(
-        vscode.l10n.t(
-          'Names removed from the form are still used in the generated files. See the output for details.',
-        ),
+        vscode.l10n.t('Code generation reported warnings. See the output for details.'),
         show,
       )
       .then((answer) => {

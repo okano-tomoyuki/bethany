@@ -77,8 +77,11 @@ export { computeLayout, type Rect } from './layout/engine.ts';
 
 export {
   BfprojDocument,
+  CPP_HEADER_EXTENSIONS,
+  CPP_SOURCE_EXTENSIONS,
   PROJECT_FORMAT_VERSION,
   ProjectCodegenSettings,
+  ProjectCppSettings,
 } from './project/schema.ts';
 export { parseProject, type ProjectParseResult } from './project/parse.ts';
 export {

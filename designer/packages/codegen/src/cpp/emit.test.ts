@@ -155,7 +155,12 @@ describe('generateAll', () => {
   });
 
   it('生成する言語が無ければエラー', () => {
-    const result = generateAll(SAMPLE, DSL_FILE, { cpp: false, python: false }, () => undefined);
+    const result = generateAll(
+      SAMPLE,
+      DSL_FILE,
+      { cpp: undefined, python: false },
+      () => undefined,
+    );
     expect('error' in result).toBe(true);
   });
 });

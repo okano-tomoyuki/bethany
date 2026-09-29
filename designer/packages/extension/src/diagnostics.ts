@@ -9,7 +9,9 @@ import {
   parseProject,
   PROJECT_EXTENSION,
   type Diagnostic,
+  type ProjectCppSettings,
 } from '@bethany-designer/core';
+import { cppOptions } from '@bethany-designer/codegen';
 import * as vscode from 'vscode';
 import { findProjects, formUri, PROJECT_PATTERN, samePath } from './projects.ts';
 import { exists } from './workspaceFiles.ts';
@@ -87,25 +89,44 @@ async function projectDiagnostics(uri: vscode.Uri, text: string): Promise<Diagno
   });
   if (project) {
     const locale = project.codegen?.commentLocale ?? 'en';
+    const cpp = cppLayout(project.codegen?.cpp);
     const formUris = (project.forms ?? []).map((form) => formUri(uri, form));
     for (const other of await findProjects()) {
       if (samePath(other.uri, uri) || !other.doc) continue;
+      if (!other.forms.some((f) => formUris.some((g) => samePath(f, g)))) continue;
       const otherLocale = other.doc.codegen?.commentLocale ?? 'en';
-      if (otherLocale === locale || !other.forms.some((f) => formUris.some((g) => samePath(f, g))))
-        continue;
-      result.push({
-        severity: 'warning',
-        code: 'comment-locale-conflict',
-        message: vscode.l10n.t(
-          '{0} shares forms with this project but uses a different commentLocale ({1})',
-          other.name,
-          otherLocale,
-        ),
-        path: ['codegen', 'commentLocale'],
-      });
+      if (otherLocale !== locale)
+        result.push({
+          severity: 'warning',
+          code: 'comment-locale-conflict',
+          message: vscode.l10n.t(
+            '{0} shares forms with this project but uses a different commentLocale ({1})',
+            other.name,
+            otherLocale,
+          ),
+          path: ['codegen', 'commentLocale'],
+        });
+      // どちらも C++ を生成するときだけ(片方だけなら、その設定が使われる)
+      const otherCpp = cppLayout(other.doc.codegen?.cpp);
+      if (cpp !== undefined && otherCpp !== undefined && otherCpp !== cpp)
+        result.push({
+          severity: 'warning',
+          code: 'cpp-settings-conflict',
+          message: vscode.l10n.t(
+            '{0} shares forms with this project but uses different C++ settings (namespace, include guard, extensions or folders). The forms are generated with the settings of the first project',
+            other.name,
+          ),
+          path: ['codegen', 'cpp'],
+        });
     }
   }
   return result;
+}
+
+/** フォームのファイルの形を決める C++ の設定(起動部分の出力先 main を除く)を比べるための文字列。C++ を生成しなければ undefined */
+function cppLayout(cpp: ProjectCppSettings | undefined): string | undefined {
+  if (!cpp) return undefined;
+  return JSON.stringify(cppOptions(cpp));
 }
 
 function toVscode(

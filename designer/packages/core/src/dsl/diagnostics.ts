@@ -35,7 +35,11 @@ export type DiagnosticCode =
   | 'unknown-main-form'
   | 'missing-form-file'
   | 'comment-locale-conflict'
-  | 'unknown-auto-create';
+  | 'cpp-settings-conflict'
+  | 'unknown-auto-create'
+  | 'invalid-namespace'
+  | 'invalid-include-guard-prefix'
+  | 'invalid-directory';
 
 export interface Diagnostic {
   readonly severity: Severity;

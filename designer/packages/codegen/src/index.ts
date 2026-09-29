@@ -9,9 +9,10 @@ import { buildModel } from './model.ts';
 import { emitPython } from './python/emit.ts';
 import { PYTHON_NAMES, PYTHON_SYNTAX } from './python/syntax.ts';
 import {
+  DEFAULT_CPP_OPTIONS,
   fileNameOf,
-  relativePath,
   resolveTargets,
+  type CppOptions,
   type CppTarget,
   type FormCodegenSettings,
   type PythonTarget,
@@ -23,10 +24,14 @@ export { regionHash } from './hash.ts';
 export { findHandler, type HandlerLanguage, type HandlerPosition } from './locate.ts';
 export {
   baseName,
+  cppOptions,
+  DEFAULT_CPP_OPTIONS,
   DEFAULT_FORM_CODEGEN,
   formCodegenSettings,
   resolveTargets,
+  type CppOptions,
   type FormCodegenSettings,
+  type FormProject,
   type CppTarget,
   type PythonTarget,
   type ResolvedTargets,
@@ -83,6 +88,7 @@ export function generatePython(
  * @param doc 検証を通過したドキュメント
  * @param dslFileName DSL のファイル名(出力先と、生成物の説明に使う)
  * @param commentLocale 生成するコードのコメントの言語(プロジェクトの codegen.commentLocale)
+ * @param options プロジェクトの C++ の設定と、プロジェクトのフォルダからのフォームのパス(formCodegenSettings)
  */
 export function generateCpp(
   doc: BfmDocument,
@@ -90,12 +96,13 @@ export function generateCpp(
   existingHeader: string | undefined,
   existingSource: string | undefined,
   commentLocale?: CommentLocale,
+  options: { readonly cpp?: CppOptions | undefined; readonly formPath?: string | undefined } = {},
 ): CppGenerateResult {
-  const target = cppTarget(doc, dslFileName);
+  const target = cppTarget(doc, dslFileName, options.cpp ?? DEFAULT_CPP_OPTIONS, options.formPath);
   const files = emitCpp(
     buildModel(doc, target.className),
     fileNameOf(dslFileName),
-    relativePath(target.source, target.header),
+    target,
     commentLocale,
   );
   const syntax = cppSyntax(target.className);
@@ -156,6 +163,7 @@ export function generateAll(
       existingHeader,
       readExisting(targets.cpp.source),
       commentLocale,
+      settings,
     );
     files.push({ path: targets.cpp.header, result: result.header });
     files.push({ path: targets.cpp.source, result: result.source });
@@ -186,17 +194,25 @@ export function generateAll(
     }
   }
   const stale = staleNamesWarning(staleChecks.flatMap(findStaleNames));
-  return { files, warnings: stale ? [stale] : [] };
+  const merged = files.flatMap((f) =>
+    f.result.ok ? (f.result.warnings ?? []).map((w) => `${f.path}: ${w}`) : [],
+  );
+  return { files, warnings: [...merged, ...(stale ? [stale] : [])] };
 }
 
-function cppTarget(doc: BfmDocument, dslFileName: string): CppTarget {
-  const target = resolveTargets(doc, dslFileName, { cpp: true, python: false }).cpp;
+function cppTarget(
+  doc: BfmDocument,
+  dslFileName: string,
+  cpp: CppOptions,
+  formPath: string | undefined,
+): CppTarget {
+  const target = resolveTargets(doc, dslFileName, { cpp, python: false, formPath }).cpp;
   if (!target) throw new Error('unreachable');
   return target;
 }
 
 function pythonTarget(doc: BfmDocument, dslFileName: string): PythonTarget {
-  const target = resolveTargets(doc, dslFileName, { cpp: false, python: true }).python;
+  const target = resolveTargets(doc, dslFileName, { cpp: undefined, python: true }).python;
   if (!target) throw new Error('unreachable');
   return target;
 }

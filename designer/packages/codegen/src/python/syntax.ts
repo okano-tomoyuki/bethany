@@ -4,6 +4,7 @@ import type { NameRules } from '../stale.ts';
 export const PYTHON_SYNTAX: LanguageSyntax = {
   comment: '#',
   indentUnit: '    ',
+  blankLinesBeforeAppended: 2,
   // name は識別子の検証を通っているため、正規表現の特殊文字を含まない
   hasHandler: (text, name) => new RegExp(`^\\s*def\\s+${name}\\s*\\(`, 'm').test(text),
   // stubs マーカーがなければ、`if __name__ == "__main__":` の手前(なければ末尾)に追記する

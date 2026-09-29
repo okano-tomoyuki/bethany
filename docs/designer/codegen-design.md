@@ -23,6 +23,19 @@ DSL (*.bfm.json)
 |---|---|---|---|
 | ① 宣言 | コンポーネントのメンバ、**ハンドラの宣言**(C++Builder の `__published` に当たる。public に置く) | ヘッダ(クラス定義の中) | `__init__` の `super().__init__()` の後(型の注釈) |
 | ② 生成 | コンポーネントの生成・プロパティ・親子・イベントの接続 | ソース(`beth_CreateComponents`) | クラスのメソッド(`beth_CreateComponents`) |
+| ③ ファイルの枠 | インクルードガード・`<bethany/beth.hpp>` と自分のヘッダの include・名前空間の始まりと終わり(プロジェクトの `codegen.cpp` の設定。[project-spec.md](project-spec.md) §5) | ヘッダ(`beth_HeaderBegin`・`beth_NamespaceBegin`・`beth_HeaderEnd`)、ソース(`beth_SourceBegin`・`beth_NamespaceBegin`・`beth_NamespaceEnd`) | — |
+| ④ フォームの変数 | `MainForm: "TMainForm" = None` | — | モジュールの末尾(`beth_FormVariable`) |
+
+③ を区間にするのは、設定(名前空間・インクルードガード・拡張子・フォルダ)を変えて生成し直したときに、既存のファイルにも反映するため。
+利用者の include は `beth_HeaderBegin`・`beth_SourceBegin` の後、名前空間の区間の前に書く(名前空間の中で include しないように)。
+名前空間を使わないときも、名前空間の区間はマーカーの行だけで残す(後から設定したときに入れる場所)。
+
+#### 後の版で加えた区間
+
+以前の版の生成物に無い区間(③・④)は、生成し直すときに加える。④ と ③ の終わりはファイルの末尾に加え、③ の始まりは以前の生成物の決まった行
+(ヘッダの先頭の `#pragma once`・空行・`#include "beth.hpp"`、ソースの先頭の自分のヘッダの include と `using namespace beth;`、
+クラスの説明のコメントの前)を置き換える。その行が手で変えられていて見つからなければ、③ の区間はどれも加えず(始まりだけ・終わりだけにならないように)、
+警告を出す。そのファイルには ③ の設定が反映されないので、マーカーを手で書き足す。
 
 tk-designer は「生成」「配置」「イベント」の 3 つのメソッドに分けていたが、LCL には配置だけを後から行う段階(pack・grid の呼び出し)が無く、
 配置はプロパティ(Left・Align・Anchors 等)の設定そのものなので、1 つのメソッドにまとめる(§4 の順で書き出す)。
@@ -45,12 +58,18 @@ Python では `#` を使う。`id` で区間を識別し、`hash` は区間の�
 
 ### C++
 
-`MainForm.hpp`
+`MainForm.hpp`(名前空間を使わない既定の設定)
 
 ```cpp
-#pragma once
+// <bethany-designer:begin id="beth_HeaderBegin">
+#ifndef MAINFORM_HPP
+#define MAINFORM_HPP
 
 #include <bethany/beth.hpp>
+// <bethany-designer:end id="beth_HeaderBegin" hash="...">
+
+// <bethany-designer:begin id="beth_NamespaceBegin">
+// <bethany-designer:end id="beth_NamespaceBegin" hash="...">
 
 /** Form created with the Bethany designer (MainForm.bfm.json). Regions enclosed in markers are overwritten when regenerated. */
 class TMainForm : public beth::TForm
@@ -86,14 +105,22 @@ private:
 };
 
 extern TMainForm* MainForm;
+
+// <bethany-designer:begin id="beth_HeaderEnd">
+#endif // MAINFORM_HPP
+// <bethany-designer:end id="beth_HeaderEnd" hash="...">
 ```
 
 `MainForm.cpp`
 
 ```cpp
+// <bethany-designer:begin id="beth_SourceBegin">
 #include "MainForm.hpp"
+// <bethany-designer:end id="beth_SourceBegin" hash="...">
 
+// <bethany-designer:begin id="beth_NamespaceBegin">
 using namespace beth;
+// <bethany-designer:end id="beth_NamespaceBegin" hash="...">
 
 TMainForm* MainForm = nullptr;
 
@@ -170,17 +197,38 @@ void TMainForm::FormCloseQuery(TObject* Sender, bool& CanClose)
     // TODO: implement
 }
 // ...
+
+// <bethany-designer:begin id="beth_NamespaceEnd">
+// <bethany-designer:end id="beth_NamespaceEnd" hash="...">
+```
+
+`"codegen": { "cpp": { "namespace": "app" } }` なら、名前空間の区間は次のようになり、フォームのクラス・フォームの変数・ハンドラは名前空間の中に入る
+(C++11 でも通るよう、入れ子の名前空間 `app::ui` は `namespace app { namespace ui {` と 1 つずつ書く)。
+
+```cpp
+// MainForm.hpp
+// <bethany-designer:begin id="beth_NamespaceBegin">
+namespace app
+{
+// <bethany-designer:end id="beth_NamespaceBegin" hash="...">
+...
+// <bethany-designer:begin id="beth_HeaderEnd">
+} // namespace app
+
+#endif // APP_MAINFORM_HPP
+// <bethany-designer:end id="beth_HeaderEnd" hash="...">
 ```
 
 利用側(C++Builder のプロジェクトファイル(.cpp)に当たる。プロジェクトファイルがあれば生成できる。[project-spec.md](project-spec.md) §5):
 
 ```cpp
+#include <bethany/beth.hpp>
 #include "MainForm.hpp"
 
 int main()
 {
     beth::Application->Initialize();
-    beth::Application->CreateForm(&MainForm);
+    beth::Application->CreateForm(&MainForm);   // 名前空間を設定していれば &app::MainForm
     beth::Application->Run();
 }
 ```

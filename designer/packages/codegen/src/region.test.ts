@@ -22,7 +22,7 @@ describe('マーカー区間のマージ', () => {
     const edited = INITIAL.replace(
       'void TMainForm::OkButtonClick(TObject* Sender)\n{\n    // TODO: implement\n}',
       'void TMainForm::OkButtonClick(TObject* Sender)\n{\n    Close();\n}',
-    ).replace('#include "MainForm.hpp"\n', '#include "MainForm.hpp"\n#include <cstdio>\n');
+    ).replace(/(<bethany-designer:end id="beth_SourceBegin".*\n)/, '$1#include <cstdio>\n');
     const result = generate(edited);
     expect(result.text).toBe(edited);
     expect(result.modifiedRegions).toEqual([]);
@@ -60,7 +60,7 @@ describe('マーカー区間のマージ', () => {
   const corruptions: [string, (text: string) => string, string][] = [
     [
       '終了マーカーがない',
-      (t) => t.replace(/.*<bethany-designer:end id="beth_CreateComponents".*\n/, ''),
+      (t) => t.replace(/.*<bethany-designer:end id="beth_NamespaceEnd".*\n/, ''),
       'no end marker',
     ],
     [

@@ -48,6 +48,9 @@ C++Builder のプロジェクト(`Project1.cbproj`・`Project1.cpp`)のうち、
 | `mainForm` が `forms` のどれかであること | エラー |
 | `autoCreate` の各要素が `forms` のどれかで、重複しないこと | エラー |
 | `forms` の各要素のファイルがあること(拡張が調べる) | 警告 |
+| `codegen.cpp.namespace` の `::` で区切った各部分が識別子であること | エラー |
+| `codegen.cpp.includeGuardPrefix` が英字・数字・`_` だけで、数字で始まらないこと | エラー |
+| `codegen.cpp.headerDir`・`sourceDir` が相対パスであること | エラー |
 
 ### 決まった形での書き出し
 
@@ -80,14 +83,51 @@ C++Builder の `.dfm` と `.cbproj` の分け方と同じ)。
 | キー | 内容 | 既定値(`Project1.bfproj.json` の場合) |
 |---|---|---|
 | `commentLocale` | 生成するコードのコメントの言語(`en`・`ja`) | `en` |
-| `cpp` | 書けば C++ を生成する。`cpp.main` は起動部分の出力先(プロジェクトファイルのフォルダからの相対パス) | `Project1.cpp` |
+| `cpp` | 書けば C++ を生成する。中のキーは下の表 | |
 | `python` | 書けば Python を生成する。`python.main` は起動部分の出力先 | `Project1.py` |
+
+`cpp` の中のキー(パスはプロジェクトファイルのフォルダからの相対パスで、区切りは `/`):
+
+| キー | 内容 | 既定値 |
+|---|---|---|
+| `main` | 起動部分の出力先 | `Project1.cpp` |
+| `namespace` | フォームのクラスとフォームの変数を入れる名前空間。`app` や `app::ui`(C++11 でも通るよう、1 つずつ入れ子にして書く) | 無し |
+| `includeGuard` | ヘッダのインクルードガード。`macro`(`#ifndef`・`#define`・`#endif`)か `pragma`(`#pragma once`) | `macro` |
+| `includeGuardPrefix` | `macro` のマクロ名の先頭に付ける文字列 | 無し |
+| `headerExtension` | ヘッダの拡張子(`.hpp`・`.h`・`.hh`・`.hxx`) | `.hpp` |
+| `sourceExtension` | ソースの拡張子(`.cpp`・`.cc`・`.cxx`) | `.cpp` |
+| `headerDir` | フォームのヘッダを置くフォルダ | フォームと同じフォルダ |
+| `sourceDir` | フォームのソースを置くフォルダ | フォームと同じフォルダ |
+
+```json
+"codegen": {
+  "cpp": {
+    "main": "src/Project1.cpp",
+    "namespace": "app::ui",
+    "headerExtension": ".h",
+    "headerDir": "include",
+    "sourceDir": "src"
+  }
+}
+```
+
+- **Bethany のヘッダ**は、山括弧のシステムインクルードで `#include <bethany/beth.hpp>` と書く(設定はできない。[ADR 0040](../adr/0040-system-include-path.md))。
+- **フォルダ**: `headerDir`・`sourceDir` を書くと、その下の、プロジェクトのフォルダからフォームのフォルダまでと同じ場所に置く
+  (`forms/MainForm.bfm.json` なら `include/forms/MainForm.h`・`src/forms/MainForm.cc`)。プロジェクトのフォルダの外にあるフォーム
+  (`../` で始まるもの)は、フォームと同じフォルダに置く。
+- **include のパス**: `headerDir` を書くと、フォームのソースと起動部分はヘッダを `headerDir` からのパスで include する(`#include "forms/MainForm.h"`)。
+  ビルドでは `headerDir` を include パスに入れる(CMake の `target_include_directories`)。書かなければ、include する側のファイルからの相対パスにする。
+- **マクロ名**は、`includeGuardPrefix`・名前空間・ヘッダのパス(`headerDir` からの、書かなければファイル名)を `_` でつないで大文字にしたもの
+  (上の例なら `APP_UI_FORMS_MAINFORM_H`)。識別子に使えない文字は `_` にし、続いた `_` は 1 つにする(`__` は処理系の予約)。
+- 設定を変えて生成し直すと、既存のファイルにも反映する(ファイルの先頭と末尾をマーカー区間にしている。[codegen-design.md](codegen-design.md) §2)。
+  ただし、`headerExtension`・`sourceExtension`・`headerDir`・`sourceDir` を変えると新しい場所に作られ、古いファイルは残る(利用者が消す)。
 
 ### フォームのコード生成
 
 - 生成する言語は、そのフォームを含むすべてのプロジェクトの和集合(Project1 が C++、Project2 が Python なら両方)。
 - コメントの言語は、そのフォームを含むプロジェクトのうち最初に `commentLocale` を書いたもの。フォームを共有するプロジェクトの間で
   `commentLocale` が食い違えば、プロジェクトファイルに警告を出す。
+- C++ の設定(`cpp` の `main` 以外)も、そのフォームを含むプロジェクトのうち最初に `cpp` を書いたものを使う。食い違えば同じく警告を出す。
 - どのプロジェクトにも属さないフォームは、C++ と Python の両方をコメントは英語で生成する(プロジェクトを作らなくても試せるように)。
 - 出力先とクラス名は決まった規則で決まる([dsl-spec.md](dsl-spec.md) §9)。
 - CLI(`beth generate MainForm.bfm.json`)は、フォームのフォルダから上へたどってプロジェクトファイルを探す。
@@ -100,7 +140,7 @@ C++Builder のプロジェクトのソース(`Project1.cpp`)に当たる、Appli
 - 出力先の既定をプロジェクト名から決めるのは、同じフォルダに複数のプロジェクトを置けるようにするため(`main.cpp` ではぶつかる)。
 - include するヘッダ・import するモジュール・クラス名は、各フォームの名前とファイル名から決める。Python では、フォームの .py が出力先と同じフォルダかその下に無ければ import できないのでエラーにする。
 - C++ では、ヘッダに宣言したフォームのグローバル変数(`extern TForm2* Form2;`)に `Application->CreateForm(&Form2)` で代入する。
-  C++Builder と同じく、ほかのフォームから `Form2->ShowModal()` と書ける。
+  C++Builder と同じく、ほかのフォームから `Form2->ShowModal()` と書ける。`namespace` を設定していれば `Application->CreateForm(&app::Form2)` と修飾する。
 - Python では、フォームのモジュールの末尾に変数(`Form2: "TForm2" = None`。区間 `beth_FormVariable`)を生成し、起動部分で
   `Form2.Form2 = Application.CreateForm(Form2.TForm2)` と代入する。ほかのフォームからの使い方は下の「ほかのフォームを使う」。
   この区間が無い以前のファイルには、再生成で末尾に加える。
@@ -113,7 +153,9 @@ C++(`Project1.cpp`):
 
 ```cpp
 // Application created with the Bethany designer (Project1.bfproj.json). Regions enclosed in markers are overwritten when regenerated.
+// <bethany-designer:begin id="beth_Include">
 #include <bethany/beth.hpp>
+// <bethany-designer:end id="beth_Include" hash="...">
 // <bethany-designer:begin id="includes">
 #include "MainForm.hpp"
 #include "Form2.hpp"

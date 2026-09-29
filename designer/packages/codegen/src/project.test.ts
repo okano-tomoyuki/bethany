@@ -1,7 +1,7 @@
 import { createDocument, createProject, type BfprojDocument } from '@bethany-designer/core';
 import { describe, expect, it } from 'vitest';
 import type { GenerateAllResult } from './index.ts';
-import { formCodegenSettings } from './names.ts';
+import { DEFAULT_CPP_OPTIONS, formCodegenSettings } from './names.ts';
 import { generateProject, resolveProjectTargets } from './project.ts';
 
 const mainForm = { doc: createDocument('MainForm'), path: 'MainForm.bfm.json' };
@@ -133,20 +133,33 @@ describe('起動時に作るフォーム(autoCreate)', () => {
 
 describe('formCodegenSettings', () => {
   it('プロジェクトに属さなければ C++ と Python の両方、コメントは英語', () => {
-    expect(formCodegenSettings([])).toEqual({ cpp: true, python: true });
+    expect(formCodegenSettings([])).toEqual({ cpp: DEFAULT_CPP_OPTIONS, python: true });
   });
 
-  it('言語は属するプロジェクトの和集合、コメントの言語は最初に書かれているもの', () => {
+  it('言語は属するプロジェクトの和集合、コメントの言語と C++ の設定は最初に書かれているもの', () => {
     expect(
       formCodegenSettings([
-        { formatVersion: 1, codegen: { cpp: {} } },
-        { formatVersion: 1, codegen: { python: {}, commentLocale: 'ja' } },
+        { doc: { formatVersion: 1, codegen: { python: {} } }, formPath: 'a/Main.bfm.json' },
+        {
+          doc: {
+            formatVersion: 1,
+            codegen: { cpp: { namespace: 'app::ui' }, commentLocale: 'ja' },
+          },
+          formPath: 'Main.bfm.json',
+        },
       ]),
-    ).toEqual({ cpp: true, python: true, commentLocale: 'ja' });
-    expect(formCodegenSettings([{ formatVersion: 1 }])).toEqual({
-      cpp: false,
-      python: false,
-      commentLocale: undefined,
+    ).toEqual({
+      cpp: { ...DEFAULT_CPP_OPTIONS, namespace: ['app', 'ui'] },
+      python: true,
+      commentLocale: 'ja',
+      formPath: 'Main.bfm.json',
     });
+    expect(formCodegenSettings([{ doc: { formatVersion: 1 }, formPath: 'Main.bfm.json' }])).toEqual(
+      {
+        cpp: undefined,
+        python: false,
+        commentLocale: undefined,
+      },
+    );
   });
 });

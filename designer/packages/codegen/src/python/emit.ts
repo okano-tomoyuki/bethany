@@ -62,7 +62,7 @@ export function emitPython(
       ...comments.formVariable(model.formName).map((line) => `# ${line}`),
       `${model.formName}: "${className}" = None`,
     ].join('\n'),
-    appendIfMissing: true,
+    ifMissing: 'append',
   };
 
   return {

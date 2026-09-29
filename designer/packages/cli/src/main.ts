@@ -19,6 +19,7 @@ import {
   generateProject,
   isProjectFileName,
   type GenerateAllResult,
+  type FormProject,
   type FormSource,
 } from '@bethany-designer/codegen';
 import {
@@ -29,7 +30,6 @@ import {
   parseDocument,
   parseProject,
   PROJECT_EXTENSION,
-  type BfprojDocument,
   type Diagnostic,
 } from '@bethany-designer/core';
 import ja from '../../extension/l10n/bundle.l10n.ja.json' with { type: 'json' };
@@ -145,10 +145,13 @@ function generateFormFile(
   return generateAll(document, basename(dslPath), settings, (path) => readIfExists(outPath(path)));
 }
 
-/** フォームのフォルダから上へたどり、そのフォームを forms に含むプロジェクトファイルを集める */
-function projectsContaining(formPath: string): BfprojDocument[] {
+/**
+ * フォームのフォルダから上へたどり、そのフォームを forms に含むプロジェクトファイルを集める
+ * (forms に書かれたフォームのパスとともに。headerDir・sourceDir の下の置き場所を決める)
+ */
+function projectsContaining(formPath: string): FormProject[] {
   const key = (path: string) => (process.platform === 'win32' ? path.toLowerCase() : path);
-  const projects: BfprojDocument[] = [];
+  const projects: FormProject[] = [];
   for (let dir = dirname(formPath); ; dir = dirname(dir)) {
     let names: string[] = [];
     try {
@@ -159,8 +162,8 @@ function projectsContaining(formPath: string): BfprojDocument[] {
     for (const name of names) {
       const text = readIfExists(resolve(dir, name));
       const project = text === undefined ? undefined : parseProject(text).project;
-      if (project?.forms?.some((form) => key(resolve(dir, form)) === key(formPath)))
-        projects.push(project);
+      const form = project?.forms?.find((f) => key(resolve(dir, f)) === key(formPath));
+      if (project && form !== undefined) projects.push({ doc: project, formPath: form });
     }
     if (dirname(dir) === dir) return projects;
   }
