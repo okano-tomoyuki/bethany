@@ -1057,6 +1057,75 @@
     X(str_t,         Dialogs_InputBox,                      (str_t c, str_t p, str_t d),                                   (c, p, d)) \
     X(str_t,         Dialogs_PasswordBox,                   (str_t c, str_t p),                                            (c, p)) \
     X(str_t,         Dialogs_InputQuery,                    (str_t c, str_t p, str_t v, bool_t* ok),                       (c, p, v, ok)) \
-    X(int_t,         TApplication_MessageBox,               (obj_t o, str_t t, str_t c, int_t f),                          (o, t, c, f))
+    X(int_t,         TApplication_MessageBox,               (obj_t o, str_t t, str_t c, int_t f),                          (o, t, c, f)) \
+    X(int_t,         TControl_GetClientWidth,               (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetClientWidth,               (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TControl_GetClientHeight,              (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetClientHeight,              (obj_t o, int_t v),                                            (o, v)) \
+    X(void,          TControl_Invalidate,                   (obj_t o),                                                     (o)) \
+    X(void,          TControl_Repaint,                      (obj_t o),                                                     (o)) \
+    X(void,          TControl_Refresh,                      (obj_t o),                                                     (o)) \
+    X(void,          TControl_Update,                       (obj_t o),                                                     (o)) \
+    X(void,          TControl_BringToFront,                 (obj_t o),                                                     (o)) \
+    X(void,          TControl_SendToBack,                   (obj_t o),                                                     (o)) \
+    X(void,          TControl_SetBounds,                    (obj_t o, int_t l, int_t t, int_t w, int_t h),                 (o, l, t, w, h)) \
+    X(void,          TWinControl_SetFocus,                  (obj_t o),                                                     (o)) \
+    X(bool_t,        TWinControl_CanFocus,                  (obj_t o),                                                     (o)) \
+    X(bool_t,        TWinControl_Focused,                   (obj_t o),                                                     (o)) \
+    X(int_t,         TCustomEdit_GetSelStart,               (obj_t o),                                                     (o)) \
+    X(void,          TCustomEdit_SetSelStart,               (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomEdit_GetSelLength,              (obj_t o),                                                     (o)) \
+    X(void,          TCustomEdit_SetSelLength,              (obj_t o, int_t v),                                            (o, v)) \
+    X(str_t,         TCustomEdit_GetSelText,                (obj_t o),                                                     (o)) \
+    X(void,          TCustomEdit_SetSelText,                (obj_t o, str_t v),                                            (o, v)) \
+    X(bool_t,        TCustomEdit_GetModified,               (obj_t o),                                                     (o)) \
+    X(void,          TCustomEdit_SetModified,               (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomEdit_GetCanUndo,                (obj_t o),                                                     (o)) \
+    X(char,          TCustomEdit_GetPasswordChar,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomEdit_SetPasswordChar,           (obj_t o, char v),                                             (o, v)) \
+    X(int_t,         TCustomEdit_GetEchoMode,               (obj_t o),                                                     (o)) \
+    X(void,          TCustomEdit_SetEchoMode,               (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomEdit_GetCharCase,               (obj_t o),                                                     (o)) \
+    X(void,          TCustomEdit_SetCharCase,               (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomEdit_GetAlignment,              (obj_t o),                                                     (o)) \
+    X(void,          TCustomEdit_SetAlignment,              (obj_t o, int_t v),                                            (o, v)) \
+    X(str_t,         TCustomEdit_GetTextHint,               (obj_t o),                                                     (o)) \
+    X(void,          TCustomEdit_SetTextHint,               (obj_t o, str_t v),                                            (o, v)) \
+    X(bool_t,        TCustomEdit_GetNumbersOnly,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomEdit_SetNumbersOnly,            (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomEdit_GetAutoSelect,             (obj_t o),                                                     (o)) \
+    X(void,          TCustomEdit_SetAutoSelect,             (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomEdit_GetHideSelection,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomEdit_SetHideSelection,          (obj_t o, bool_t v),                                           (o, v)) \
+    X(void,          TCustomEdit_GetCaretPos,               (obj_t o, int_t* x, int_t* y),                                 (o, x, y)) \
+    X(void,          TCustomEdit_SetCaretPos,               (obj_t o, int_t x, int_t y),                                   (o, x, y)) \
+    X(void,          TCustomEdit_SelectAll,                 (obj_t o),                                                     (o)) \
+    X(void,          TCustomEdit_ClearSelection,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomEdit_Clear,                     (obj_t o),                                                     (o)) \
+    X(void,          TCustomEdit_CopyToClipboard,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomEdit_CutToClipboard,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomEdit_PasteFromClipboard,        (obj_t o),                                                     (o)) \
+    X(void,          TCustomEdit_Undo,                      (obj_t o),                                                     (o)) \
+    X(bool_t,        TCustomMemo_GetWordWrap,               (obj_t o),                                                     (o)) \
+    X(void,          TCustomMemo_SetWordWrap,               (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomMemo_GetWantReturns,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomMemo_SetWantReturns,            (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomMemo_GetWantTabs,               (obj_t o),                                                     (o)) \
+    X(void,          TCustomMemo_SetWantTabs,               (obj_t o, bool_t v),                                           (o, v)) \
+    X(void,          TCustomMemo_Append,                    (obj_t o, str_t s),                                            (o, s)) \
+    X(int_t,         TCustomLabel_GetAlignment,             (obj_t o),                                                     (o)) \
+    X(void,          TCustomLabel_SetAlignment,             (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomLabel_GetLayout,                (obj_t o),                                                     (o)) \
+    X(void,          TCustomLabel_SetLayout,                (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TCustomLabel_GetWordWrap,              (obj_t o),                                                     (o)) \
+    X(void,          TCustomLabel_SetWordWrap,              (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomLabel_GetTransparent,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomLabel_SetTransparent,           (obj_t o, bool_t v),                                           (o, v)) \
+    X(obj_t,         TCustomLabel_GetFocusControl,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomLabel_SetFocusControl,          (obj_t o, obj_t v),                                            (o, v)) \
+    X(bool_t,        TCustomLabel_GetShowAccelChar,         (obj_t o),                                                     (o)) \
+    X(void,          TCustomLabel_SetShowAccelChar,         (obj_t o, bool_t v),                                           (o, v)) \
+    X(void,          TWinControl_SetOnEnter,                (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(void,          TWinControl_SetOnExit,                 (obj_t o, callback_t cb, void* d),                             (o, cb, d))
 
 #endif

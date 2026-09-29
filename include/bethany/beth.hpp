@@ -1352,9 +1352,39 @@ private:
     static void SetInnerBorderImpl(TObject* owner, const int& value);
 };
 
+// ---- テキストの表示・入力(docs/adr/0042。値の順は LCL と同じ) ----
+
+// 文字の横の揃え(LCL の TAlignment)。
+enum TAlignment     { taLeftJustify, taRightJustify, taCenter };
+// 文字の縦の揃え(TLabel の Layout)。
+enum TTextLayout    { tlTop, tlCenter, tlBottom };
+// 入力した文字の表示のしかた(TEdit の EchoMode)。emPassword は PasswordChar(既定は *)で伏せる。
+enum TEchoMode      { emNormal, emNone, emPassword };
+// 入力した英字のそろえ方(TEdit の CharCase。VCL と同じ綴り)。
+enum TEditCharCase  { ecNormal, ecUpperCase, ecLowerCase };
+
 class TControl : public TComponent
 {
 public:
+    // クライアント領域(枠・タイトルバー・メニューの内側)の幅。設定するとそれに合わせて Width が変わる。
+    Property<int> ClientWidth;
+    // クライアント領域の高さ。
+    Property<int> ClientHeight;
+    // 再描画を依頼する(描画はメッセージの処理のときに行われる)。
+    void Invalidate();
+    // すぐに再描画する。
+    void Repaint();
+    // すぐに再描画する(Repaint と同じ)。
+    void Refresh();
+    // 再描画を依頼済みの部分を、すぐに描画する。
+    void Update();
+    // 兄弟の中で一番手前にする。
+    void BringToFront();
+    // 兄弟の中で一番奥にする。
+    void SendToBack();
+    // 位置と大きさをまとめて設定する(Left・Top・Width・Height を 1 つずつ設定するより、配置の計算が 1 回で済む)。
+    void SetBounds(int ALeft, int ATop, int AWidth, int AHeight);
+
     Property<TWinControl*> Parent;
     Property<int>          Left;
     Property<int>          Top;
@@ -1511,11 +1541,27 @@ private:
     static void         SetCursorImpl(TObject* owner, const TCursor& value);
     static std::string  GetTextImpl(TObject* owner);
     static void         SetTextImpl(TObject* owner, const std::string& value);
+
+private:
+    static int GetClientWidthImpl(TObject* owner);
+    static void SetClientWidthImpl(TObject* owner, const int& value);
+    static int GetClientHeightImpl(TObject* owner);
+    static void SetClientHeightImpl(TObject* owner, const int& value);
 };
 
 class TWinControl : public TControl
 {
 public:
+    // フォーカスを移す(表示されていない・無効なコントロールには移せず、例外になる。CanFocus で確かめる)。
+    void SetFocus();
+    // フォーカスを移せるか(自分と親がすべて表示され、有効か)。
+    bool CanFocus() const;
+    // フォーカスを持っているか。
+    bool Focused() const;
+    // フォーカスを受けたとき・失ったとき。
+    Property<TNotifyEvent> OnEnter;
+    Property<TNotifyEvent> OnExit;
+
     Property<TKeyEvent>      OnKeyDown;
     Property<TKeyEvent>      OnKeyUp;
     Property<TKeyPressEvent> OnKeyPress;
@@ -1549,6 +1595,18 @@ private:
     static void           SetTabOrderImpl(TObject* owner, const int& value);
     static bool           GetTabStopImpl(TObject* owner);
     static void           SetTabStopImpl(TObject* owner, const bool& value);
+
+private:
+    TNotifyEvent onEnter_;
+    TNotifyEvent onExit_;
+    bool         onEnterHooked_ = false;
+    bool         onExitHooked_ = false;
+    static void BETH_CALL EnterTrampoline(ObjectHandle sender, void* data);
+    static void BETH_CALL ExitTrampoline(ObjectHandle sender, void* data);
+    static TNotifyEvent GetOnEnterImpl(TObject* owner);
+    static void         SetOnEnterImpl(TObject* owner, const TNotifyEvent& value);
+    static TNotifyEvent GetOnExitImpl(TObject* owner);
+    static void         SetOnExitImpl(TObject* owner, const TNotifyEvent& value);
 };
 
 // つまみを左右または上下にドラッグして値を選ぶスクロールバー。
@@ -2102,9 +2160,37 @@ protected:
 
 class TCustomLabel : public TGraphicControl
 {
+public:
+    // 文字の横の揃え(AutoSize が false のときに効く)。
+    Property<TAlignment> Alignment;
+    // 文字の縦の揃え(AutoSize が false のときに効く)。
+    Property<TTextLayout> Layout;
+    // 幅に合わせて折り返す(AutoSize が true なら、折り返した行の数に合わせて高さが変わる)。
+    Property<bool> WordWrap;
+    // 背景を塗らない(親の背景が見える)。
+    Property<bool> Transparent;
+    // Caption のアクセスキー(&N)を押したときにフォーカスを移すコントロール。
+    Property<TWinControl*> FocusControl;
+    // Caption の & をアクセスキーの印(下線)として表示する(false なら & をそのまま表示する)。
+    Property<bool> ShowAccelChar;
+
 protected:
-    explicit TCustomLabel(ObjectHandle handle) : TGraphicControl(handle) {}
+    explicit TCustomLabel(ObjectHandle handle);
     ~TCustomLabel() override = default;
+
+private:
+    static TAlignment GetAlignmentImpl(TObject* owner);
+    static void SetAlignmentImpl(TObject* owner, const TAlignment& value);
+    static TTextLayout GetLayoutImpl(TObject* owner);
+    static void SetLayoutImpl(TObject* owner, const TTextLayout& value);
+    static bool GetWordWrapImpl(TObject* owner);
+    static void SetWordWrapImpl(TObject* owner, const bool& value);
+    static bool GetTransparentImpl(TObject* owner);
+    static void SetTransparentImpl(TObject* owner, const bool& value);
+    static TWinControl* GetFocusControlImpl(TObject* owner);
+    static void SetFocusControlImpl(TObject* owner, TWinControl* const& value);
+    static bool GetShowAccelCharImpl(TObject* owner);
+    static void SetShowAccelCharImpl(TObject* owner, const bool& value);
 };
 
 class TLabel : public TCustomLabel
@@ -2308,6 +2394,49 @@ protected:
 class TCustomEdit : public TWinControl
 {
 public:
+    // 選択の開始位置(文字の数。0 から)。選択が無ければキャレットの位置。
+    Property<int> SelStart;
+    // 選択の長さ(文字の数)。
+    Property<int> SelLength;
+    // 選択している文字列。設定すると選択を置き換える(選択が無ければキャレットの位置に挿入する)。
+    Property<std::string> SelText;
+    // 利用者が内容を変えたか。Text を設定すると false に戻る。
+    Property<bool> Modified;
+    // 元に戻せる編集があるか。
+    ReadOnlyProperty<bool> CanUndo;
+    // 入力した文字の代わりに表示する文字(#0 なら隠さない)。
+    Property<char> PasswordChar;
+    // 入力した文字の表示のしかた(emPassword は伏せ字、emNone は表示しない)。
+    Property<TEchoMode> EchoMode;
+    // 入力した英字を大文字・小文字にそろえる。
+    Property<TEditCharCase> CharCase;
+    // 文字の横の揃え。
+    Property<TAlignment> Alignment;
+    // 空のときに薄く表示する説明。
+    Property<std::string> TextHint;
+    // 数字だけを入力できるようにする。
+    Property<bool> NumbersOnly;
+    // フォーカスを受けたときに全体を選択する。
+    Property<bool> AutoSelect;
+    // フォーカスが無いときに選択の表示を隠す。
+    Property<bool> HideSelection;
+    // キャレットの位置(X は行の中の文字の位置、Y は行。どちらも 0 から)。
+    Property<TPoint> CaretPos;
+    // 全体を選択する。
+    void SelectAll();
+    // 選択している文字列を消す。
+    void ClearSelection();
+    // 内容を空にする。
+    void Clear();
+    // 選択している文字列をクリップボードに写す。
+    void CopyToClipboard();
+    // 選択している文字列をクリップボードに移す。
+    void CutToClipboard();
+    // クリップボードの文字列を、選択を置き換えて貼り付ける。
+    void PasteFromClipboard();
+    // 直前の編集を元に戻す。
+    void Undo();
+
     using TControl::Text;
     Property<int>          MaxLength;
     Property<bool>         ReadOnly;
@@ -2328,6 +2457,35 @@ private:
     static void SetMaxLengthImpl(TObject* owner, const int& value);
     static bool GetReadOnlyImpl(TObject* owner);
     static void SetReadOnlyImpl(TObject* owner, const bool& value);
+
+private:
+    static int GetSelStartImpl(TObject* owner);
+    static void SetSelStartImpl(TObject* owner, const int& value);
+    static int GetSelLengthImpl(TObject* owner);
+    static void SetSelLengthImpl(TObject* owner, const int& value);
+    static std::string GetSelTextImpl(TObject* owner);
+    static void SetSelTextImpl(TObject* owner, const std::string& value);
+    static bool GetModifiedImpl(TObject* owner);
+    static void SetModifiedImpl(TObject* owner, const bool& value);
+    static bool GetCanUndoImpl(TObject* owner);
+    static char GetPasswordCharImpl(TObject* owner);
+    static void SetPasswordCharImpl(TObject* owner, const char& value);
+    static TEchoMode GetEchoModeImpl(TObject* owner);
+    static void SetEchoModeImpl(TObject* owner, const TEchoMode& value);
+    static TEditCharCase GetCharCaseImpl(TObject* owner);
+    static void SetCharCaseImpl(TObject* owner, const TEditCharCase& value);
+    static TAlignment GetAlignmentImpl(TObject* owner);
+    static void SetAlignmentImpl(TObject* owner, const TAlignment& value);
+    static std::string GetTextHintImpl(TObject* owner);
+    static void SetTextHintImpl(TObject* owner, const std::string& value);
+    static bool GetNumbersOnlyImpl(TObject* owner);
+    static void SetNumbersOnlyImpl(TObject* owner, const bool& value);
+    static bool GetAutoSelectImpl(TObject* owner);
+    static void SetAutoSelectImpl(TObject* owner, const bool& value);
+    static bool GetHideSelectionImpl(TObject* owner);
+    static void SetHideSelectionImpl(TObject* owner, const bool& value);
+    static TPoint GetCaretPosImpl(TObject* owner);
+    static void SetCaretPosImpl(TObject* owner, const TPoint& value);
 };
 
 class TEdit : public TCustomEdit
@@ -2915,7 +3073,6 @@ private:
 enum TViewStyle     { vsIcon, vsSmallIcon, vsList, vsReport };
 enum TSortType      { stNone, stData, stText, stBoth };
 enum TSortDirection { sdAscending, sdDescending };
-enum TAlignment     { taLeftJustify, taRightJustify, taCenter };
 enum TItemChange    { ctText, ctImage, ctState };
 
 class TCustomListView;
@@ -3275,6 +3432,15 @@ protected:
 class TCustomMemo : public TCustomEdit
 {
 public:
+    // 右端で折り返す(折り返すと横のスクロールバーは出ない)。
+    Property<bool> WordWrap;
+    // Enter で改行を入れる(false なら、フォームの既定のボタンが押される)。
+    Property<bool> WantReturns;
+    // Tab でタブ文字を入れる(false なら、次のコントロールにフォーカスが移る)。
+    Property<bool> WantTabs;
+    // 末尾に 1 行加える(Lines->Add と違い、表示を最後の行までスクロールする)。
+    void Append(const std::string& S);
+
     Property<int> ScrollBars;
 
     // 文字列の一覧(TStrings。Memo1->Lines->Add("x") のように使う)。
@@ -3289,6 +3455,14 @@ private:
     static TStrings* GetLinesImpl(TObject* owner);
     static int  GetScrollBarsImpl(TObject* owner);
     static void SetScrollBarsImpl(TObject* owner, const int& value);
+
+private:
+    static bool GetWordWrapImpl(TObject* owner);
+    static void SetWordWrapImpl(TObject* owner, const bool& value);
+    static bool GetWantReturnsImpl(TObject* owner);
+    static void SetWantReturnsImpl(TObject* owner, const bool& value);
+    static bool GetWantTabsImpl(TObject* owner);
+    static void SetWantTabsImpl(TObject* owner, const bool& value);
 };
 
 class TMemo : public TCustomMemo

@@ -27,6 +27,15 @@ public:
     beth::TMenuItem* FileSaveAsItem;
     beth::TMenuItem* N1;
     beth::TMenuItem* FileExitItem;
+    beth::TMenuItem* EditMenu;
+    beth::TMenuItem* EditUndoItem;
+    beth::TMenuItem* N2;
+    beth::TMenuItem* EditCutItem;
+    beth::TMenuItem* EditCopyItem;
+    beth::TMenuItem* EditPasteItem;
+    beth::TMenuItem* EditSelectAllItem;
+    beth::TMenuItem* N3;
+    beth::TMenuItem* EditFindItem;
     beth::TMenuItem* FormatMenu;
     beth::TMenuItem* FormatFontItem;
     beth::TMenuItem* HelpMenu;
@@ -34,6 +43,7 @@ public:
     beth::TOpenDialog* OpenDialog1;
     beth::TSaveDialog* SaveDialog1;
     beth::TFontDialog* FontDialog1;
+    beth::TFindDialog* FindDialog1;
 
     void FormCreate(beth::TObject* Sender);
     void FormCloseQuery(beth::TObject* Sender, bool& CanClose);
@@ -43,9 +53,16 @@ public:
     void FileSaveItemClick(beth::TObject* Sender);
     void FileSaveAsItemClick(beth::TObject* Sender);
     void FileExitItemClick(beth::TObject* Sender);
+    void EditUndoItemClick(beth::TObject* Sender);
+    void EditCutItemClick(beth::TObject* Sender);
+    void EditCopyItemClick(beth::TObject* Sender);
+    void EditPasteItemClick(beth::TObject* Sender);
+    void EditSelectAllItemClick(beth::TObject* Sender);
+    void EditFindItemClick(beth::TObject* Sender);
     void FormatFontItemClick(beth::TObject* Sender);
     void HelpAboutItemClick(beth::TObject* Sender);
-    // <bethany-designer:end id="declarations" hash="3c2fecfc">
+    void FindDialog1Find(beth::TObject* Sender);
+    // <bethany-designer:end id="declarations" hash="9cf817b7">
 
     explicit TMainForm(beth::TComponent* AOwner);
 
@@ -59,6 +76,10 @@ private:
     bool SaveAs();
     // 変更を保存するか聞く。続けてよければ true(保存した・保存しない)、取りやめなら false
     bool ConfirmDiscard();
+
+    static int Utf8Length(const std::string& s);
+    static std::size_t Utf8Offset(const std::string& s, int chars);
+    static std::string Lower(std::string s);
 
 protected:
     ~TMainForm() override = default;

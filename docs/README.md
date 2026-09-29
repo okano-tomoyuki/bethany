@@ -62,6 +62,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0039](adr/0039-python-distribution.md) | Python のバインディングを beth パッケージにまとめ、beth.dll を同梱した Windows x64 の wheel を PyPI に出す | 承認 |
 | [0040](adr/0040-system-include-path.md) | ヘッダを include/bethany/ に置き、利用者は #include <bethany/beth.hpp> と書く | 承認 |
 | [0041](adr/0041-modal-result-and-message-dialogs.md) | ModalResult・メッセージのダイアログ・フォームの表示・既定のボタン(Tier A の 1 バッチ目) | 承認 |
+| [0042](adr/0042-focus-edit-memo-label.md) | フォーカス・表示の更新・テキストの編集・TMemo・TLabel(Tier A の 2 バッチ目) | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。

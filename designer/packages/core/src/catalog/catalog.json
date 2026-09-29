@@ -7,12 +7,17 @@
     "BorderIcons",
     "BorderSpacing",
     "BorderStyle",
+    "BringToFront",
+    "CanFocus",
     "Caption",
+    "ClientHeight",
+    "ClientWidth",
     "Close",
     "Color",
     "Constraints",
     "Cursor",
     "Enabled",
+    "Focused",
     "Font",
     "FormStyle",
     "Free",
@@ -22,6 +27,7 @@
     "Height",
     "Hide",
     "Hint",
+    "Invalidate",
     "KeyPreview",
     "Left",
     "Menu",
@@ -34,6 +40,8 @@
     "OnDblClick",
     "OnDeactivate",
     "OnDestroy",
+    "OnEnter",
+    "OnExit",
     "OnHide",
     "OnKeyDown",
     "OnKeyPress",
@@ -52,7 +60,12 @@
     "ParentShowHint",
     "PopupMenu",
     "Position",
+    "Refresh",
     "Release",
+    "Repaint",
+    "SendToBack",
+    "SetBounds",
+    "SetFocus",
     "Show",
     "ShowHint",
     "ShowModal",
@@ -61,6 +74,7 @@
     "Tag",
     "Text",
     "Top",
+    "Update",
     "Visible",
     "Width",
     "WindowState",
@@ -622,6 +636,15 @@
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
         },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
+        },
         "OnKeyDown": {
           "type": "TKeyEvent",
           "declaredIn": "TWinControl"
@@ -917,6 +940,15 @@
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
         },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
+        },
         "OnKeyDown": {
           "type": "TKeyEvent",
           "declaredIn": "TWinControl"
@@ -1211,6 +1243,15 @@
         "OnMouseWheel": {
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
+        },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
         },
         "OnKeyDown": {
           "type": "TKeyEvent",
@@ -1519,6 +1560,15 @@
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
         },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
+        },
         "OnKeyDown": {
           "type": "TKeyEvent",
           "declaredIn": "TWinControl"
@@ -1789,6 +1839,15 @@
         "OnMouseWheel": {
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
+        },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
         },
         "OnKeyDown": {
           "type": "TKeyEvent",
@@ -2078,6 +2137,15 @@
         "OnMouseWheel": {
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
+        },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
         },
         "OnKeyDown": {
           "type": "TKeyEvent",
@@ -2391,6 +2459,15 @@
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
         },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
+        },
         "OnKeyDown": {
           "type": "TKeyEvent",
           "declaredIn": "TWinControl"
@@ -2667,6 +2744,15 @@
         "OnMouseWheel": {
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
+        },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
         },
         "OnKeyDown": {
           "type": "TKeyEvent",
@@ -2961,6 +3047,15 @@
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
         },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
+        },
         "OnKeyDown": {
           "type": "TKeyEvent",
           "declaredIn": "TWinControl"
@@ -3247,6 +3342,15 @@
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
         },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
+        },
         "OnKeyDown": {
           "type": "TKeyEvent",
           "declaredIn": "TWinControl"
@@ -3469,6 +3573,57 @@
           },
           "declaredIn": "TControl",
           "default": "crDefault"
+        },
+        "Alignment": {
+          "type": {
+            "kind": "enum",
+            "enum": "TAlignment"
+          },
+          "declaredIn": "TCustomLabel",
+          "default": "taLeftJustify",
+          "doc": "文字の横の揃え(AutoSize が false のときに効く)。"
+        },
+        "Layout": {
+          "type": {
+            "kind": "enum",
+            "enum": "TTextLayout"
+          },
+          "declaredIn": "TCustomLabel",
+          "default": "tlTop",
+          "doc": "文字の縦の揃え(AutoSize が false のときに効く)。"
+        },
+        "WordWrap": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomLabel",
+          "default": false,
+          "doc": "幅に合わせて折り返す(AutoSize が true なら、折り返した行の数に合わせて高さが変わる)。"
+        },
+        "Transparent": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomLabel",
+          "default": true,
+          "doc": "背景を塗らない(親の背景が見える)。"
+        },
+        "FocusControl": {
+          "type": {
+            "kind": "ref",
+            "class": "TWinControl"
+          },
+          "declaredIn": "TCustomLabel",
+          "default": null,
+          "doc": "Caption のアクセスキー(&N)を押したときにフォーカスを移すコントロール。"
+        },
+        "ShowAccelChar": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomLabel",
+          "default": true,
+          "doc": "Caption の & をアクセスキーの印(下線)として表示する(false なら & をそのまま表示する)。"
         }
       },
       "events": {
@@ -4058,6 +4213,15 @@
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
         },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
+        },
         "OnKeyDown": {
           "type": "TKeyEvent",
           "declaredIn": "TWinControl"
@@ -4418,6 +4582,15 @@
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
         },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
+        },
         "OnKeyDown": {
           "type": "TKeyEvent",
           "declaredIn": "TWinControl"
@@ -4703,6 +4876,15 @@
         "OnMouseWheel": {
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
+        },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
         },
         "OnKeyDown": {
           "type": "TKeyEvent",
@@ -4990,6 +5172,15 @@
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
         },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
+        },
         "OnKeyDown": {
           "type": "TKeyEvent",
           "declaredIn": "TWinControl"
@@ -5276,6 +5467,15 @@
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
         },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
+        },
         "OnKeyDown": {
           "type": "TKeyEvent",
           "declaredIn": "TWinControl"
@@ -5507,6 +5707,73 @@
           "declaredIn": "TWinControl",
           "default": true
         },
+        "PasswordChar": {
+          "type": {
+            "kind": "char"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "\u0000",
+          "doc": "入力した文字の代わりに表示する文字(#0 なら隠さない)。"
+        },
+        "EchoMode": {
+          "type": {
+            "kind": "enum",
+            "enum": "TEchoMode"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "emNormal",
+          "doc": "入力した文字の表示のしかた(emPassword は伏せ字、emNone は表示しない)。"
+        },
+        "CharCase": {
+          "type": {
+            "kind": "enum",
+            "enum": "TEditCharCase"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "ecNormal",
+          "doc": "入力した英字を大文字・小文字にそろえる。"
+        },
+        "Alignment": {
+          "type": {
+            "kind": "enum",
+            "enum": "TAlignment"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "taLeftJustify",
+          "doc": "文字の横の揃え。"
+        },
+        "TextHint": {
+          "type": {
+            "kind": "string"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "",
+          "doc": "空のときに薄く表示する説明。"
+        },
+        "NumbersOnly": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": false,
+          "doc": "数字だけを入力できるようにする。"
+        },
+        "AutoSelect": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": true,
+          "doc": "フォーカスを受けたときに全体を選択する。"
+        },
+        "HideSelection": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": true,
+          "doc": "フォーカスが無いときに選択の表示を隠す。"
+        },
         "Text": {
           "type": {
             "kind": "string"
@@ -5567,6 +5834,15 @@
         "OnMouseWheel": {
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
+        },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
         },
         "OnKeyDown": {
           "type": "TKeyEvent",
@@ -5804,6 +6080,73 @@
           "declaredIn": "TWinControl",
           "default": true
         },
+        "PasswordChar": {
+          "type": {
+            "kind": "char"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "\u0000",
+          "doc": "入力した文字の代わりに表示する文字(#0 なら隠さない)。"
+        },
+        "EchoMode": {
+          "type": {
+            "kind": "enum",
+            "enum": "TEchoMode"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "emNormal",
+          "doc": "入力した文字の表示のしかた(emPassword は伏せ字、emNone は表示しない)。"
+        },
+        "CharCase": {
+          "type": {
+            "kind": "enum",
+            "enum": "TEditCharCase"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "ecNormal",
+          "doc": "入力した英字を大文字・小文字にそろえる。"
+        },
+        "Alignment": {
+          "type": {
+            "kind": "enum",
+            "enum": "TAlignment"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "taLeftJustify",
+          "doc": "文字の横の揃え。"
+        },
+        "TextHint": {
+          "type": {
+            "kind": "string"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "",
+          "doc": "空のときに薄く表示する説明。"
+        },
+        "NumbersOnly": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": false,
+          "doc": "数字だけを入力できるようにする。"
+        },
+        "AutoSelect": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": true,
+          "doc": "フォーカスを受けたときに全体を選択する。"
+        },
+        "HideSelection": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": true,
+          "doc": "フォーカスが無いときに選択の表示を隠す。"
+        },
         "ReadOnly": {
           "type": {
             "kind": "bool"
@@ -5884,6 +6227,15 @@
         "OnMouseWheel": {
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
+        },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
         },
         "OnKeyDown": {
           "type": "TKeyEvent",
@@ -6122,6 +6474,73 @@
           "declaredIn": "TWinControl",
           "default": true
         },
+        "PasswordChar": {
+          "type": {
+            "kind": "char"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "\u0000",
+          "doc": "入力した文字の代わりに表示する文字(#0 なら隠さない)。"
+        },
+        "EchoMode": {
+          "type": {
+            "kind": "enum",
+            "enum": "TEchoMode"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "emNormal",
+          "doc": "入力した文字の表示のしかた(emPassword は伏せ字、emNone は表示しない)。"
+        },
+        "CharCase": {
+          "type": {
+            "kind": "enum",
+            "enum": "TEditCharCase"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "ecNormal",
+          "doc": "入力した英字を大文字・小文字にそろえる。"
+        },
+        "Alignment": {
+          "type": {
+            "kind": "enum",
+            "enum": "TAlignment"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "taLeftJustify",
+          "doc": "文字の横の揃え。"
+        },
+        "TextHint": {
+          "type": {
+            "kind": "string"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "",
+          "doc": "空のときに薄く表示する説明。"
+        },
+        "NumbersOnly": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": false,
+          "doc": "数字だけを入力できるようにする。"
+        },
+        "AutoSelect": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": true,
+          "doc": "フォーカスを受けたときに全体を選択する。"
+        },
+        "HideSelection": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": true,
+          "doc": "フォーカスが無いときに選択の表示を隠す。"
+        },
         "ReadOnly": {
           "type": {
             "kind": "bool"
@@ -6195,6 +6614,15 @@
         "OnMouseWheel": {
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
+        },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
         },
         "OnKeyDown": {
           "type": "TKeyEvent",
@@ -6431,6 +6859,73 @@
           "declaredIn": "TWinControl",
           "default": true
         },
+        "PasswordChar": {
+          "type": {
+            "kind": "char"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "\u0000",
+          "doc": "入力した文字の代わりに表示する文字(#0 なら隠さない)。"
+        },
+        "EchoMode": {
+          "type": {
+            "kind": "enum",
+            "enum": "TEchoMode"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "emNormal",
+          "doc": "入力した文字の表示のしかた(emPassword は伏せ字、emNone は表示しない)。"
+        },
+        "CharCase": {
+          "type": {
+            "kind": "enum",
+            "enum": "TEditCharCase"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "ecNormal",
+          "doc": "入力した英字を大文字・小文字にそろえる。"
+        },
+        "Alignment": {
+          "type": {
+            "kind": "enum",
+            "enum": "TAlignment"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "taLeftJustify",
+          "doc": "文字の横の揃え。"
+        },
+        "TextHint": {
+          "type": {
+            "kind": "string"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "",
+          "doc": "空のときに薄く表示する説明。"
+        },
+        "NumbersOnly": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": false,
+          "doc": "数字だけを入力できるようにする。"
+        },
+        "AutoSelect": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": true,
+          "doc": "フォーカスを受けたときに全体を選択する。"
+        },
+        "HideSelection": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": true,
+          "doc": "フォーカスが無いときに選択の表示を隠す。"
+        },
         "Text": {
           "type": {
             "kind": "string"
@@ -6498,6 +6993,15 @@
         "OnMouseWheel": {
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
+        },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
         },
         "OnKeyDown": {
           "type": "TKeyEvent",
@@ -6735,6 +7239,73 @@
           "declaredIn": "TWinControl",
           "default": true
         },
+        "PasswordChar": {
+          "type": {
+            "kind": "char"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "\u0000",
+          "doc": "入力した文字の代わりに表示する文字(#0 なら隠さない)。"
+        },
+        "EchoMode": {
+          "type": {
+            "kind": "enum",
+            "enum": "TEchoMode"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "emNormal",
+          "doc": "入力した文字の表示のしかた(emPassword は伏せ字、emNone は表示しない)。"
+        },
+        "CharCase": {
+          "type": {
+            "kind": "enum",
+            "enum": "TEditCharCase"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "ecNormal",
+          "doc": "入力した英字を大文字・小文字にそろえる。"
+        },
+        "Alignment": {
+          "type": {
+            "kind": "enum",
+            "enum": "TAlignment"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "taLeftJustify",
+          "doc": "文字の横の揃え。"
+        },
+        "TextHint": {
+          "type": {
+            "kind": "string"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "",
+          "doc": "空のときに薄く表示する説明。"
+        },
+        "NumbersOnly": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": false,
+          "doc": "数字だけを入力できるようにする。"
+        },
+        "AutoSelect": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": true,
+          "doc": "フォーカスを受けたときに全体を選択する。"
+        },
+        "HideSelection": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": true,
+          "doc": "フォーカスが無いときに選択の表示を隠す。"
+        },
         "Text": {
           "type": {
             "kind": "string"
@@ -6811,6 +7382,15 @@
         "OnMouseWheel": {
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
+        },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
         },
         "OnKeyDown": {
           "type": "TKeyEvent",
@@ -7131,6 +7711,15 @@
         "OnMouseWheel": {
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
+        },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
         },
         "OnKeyDown": {
           "type": "TKeyEvent",
@@ -7454,6 +8043,15 @@
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
         },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
+        },
         "OnKeyDown": {
           "type": "TKeyEvent",
           "declaredIn": "TWinControl"
@@ -7759,6 +8357,15 @@
         "OnMouseWheel": {
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
+        },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
         },
         "OnKeyDown": {
           "type": "TKeyEvent",
@@ -8106,6 +8713,15 @@
         "OnMouseWheel": {
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
+        },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
         },
         "OnKeyDown": {
           "type": "TKeyEvent",
@@ -8508,6 +9124,15 @@
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
         },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
+        },
         "OnKeyDown": {
           "type": "TKeyEvent",
           "declaredIn": "TWinControl"
@@ -8842,6 +9467,15 @@
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
         },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
+        },
         "OnKeyDown": {
           "type": "TKeyEvent",
           "declaredIn": "TWinControl"
@@ -9079,6 +9713,40 @@
           "declaredIn": "TWinControl",
           "default": true
         },
+        "CharCase": {
+          "type": {
+            "kind": "enum",
+            "enum": "TEditCharCase"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "ecNormal",
+          "doc": "入力した英字を大文字・小文字にそろえる。"
+        },
+        "Alignment": {
+          "type": {
+            "kind": "enum",
+            "enum": "TAlignment"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": "taLeftJustify",
+          "doc": "文字の横の揃え。"
+        },
+        "AutoSelect": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": false,
+          "doc": "フォーカスを受けたときに全体を選択する。"
+        },
+        "HideSelection": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomEdit",
+          "default": true,
+          "doc": "フォーカスが無いときに選択の表示を隠す。"
+        },
         "MaxLength": {
           "type": {
             "kind": "int"
@@ -9092,6 +9760,30 @@
           },
           "declaredIn": "TCustomEdit",
           "default": false
+        },
+        "WordWrap": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomMemo",
+          "default": true,
+          "doc": "右端で折り返す(折り返すと横のスクロールバーは出ない)。"
+        },
+        "WantReturns": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomMemo",
+          "default": true,
+          "doc": "Enter で改行を入れる(false なら、フォームの既定のボタンが押される)。"
+        },
+        "WantTabs": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomMemo",
+          "default": false,
+          "doc": "Tab でタブ文字を入れる(false なら、次のコントロールにフォーカスが移る)。"
         },
         "ScrollBars": {
           "type": {
@@ -9146,6 +9838,15 @@
         "OnMouseWheel": {
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
+        },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
         },
         "OnKeyDown": {
           "type": "TKeyEvent",
@@ -9444,6 +10145,15 @@
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
         },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
+        },
         "OnKeyDown": {
           "type": "TKeyEvent",
           "declaredIn": "TWinControl"
@@ -9734,6 +10444,15 @@
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
         },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
+        },
         "OnKeyDown": {
           "type": "TKeyEvent",
           "declaredIn": "TWinControl"
@@ -10019,6 +10738,15 @@
         "OnMouseWheel": {
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
+        },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
         },
         "OnKeyDown": {
           "type": "TKeyEvent",
@@ -10309,6 +11037,15 @@
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
         },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
+        },
         "OnKeyDown": {
           "type": "TKeyEvent",
           "declaredIn": "TWinControl"
@@ -10592,6 +11329,15 @@
         "OnMouseWheel": {
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
+        },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
         },
         "OnKeyDown": {
           "type": "TKeyEvent",
@@ -12067,6 +12813,15 @@
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
         },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
+        },
         "OnKeyDown": {
           "type": "TKeyEvent",
           "declaredIn": "TWinControl"
@@ -12430,6 +13185,15 @@
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
         },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
+        },
         "OnKeyDown": {
           "type": "TKeyEvent",
           "declaredIn": "TWinControl"
@@ -12733,6 +13497,15 @@
         "OnMouseWheel": {
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
+        },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
         },
         "OnKeyDown": {
           "type": "TKeyEvent",
@@ -13157,6 +13930,15 @@
         "OnMouseWheel": {
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
+        },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
         },
         "OnKeyDown": {
           "type": "TKeyEvent",
@@ -13880,6 +14662,15 @@
         "OnMouseWheel": {
           "type": "TMouseWheelEvent",
           "declaredIn": "TControl"
+        },
+        "OnEnter": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl",
+          "doc": "フォーカスを受けたとき・失ったとき。"
+        },
+        "OnExit": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TWinControl"
         },
         "OnKeyDown": {
           "type": "TKeyEvent",
@@ -14742,6 +15533,26 @@
       "akRight",
       "akBottom"
     ],
+    "TAlignment": [
+      "taLeftJustify",
+      "taRightJustify",
+      "taCenter"
+    ],
+    "TTextLayout": [
+      "tlTop",
+      "tlCenter",
+      "tlBottom"
+    ],
+    "TEchoMode": [
+      "emNormal",
+      "emNone",
+      "emPassword"
+    ],
+    "TEditCharCase": [
+      "ecNormal",
+      "ecUpperCase",
+      "ecLowerCase"
+    ],
     "TScrollBarKind": [
       "sbHorizontal",
       "sbVertical"
@@ -14875,11 +15686,6 @@
     "TSortDirection": [
       "sdAscending",
       "sdDescending"
-    ],
-    "TAlignment": [
-      "taLeftJustify",
-      "taRightJustify",
-      "taCenter"
     ],
     "TItemChange": [
       "ctText",

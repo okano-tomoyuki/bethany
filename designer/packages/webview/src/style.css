@@ -739,7 +739,15 @@ input[aria-invalid='true'] {
 }
 
 .look-label {
+  display: flex;
+  flex-direction: column;
   white-space: pre;
+}
+
+.look-label.wrap,
+.look-box.lines.wrap {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .look-label.sunken {
@@ -749,7 +757,6 @@ input[aria-invalid='true'] {
 .look-edit {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 0 4px;
   white-space: pre;
   border: 1px solid #e5e5e5;
@@ -768,6 +775,16 @@ input[aria-invalid='true'] {
 
 .look-dropdown {
   color: #555;
+}
+
+.look-edit.hint {
+  color: #8a8a8a;
+}
+
+/* 右端に矢印を持つもの(スピンエディット・コンボボックス) */
+.look-edit.spin,
+.look-edit.combo {
+  justify-content: space-between;
 }
 
 .look-box {

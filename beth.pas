@@ -133,6 +133,10 @@ type
     同一ユニット内で宣言した派生クラス経由なら、基底の protected メンバに触れられる。 }
   TControlAccess = class(TControl);
   TButtonControlAccess = class(TButtonControl);
+  TWinControlAccess = class(TWinControl);
+  TCustomEditAccess = class(TCustomEdit);
+  TCustomMemoAccess = class(TCustomMemo);
+  TCustomLabelAccess = class(TCustomLabel);
 
   { *_Create で生成したすべてのコンポーネントの破棄を受け取り、C/C++ 側へ通知する。
     Owner による連鎖破棄など、呼び出し側が知らないところで起きる破棄も検知できる。 }
@@ -11548,6 +11552,676 @@ begin
   end;
 end;
 
+{ ---------------- フォーカス・表示の更新・テキストの編集・TMemo・TLabel(docs/adr/0042) ---------------- }
+
+{ 選択の置き換え・全選択・クリップボード・元に戻す、は LCL ではウィンドウのハンドルが無いと何もしない。
+  VCL と同じく表示の前でも使えるよう、先にハンドルを作る(HandleNeeded。親のハンドルも作られる)。 }
+
+function TControl_GetClientWidth(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TControl(Obj).ClientWidth;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TControl_SetClientWidth(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TControl(Obj).ClientWidth := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TControl_GetClientHeight(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TControl(Obj).ClientHeight;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TControl_SetClientHeight(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TControl(Obj).ClientHeight := Value;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TControl_Invalidate(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TControl(Obj).Invalidate;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TControl_Repaint(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TControl(Obj).Repaint;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TControl_Refresh(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TControl(Obj).Refresh;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TControl_Update(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TControl(Obj).Update;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TControl_BringToFront(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TControl(Obj).BringToFront;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TControl_SendToBack(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TControl(Obj).SendToBack;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TControl_SetBounds(Obj: Pointer; ALeft, ATop, AWidth, AHeight: Integer); BETH_CALL;
+begin
+  try
+    TControl(Obj).SetBounds(ALeft, ATop, AWidth, AHeight);
+  except
+    ReportException;
+  end;
+end;
+
+procedure TWinControl_SetFocus(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TWinControlAccess(Obj).SetFocus;
+  except
+    ReportException;
+  end;
+end;
+
+function TWinControl_CanFocus(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TWinControlAccess(Obj).CanFocus;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+function TWinControl_Focused(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TWinControlAccess(Obj).Focused;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+function TCustomEdit_GetSelStart(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomEditAccess(Obj).SelStart;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomEdit_SetSelStart(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomEditAccess(Obj).SelStart := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomEdit_GetSelLength(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomEditAccess(Obj).SelLength;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomEdit_SetSelLength(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomEditAccess(Obj).SelLength := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomEdit_GetSelText(Obj: Pointer): PChar; BETH_CALL;
+begin
+  try
+    Result := ReturnStr(TCustomEditAccess(Obj).SelText);
+  except
+    Result := '';
+    ReportException;
+  end;
+end;
+
+procedure TCustomEdit_SetSelText(Obj: Pointer; Value: PChar); BETH_CALL;
+begin
+  try
+    TCustomEditAccess(Obj).HandleNeeded;
+    TCustomEditAccess(Obj).SelText := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomEdit_GetModified(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomEditAccess(Obj).Modified;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomEdit_SetModified(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomEditAccess(Obj).Modified := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomEdit_GetCanUndo(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomEditAccess(Obj).CanUndo;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+function TCustomEdit_GetPasswordChar(Obj: Pointer): AnsiChar; BETH_CALL;
+begin
+  try
+    Result := AnsiChar(TCustomEditAccess(Obj).PasswordChar);
+  except
+    Result := #0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomEdit_SetPasswordChar(Obj: Pointer; Value: AnsiChar); BETH_CALL;
+begin
+  try
+    TCustomEditAccess(Obj).PasswordChar := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomEdit_GetEchoMode(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomEditAccess(Obj).EchoMode);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomEdit_SetEchoMode(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomEditAccess(Obj).EchoMode := TEchoMode(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomEdit_GetCharCase(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomEditAccess(Obj).CharCase);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomEdit_SetCharCase(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomEditAccess(Obj).CharCase := TEditCharCase(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomEdit_GetAlignment(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomEditAccess(Obj).Alignment);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomEdit_SetAlignment(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomEditAccess(Obj).Alignment := TAlignment(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomEdit_GetTextHint(Obj: Pointer): PChar; BETH_CALL;
+begin
+  try
+    Result := ReturnStr(TCustomEditAccess(Obj).TextHint);
+  except
+    Result := '';
+    ReportException;
+  end;
+end;
+
+procedure TCustomEdit_SetTextHint(Obj: Pointer; Value: PChar); BETH_CALL;
+begin
+  try
+    TCustomEditAccess(Obj).TextHint := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomEdit_GetNumbersOnly(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomEditAccess(Obj).NumbersOnly;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomEdit_SetNumbersOnly(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomEditAccess(Obj).NumbersOnly := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomEdit_GetAutoSelect(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomEditAccess(Obj).AutoSelect;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomEdit_SetAutoSelect(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomEditAccess(Obj).AutoSelect := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomEdit_GetHideSelection(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomEditAccess(Obj).HideSelection;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomEdit_SetHideSelection(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomEditAccess(Obj).HideSelection := Value;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomEdit_GetCaretPos(Obj: Pointer; X, Y: PInteger); BETH_CALL;
+var
+  P: TPoint;
+begin
+  try
+    P := TCustomEditAccess(Obj).CaretPos;
+    X^ := P.X;
+    Y^ := P.Y;
+  except
+    X^ := 0;
+    Y^ := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomEdit_SetCaretPos(Obj: Pointer; X, Y: Integer); BETH_CALL;
+var
+  P: TPoint;
+begin
+  try
+    { Point(X, Y) は Windows ユニットの型 POINT の型変換と解釈されるため、組み立てて渡す }
+    P.X := X;
+    P.Y := Y;
+    TCustomEditAccess(Obj).CaretPos := P;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomEdit_SelectAll(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TCustomEditAccess(Obj).HandleNeeded;
+    TCustomEditAccess(Obj).SelectAll;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomEdit_ClearSelection(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TCustomEditAccess(Obj).HandleNeeded;
+    TCustomEditAccess(Obj).ClearSelection;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomEdit_Clear(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TCustomEditAccess(Obj).Clear;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomEdit_CopyToClipboard(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TCustomEditAccess(Obj).HandleNeeded;
+    TCustomEditAccess(Obj).CopyToClipboard;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomEdit_CutToClipboard(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TCustomEditAccess(Obj).HandleNeeded;
+    TCustomEditAccess(Obj).CutToClipboard;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomEdit_PasteFromClipboard(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TCustomEditAccess(Obj).HandleNeeded;
+    TCustomEditAccess(Obj).PasteFromClipboard;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomEdit_Undo(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TCustomEditAccess(Obj).HandleNeeded;
+    TCustomEditAccess(Obj).Undo;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomMemo_GetWordWrap(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomMemoAccess(Obj).WordWrap;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomMemo_SetWordWrap(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomMemoAccess(Obj).WordWrap := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomMemo_GetWantReturns(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomMemoAccess(Obj).WantReturns;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomMemo_SetWantReturns(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomMemoAccess(Obj).WantReturns := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomMemo_GetWantTabs(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomMemoAccess(Obj).WantTabs;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomMemo_SetWantTabs(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomMemoAccess(Obj).WantTabs := Value;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomMemo_Append(Obj: Pointer; S: PChar); BETH_CALL;
+begin
+  try
+    TCustomMemoAccess(Obj).Append(S);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomLabel_GetAlignment(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomLabelAccess(Obj).Alignment);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomLabel_SetAlignment(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomLabelAccess(Obj).Alignment := TAlignment(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomLabel_GetLayout(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomLabelAccess(Obj).Layout);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomLabel_SetLayout(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomLabelAccess(Obj).Layout := TTextLayout(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomLabel_GetWordWrap(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomLabelAccess(Obj).WordWrap;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomLabel_SetWordWrap(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomLabelAccess(Obj).WordWrap := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomLabel_GetTransparent(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomLabelAccess(Obj).Transparent;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomLabel_SetTransparent(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomLabelAccess(Obj).Transparent := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomLabel_GetFocusControl(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TCustomLabelAccess(Obj).FocusControl);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TCustomLabel_SetFocusControl(Obj: Pointer; Value: Pointer); BETH_CALL;
+begin
+  try
+    TCustomLabelAccess(Obj).FocusControl := TWinControl(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomLabel_GetShowAccelChar(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomLabelAccess(Obj).ShowAccelChar;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomLabel_SetShowAccelChar(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomLabelAccess(Obj).ShowAccelChar := Value;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TWinControl_SetOnEnter(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TWinControlAccess(Obj).OnEnter := @BridgeFor(TWinControl(Obj), MethodData(TWinControlAccess(Obj).OnEnter), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TWinControl_SetOnExit(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TWinControlAccess(Obj).OnExit := @BridgeFor(TWinControl(Obj), MethodData(TWinControlAccess(Obj).OnExit), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
+end;
+
 exports
   FreeNotify_SetCallback,
   Error_SetCallback,
@@ -12649,7 +13323,77 @@ exports
   Dialogs_InputBox,
   Dialogs_PasswordBox,
   Dialogs_InputQuery,
-  TApplication_MessageBox;
+  TApplication_MessageBox,
+
+  TControl_GetClientWidth,
+  TControl_SetClientWidth,
+  TControl_GetClientHeight,
+  TControl_SetClientHeight,
+  TControl_Invalidate,
+  TControl_Repaint,
+  TControl_Refresh,
+  TControl_Update,
+  TControl_BringToFront,
+  TControl_SendToBack,
+  TControl_SetBounds,
+  TWinControl_SetFocus,
+  TWinControl_CanFocus,
+  TWinControl_Focused,
+  TCustomEdit_GetSelStart,
+  TCustomEdit_SetSelStart,
+  TCustomEdit_GetSelLength,
+  TCustomEdit_SetSelLength,
+  TCustomEdit_GetSelText,
+  TCustomEdit_SetSelText,
+  TCustomEdit_GetModified,
+  TCustomEdit_SetModified,
+  TCustomEdit_GetCanUndo,
+  TCustomEdit_GetPasswordChar,
+  TCustomEdit_SetPasswordChar,
+  TCustomEdit_GetEchoMode,
+  TCustomEdit_SetEchoMode,
+  TCustomEdit_GetCharCase,
+  TCustomEdit_SetCharCase,
+  TCustomEdit_GetAlignment,
+  TCustomEdit_SetAlignment,
+  TCustomEdit_GetTextHint,
+  TCustomEdit_SetTextHint,
+  TCustomEdit_GetNumbersOnly,
+  TCustomEdit_SetNumbersOnly,
+  TCustomEdit_GetAutoSelect,
+  TCustomEdit_SetAutoSelect,
+  TCustomEdit_GetHideSelection,
+  TCustomEdit_SetHideSelection,
+  TCustomEdit_GetCaretPos,
+  TCustomEdit_SetCaretPos,
+  TCustomEdit_SelectAll,
+  TCustomEdit_ClearSelection,
+  TCustomEdit_Clear,
+  TCustomEdit_CopyToClipboard,
+  TCustomEdit_CutToClipboard,
+  TCustomEdit_PasteFromClipboard,
+  TCustomEdit_Undo,
+  TCustomMemo_GetWordWrap,
+  TCustomMemo_SetWordWrap,
+  TCustomMemo_GetWantReturns,
+  TCustomMemo_SetWantReturns,
+  TCustomMemo_GetWantTabs,
+  TCustomMemo_SetWantTabs,
+  TCustomMemo_Append,
+  TCustomLabel_GetAlignment,
+  TCustomLabel_SetAlignment,
+  TCustomLabel_GetLayout,
+  TCustomLabel_SetLayout,
+  TCustomLabel_GetWordWrap,
+  TCustomLabel_SetWordWrap,
+  TCustomLabel_GetTransparent,
+  TCustomLabel_SetTransparent,
+  TCustomLabel_GetFocusControl,
+  TCustomLabel_SetFocusControl,
+  TCustomLabel_GetShowAccelChar,
+  TCustomLabel_SetShowAccelChar,
+  TWinControl_SetOnEnter,
+  TWinControl_SetOnExit;
 
 begin
   RequireDerivedFormResource := False;

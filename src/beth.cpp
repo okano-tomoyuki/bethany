@@ -258,6 +258,8 @@ TComponent* TComponent::FromHandle(ObjectHandle handle)
 
 TControl::TControl(ObjectHandle handle)
     : TComponent(handle)
+    , ClientWidth(this, &TControl::GetClientWidthImpl, &TControl::SetClientWidthImpl)
+    , ClientHeight(this, &TControl::GetClientHeightImpl, &TControl::SetClientHeightImpl)
     , Parent(this, &TControl::GetParentImpl, &TControl::SetParentImpl)
     , Left(this, &TControl::GetLeftImpl, &TControl::SetLeftImpl)
     , Top(this, &TControl::GetTopImpl, &TControl::SetTopImpl)
@@ -294,6 +296,45 @@ TControl::TControl(ObjectHandle handle)
     , borderSpacing_(handle ? internal::TControl_GetBorderSpacing(handle) : nullptr)
     , constraints_(handle ? internal::TControl_GetConstraints(handle) : nullptr)
 {}
+
+// ---- docs/adr/0042 ----
+
+int TControl::GetClientWidthImpl(TObject* owner)
+{
+    return internal::TControl_GetClientWidth(owner->Handle());
+}
+
+void TControl::SetClientWidthImpl(TObject* owner, const int& value)
+{
+    internal::TControl_SetClientWidth(owner->Handle(), value);
+}
+
+int TControl::GetClientHeightImpl(TObject* owner)
+{
+    return internal::TControl_GetClientHeight(owner->Handle());
+}
+
+void TControl::SetClientHeightImpl(TObject* owner, const int& value)
+{
+    internal::TControl_SetClientHeight(owner->Handle(), value);
+}
+
+void TControl::Invalidate() { internal::TControl_Invalidate(handle_); }
+
+void TControl::Repaint() { internal::TControl_Repaint(handle_); }
+
+void TControl::Refresh() { internal::TControl_Refresh(handle_); }
+
+void TControl::Update() { internal::TControl_Update(handle_); }
+
+void TControl::BringToFront() { internal::TControl_BringToFront(handle_); }
+
+void TControl::SendToBack() { internal::TControl_SendToBack(handle_); }
+
+void TControl::SetBounds(int ALeft, int ATop, int AWidth, int AHeight)
+{
+    internal::TControl_SetBounds(handle_, ALeft, ATop, AWidth, AHeight);
+}
 
 void TControl::Show() { internal::TControl_Show(handle_); }
 void TControl::Hide() { internal::TControl_Hide(handle_); }
@@ -586,12 +627,72 @@ void BETH_CALL TControl::MouseWheelTrampoline(ObjectHandle sender, internal::int
 
 TWinControl::TWinControl(ObjectHandle handle)
     : TControl(handle)
+    , OnEnter(this, &TWinControl::GetOnEnterImpl, &TWinControl::SetOnEnterImpl)
+    , OnExit(this, &TWinControl::GetOnExitImpl, &TWinControl::SetOnExitImpl)
     , OnKeyDown(this, &TWinControl::GetOnKeyDownImpl, &TWinControl::SetOnKeyDownImpl)
     , OnKeyUp(this, &TWinControl::GetOnKeyUpImpl, &TWinControl::SetOnKeyUpImpl)
     , OnKeyPress(this, &TWinControl::GetOnKeyPressImpl, &TWinControl::SetOnKeyPressImpl)
     , TabOrder(this, &TWinControl::GetTabOrderImpl, &TWinControl::SetTabOrderImpl)
     , TabStop(this, &TWinControl::GetTabStopImpl, &TWinControl::SetTabStopImpl)
 {}
+
+// ---- docs/adr/0042 ----
+
+void TWinControl::SetFocus() { internal::TWinControl_SetFocus(handle_); }
+
+bool TWinControl::CanFocus() const { return internal::TWinControl_CanFocus(handle_) != 0; }
+
+bool TWinControl::Focused() const { return internal::TWinControl_Focused(handle_) != 0; }
+
+TNotifyEvent TWinControl::GetOnEnterImpl(TObject* owner)
+{
+    return static_cast<TWinControl*>(owner)->onEnter_;
+}
+void TWinControl::SetOnEnterImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TWinControl* self = static_cast<TWinControl*>(owner);
+    self->onEnter_ = value;
+    if (value && !self->onEnterHooked_)
+    {
+        internal::TWinControl_SetOnEnter(self->handle_, &TWinControl::EnterTrampoline, nullptr);
+        self->onEnterHooked_ = true;
+    }
+}
+void BETH_CALL TWinControl::EnterTrampoline(ObjectHandle sender, void*)
+{
+    GuardCallback([&] {
+        TWinControl* self = static_cast<TWinControl*>(FromHandle(sender));
+        if (!self || !self->onEnter_)
+            return;
+        TNotifyEvent handler = self->onEnter_;
+        handler(self);
+    });
+}
+
+TNotifyEvent TWinControl::GetOnExitImpl(TObject* owner)
+{
+    return static_cast<TWinControl*>(owner)->onExit_;
+}
+void TWinControl::SetOnExitImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TWinControl* self = static_cast<TWinControl*>(owner);
+    self->onExit_ = value;
+    if (value && !self->onExitHooked_)
+    {
+        internal::TWinControl_SetOnExit(self->handle_, &TWinControl::ExitTrampoline, nullptr);
+        self->onExitHooked_ = true;
+    }
+}
+void BETH_CALL TWinControl::ExitTrampoline(ObjectHandle sender, void*)
+{
+    GuardCallback([&] {
+        TWinControl* self = static_cast<TWinControl*>(FromHandle(sender));
+        if (!self || !self->onExit_)
+            return;
+        TNotifyEvent handler = self->onExit_;
+        handler(self);
+    });
+}
 
 int  TWinControl::GetTabOrderImpl(TObject* owner)                   { return internal::TWinControl_GetTabOrder(owner->Handle()); }
 void TWinControl::SetTabOrderImpl(TObject* owner, const int& value)  { internal::TWinControl_SetTabOrder(owner->Handle(), value); }
@@ -1253,6 +1354,76 @@ TCheckGroup::TCheckGroup(TComponent* AOwner)
     : TCustomCheckGroup(internal::TCheckGroup_Create(HandleOf(AOwner)))
 {}
 
+TCustomLabel::TCustomLabel(ObjectHandle handle)
+    : TGraphicControl(handle)
+    , Alignment(this, &TCustomLabel::GetAlignmentImpl, &TCustomLabel::SetAlignmentImpl)
+    , Layout(this, &TCustomLabel::GetLayoutImpl, &TCustomLabel::SetLayoutImpl)
+    , WordWrap(this, &TCustomLabel::GetWordWrapImpl, &TCustomLabel::SetWordWrapImpl)
+    , Transparent(this, &TCustomLabel::GetTransparentImpl, &TCustomLabel::SetTransparentImpl)
+    , FocusControl(this, &TCustomLabel::GetFocusControlImpl, &TCustomLabel::SetFocusControlImpl)
+    , ShowAccelChar(this, &TCustomLabel::GetShowAccelCharImpl, &TCustomLabel::SetShowAccelCharImpl)
+{}
+
+TAlignment TCustomLabel::GetAlignmentImpl(TObject* owner)
+{
+    return static_cast<TAlignment>(internal::TCustomLabel_GetAlignment(owner->Handle()));
+}
+
+void TCustomLabel::SetAlignmentImpl(TObject* owner, const TAlignment& value)
+{
+    internal::TCustomLabel_SetAlignment(owner->Handle(), value);
+}
+
+TTextLayout TCustomLabel::GetLayoutImpl(TObject* owner)
+{
+    return static_cast<TTextLayout>(internal::TCustomLabel_GetLayout(owner->Handle()));
+}
+
+void TCustomLabel::SetLayoutImpl(TObject* owner, const TTextLayout& value)
+{
+    internal::TCustomLabel_SetLayout(owner->Handle(), value);
+}
+
+bool TCustomLabel::GetWordWrapImpl(TObject* owner)
+{
+    return internal::TCustomLabel_GetWordWrap(owner->Handle()) != 0;
+}
+
+void TCustomLabel::SetWordWrapImpl(TObject* owner, const bool& value)
+{
+    internal::TCustomLabel_SetWordWrap(owner->Handle(), value ? 1 : 0);
+}
+
+bool TCustomLabel::GetTransparentImpl(TObject* owner)
+{
+    return internal::TCustomLabel_GetTransparent(owner->Handle()) != 0;
+}
+
+void TCustomLabel::SetTransparentImpl(TObject* owner, const bool& value)
+{
+    internal::TCustomLabel_SetTransparent(owner->Handle(), value ? 1 : 0);
+}
+
+TWinControl* TCustomLabel::GetFocusControlImpl(TObject* owner)
+{
+    return dynamic_cast<TWinControl*>(FromHandle(internal::TCustomLabel_GetFocusControl(owner->Handle())));
+}
+
+void TCustomLabel::SetFocusControlImpl(TObject* owner, TWinControl* const& value)
+{
+    internal::TCustomLabel_SetFocusControl(owner->Handle(), value ? value->Handle() : nullptr);
+}
+
+bool TCustomLabel::GetShowAccelCharImpl(TObject* owner)
+{
+    return internal::TCustomLabel_GetShowAccelChar(owner->Handle()) != 0;
+}
+
+void TCustomLabel::SetShowAccelCharImpl(TObject* owner, const bool& value)
+{
+    internal::TCustomLabel_SetShowAccelChar(owner->Handle(), value ? 1 : 0);
+}
+
 TLabel::TLabel(TComponent* AOwner)
     : TCustomLabel(internal::TLabel_Create(HandleOf(AOwner)))
 {}
@@ -1430,10 +1601,178 @@ TToggleBox::TToggleBox(TComponent* AOwner)
 
 TCustomEdit::TCustomEdit(ObjectHandle handle)
     : TWinControl(handle)
+    , SelStart(this, &TCustomEdit::GetSelStartImpl, &TCustomEdit::SetSelStartImpl)
+    , SelLength(this, &TCustomEdit::GetSelLengthImpl, &TCustomEdit::SetSelLengthImpl)
+    , SelText(this, &TCustomEdit::GetSelTextImpl, &TCustomEdit::SetSelTextImpl)
+    , Modified(this, &TCustomEdit::GetModifiedImpl, &TCustomEdit::SetModifiedImpl)
+    , CanUndo(this, &TCustomEdit::GetCanUndoImpl)
+    , PasswordChar(this, &TCustomEdit::GetPasswordCharImpl, &TCustomEdit::SetPasswordCharImpl)
+    , EchoMode(this, &TCustomEdit::GetEchoModeImpl, &TCustomEdit::SetEchoModeImpl)
+    , CharCase(this, &TCustomEdit::GetCharCaseImpl, &TCustomEdit::SetCharCaseImpl)
+    , Alignment(this, &TCustomEdit::GetAlignmentImpl, &TCustomEdit::SetAlignmentImpl)
+    , TextHint(this, &TCustomEdit::GetTextHintImpl, &TCustomEdit::SetTextHintImpl)
+    , NumbersOnly(this, &TCustomEdit::GetNumbersOnlyImpl, &TCustomEdit::SetNumbersOnlyImpl)
+    , AutoSelect(this, &TCustomEdit::GetAutoSelectImpl, &TCustomEdit::SetAutoSelectImpl)
+    , HideSelection(this, &TCustomEdit::GetHideSelectionImpl, &TCustomEdit::SetHideSelectionImpl)
+    , CaretPos(this, &TCustomEdit::GetCaretPosImpl, &TCustomEdit::SetCaretPosImpl)
     , MaxLength(this, &TCustomEdit::GetMaxLengthImpl, &TCustomEdit::SetMaxLengthImpl)
     , ReadOnly(this, &TCustomEdit::GetReadOnlyImpl, &TCustomEdit::SetReadOnlyImpl)
     , OnChange(this, &TCustomEdit::GetOnChangeImpl, &TCustomEdit::SetOnChangeImpl)
 {}
+
+// ---- docs/adr/0042 ----
+
+int TCustomEdit::GetSelStartImpl(TObject* owner)
+{
+    return internal::TCustomEdit_GetSelStart(owner->Handle());
+}
+
+void TCustomEdit::SetSelStartImpl(TObject* owner, const int& value)
+{
+    internal::TCustomEdit_SetSelStart(owner->Handle(), value);
+}
+
+int TCustomEdit::GetSelLengthImpl(TObject* owner)
+{
+    return internal::TCustomEdit_GetSelLength(owner->Handle());
+}
+
+void TCustomEdit::SetSelLengthImpl(TObject* owner, const int& value)
+{
+    internal::TCustomEdit_SetSelLength(owner->Handle(), value);
+}
+
+std::string TCustomEdit::GetSelTextImpl(TObject* owner)
+{
+    return internal::TCustomEdit_GetSelText(owner->Handle());
+}
+
+void TCustomEdit::SetSelTextImpl(TObject* owner, const std::string& value)
+{
+    internal::TCustomEdit_SetSelText(owner->Handle(), value.c_str());
+}
+
+bool TCustomEdit::GetModifiedImpl(TObject* owner)
+{
+    return internal::TCustomEdit_GetModified(owner->Handle()) != 0;
+}
+
+void TCustomEdit::SetModifiedImpl(TObject* owner, const bool& value)
+{
+    internal::TCustomEdit_SetModified(owner->Handle(), value ? 1 : 0);
+}
+
+bool TCustomEdit::GetCanUndoImpl(TObject* owner)
+{
+    return internal::TCustomEdit_GetCanUndo(owner->Handle()) != 0;
+}
+
+char TCustomEdit::GetPasswordCharImpl(TObject* owner)
+{
+    return internal::TCustomEdit_GetPasswordChar(owner->Handle());
+}
+
+void TCustomEdit::SetPasswordCharImpl(TObject* owner, const char& value)
+{
+    internal::TCustomEdit_SetPasswordChar(owner->Handle(), value);
+}
+
+TEchoMode TCustomEdit::GetEchoModeImpl(TObject* owner)
+{
+    return static_cast<TEchoMode>(internal::TCustomEdit_GetEchoMode(owner->Handle()));
+}
+
+void TCustomEdit::SetEchoModeImpl(TObject* owner, const TEchoMode& value)
+{
+    internal::TCustomEdit_SetEchoMode(owner->Handle(), value);
+}
+
+TEditCharCase TCustomEdit::GetCharCaseImpl(TObject* owner)
+{
+    return static_cast<TEditCharCase>(internal::TCustomEdit_GetCharCase(owner->Handle()));
+}
+
+void TCustomEdit::SetCharCaseImpl(TObject* owner, const TEditCharCase& value)
+{
+    internal::TCustomEdit_SetCharCase(owner->Handle(), value);
+}
+
+TAlignment TCustomEdit::GetAlignmentImpl(TObject* owner)
+{
+    return static_cast<TAlignment>(internal::TCustomEdit_GetAlignment(owner->Handle()));
+}
+
+void TCustomEdit::SetAlignmentImpl(TObject* owner, const TAlignment& value)
+{
+    internal::TCustomEdit_SetAlignment(owner->Handle(), value);
+}
+
+std::string TCustomEdit::GetTextHintImpl(TObject* owner)
+{
+    return internal::TCustomEdit_GetTextHint(owner->Handle());
+}
+
+void TCustomEdit::SetTextHintImpl(TObject* owner, const std::string& value)
+{
+    internal::TCustomEdit_SetTextHint(owner->Handle(), value.c_str());
+}
+
+bool TCustomEdit::GetNumbersOnlyImpl(TObject* owner)
+{
+    return internal::TCustomEdit_GetNumbersOnly(owner->Handle()) != 0;
+}
+
+void TCustomEdit::SetNumbersOnlyImpl(TObject* owner, const bool& value)
+{
+    internal::TCustomEdit_SetNumbersOnly(owner->Handle(), value ? 1 : 0);
+}
+
+bool TCustomEdit::GetAutoSelectImpl(TObject* owner)
+{
+    return internal::TCustomEdit_GetAutoSelect(owner->Handle()) != 0;
+}
+
+void TCustomEdit::SetAutoSelectImpl(TObject* owner, const bool& value)
+{
+    internal::TCustomEdit_SetAutoSelect(owner->Handle(), value ? 1 : 0);
+}
+
+bool TCustomEdit::GetHideSelectionImpl(TObject* owner)
+{
+    return internal::TCustomEdit_GetHideSelection(owner->Handle()) != 0;
+}
+
+void TCustomEdit::SetHideSelectionImpl(TObject* owner, const bool& value)
+{
+    internal::TCustomEdit_SetHideSelection(owner->Handle(), value ? 1 : 0);
+}
+
+TPoint TCustomEdit::GetCaretPosImpl(TObject* owner)
+{
+    internal::int_t x = 0, y = 0;
+    internal::TCustomEdit_GetCaretPos(owner->Handle(), &x, &y);
+    TPoint p = {x, y};
+    return p;
+}
+
+void TCustomEdit::SetCaretPosImpl(TObject* owner, const TPoint& value)
+{
+    internal::TCustomEdit_SetCaretPos(owner->Handle(), value.X, value.Y);
+}
+
+void TCustomEdit::SelectAll() { internal::TCustomEdit_SelectAll(handle_); }
+
+void TCustomEdit::ClearSelection() { internal::TCustomEdit_ClearSelection(handle_); }
+
+void TCustomEdit::Clear() { internal::TCustomEdit_Clear(handle_); }
+
+void TCustomEdit::CopyToClipboard() { internal::TCustomEdit_CopyToClipboard(handle_); }
+
+void TCustomEdit::CutToClipboard() { internal::TCustomEdit_CutToClipboard(handle_); }
+
+void TCustomEdit::PasteFromClipboard() { internal::TCustomEdit_PasteFromClipboard(handle_); }
+
+void TCustomEdit::Undo() { internal::TCustomEdit_Undo(handle_); }
 
 TNotifyEvent TCustomEdit::GetOnChangeImpl(TObject* owner)
 {
@@ -2362,10 +2701,47 @@ TSplitter::TSplitter(TComponent* AOwner)
 
 TCustomMemo::TCustomMemo(ObjectHandle handle)
     : TCustomEdit(handle)
+    , WordWrap(this, &TCustomMemo::GetWordWrapImpl, &TCustomMemo::SetWordWrapImpl)
+    , WantReturns(this, &TCustomMemo::GetWantReturnsImpl, &TCustomMemo::SetWantReturnsImpl)
+    , WantTabs(this, &TCustomMemo::GetWantTabsImpl, &TCustomMemo::SetWantTabsImpl)
     , ScrollBars(this, &TCustomMemo::GetScrollBarsImpl, &TCustomMemo::SetScrollBarsImpl)
     , Lines(this, &TCustomMemo::GetLinesImpl)
     , lines_(this, &internal::TCustomMemo_GetLines)
 {}
+
+// ---- docs/adr/0042 ----
+
+bool TCustomMemo::GetWordWrapImpl(TObject* owner)
+{
+    return internal::TCustomMemo_GetWordWrap(owner->Handle()) != 0;
+}
+
+void TCustomMemo::SetWordWrapImpl(TObject* owner, const bool& value)
+{
+    internal::TCustomMemo_SetWordWrap(owner->Handle(), value ? 1 : 0);
+}
+
+bool TCustomMemo::GetWantReturnsImpl(TObject* owner)
+{
+    return internal::TCustomMemo_GetWantReturns(owner->Handle()) != 0;
+}
+
+void TCustomMemo::SetWantReturnsImpl(TObject* owner, const bool& value)
+{
+    internal::TCustomMemo_SetWantReturns(owner->Handle(), value ? 1 : 0);
+}
+
+bool TCustomMemo::GetWantTabsImpl(TObject* owner)
+{
+    return internal::TCustomMemo_GetWantTabs(owner->Handle()) != 0;
+}
+
+void TCustomMemo::SetWantTabsImpl(TObject* owner, const bool& value)
+{
+    internal::TCustomMemo_SetWantTabs(owner->Handle(), value ? 1 : 0);
+}
+
+void TCustomMemo::Append(const std::string& S) { internal::TCustomMemo_Append(handle_, S.c_str()); }
 
 TStrings* TCustomMemo::GetLinesImpl(TObject* owner) { return &static_cast<TCustomMemo*>(owner)->lines_; }
 

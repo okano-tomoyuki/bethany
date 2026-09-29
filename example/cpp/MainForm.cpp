@@ -3,6 +3,8 @@
 // <bethany-designer:end id="beth_SourceBegin" hash="209f96a1">
 #include "dialogs/AboutForm.hpp"
 
+#include <cctype>
+
 // <bethany-designer:begin id="beth_NamespaceBegin">
 using namespace beth;
 
@@ -32,6 +34,15 @@ void TMainForm::beth_CreateComponents()
     FileSaveAsItem = new TMenuItem(this);
     N1 = new TMenuItem(this);
     FileExitItem = new TMenuItem(this);
+    EditMenu = new TMenuItem(this);
+    EditUndoItem = new TMenuItem(this);
+    N2 = new TMenuItem(this);
+    EditCutItem = new TMenuItem(this);
+    EditCopyItem = new TMenuItem(this);
+    EditPasteItem = new TMenuItem(this);
+    EditSelectAllItem = new TMenuItem(this);
+    N3 = new TMenuItem(this);
+    EditFindItem = new TMenuItem(this);
     FormatMenu = new TMenuItem(this);
     FormatFontItem = new TMenuItem(this);
     HelpMenu = new TMenuItem(this);
@@ -39,6 +50,7 @@ void TMainForm::beth_CreateComponents()
     OpenDialog1 = new TOpenDialog(this);
     SaveDialog1 = new TSaveDialog(this);
     FontDialog1 = new TFontDialog(this);
+    FindDialog1 = new TFindDialog(this);
 
     Width = 640;
     Height = 480;
@@ -92,6 +104,45 @@ void TMainForm::beth_CreateComponents()
     FileExitItem->OnClick = [this](TObject* Sender) { FileExitItemClick(Sender); };
     FileMenu->Add(FileExitItem);
 
+    EditMenu->Caption = "&Edit";
+    MainMenu1->Items->Add(EditMenu);
+
+    EditUndoItem->Caption = "&Undo";
+    EditUndoItem->ShortCut = TextToShortCut("Ctrl+Z");
+    EditUndoItem->OnClick = [this](TObject* Sender) { EditUndoItemClick(Sender); };
+    EditMenu->Add(EditUndoItem);
+
+    N2->Caption = "-";
+    EditMenu->Add(N2);
+
+    EditCutItem->Caption = "Cu&t";
+    EditCutItem->ShortCut = TextToShortCut("Ctrl+X");
+    EditCutItem->OnClick = [this](TObject* Sender) { EditCutItemClick(Sender); };
+    EditMenu->Add(EditCutItem);
+
+    EditCopyItem->Caption = "&Copy";
+    EditCopyItem->ShortCut = TextToShortCut("Ctrl+C");
+    EditCopyItem->OnClick = [this](TObject* Sender) { EditCopyItemClick(Sender); };
+    EditMenu->Add(EditCopyItem);
+
+    EditPasteItem->Caption = "&Paste";
+    EditPasteItem->ShortCut = TextToShortCut("Ctrl+V");
+    EditPasteItem->OnClick = [this](TObject* Sender) { EditPasteItemClick(Sender); };
+    EditMenu->Add(EditPasteItem);
+
+    EditSelectAllItem->Caption = "Select &All";
+    EditSelectAllItem->ShortCut = TextToShortCut("Ctrl+A");
+    EditSelectAllItem->OnClick = [this](TObject* Sender) { EditSelectAllItemClick(Sender); };
+    EditMenu->Add(EditSelectAllItem);
+
+    N3->Caption = "-";
+    EditMenu->Add(N3);
+
+    EditFindItem->Caption = "&Find...";
+    EditFindItem->ShortCut = TextToShortCut("Ctrl+F");
+    EditFindItem->OnClick = [this](TObject* Sender) { EditFindItemClick(Sender); };
+    EditMenu->Add(EditFindItem);
+
     FormatMenu->Caption = "F&ormat";
     MainMenu1->Items->Add(FormatMenu);
 
@@ -112,10 +163,65 @@ void TMainForm::beth_CreateComponents()
     SaveDialog1->Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
     SaveDialog1->DefaultExt = "txt";
     SaveDialog1->Options = ofEnableSizing | ofViewDetail | ofOverwritePrompt;
+
+    FindDialog1->Options = frDown | frHideWholeWord | frHideUpDown;
+    FindDialog1->OnFind = [this](TObject* Sender) { FindDialog1Find(Sender); };
 }
-// <bethany-designer:end id="beth_CreateComponents" hash="03a19671">
+// <bethany-designer:end id="beth_CreateComponents" hash="48596058">
 
 // <bethany-designer:handler-stubs>
+
+void TMainForm::EditUndoItemClick(TObject* Sender)
+{
+    if (Memo1->CanUndo)
+        Memo1->Undo();
+}
+
+void TMainForm::EditCutItemClick(TObject* Sender)
+{
+    Memo1->CutToClipboard();
+}
+
+void TMainForm::EditCopyItemClick(TObject* Sender)
+{
+    Memo1->CopyToClipboard();
+}
+
+void TMainForm::EditPasteItemClick(TObject* Sender)
+{
+    Memo1->PasteFromClipboard();
+}
+
+void TMainForm::EditSelectAllItemClick(TObject* Sender)
+{
+    Memo1->SelectAll();
+}
+
+void TMainForm::EditFindItemClick(TObject* Sender)
+{
+    // 選択している文字列があれば、それを探す文字列にする
+    if (Memo1->SelLength > 0)
+        FindDialog1->FindText = Memo1->SelText;
+    FindDialog1->Execute();  // モードレス。「次を検索」を押すたびに OnFind が呼ばれる
+}
+
+void TMainForm::FindDialog1Find(TObject* Sender)
+{
+    // 選択の後ろ(選択が無ければキャレットの位置)から探し、見つけたら選択する
+    const bool matchCase = (FindDialog1->Options & frMatchCase) != 0;
+    const std::string text = Memo1->Text;
+    const std::string what = FindDialog1->FindText;
+    const std::size_t from = Utf8Offset(text, Memo1->SelStart + Memo1->SelLength);
+    const std::size_t found = matchCase ? text.find(what, from) : Lower(text).find(Lower(what), from);
+    if (found == std::string::npos)
+    {
+        ShowMessage("\"" + what + "\" was not found.");
+        return;
+    }
+    Memo1->SelStart = Utf8Length(text.substr(0, found));
+    Memo1->SelLength = Utf8Length(what);
+    Memo1->SetFocus();
+}
 
 void TMainForm::FormCreate(TObject* Sender)
 {
@@ -232,6 +338,36 @@ bool TMainForm::ConfirmDiscard()
     default:  // mrCancel(× で閉じたときも)
         return false;
     }
+}
+
+// ---- 検索のための文字列の操作 ----
+// SelStart・SelLength は文字の数(UTF-8 の文字)で、std::string はバイトの数なので、変換する。
+
+int TMainForm::Utf8Length(const std::string& s)
+{
+    int n = 0;
+    for (unsigned char c : s)
+        if ((c & 0xC0) != 0x80)  // UTF-8 の後続のバイト(10xxxxxx)でなければ、文字の始まり
+            ++n;
+    return n;
+}
+
+std::size_t TMainForm::Utf8Offset(const std::string& s, int chars)
+{
+    std::size_t i = 0;
+    for (int n = 0; i < s.size(); ++i)
+    {
+        if ((static_cast<unsigned char>(s[i]) & 0xC0) != 0x80 && n++ == chars)
+            break;
+    }
+    return i;
+}
+
+std::string TMainForm::Lower(std::string s)
+{
+    for (char& c : s)
+        c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));  // ASCII だけを小文字にする
+    return s;
 }
 
 // <bethany-designer:begin id="beth_NamespaceEnd">

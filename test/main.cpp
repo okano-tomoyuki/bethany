@@ -2474,6 +2474,27 @@ int main()
     tempLabel->Free();
     std::printf("Destroyed labels after Free(): %d (expected 1)\n", g_destroyedLabels);
 
+    // テキストの編集(docs/adr/0042)。表示の前でも、選択の置き換えは DLL がハンドルを作ってから行う。
+    {
+        TEdit* selEdit = new TEdit(Form1);
+        selEdit->Parent = Form1;
+        selEdit->Left = 200;
+        selEdit->Top = 320;
+        selEdit->Text = "Hello World";
+        selEdit->SelStart = 6;
+        selEdit->SelLength = 5;
+        std::printf("SelText=%s (expected World)", std::string(selEdit->SelText).c_str());
+        selEdit->SelText = "Bethany";
+        std::printf(", Text after SelText=%s (expected Hello Bethany)\n", std::string(selEdit->Text).c_str());
+        selEdit->TextHint = "hint";
+        selEdit->CharCase = ecUpperCase;
+        std::printf("TextHint=%s, CharCase=%d (expected ecUpperCase=%d), CanFocus before Show=%s\n",
+                    std::string(selEdit->TextHint).c_str(), (int)(TEditCharCase)selEdit->CharCase, (int)ecUpperCase,
+                    selEdit->CanFocus() ? "true" : "false");
+        selEdit->OnEnter = [](TObject*) { std::printf("selEdit OnEnter\n"); };
+        selEdit->OnExit = [](TObject*) { std::printf("selEdit OnExit\n"); };
+    }
+
     std::printf("Running (click the buttons, then close the window three times: the first two closes are blocked, or press Quit)...\n");
     std::fflush(stdout);
     Application->Run();

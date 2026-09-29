@@ -37,7 +37,7 @@ from ._core import (BethError, Ref, TRect, TPoint, TObject, TPersistent, TCompon
                    MB_DEFBUTTON1, MB_DEFBUTTON2, MB_DEFBUTTON3,
                    IDOK, IDCANCEL, IDABORT, IDRETRY, IDIGNORE, IDYES, IDNO)
 from ._core import (lib, _mixins, _register, _event_types, _ItemMixin, _Prop, _Indexed, _Event,
-                   _int, _float, _bool, _str, _char, _ptr, _rect_conv, _enum, _set, _comp, _existing, _item, _obj, _view,
+                   _int, _float, _bool, _str, _char, _ptr, _rect_conv, _point_conv, _enum, _set, _comp, _existing, _item, _obj, _view,
                    _str_key, _enc, _dec, _h, _b, _rect, _point, _to_enum, _to_comp, _to_existing, _to_item, _to_obj,
                    _a_int, _a_bool, _a_rect, _a_enum, _a_comp, _a_item, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_enum)
 
@@ -129,6 +129,42 @@ class TAnchorKind(enum.IntEnum):
     akBottom = 3
 
 akTop, akLeft, akRight, akBottom = TAnchorKind.akTop, TAnchorKind.akLeft, TAnchorKind.akRight, TAnchorKind.akBottom
+
+
+# 文字の横の揃え(LCL の TAlignment)。
+class TAlignment(enum.IntEnum):
+    taLeftJustify = 0
+    taRightJustify = 1
+    taCenter = 2
+
+taLeftJustify, taRightJustify, taCenter = TAlignment.taLeftJustify, TAlignment.taRightJustify, TAlignment.taCenter
+
+
+# 文字の縦の揃え(TLabel の Layout)。
+class TTextLayout(enum.IntEnum):
+    tlTop = 0
+    tlCenter = 1
+    tlBottom = 2
+
+tlTop, tlCenter, tlBottom = TTextLayout.tlTop, TTextLayout.tlCenter, TTextLayout.tlBottom
+
+
+# 入力した文字の表示のしかた(TEdit の EchoMode)。emPassword は PasswordChar(既定は *)で伏せる。
+class TEchoMode(enum.IntEnum):
+    emNormal = 0
+    emNone = 1
+    emPassword = 2
+
+emNormal, emNone, emPassword = TEchoMode.emNormal, TEchoMode.emNone, TEchoMode.emPassword
+
+
+# 入力した英字のそろえ方(TEdit の CharCase。VCL と同じ綴り)。
+class TEditCharCase(enum.IntEnum):
+    ecNormal = 0
+    ecUpperCase = 1
+    ecLowerCase = 2
+
+ecNormal, ecUpperCase, ecLowerCase = TEditCharCase.ecNormal, TEditCharCase.ecUpperCase, TEditCharCase.ecLowerCase
 
 
 # つまみを左右または上下にドラッグして値を選ぶスクロールバー。
@@ -329,14 +365,6 @@ class TSortDirection(enum.IntEnum):
     sdDescending = 1
 
 sdAscending, sdDescending = TSortDirection.sdAscending, TSortDirection.sdDescending
-
-
-class TAlignment(enum.IntEnum):
-    taLeftJustify = 0
-    taRightJustify = 1
-    taCenter = 2
-
-taLeftJustify, taRightJustify, taCenter = TAlignment.taLeftJustify, TAlignment.taRightJustify, TAlignment.taCenter
 
 
 class TItemChange(enum.IntEnum):
@@ -1176,6 +1204,31 @@ class TControlBorderSpacing(TPersistent):
 
 
 class TControl(TComponent):
+    # クライアント領域(枠・タイトルバー・メニューの内側)の幅。設定するとそれに合わせて Width が変わる。
+    ClientWidth = _Prop("TControl_GetClientWidth", "TControl_SetClientWidth", _int)
+    # クライアント領域の高さ。
+    ClientHeight = _Prop("TControl_GetClientHeight", "TControl_SetClientHeight", _int)
+    # 再描画を依頼する(描画はメッセージの処理のときに行われる)。
+    def Invalidate(self):
+        lib.TControl_Invalidate(self._current())
+    # すぐに再描画する。
+    def Repaint(self):
+        lib.TControl_Repaint(self._current())
+    # すぐに再描画する(Repaint と同じ)。
+    def Refresh(self):
+        lib.TControl_Refresh(self._current())
+    # 再描画を依頼済みの部分を、すぐに描画する。
+    def Update(self):
+        lib.TControl_Update(self._current())
+    # 兄弟の中で一番手前にする。
+    def BringToFront(self):
+        lib.TControl_BringToFront(self._current())
+    # 兄弟の中で一番奥にする。
+    def SendToBack(self):
+        lib.TControl_SendToBack(self._current())
+    # 位置と大きさをまとめて設定する(Left・Top・Width・Height を 1 つずつ設定するより、配置の計算が 1 回で済む)。
+    def SetBounds(self, ALeft, ATop, AWidth, AHeight):
+        lib.TControl_SetBounds(self._current(), int(ALeft), int(ATop), int(AWidth), int(AHeight))
     Parent = _Prop("TControl_GetParent", "TControl_SetParent", _comp("TWinControl"))
     Left = _Prop("TControl_GetLeft", "TControl_SetLeft", _int)
     Top = _Prop("TControl_GetTop", "TControl_SetTop", _int)
@@ -1228,6 +1281,20 @@ class TControl(TComponent):
 
 
 class TWinControl(TControl):
+    # フォーカスを移す(表示されていない・無効なコントロールには移せず、例外になる。CanFocus で確かめる)。
+    def SetFocus(self):
+        lib.TWinControl_SetFocus(self._current())
+    # フォーカスを移せるか(自分と親がすべて表示され、有効か)。
+    def CanFocus(self):
+        _r = lib.TWinControl_CanFocus(self._current())
+        return _r != 0
+    # フォーカスを持っているか。
+    def Focused(self):
+        _r = lib.TWinControl_Focused(self._current())
+        return _r != 0
+    # フォーカスを受けたとき・失ったとき。
+    OnEnter = _Event("TWinControl_SetOnEnter", "TNotifyEvent")
+    OnExit = _Event("TWinControl_SetOnExit", "TNotifyEvent")
     OnKeyDown = _Event("TWinControl_SetOnKeyDown", "TKeyEvent")
     OnKeyUp = _Event("TWinControl_SetOnKeyUp", "TKeyEvent")
     OnKeyPress = _Event("TWinControl_SetOnKeyPress", "TKeyPressEvent")
@@ -1413,7 +1480,18 @@ class TCheckGroup(TCustomCheckGroup):
 
 
 class TCustomLabel(TGraphicControl):
-    pass
+    # 文字の横の揃え(AutoSize が false のときに効く)。
+    Alignment = _Prop("TCustomLabel_GetAlignment", "TCustomLabel_SetAlignment", _enum("TAlignment"))
+    # 文字の縦の揃え(AutoSize が false のときに効く)。
+    Layout = _Prop("TCustomLabel_GetLayout", "TCustomLabel_SetLayout", _enum("TTextLayout"))
+    # 幅に合わせて折り返す(AutoSize が true なら、折り返した行の数に合わせて高さが変わる)。
+    WordWrap = _Prop("TCustomLabel_GetWordWrap", "TCustomLabel_SetWordWrap", _bool)
+    # 背景を塗らない(親の背景が見える)。
+    Transparent = _Prop("TCustomLabel_GetTransparent", "TCustomLabel_SetTransparent", _bool)
+    # Caption のアクセスキー(&N)を押したときにフォーカスを移すコントロール。
+    FocusControl = _Prop("TCustomLabel_GetFocusControl", "TCustomLabel_SetFocusControl", _comp("TWinControl"))
+    # Caption の & をアクセスキーの印(下線)として表示する(false なら & をそのまま表示する)。
+    ShowAccelChar = _Prop("TCustomLabel_GetShowAccelChar", "TCustomLabel_SetShowAccelChar", _bool)
 
 
 class TLabel(TCustomLabel):
@@ -1498,6 +1576,55 @@ class TToggleBox(TCustomCheckBox):
 
 
 class TCustomEdit(TWinControl):
+    # 選択の開始位置(文字の数。0 から)。選択が無ければキャレットの位置。
+    SelStart = _Prop("TCustomEdit_GetSelStart", "TCustomEdit_SetSelStart", _int)
+    # 選択の長さ(文字の数)。
+    SelLength = _Prop("TCustomEdit_GetSelLength", "TCustomEdit_SetSelLength", _int)
+    # 選択している文字列。設定すると選択を置き換える(選択が無ければキャレットの位置に挿入する)。
+    SelText = _Prop("TCustomEdit_GetSelText", "TCustomEdit_SetSelText", _str)
+    # 利用者が内容を変えたか。Text を設定すると false に戻る。
+    Modified = _Prop("TCustomEdit_GetModified", "TCustomEdit_SetModified", _bool)
+    # 元に戻せる編集があるか。
+    CanUndo = _Prop("TCustomEdit_GetCanUndo", None, _bool)
+    # 入力した文字の代わりに表示する文字(#0 なら隠さない)。
+    PasswordChar = _Prop("TCustomEdit_GetPasswordChar", "TCustomEdit_SetPasswordChar", _char)
+    # 入力した文字の表示のしかた(emPassword は伏せ字、emNone は表示しない)。
+    EchoMode = _Prop("TCustomEdit_GetEchoMode", "TCustomEdit_SetEchoMode", _enum("TEchoMode"))
+    # 入力した英字を大文字・小文字にそろえる。
+    CharCase = _Prop("TCustomEdit_GetCharCase", "TCustomEdit_SetCharCase", _enum("TEditCharCase"))
+    # 文字の横の揃え。
+    Alignment = _Prop("TCustomEdit_GetAlignment", "TCustomEdit_SetAlignment", _enum("TAlignment"))
+    # 空のときに薄く表示する説明。
+    TextHint = _Prop("TCustomEdit_GetTextHint", "TCustomEdit_SetTextHint", _str)
+    # 数字だけを入力できるようにする。
+    NumbersOnly = _Prop("TCustomEdit_GetNumbersOnly", "TCustomEdit_SetNumbersOnly", _bool)
+    # フォーカスを受けたときに全体を選択する。
+    AutoSelect = _Prop("TCustomEdit_GetAutoSelect", "TCustomEdit_SetAutoSelect", _bool)
+    # フォーカスが無いときに選択の表示を隠す。
+    HideSelection = _Prop("TCustomEdit_GetHideSelection", "TCustomEdit_SetHideSelection", _bool)
+    # キャレットの位置(X は行の中の文字の位置、Y は行。どちらも 0 から)。
+    CaretPos = _Prop("TCustomEdit_GetCaretPos", "TCustomEdit_SetCaretPos", _point_conv)
+    # 全体を選択する。
+    def SelectAll(self):
+        lib.TCustomEdit_SelectAll(self._current())
+    # 選択している文字列を消す。
+    def ClearSelection(self):
+        lib.TCustomEdit_ClearSelection(self._current())
+    # 内容を空にする。
+    def Clear(self):
+        lib.TCustomEdit_Clear(self._current())
+    # 選択している文字列をクリップボードに写す。
+    def CopyToClipboard(self):
+        lib.TCustomEdit_CopyToClipboard(self._current())
+    # 選択している文字列をクリップボードに移す。
+    def CutToClipboard(self):
+        lib.TCustomEdit_CutToClipboard(self._current())
+    # クリップボードの文字列を、選択を置き換えて貼り付ける。
+    def PasteFromClipboard(self):
+        lib.TCustomEdit_PasteFromClipboard(self._current())
+    # 直前の編集を元に戻す。
+    def Undo(self):
+        lib.TCustomEdit_Undo(self._current())
     Text = TControl._Text
     MaxLength = _Prop("TCustomEdit_GetMaxLength", "TCustomEdit_SetMaxLength", _int)
     ReadOnly = _Prop("TCustomEdit_GetReadOnly", "TCustomEdit_SetReadOnly", _bool)
@@ -1966,6 +2093,15 @@ class TSplitter(TCustomSplitter):
 
 
 class TCustomMemo(TCustomEdit):
+    # 右端で折り返す(折り返すと横のスクロールバーは出ない)。
+    WordWrap = _Prop("TCustomMemo_GetWordWrap", "TCustomMemo_SetWordWrap", _bool)
+    # Enter で改行を入れる(false なら、フォームの既定のボタンが押される)。
+    WantReturns = _Prop("TCustomMemo_GetWantReturns", "TCustomMemo_SetWantReturns", _bool)
+    # Tab でタブ文字を入れる(false なら、次のコントロールにフォーカスが移る)。
+    WantTabs = _Prop("TCustomMemo_GetWantTabs", "TCustomMemo_SetWantTabs", _bool)
+    # 末尾に 1 行加える(Lines->Add と違い、表示を最後の行までスクロールする)。
+    def Append(self, S):
+        lib.TCustomMemo_Append(self._current(), _enc(S))
     ScrollBars = _Prop("TCustomMemo_GetScrollBars", "TCustomMemo_SetScrollBars", _int)
     # 文字列の一覧(TStrings。Memo1->Lines->Add("x") のように使う)。
     Lines = _Prop("TCustomMemo_GetLines", None, _view("TStrings"))
@@ -2612,9 +2748,11 @@ __all__ = [
     "dupIgnore", "dupAccept", "dupError", "TPixelFormat", "pfDevice", "pf1bit", "pf4bit", "pf8bit", "pf15bit",
     "pf16bit", "pf24bit", "pf32bit", "pfCustom", "TTransparentMode", "tmAuto", "tmFixed", "TDrawingStyle",
     "dsFocus", "dsSelected", "dsNormal", "dsTransparent", "TAlign", "alNone", "alTop", "alBottom", "alLeft",
-    "alRight", "alClient", "alCustom", "TAnchorKind", "akTop", "akLeft", "akRight", "akBottom", "TScrollBarKind",
-    "sbHorizontal", "sbVertical", "TFormBorderStyle", "bsNone", "bsSingle", "bsSizeable", "bsDialog",
-    "bsToolWindow", "bsSizeToolWin", "TPosition", "poDesigned", "poDefault", "poDefaultPosOnly",
+    "alRight", "alClient", "alCustom", "TAnchorKind", "akTop", "akLeft", "akRight", "akBottom", "TAlignment",
+    "taLeftJustify", "taRightJustify", "taCenter", "TTextLayout", "tlTop", "tlCenter", "tlBottom", "TEchoMode",
+    "emNormal", "emNone", "emPassword", "TEditCharCase", "ecNormal", "ecUpperCase", "ecLowerCase",
+    "TScrollBarKind", "sbHorizontal", "sbVertical", "TFormBorderStyle", "bsNone", "bsSingle", "bsSizeable",
+    "bsDialog", "bsToolWindow", "bsSizeToolWin", "TPosition", "poDesigned", "poDefault", "poDefaultPosOnly",
     "poDefaultSizeOnly", "poScreenCenter", "poDesktopCenter", "poMainFormCenter", "poOwnerFormCenter",
     "poWorkAreaCenter", "TWindowState", "wsNormal", "wsMinimized", "wsMaximized", "wsFullScreen", "TBorderIcon",
     "biSystemMenu", "biMinimize", "biMaximize", "biHelp", "TFormStyle", "fsNormal", "fsMDIChild", "fsMDIForm",
@@ -2627,16 +2765,16 @@ __all__ = [
     "blGlyphBottom", "TLabelPosition", "lpAbove", "lpBelow", "lpLeft", "lpRight", "TTabPosition", "tpTop",
     "tpBottom", "tpLeft", "tpRight", "TNodeAttachMode", "naAdd", "naAddFirst", "naAddChild", "naAddChildFirst",
     "naInsert", "naInsertBehind", "TViewStyle", "vsIcon", "vsSmallIcon", "vsList", "vsReport", "TSortType",
-    "stNone", "stData", "stText", "stBoth", "TSortDirection", "sdAscending", "sdDescending", "TAlignment",
-    "taLeftJustify", "taRightJustify", "taCenter", "TItemChange", "ctText", "ctImage", "ctState", "TResizeStyle",
-    "rsLine", "rsNone", "rsPattern", "rsUpdate", "TStaticBorderStyle", "sbsNone", "sbsSingle", "sbsSunken",
-    "TShapeType", "stRectangle", "stSquare", "stRoundRect", "stRoundSquare", "stEllipse", "stCircle",
-    "stSquaredDiamond", "stDiamond", "stTriangle", "stTriangleLeft", "stTriangleRight", "stTriangleDown", "stStar",
-    "stStarDown", "stPolygon", "TSectionTrackState", "tsTrackBegin", "tsTrackMove", "tsTrackEnd", "TEdgeStyle",
-    "esNone", "esRaised", "esLowered", "TToolButtonStyle", "tbsButton", "tbsCheck", "tbsDropDown", "tbsSeparator",
-    "tbsDivider", "tbsButtonDrop", "TGrabStyle", "gsSimple", "gsDouble", "gsHorLines", "gsVerLines", "gsGripper",
-    "gsButton", "TShiftState", "ssShift", "ssAlt", "ssCtrl", "ssLeft", "ssRight", "ssMiddle", "ssDouble", "ssMeta",
-    "ssSuper", "ssHyper", "ssAltGr", "ssCaps", "ssNum", "ssScroll", "ssTriple", "ssQuad", "ssExtra1", "ssExtra2",
+    "stNone", "stData", "stText", "stBoth", "TSortDirection", "sdAscending", "sdDescending", "TItemChange",
+    "ctText", "ctImage", "ctState", "TResizeStyle", "rsLine", "rsNone", "rsPattern", "rsUpdate",
+    "TStaticBorderStyle", "sbsNone", "sbsSingle", "sbsSunken", "TShapeType", "stRectangle", "stSquare",
+    "stRoundRect", "stRoundSquare", "stEllipse", "stCircle", "stSquaredDiamond", "stDiamond", "stTriangle",
+    "stTriangleLeft", "stTriangleRight", "stTriangleDown", "stStar", "stStarDown", "stPolygon",
+    "TSectionTrackState", "tsTrackBegin", "tsTrackMove", "tsTrackEnd", "TEdgeStyle", "esNone", "esRaised",
+    "esLowered", "TToolButtonStyle", "tbsButton", "tbsCheck", "tbsDropDown", "tbsSeparator", "tbsDivider",
+    "tbsButtonDrop", "TGrabStyle", "gsSimple", "gsDouble", "gsHorLines", "gsVerLines", "gsGripper", "gsButton",
+    "TShiftState", "ssShift", "ssAlt", "ssCtrl", "ssLeft", "ssRight", "ssMiddle", "ssDouble", "ssMeta", "ssSuper",
+    "ssHyper", "ssAltGr", "ssCaps", "ssNum", "ssScroll", "ssTriple", "ssQuad", "ssExtra1", "ssExtra2",
     "TFontStyles", "fsBold", "fsItalic", "fsUnderline", "fsStrikeOut", "TGridOptions", "goFixedVertLine",
     "goFixedHorzLine", "goVertLine", "goHorzLine", "goRangeSelect", "goDrawFocusSelected", "goRowSizing",
     "goColSizing", "goRowMoving", "goColMoving", "goEditing", "goAutoAddRows", "goTabs", "goRowSelect",

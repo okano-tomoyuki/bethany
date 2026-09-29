@@ -9,7 +9,10 @@
       "Caption": "Bethany Notepad",
       "Menu": "MainMenu1"
     },
-    "events": { "OnCreate": "FormCreate", "OnCloseQuery": "FormCloseQuery" },
+    "events": {
+      "OnCreate": "FormCreate",
+      "OnCloseQuery": "FormCloseQuery"
+    },
     "controls": [
       {
         "name": "Memo1",
@@ -22,7 +25,9 @@
           "Align": "alClient",
           "ScrollBars": 3
         },
-        "events": { "OnChange": "Memo1Change" }
+        "events": {
+          "OnChange": "Memo1Change"
+        }
       },
       {
         "name": "StatusBar1",
@@ -41,62 +46,184 @@
     {
       "name": "MainMenu1",
       "class": "TMainMenu",
-      "design": { "left": 16, "top": 16 },
+      "design": {
+        "left": 16,
+        "top": 16
+      },
       "items": [
         {
           "name": "FileMenu",
-          "properties": { "Caption": "&File" },
+          "properties": {
+            "Caption": "&File"
+          },
           "items": [
             {
               "name": "FileNewItem",
-              "properties": { "Caption": "&New", "ShortCut": "Ctrl+N" },
-              "events": { "OnClick": "FileNewItemClick" }
+              "properties": {
+                "Caption": "&New",
+                "ShortCut": "Ctrl+N"
+              },
+              "events": {
+                "OnClick": "FileNewItemClick"
+              }
             },
             {
               "name": "FileOpenItem",
-              "properties": { "Caption": "&Open...", "ShortCut": "Ctrl+O" },
-              "events": { "OnClick": "FileOpenItemClick" }
+              "properties": {
+                "Caption": "&Open...",
+                "ShortCut": "Ctrl+O"
+              },
+              "events": {
+                "OnClick": "FileOpenItemClick"
+              }
             },
             {
               "name": "FileSaveItem",
-              "properties": { "Caption": "&Save", "ShortCut": "Ctrl+S" },
-              "events": { "OnClick": "FileSaveItemClick" }
+              "properties": {
+                "Caption": "&Save",
+                "ShortCut": "Ctrl+S"
+              },
+              "events": {
+                "OnClick": "FileSaveItemClick"
+              }
             },
             {
               "name": "FileSaveAsItem",
-              "properties": { "Caption": "Save &As..." },
-              "events": { "OnClick": "FileSaveAsItemClick" }
+              "properties": {
+                "Caption": "Save &As..."
+              },
+              "events": {
+                "OnClick": "FileSaveAsItemClick"
+              }
             },
             {
               "name": "N1",
-              "properties": { "Caption": "-" }
+              "properties": {
+                "Caption": "-"
+              }
             },
             {
               "name": "FileExitItem",
-              "properties": { "Caption": "E&xit" },
-              "events": { "OnClick": "FileExitItemClick" }
+              "properties": {
+                "Caption": "E&xit"
+              },
+              "events": {
+                "OnClick": "FileExitItemClick"
+              }
+            }
+          ]
+        },
+        {
+          "name": "EditMenu",
+          "properties": {
+            "Caption": "&Edit"
+          },
+          "items": [
+            {
+              "name": "EditUndoItem",
+              "properties": {
+                "Caption": "&Undo",
+                "ShortCut": "Ctrl+Z"
+              },
+              "events": {
+                "OnClick": "EditUndoItemClick"
+              }
+            },
+            {
+              "name": "N2",
+              "properties": {
+                "Caption": "-"
+              }
+            },
+            {
+              "name": "EditCutItem",
+              "properties": {
+                "Caption": "Cu&t",
+                "ShortCut": "Ctrl+X"
+              },
+              "events": {
+                "OnClick": "EditCutItemClick"
+              }
+            },
+            {
+              "name": "EditCopyItem",
+              "properties": {
+                "Caption": "&Copy",
+                "ShortCut": "Ctrl+C"
+              },
+              "events": {
+                "OnClick": "EditCopyItemClick"
+              }
+            },
+            {
+              "name": "EditPasteItem",
+              "properties": {
+                "Caption": "&Paste",
+                "ShortCut": "Ctrl+V"
+              },
+              "events": {
+                "OnClick": "EditPasteItemClick"
+              }
+            },
+            {
+              "name": "EditSelectAllItem",
+              "properties": {
+                "Caption": "Select &All",
+                "ShortCut": "Ctrl+A"
+              },
+              "events": {
+                "OnClick": "EditSelectAllItemClick"
+              }
+            },
+            {
+              "name": "N3",
+              "properties": {
+                "Caption": "-"
+              }
+            },
+            {
+              "name": "EditFindItem",
+              "properties": {
+                "Caption": "&Find...",
+                "ShortCut": "Ctrl+F"
+              },
+              "events": {
+                "OnClick": "EditFindItemClick"
+              }
             }
           ]
         },
         {
           "name": "FormatMenu",
-          "properties": { "Caption": "F&ormat" },
+          "properties": {
+            "Caption": "F&ormat"
+          },
           "items": [
             {
               "name": "FormatFontItem",
-              "properties": { "Caption": "&Font..." },
-              "events": { "OnClick": "FormatFontItemClick" }
+              "properties": {
+                "Caption": "&Font..."
+              },
+              "events": {
+                "OnClick": "FormatFontItemClick"
+              }
             }
           ]
         },
         {
           "name": "HelpMenu",
-          "properties": { "Caption": "&Help" },
+          "properties": {
+            "Caption": "&Help"
+          },
           "items": [
             {
               "name": "HelpAboutItem",
-              "properties": { "Caption": "&About Bethany Notepad..." },
-              "events": { "OnClick": "HelpAboutItemClick" }
+              "properties": {
+                "Caption": "&About Bethany Notepad..."
+              },
+              "events": {
+                "OnClick": "HelpAboutItemClick"
+              }
             }
           ]
         }
@@ -105,26 +232,61 @@
     {
       "name": "OpenDialog1",
       "class": "TOpenDialog",
-      "design": { "left": 56, "top": 16 },
+      "design": {
+        "left": 56,
+        "top": 16
+      },
       "properties": {
         "Filter": "Text files (*.txt)|*.txt|All files (*.*)|*.*",
-        "Options": ["ofEnableSizing", "ofViewDetail", "ofFileMustExist"]
+        "Options": [
+          "ofEnableSizing",
+          "ofViewDetail",
+          "ofFileMustExist"
+        ]
       }
     },
     {
       "name": "SaveDialog1",
       "class": "TSaveDialog",
-      "design": { "left": 96, "top": 16 },
+      "design": {
+        "left": 96,
+        "top": 16
+      },
       "properties": {
         "Filter": "Text files (*.txt)|*.txt|All files (*.*)|*.*",
         "DefaultExt": "txt",
-        "Options": ["ofEnableSizing", "ofViewDetail", "ofOverwritePrompt"]
+        "Options": [
+          "ofEnableSizing",
+          "ofViewDetail",
+          "ofOverwritePrompt"
+        ]
       }
     },
     {
       "name": "FontDialog1",
       "class": "TFontDialog",
-      "design": { "left": 136, "top": 16 }
+      "design": {
+        "left": 136,
+        "top": 16
+      }
+    },
+    {
+      "name": "FindDialog1",
+      "class": "TFindDialog",
+      "design": {
+        "left": 176,
+        "top": 16
+      },
+      "properties": {
+        "Options": [
+          "frDown",
+          "frHideWholeWord",
+          "frHideUpDown"
+        ]
+      },
+      "events": {
+        "OnFind": "FindDialog1Find"
+      }
     }
   ]
 }

@@ -4,6 +4,10 @@
 
 - New properties from the Bethany library 0.3.0: `BorderStyle`, `Position`, `WindowState`, `BorderIcons`, `FormStyle`, `KeyPreview`
   and `ActiveControl` of forms, and `ModalResult`, `Default` and `Cancel` of buttons. The canvas draws the default button with an accent border
+- New properties from the Bethany library 0.3.0: `PasswordChar`, `EchoMode`, `CharCase`, `Alignment`, `TextHint`, `NumbersOnly`,
+  `AutoSelect` and `HideSelection` of edits, `WordWrap`, `WantReturns` and `WantTabs` of memos, `Alignment`, `Layout`, `WordWrap`,
+  `Transparent`, `FocusControl` and `ShowAccelChar` of labels, and the `OnEnter` and `OnExit` events. The canvas shows the alignment and
+  word wrap of labels and memos, and the text hint and password characters of edits
 - Integer properties with named constants (`ModalResult`, `Cursor`) are chosen from a list in the Object Inspector
 - The include guard macro does not repeat a namespace that is also the folder of the header
   (`APP_DIALOGS_ABOUT_HPP` instead of `APP_DIALOGS_DIALOGS_ABOUT_HPP` for `app::dialogs` and `dialogs/About.hpp`)

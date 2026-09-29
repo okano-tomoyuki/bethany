@@ -119,7 +119,15 @@ function ControlView({
 }
 
 /** Caption の & を下線にして表示する */
-export function Caption({ value }: { readonly value: string }) {
+export function Caption({
+  value,
+  accel = true,
+}: {
+  readonly value: string;
+  /** false なら & をそのまま表示する(TLabel の ShowAccelChar) */
+  readonly accel?: boolean;
+}) {
+  if (!accel) return <>{value}</>;
   const [before, key, after] = splitAccelerator(value);
   return (
     <>
@@ -173,9 +181,19 @@ function Body({
         </div>
       );
     case 'TLabel':
+      // Transparent(既定)なら背景を塗らない。横の揃え・縦の揃え・折り返しは AutoSize が false のときに見える
       return (
-        <div className="look-label" style={flag(location, 'ParentColor') ? {} : background}>
-          {caption}
+        <div
+          className={flag(location, 'WordWrap') ? 'look-label wrap' : 'look-label'}
+          style={{
+            ...(flag(location, 'Transparent') || flag(location, 'ParentColor') ? {} : background),
+            textAlign: textAlign(text(location, 'Alignment')),
+            justifyContent: LAYOUTS[text(location, 'Layout')] ?? 'flex-start',
+          }}
+        >
+          <span>
+            <Caption value={text(location, 'Caption')} accel={flag(location, 'ShowAccelChar')} />
+          </span>
         </div>
       );
     case 'TStaticText':
@@ -189,12 +207,23 @@ function Body({
       );
     case 'TEdit':
     case 'TMaskEdit':
-    case 'TLabeledEdit':
+    case 'TLabeledEdit': {
+      // 空なら TextHint を薄く、PasswordChar・EchoMode が伏せ字なら伏せて表示する
+      const value = text(location, 'Text');
       return (
-        <div className="look-edit" style={background}>
-          {text(location, 'Text')}
+        <div
+          className={
+            value === '' && text(location, 'TextHint') !== '' ? 'look-edit hint' : 'look-edit'
+          }
+          style={{
+            ...background,
+            justifyContent: EDIT_ALIGN[text(location, 'Alignment')] ?? 'flex-start',
+          }}
+        >
+          {value === '' ? text(location, 'TextHint') : maskText(location, value)}
         </div>
       );
+    }
     case 'TSpinEdit':
     case 'TFloatSpinEdit': {
       const value = number(location, 'Value');
@@ -215,7 +244,10 @@ function Body({
       );
     case 'TMemo':
       return (
-        <div className="look-box lines" style={background}>
+        <div
+          className={flag(location, 'WordWrap') ? 'look-box lines wrap' : 'look-box lines'}
+          style={{ ...background, textAlign: textAlign(text(location, 'Alignment')) }}
+        >
           {strings(location, 'Lines').map((line, i) => (
             <div key={i}>{line === '' ? ' ' : line}</div>
           ))}
@@ -422,4 +454,36 @@ function Grid({ location }: { readonly location: NodeLocation & { readonly kind:
       ))}
     </div>
   );
+}
+
+/** TAlignment → CSS の text-align */
+function textAlign(alignment: string): 'left' | 'right' | 'center' {
+  return alignment === 'taRightJustify' ? 'right' : alignment === 'taCenter' ? 'center' : 'left';
+}
+
+/** TAlignment → 1 行の入力欄の中での位置(flex) */
+const EDIT_ALIGN: Readonly<Record<string, string>> = {
+  taRightJustify: 'flex-end',
+  taCenter: 'center',
+};
+
+/** TTextLayout → 縦の位置(flex) */
+const LAYOUTS: Readonly<Record<string, string>> = {
+  tlTop: 'flex-start',
+  tlCenter: 'center',
+  tlBottom: 'flex-end',
+};
+
+/** 伏せ字(EchoMode が emPassword なら PasswordChar か *、emNone なら表示しない。PasswordChar だけでも伏せる) */
+function maskText(location: NodeLocation, value: string): string {
+  const mode = text(location, 'EchoMode');
+  if (mode === 'emNone') return '';
+  const passwordChar = text(location, 'PasswordChar');
+  const mask =
+    passwordChar !== '' && passwordChar !== '\u0000'
+      ? passwordChar
+      : mode === 'emPassword'
+        ? '*'
+        : '';
+  return mask === '' ? value : mask.repeat(Array.from(value).length);
 }

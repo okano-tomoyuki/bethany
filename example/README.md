@@ -3,13 +3,15 @@
 A small text editor built with [Bethany](../README.md) and the [Bethany Designer](../designer/packages/extension/README.md).
 The same application is written in C++ (`cpp/`) and in Python (`py/`) from the same forms.
 
-- A main form with a menu (_File_, _Format_, _Help_), a memo and a status bar
+- A main form with a menu (_File_, _Edit_, _Format_, _Help_), a memo and a status bar
+- Undo, cut, copy, paste and select all of the memo, and _Find_ with `TFindDialog` (the found text is selected with `SelStart` and
+  `SelLength`)
 - Open, Save and Font dialogs (`TOpenDialog`, `TSaveDialog`, `TFontDialog`)
 - An _About_ form shown with `ShowModal()` from the main form through its form variable, closed by its OK button (`ModalResult = mrOk`,
   `Default`, `Cancel`)
 - Asking to save the changes with `MessageDlg` when closing the window (`OnCloseQuery`) or opening another file
 
-This example uses Bethany 0.3.0 or later (`ModalResult`, `MessageDlg`). Until 0.3.0 is released, build it with the Bethany in
+This example uses Bethany 0.3.0 or later (`ModalResult`, `MessageDlg`, `SelStart`, `SelLength`, `CopyToClipboard` and so on). Until 0.3.0 is released, build it with the Bethany in
 this repository (below).
 
 ## Files

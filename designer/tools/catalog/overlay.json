@@ -2,9 +2,10 @@
   "$comment": "カタログの手書きの補足(docs/designer/catalog.md §3)。notDesignable はそのクラスと派生でデザイン時に設定できないプロパティ、designable はその除外を取り消すもの。classes は利用者が生成できる全クラスについて書く(childClasses は子に置けるクラス、parentClasses は置ける親のクラス)(無いと extract.py がエラーにする)。",
   "palette": ["Standard", "Additional", "Common Controls", "Dialogs", "System", "Misc"],
   "notDesignable": {
-    "TControl": ["Parent", "Caption"],
+    "TControl": ["Parent", "Caption", "ClientWidth", "ClientHeight"],
     "TCustomForm": ["Align", "Anchors", "BorderSpacing", "TabOrder", "TabStop", "Visible", "ModalResult"],
-    "TCustomMemo": ["Text"],
+    "TCustomEdit": ["SelStart", "SelLength", "SelText", "Modified"],
+    "TCustomMemo": ["Text", "PasswordChar", "EchoMode", "NumbersOnly", "TextHint"],
     "TCustomFloatSpinEdit": ["Text", "MaxLength"],
     "TCustomSpinEdit": ["DecimalPlaces"],
     "TCustomDrawGrid": ["Col", "Row", "LeftCol", "TopRow", "EditorMode"],

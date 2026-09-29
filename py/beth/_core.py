@@ -193,6 +193,24 @@ _ptr = _Conv(lambda raw: raw, lambda v: v)
 _rect_conv = _RectConv()
 
 
+class _PointConv(_Conv):
+    """TPoint(DLL は 2 つの出力引数で返し、2 つの引数で受け取る)。"""
+
+    def __init__(self):
+        super().__init__(None, None)
+
+    def read(self, obj, fn, *index):
+        x, y = ctypes.c_int(), ctypes.c_int()
+        fn(obj._current(), *index, ctypes.byref(x), ctypes.byref(y))
+        return TPoint(x.value, y.value)
+
+    def write(self, obj, fn, value, *index):
+        fn(obj._current(), *index, *_point(value))
+
+
+_point_conv = _PointConv()
+
+
 def _enum(name):
     return _Conv(lambda raw: _to_enum(name, raw), int)
 

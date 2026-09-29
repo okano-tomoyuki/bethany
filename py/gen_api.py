@@ -337,6 +337,8 @@ class Gen:
             return {"int": "_int", "bool": "_bool", "float": "_float", "char": "_char", "str": "_str", "ptr": "_ptr"}[s]
         if t in ("TRect", "TGridRect"):
             return "_rect_conv"
+        if t == "TPoint":
+            return "_point_conv"
         m = re.fullmatch(r"(?:const )?(\w+)\*", t)
         if m and self.is_class(m.group(1)) or (m and m.group(1) in CORE_CLASSES):
             kind = self.class_kind(m.group(1))
@@ -767,7 +769,7 @@ from ._core import (BethError, Ref, TRect, TPoint, TObject, TPersistent, TCompon
                    MB_DEFBUTTON1, MB_DEFBUTTON2, MB_DEFBUTTON3,
                    IDOK, IDCANCEL, IDABORT, IDRETRY, IDIGNORE, IDYES, IDNO)
 from ._core import (lib, _mixins, _register, _event_types, _ItemMixin, _Prop, _Indexed, _Event,
-                   _int, _float, _bool, _str, _char, _ptr, _rect_conv, _enum, _set, _comp, _existing, _item, _obj, _view,
+                   _int, _float, _bool, _str, _char, _ptr, _rect_conv, _point_conv, _enum, _set, _comp, _existing, _item, _obj, _view,
                    _str_key, _enc, _dec, _h, _b, _rect, _point, _to_enum, _to_comp, _to_existing, _to_item, _to_obj,
                    _a_int, _a_bool, _a_rect, _a_enum, _a_comp, _a_item, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_enum)
 '''

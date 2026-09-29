@@ -46,7 +46,7 @@ published のものはデザイナーのカタログ(`designer/tools/catalog/ext
 ### Tier A — 基本的なアプリに必須(最優先)
 
 C++Builder の入門的なアプリ(ダイアログ・入力のフォーム・テキストの編集)をそのままの書き方で作れるようにするもの。
-メモ帳のサンプルで代わりの書き方が要ったものは、すべてここに入る。✅ は実装済み(A1〜A4 は [ADR 0041](adr/0041-modal-result-and-message-dialogs.md)。`QuestionDlg` は未対応)。
+メモ帳のサンプルで代わりの書き方が要ったものは、すべてここに入る。✅ は実装済み(A1〜A4 は [ADR 0041](adr/0041-modal-result-and-message-dialogs.md)。`QuestionDlg` は未対応。A5〜A9 は [ADR 0042](adr/0042-focus-edit-memo-label.md))。
 
 | # | 項目 | 対象 | 種類 | コスト | 備考 |
 |---|---|---|---|---|---|
@@ -54,11 +54,11 @@ C++Builder の入門的なアプリ(ダイアログ・入力のフォーム・�
 | A2 | ✅ **メッセージのダイアログ** | `ShowMessage`・`MessageDlg`(`TMsgDlgType`・`TMsgDlgButtons`)・`QuestionDlg`・`InputBox`・`InputQuery`・`PasswordBox`・`Application->MessageBox` | 関数 | M | 新しい列挙型と集合型。戻り値は A1 の `TModalResult` |
 | A3 | ✅ **フォームの表示** | `TCustomForm` の `BorderStyle`(bsDialog 等)・`Position`(poMainFormCenter 等)・`WindowState`・`BorderIcons`・`FormStyle`(fsStayOnTop)・`KeyPreview`・`ActiveControl` | P | S〜M | 新しい列挙型・集合型。デザイナーに出す |
 | A4 | ✅ **既定のボタン** | `TCustomButton.Default`・`Cancel`(Enter・Esc で押す) | P | S | A1 と組み合わせてダイアログを作る |
-| A5 | **フォーカス** | `TWinControl.SetFocus`・`CanFocus`・`Focused`・`OnEnter`・`OnExit` | M・E | S | |
-| A6 | **表示の更新・位置** | `TControl.Invalidate`・`Repaint`・`Refresh`・`Update`・`BringToFront`・`SendToBack`・`SetBounds`・`ClientWidth`・`ClientHeight` | M・P | S | |
-| A7 | **テキストの編集** | `TCustomEdit` の `SelStart`・`SelLength`・`SelText`・`SelectAll`・`ClearSelection`・`Clear`・`CopyToClipboard`・`CutToClipboard`・`PasteFromClipboard`・`Undo`・`CanUndo`・`Modified`・`PasswordChar`・`EchoMode`・`CharCase`・`Alignment`・`TextHint`・`NumbersOnly`・`AutoSelect`・`HideSelection` | P・M | S〜M | 検索・置換(TFindDialog の OnFind で選択する)に要る |
-| A8 | **TMemo** | `WordWrap`・`WantReturns`・`WantTabs`・`CaretPos`・`Append` | P・M | S | `TPoint` は既にある |
-| A9 | **TLabel** | `Alignment`・`Layout`・`WordWrap`・`Transparent`・`FocusControl`・`ShowAccelChar` | P | S〜M | `TTextLayout` は新しい列挙型 |
+| A5 | ✅ **フォーカス** | `TWinControl.SetFocus`・`CanFocus`・`Focused`・`OnEnter`・`OnExit` | M・E | S | |
+| A6 | ✅ **表示の更新・位置** | `TControl.Invalidate`・`Repaint`・`Refresh`・`Update`・`BringToFront`・`SendToBack`・`SetBounds`・`ClientWidth`・`ClientHeight` | M・P | S | |
+| A7 | ✅ **テキストの編集** | `TCustomEdit` の `SelStart`・`SelLength`・`SelText`・`SelectAll`・`ClearSelection`・`Clear`・`CopyToClipboard`・`CutToClipboard`・`PasteFromClipboard`・`Undo`・`CanUndo`・`Modified`・`PasswordChar`・`EchoMode`・`CharCase`・`Alignment`・`TextHint`・`NumbersOnly`・`AutoSelect`・`HideSelection` | P・M | S〜M | 検索・置換(TFindDialog の OnFind で選択する)に要る |
+| A8 | ✅ **TMemo** | `WordWrap`・`WantReturns`・`WantTabs`・`CaretPos`・`Append` | P・M | S | `TPoint` は既にある |
+| A9 | ✅ **TLabel** | `Alignment`・`Layout`・`WordWrap`・`Transparent`・`FocusControl`・`ShowAccelChar` | P | S〜M | `TTextLayout` は新しい列挙型 |
 | A10 | **リストの選択** | `TCustomListBox` の `MultiSelect`・`ExtendedSelect`・`Selected[i]`・`SelCount`・`ClearSelection`・`SelectAll`・`Sorted`・`TopIndex`・`ItemAtPos`・`OnSelectionChange`、`TCustomComboBox` の `Style`(csDropDownList)・`DropDownCount`・`Sorted`・`ReadOnly`・`DroppedDown`・`AutoComplete`・`OnSelect`・`OnDropDown`・`OnCloseUp` | P・M・E | S〜M | コンボボックスの `Style` は、選択だけのコンボボックスに要る |
 | A11 | **チェックの 3 状態** | `TCustomCheckBox.State`・`AllowGrayed`・`OnChange` | P・E | S〜M | `TCheckBoxState` は新しい列挙型 |
 | A12 | **Application** | `ExeName`・`OnException`・`OnIdle`・`Minimize`・`Restore`・`BringToFront`・`ShowHint`・`HintPause`・`HintHidePause` | P・M・E | S〜M | `OnIdle` は `Done` を参照で受けるイベント(`OnCloseQuery` の `CanClose` と同じ形) |

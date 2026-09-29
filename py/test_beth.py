@@ -1990,6 +1990,24 @@ def main():
     tempLabel.Parent = Form1
     tempLabel.Free()
     pr(f"Destroyed labels after Free(): {destroyed_labels()} (expected 1)")
+
+    # テキストの編集(docs/adr/0042)。表示の前でも、選択の置き換えは DLL がハンドルを作ってから行う。
+    sel_edit = TEdit(Form1)
+    sel_edit.Parent = Form1
+    sel_edit.Left = 200
+    sel_edit.Top = 320
+    sel_edit.Text = "Hello World"
+    sel_edit.SelStart = 6
+    sel_edit.SelLength = 5
+    sel_text = sel_edit.SelText
+    sel_edit.SelText = "Bethany"
+    pr(f"SelText={sel_text} (expected World), Text after SelText={sel_edit.Text} (expected Hello Bethany)")
+    sel_edit.TextHint = "hint"
+    sel_edit.CharCase = ecUpperCase
+    pr(f"TextHint={sel_edit.TextHint}, CharCase={int(sel_edit.CharCase)} (expected ecUpperCase={int(ecUpperCase)}), "
+       f"CanFocus before Show={'true' if sel_edit.CanFocus() else 'false'}")
+    sel_edit.OnEnter = lambda Sender: pr("selEdit OnEnter")
+    sel_edit.OnExit = lambda Sender: pr("selEdit OnExit")
     try:
         tempLabel.Caption
         pr("must not be reached")

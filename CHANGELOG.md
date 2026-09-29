@@ -13,6 +13,12 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
 - メッセージのダイアログ `ShowMessage`・`MessageDlg`(`TMsgDlgType`・`TMsgDlgButtons`、`mbYesNo` 等)・`InputBox`・`InputQuery`・`PasswordBox` と、
   `Application->MessageBox`
 - フォームの `BorderStyle`・`Position`・`WindowState`・`BorderIcons`・`FormStyle`・`KeyPreview`・`ActiveControl`、ボタンの `Default`・`Cancel`
+- フォーカス(`SetFocus`・`CanFocus`・`Focused`・`OnEnter`・`OnExit`)、表示の更新と位置(`Invalidate`・`Repaint`・`Refresh`・`Update`・
+  `BringToFront`・`SendToBack`・`SetBounds`・`ClientWidth`・`ClientHeight`)([ADR 0042](docs/adr/0042-focus-edit-memo-label.md))
+- テキストの編集(`SelStart`・`SelLength`・`SelText`・`SelectAll`・`ClearSelection`・`Clear`・クリップボード・`Undo`・`CanUndo`・`Modified`・
+  `PasswordChar`・`EchoMode`・`CharCase`・`Alignment`・`TextHint`・`NumbersOnly`・`AutoSelect`・`HideSelection`・`CaretPos`)。
+  VCL と同じく、フォームを表示する前でも選択の置き換えやクリップボードが効く
+- TMemo の `WordWrap`・`WantReturns`・`WantTabs`・`Append`、TLabel の `Alignment`・`Layout`・`WordWrap`・`Transparent`・`FocusControl`・`ShowAccelChar`
 
 ### 変更
 

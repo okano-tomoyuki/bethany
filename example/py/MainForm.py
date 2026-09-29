@@ -22,6 +22,15 @@ class TMainForm(TForm):
         self.FileSaveAsItem: TMenuItem
         self.N1: TMenuItem
         self.FileExitItem: TMenuItem
+        self.EditMenu: TMenuItem
+        self.EditUndoItem: TMenuItem
+        self.N2: TMenuItem
+        self.EditCutItem: TMenuItem
+        self.EditCopyItem: TMenuItem
+        self.EditPasteItem: TMenuItem
+        self.EditSelectAllItem: TMenuItem
+        self.N3: TMenuItem
+        self.EditFindItem: TMenuItem
         self.FormatMenu: TMenuItem
         self.FormatFontItem: TMenuItem
         self.HelpMenu: TMenuItem
@@ -29,7 +38,8 @@ class TMainForm(TForm):
         self.OpenDialog1: TOpenDialog
         self.SaveDialog1: TSaveDialog
         self.FontDialog1: TFontDialog
-        # <bethany-designer:end id="declarations" hash="2f216fa2">
+        self.FindDialog1: TFindDialog
+        # <bethany-designer:end id="declarations" hash="769c57fd">
         self.beth_CreateComponents()
         self.FileName = ""  # 開いているファイル(新規なら空)
         self.Modified = False  # 保存していない変更があるか
@@ -47,6 +57,15 @@ class TMainForm(TForm):
         self.FileSaveAsItem = TMenuItem(self)
         self.N1 = TMenuItem(self)
         self.FileExitItem = TMenuItem(self)
+        self.EditMenu = TMenuItem(self)
+        self.EditUndoItem = TMenuItem(self)
+        self.N2 = TMenuItem(self)
+        self.EditCutItem = TMenuItem(self)
+        self.EditCopyItem = TMenuItem(self)
+        self.EditPasteItem = TMenuItem(self)
+        self.EditSelectAllItem = TMenuItem(self)
+        self.N3 = TMenuItem(self)
+        self.EditFindItem = TMenuItem(self)
         self.FormatMenu = TMenuItem(self)
         self.FormatFontItem = TMenuItem(self)
         self.HelpMenu = TMenuItem(self)
@@ -54,6 +73,7 @@ class TMainForm(TForm):
         self.OpenDialog1 = TOpenDialog(self)
         self.SaveDialog1 = TSaveDialog(self)
         self.FontDialog1 = TFontDialog(self)
+        self.FindDialog1 = TFindDialog(self)
 
         self.Width = 640
         self.Height = 480
@@ -107,6 +127,45 @@ class TMainForm(TForm):
         self.FileExitItem.OnClick = self.FileExitItemClick
         self.FileMenu.Add(self.FileExitItem)
 
+        self.EditMenu.Caption = "&Edit"
+        self.MainMenu1.Items.Add(self.EditMenu)
+
+        self.EditUndoItem.Caption = "&Undo"
+        self.EditUndoItem.ShortCut = TextToShortCut("Ctrl+Z")
+        self.EditUndoItem.OnClick = self.EditUndoItemClick
+        self.EditMenu.Add(self.EditUndoItem)
+
+        self.N2.Caption = "-"
+        self.EditMenu.Add(self.N2)
+
+        self.EditCutItem.Caption = "Cu&t"
+        self.EditCutItem.ShortCut = TextToShortCut("Ctrl+X")
+        self.EditCutItem.OnClick = self.EditCutItemClick
+        self.EditMenu.Add(self.EditCutItem)
+
+        self.EditCopyItem.Caption = "&Copy"
+        self.EditCopyItem.ShortCut = TextToShortCut("Ctrl+C")
+        self.EditCopyItem.OnClick = self.EditCopyItemClick
+        self.EditMenu.Add(self.EditCopyItem)
+
+        self.EditPasteItem.Caption = "&Paste"
+        self.EditPasteItem.ShortCut = TextToShortCut("Ctrl+V")
+        self.EditPasteItem.OnClick = self.EditPasteItemClick
+        self.EditMenu.Add(self.EditPasteItem)
+
+        self.EditSelectAllItem.Caption = "Select &All"
+        self.EditSelectAllItem.ShortCut = TextToShortCut("Ctrl+A")
+        self.EditSelectAllItem.OnClick = self.EditSelectAllItemClick
+        self.EditMenu.Add(self.EditSelectAllItem)
+
+        self.N3.Caption = "-"
+        self.EditMenu.Add(self.N3)
+
+        self.EditFindItem.Caption = "&Find..."
+        self.EditFindItem.ShortCut = TextToShortCut("Ctrl+F")
+        self.EditFindItem.OnClick = self.EditFindItemClick
+        self.EditMenu.Add(self.EditFindItem)
+
         self.FormatMenu.Caption = "F&ormat"
         self.MainMenu1.Items.Add(self.FormatMenu)
 
@@ -127,9 +186,50 @@ class TMainForm(TForm):
         self.SaveDialog1.Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*"
         self.SaveDialog1.DefaultExt = "txt"
         self.SaveDialog1.Options = ofEnableSizing | ofViewDetail | ofOverwritePrompt
-    # <bethany-designer:end id="beth_CreateComponents" hash="2b3e5197">
+
+        self.FindDialog1.Options = frDown | frHideWholeWord | frHideUpDown
+        self.FindDialog1.OnFind = self.FindDialog1Find
+    # <bethany-designer:end id="beth_CreateComponents" hash="d9d8d843">
 
     # <bethany-designer:handler-stubs>
+
+    def EditUndoItemClick(self, Sender):
+        if self.Memo1.CanUndo:
+            self.Memo1.Undo()
+
+    def EditCutItemClick(self, Sender):
+        self.Memo1.CutToClipboard()
+
+    def EditCopyItemClick(self, Sender):
+        self.Memo1.CopyToClipboard()
+
+    def EditPasteItemClick(self, Sender):
+        self.Memo1.PasteFromClipboard()
+
+    def EditSelectAllItemClick(self, Sender):
+        self.Memo1.SelectAll()
+
+    def EditFindItemClick(self, Sender):
+        # 選択している文字列があれば、それを探す文字列にする
+        if self.Memo1.SelLength > 0:
+            self.FindDialog1.FindText = self.Memo1.SelText
+        self.FindDialog1.Execute()  # モードレス。「次を検索」を押すたびに OnFind が呼ばれる
+
+    def FindDialog1Find(self, Sender):
+        # 選択の後ろ(選択が無ければキャレットの位置)から探し、見つけたら選択する。位置は文字の数
+        text = self.Memo1.Text
+        what = self.FindDialog1.FindText
+        start = self.Memo1.SelStart + self.Memo1.SelLength
+        if self.FindDialog1.Options & frMatchCase:
+            found = text.find(what, start)
+        else:
+            found = text.lower().find(what.lower(), start)
+        if found < 0:
+            ShowMessage(f'"{what}" was not found.')
+            return
+        self.Memo1.SelStart = found
+        self.Memo1.SelLength = len(what)
+        self.Memo1.SetFocus()
 
     def FormCreate(self, Sender):
         self.UpdateCaption()
