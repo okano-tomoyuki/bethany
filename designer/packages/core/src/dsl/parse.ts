@@ -1,6 +1,7 @@
 import type { Diagnostic } from './diagnostics.ts';
 import { l10n } from '../l10n.ts';
 import { FORMAT_VERSION, BfmDocument } from './schema.ts';
+import { upgradeDocument } from './upgrade.ts';
 import { validateDocument } from './validate.ts';
 
 export interface ParseResult {
@@ -48,7 +49,9 @@ export function parseDocument(text: string): ParseResult {
       })),
     };
   }
-  return { document: result.data, diagnostics: validateDocument(result.data) };
+  // 古い書き方の値(列挙型の整数)を直してから検証する(docs/adr/0048)
+  const document = upgradeDocument(result.data);
+  return { document, diagnostics: validateDocument(document) };
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

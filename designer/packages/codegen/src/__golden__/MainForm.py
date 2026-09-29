@@ -18,6 +18,7 @@ class TMainForm(TForm):
         self.Memo1: TMemo
         self.BottomPanel: TPanel
         self.StatusLabel: TLabel
+        self.HintPanel: TPanel
         self.MainMenu1: TMainMenu
         self.FileMenu: TMenuItem
         self.FileOpenItem: TMenuItem
@@ -30,7 +31,7 @@ class TMainForm(TForm):
         self.Timer1: TTimer
         self.ActionList1: TActionList
         self.FileSaveAction: TAction
-        # <bethany-designer:end id="declarations" hash="c83e20a0">
+        # <bethany-designer:end id="declarations" hash="96160a63">
         self.beth_CreateComponents()
 
     # <bethany-designer:begin id="beth_CreateComponents">
@@ -47,6 +48,7 @@ class TMainForm(TForm):
         self.Memo1 = TMemo(self)
         self.BottomPanel = TPanel(self)
         self.StatusLabel = TLabel(self)
+        self.HintPanel = TPanel(self)
         self.MainMenu1 = TMainMenu(self)
         self.FileMenu = TMenuItem(self)
         self.FileOpenItem = TMenuItem(self)
@@ -143,7 +145,8 @@ class TMainForm(TForm):
         self.Memo1.Height = 92
         self.Memo1.Align = alClient
         self.Memo1.PopupMenu = self.PopupMenu1
-        self.Memo1.ScrollBars = 3
+        self.Memo1.BorderStyle = bsNone
+        self.Memo1.ScrollBars = ssBoth
         self.Memo1.Lines.Add("line 1")
         self.Memo1.Lines.Add("line \"2\"")
 
@@ -155,6 +158,10 @@ class TMainForm(TForm):
         self.BottomPanel.Caption = ""
         self.BottomPanel.Align = alBottom
         self.BottomPanel.Color = 0x00C0F0FF  # #FFF0C0
+        self.BottomPanel.BorderWidth = 1
+        self.BottomPanel.BevelOuter = bvLowered
+        self.BottomPanel.BevelInner = bvRaised
+        self.BottomPanel.BevelWidth = 2
 
         self.StatusLabel.Parent = self.BottomPanel
         self.StatusLabel.Left = 8
@@ -164,6 +171,18 @@ class TMainForm(TForm):
         self.StatusLabel.Caption = "Ready"
         self.StatusLabel.Font.Size = 10
         self.StatusLabel.Font.Color = clBlue
+
+        self.HintPanel.Parent = self.BottomPanel
+        self.HintPanel.Left = 295
+        self.HintPanel.Top = 5
+        self.HintPanel.Width = 100
+        self.HintPanel.Height = 31
+        self.HintPanel.Caption = "Hint"
+        self.HintPanel.Align = alRight
+        self.HintPanel.BorderStyle = bsSingle
+        self.HintPanel.Alignment = taRightJustify
+        self.HintPanel.VerticalAlignment = taAlignTop
+        self.HintPanel.BevelOuter = bvNone
 
         self.PageControl1.ActivePage = self.MemoSheet
 
@@ -202,7 +221,7 @@ class TMainForm(TForm):
         self.FileSaveAction.OnExecute = self.FileSaveActionExecute
 
         self.FileSaveItem.Action = self.FileSaveAction
-    # <bethany-designer:end id="beth_CreateComponents" hash="8846023b">
+    # <bethany-designer:end id="beth_CreateComponents" hash="de509bc8">
 
     # <bethany-designer:handler-stubs>
 

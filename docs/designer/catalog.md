@@ -93,6 +93,9 @@ python designer/tools/catalog/extract.py --check      # カタログが beth.hpp
 }
 ```
 
+列挙型の別名で一部の要素だけを選べるもの(TBorderStyle は TFormBorderStyle の `bsNone`・`bsSingle` だけ)は、プロパティの型に
+`"values": ["bsNone", "bsSingle"]` を持つ([ADR 0048](../adr/0048-panel-bevel-scroll-border.md))。
+
 値(既定値・大きさ・定数)は形を示すための例で、実際の値は実測・抽出で決まる。
 継承したプロパティ・イベントは、各クラスに展開して持つ(DSL の検証・プロパティエディタで継承をたどらなくて済むように)。
 デザイン時に設定できないプロパティは書き出さない。`doc` は beth.hpp のコメント(日本語)。

@@ -12,7 +12,11 @@ export type PropertyType =
   | { readonly kind: 'char' }
   /** 整数の別名(TColor・TCursor・TShortCut)。定数は Catalog.constants */
   | { readonly kind: 'alias'; readonly alias: string }
-  | { readonly kind: 'enum'; readonly enum: string }
+  /**
+   * 列挙型(要素は Catalog.enums[enum])。values があれば、選べるのはその要素だけ
+   * (TBorderStyle は TFormBorderStyle の bsNone・bsSingle だけ。docs/adr/0048)
+   */
+  | { readonly kind: 'enum'; readonly enum: string; readonly values?: readonly string[] }
   /** ビット集合(TFontStyles・TOpenOptions 等。要素は Catalog.flags) */
   | { readonly kind: 'flags'; readonly flags: string }
   /** Set<E>(TAnchors。要素は Catalog.enums[enum]) */

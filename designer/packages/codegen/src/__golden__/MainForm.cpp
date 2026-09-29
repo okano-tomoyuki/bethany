@@ -29,6 +29,7 @@ void TMainForm::beth_CreateComponents()
     Memo1 = new TMemo(this);
     BottomPanel = new TPanel(this);
     StatusLabel = new TLabel(this);
+    HintPanel = new TPanel(this);
     MainMenu1 = new TMainMenu(this);
     FileMenu = new TMenuItem(this);
     FileOpenItem = new TMenuItem(this);
@@ -131,7 +132,8 @@ void TMainForm::beth_CreateComponents()
     Memo1->Height = 92;
     Memo1->Align = alClient;
     Memo1->PopupMenu = PopupMenu1;
-    Memo1->ScrollBars = 3;
+    Memo1->BorderStyle = bsNone;
+    Memo1->ScrollBars = ssBoth;
     Memo1->Lines->Add("line 1");
     Memo1->Lines->Add("line \"2\"");
 
@@ -143,6 +145,10 @@ void TMainForm::beth_CreateComponents()
     BottomPanel->Caption = "";
     BottomPanel->Align = alBottom;
     BottomPanel->Color = 0x00C0F0FF /* #FFF0C0 */;
+    BottomPanel->BorderWidth = 1;
+    BottomPanel->BevelOuter = bvLowered;
+    BottomPanel->BevelInner = bvRaised;
+    BottomPanel->BevelWidth = 2;
 
     StatusLabel->Parent = BottomPanel;
     StatusLabel->Left = 8;
@@ -152,6 +158,18 @@ void TMainForm::beth_CreateComponents()
     StatusLabel->Caption = "Ready";
     StatusLabel->Font->Size = 10;
     StatusLabel->Font->Color = clBlue;
+
+    HintPanel->Parent = BottomPanel;
+    HintPanel->Left = 295;
+    HintPanel->Top = 5;
+    HintPanel->Width = 100;
+    HintPanel->Height = 31;
+    HintPanel->Caption = "Hint";
+    HintPanel->Align = alRight;
+    HintPanel->BorderStyle = bsSingle;
+    HintPanel->Alignment = taRightJustify;
+    HintPanel->VerticalAlignment = taAlignTop;
+    HintPanel->BevelOuter = bvNone;
 
     PageControl1->ActivePage = MemoSheet;
 
@@ -191,7 +209,7 @@ void TMainForm::beth_CreateComponents()
 
     FileSaveItem->Action = FileSaveAction;
 }
-// <bethany-designer:end id="beth_CreateComponents" hash="c0efaec3">
+// <bethany-designer:end id="beth_CreateComponents" hash="78f45f3f">
 
 // <bethany-designer:handler-stubs>
 

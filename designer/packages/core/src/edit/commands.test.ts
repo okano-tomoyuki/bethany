@@ -219,7 +219,7 @@ describe('削除', () => {
   });
 
   it('最後の子を削除すると controls を消す(メニューの items は残す)', () => {
-    let doc = apply({ type: 'removeNodes', names: ['StatusLabel'] });
+    let doc = apply({ type: 'removeNodes', names: ['StatusLabel', 'HintPanel'] });
     expect(node(doc, 'BottomPanel').node).not.toHaveProperty('controls');
     doc = apply({ type: 'removeNodes', names: ['ClearItem'] }, doc);
     expect(node(doc, 'PopupMenu1').node).toHaveProperty('items', []);
@@ -238,6 +238,7 @@ describe('移動', () => {
       'OkButton',
       'NameEdit',
       'StatusLabel',
+      'HintPanel',
     ]);
     expect(names(doc.form.controls)).toEqual(['PageControl1', 'BottomPanel']);
   });

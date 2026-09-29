@@ -887,11 +887,31 @@ input[aria-invalid='true'] {
 
 .look-panel {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  white-space: pre;
-  border: 1px solid;
-  border-color: #fff #a0a0a0 #a0a0a0 #fff;
+}
+
+/* BorderStyle が bsSingle(Windows の枠。2 ピクセルのくぼみ) */
+.look-panel.framed {
+  border: 2px solid;
+  border-color: #a0a0a0 #fff #fff #a0a0a0;
+}
+
+/* 外側の縁・内側の縁・BorderWidth の余白(それぞれ 1 つ内側に入れる) */
+.look-panel-part {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.look-panel-text.wrap {
+  overflow-wrap: anywhere;
+}
+
+/* BorderStyle が bsNone(docs/adr/0048) */
+.no-border {
+  border-color: transparent !important;
 }
 
 .look-tabs-frame {

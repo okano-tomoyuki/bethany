@@ -1322,6 +1322,53 @@
     X(void,          TPicture_SetIcon,                      (obj_t o, obj_t v),                                            (o, v)) \
     X(bool_t,        TCustomForm_GetAllowDropFiles,         (obj_t o),                                                     (o)) \
     X(void,          TCustomForm_SetAllowDropFiles,         (obj_t o, bool_t v),                                           (o, v)) \
-    X(void,          TCustomForm_SetOnDropFiles,            (obj_t o, drop_files_callback_t cb, void* data),               (o, cb, data))
+    X(void,          TCustomForm_SetOnDropFiles,            (obj_t o, drop_files_callback_t cb, void* data),               (o, cb, data)) \
+    X(int_t,         TWinControl_GetBorderStyle,            (obj_t o),                                                     (o)) \
+    X(void,          TWinControl_SetBorderStyle,            (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TWinControl_GetBorderWidth,            (obj_t o),                                                     (o)) \
+    X(void,          TWinControl_SetBorderWidth,            (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomPanel_GetAlignment,             (obj_t o),                                                     (o)) \
+    X(void,          TCustomPanel_SetAlignment,             (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomPanel_GetVerticalAlignment,     (obj_t o),                                                     (o)) \
+    X(void,          TCustomPanel_SetVerticalAlignment,     (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TCustomPanel_GetWordWrap,              (obj_t o),                                                     (o)) \
+    X(void,          TCustomPanel_SetWordWrap,              (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TCustomPanel_GetBevelColor,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomPanel_SetBevelColor,            (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomPanel_GetBevelInner,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomPanel_SetBevelInner,            (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomPanel_GetBevelOuter,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomPanel_SetBevelOuter,            (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomPanel_GetBevelWidth,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomPanel_SetBevelWidth,            (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomDrawGrid_GetScrollBars,             (obj_t o),                                                     (o)) \
+    X(void,          TCustomDrawGrid_SetScrollBars,             (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomTreeView_GetScrollBars,         (obj_t o),                                                     (o)) \
+    X(void,          TCustomTreeView_SetScrollBars,         (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomListView_GetScrollBars,         (obj_t o),                                                     (o)) \
+    X(void,          TCustomListView_SetScrollBars,         (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TControlScrollBar_GetKind,             (obj_t o),                                                     (o)) \
+    X(int_t,         TControlScrollBar_GetSize,             (obj_t o),                                                     (o)) \
+    X(bool_t,        TControlScrollBar_IsScrollBarVisible,  (obj_t o),                                                     (o)) \
+    X(int_t,         TControlScrollBar_GetIncrement,        (obj_t o),                                                     (o)) \
+    X(void,          TControlScrollBar_SetIncrement,        (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TControlScrollBar_GetPage,             (obj_t o),                                                     (o)) \
+    X(void,          TControlScrollBar_SetPage,             (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TControlScrollBar_GetPosition,         (obj_t o),                                                     (o)) \
+    X(void,          TControlScrollBar_SetPosition,         (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TControlScrollBar_GetRange,            (obj_t o),                                                     (o)) \
+    X(void,          TControlScrollBar_SetRange,            (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TControlScrollBar_GetSmooth,           (obj_t o),                                                     (o)) \
+    X(void,          TControlScrollBar_SetSmooth,           (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TControlScrollBar_GetTracking,         (obj_t o),                                                     (o)) \
+    X(void,          TControlScrollBar_SetTracking,         (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TControlScrollBar_GetVisible,          (obj_t o),                                                     (o)) \
+    X(void,          TControlScrollBar_SetVisible,          (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TScrollingWinControl_GetAutoScroll,    (obj_t o),                                                     (o)) \
+    X(void,          TScrollingWinControl_SetAutoScroll,    (obj_t o, bool_t v),                                           (o, v)) \
+    X(obj_t,         TScrollingWinControl_GetHorzScrollBar, (obj_t o),                                                     (o)) \
+    X(void,          TScrollingWinControl_SetHorzScrollBar, (obj_t o, obj_t v),                                            (o, v)) \
+    X(obj_t,         TScrollingWinControl_GetVertScrollBar, (obj_t o),                                                     (o)) \
+    X(void,          TScrollingWinControl_SetVertScrollBar, (obj_t o, obj_t v),                                            (o, v))
 
 #endif

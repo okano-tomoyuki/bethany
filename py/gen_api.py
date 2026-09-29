@@ -168,6 +168,7 @@ class Model:
         self.int_aliases = {}  # TColor・TShortCut 等 → 定数 [(名前, 値の式, コメント)]
         self.events = {}       # 名前 → [引数の型](Sender を除く)
         self.event_aliases = {}
+        self.enum_aliases = {}  # TBorderStyle → TFormBorderStyle(同じ列挙型の別名。docs/adr/0048)
         self.classes = {}      # 名前 → (基底, 本体, コメント)
         self.set_constants = []  # 集合の定数 [(名前, 集合の型, [要素])](mbYesNo 等。beth.cpp の定義から)
         self.class_order = []
@@ -215,6 +216,9 @@ def parse_hpp():
         m = re.fullmatch(r"using (\w+) = (\w+)", t)
         if m and (m.group(2) in model.events):
             model.event_aliases[m.group(1)] = m.group(2)
+            continue
+        if m and (m.group(2) in model.enums):
+            model.enum_aliases[m.group(1)] = m.group(2)
             continue
         m = re.fullmatch(r"using (\w+) = Set<(\w+)>", t)
         if m:
@@ -299,6 +303,7 @@ class Gen:
     def scalar(self, t):
         """スカラーの型 → 'int'・'bool'・'float'・'char'・'str'・'ptr'・('enum', 名前)。クラス等なら None。"""
         t = t.replace("const ", "").strip()
+        t = self.m.enum_aliases.get(t, t)
         if t in ("int", "unsigned short", "unsigned int", "std::intptr_t") or t in self.m.int_aliases:
             return "int"
         if t == "bool":
@@ -429,6 +434,7 @@ class Gen:
         for e, items in self.m.enums.items():
             names.append(e)
             names += [i for i, _, _ in items]
+        names += list(self.m.enum_aliases)
         for f, items in self.m.flags.items():
             names.append(f)
             names += [i for i, _, _ in items]
@@ -459,6 +465,10 @@ class Gen:
             out.append(", ".join(i for i, _, _ in items) + " = " + ", ".join(f"{name}.{i}" for i, _, _ in items))
             out.append("")
             out.append("")
+        for alias, target in self.m.enum_aliases.items():
+            out.append(f"{alias} = {target}")
+        if self.m.enum_aliases:
+            out += ["", ""]
         return out
 
     def gen_flags(self):

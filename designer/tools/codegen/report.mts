@@ -79,6 +79,9 @@ export const EXPECTED_CHECKS: Readonly<Record<string, string>> = {
   actionLink: '&Save/Ctrl+S/1',
   // ファイルのドロップ(docs/adr/0047)
   allowDropFiles: '1',
+  // パネルの縁・コントロールの枠(docs/adr/0048): BevelOuter/BevelInner/BevelWidth/BorderWidth と、Memo1 の BorderStyle/ScrollBars
+  panelBevel: '1/2/2/1',
+  memoBorder: '0/3',
   dialogOptions: String((1 << 20) | (1 << 23) | (1 << 9)),
   timer: '0/500',
   caption: 'Sample',

@@ -2,7 +2,7 @@
  * プロパティの欄の文字入力と DSL の値の変換(docs/designer/editor-design.md §6)。
  * 空欄は「値を書かない(既定値)」を表す。
  */
-import { getCatalog } from '../catalog/catalog.ts';
+import { enumItems, getCatalog } from '../catalog/catalog.ts';
 import type { PropertyType } from '../catalog/types.ts';
 import type { PropertyValue } from '../dsl/schema.ts';
 import { l10n } from '../l10n.ts';
@@ -59,7 +59,7 @@ export function parseInput(type: PropertyType, text: string): InputResult {
     case 'char':
       return text.length === 1 ? ok(text) : error(l10n.t('Enter a single character'));
     case 'enum': {
-      const items = catalog.enums[type.enum] ?? [];
+      const items = enumItems(type);
       return items.includes(trimmed)
         ? ok(trimmed)
         : error(l10n.t('Enter one of {0}', items.join(', ')));

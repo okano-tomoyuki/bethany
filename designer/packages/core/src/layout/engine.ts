@@ -60,8 +60,7 @@ export function computeLayout(
 
 /** コンテナの Align の範囲(子の座標) */
 function areaOf(node: Container, size: { width: number; height: number }): Rect {
-  if (node.class === 'TForm') return { left: 0, top: 0, ...size };
-  const { origin, insets } = clientMetrics(node.class);
+  const { origin, insets } = clientMetrics(node.class, node.properties);
   return {
     left: insets.left - origin.x,
     top: insets.top - origin.y,

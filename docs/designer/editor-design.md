@@ -134,14 +134,16 @@ ADR 0036 の決定 2〜4。実装は [engine.ts](../../designer/packages/core/sr
 
 | クラス | 子の座標の原点 | 寄せる範囲の余白(左・上・右・下) |
 |---|---|---|
-| TForm | クライアント領域の左上(Width・Height がクライアント領域。dsl-spec.md §10 Q9) | なし |
-| TPanel | 外側の左上 | 1・1・1・1 |
+| TForm | クライアント領域の左上(Width・Height がクライアント領域。dsl-spec.md §10 Q9) | BorderWidth |
+| TPanel | 外側の左上(BorderStyle が bsSingle なら (2, 2)) | 枠 + 縁 + BorderWidth(既定は 1・1・1・1) |
 | TGroupBox | クライアント領域の左上(2, 18) | 2・18・2・2(上は見出しの高さでフォントに依存) |
-| TScrollBox | クライアント領域の左上(2, 2) | 2・2・2・2 |
+| TScrollBox | クライアント領域の左上(BorderStyle が bsSingle(既定)なら (2, 2)、bsNone なら (0, 0)) | 枠(2 か 0) |
 | TTabControl | 外側の左上 | 2・23・2・2(タブが 1 行あるとき) |
 | TPageControl(→ TTabSheet) | クライアント領域の左上(4, 24) | 4・24・4・4 |
 
-- TPanel の余白は枠(BevelOuter)から決まるが、BevelOuter 等はまだカタログに無い(既定の bvRaised の値)。
+- TPanel・TScrollBox・BorderWidth の余白はプロパティから計算する([ADR 0048](../adr/0048-panel-bevel-scroll-border.md)。規則は実物の LCL で測ったもの):
+  枠(BorderStyle が bsSingle)は 2 で、原点も余白もずれる。TPanel の縁は bvNone でない BevelOuter・BevelInner 1 つにつき BevelWidth で、
+  BorderWidth と同じく余白だけを広げる。TTabSheet の BorderWidth は Windows の LCL では効かないため、Bethany では公開しない。
 - TGroupBox の見出しの高さは、記録したフォント(Yu Gothic UI 9pt)以外ではずれる(Font.Size を 14 にすると上の余白は 28)。
 - TStatusBar は、生成しただけでは高さが 0 なので、フォームに置いて測った高さ(24)を追加したときの大きさにする。
 

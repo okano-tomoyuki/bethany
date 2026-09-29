@@ -22,6 +22,11 @@
   under the action list, and the `Action` property of controls and menu items chooses one. The Object Inspector and the canvas
   show the values that come from the action, and a warning tells when a property or `OnClick` set on the control is overridden
 - New from the Bethany library 0.3.0: the `AllowDropFiles` property and the `OnDropFiles` event of forms (files dropped from Explorer)
+- New from the Bethany library 0.3.0: the bevels (`BevelOuter`, `BevelInner`, `BevelWidth`, `BevelColor`) and caption alignment
+  (`Alignment`, `VerticalAlignment`, `WordWrap`) of panels, `BorderStyle` and `BorderWidth`, `ScrollBars` of grids, tree views and
+  list views, and `AutoScroll`, `HorzScrollBar` and `VertScrollBar` of forms and scroll boxes. The canvas draws the bevels, borders
+  and caption alignment, and the layout accounts for bevels, borders and `BorderWidth`
+- `ScrollBars` of memos is now a named value (`ssBoth`). Older form files with a number are read as the name
 - The include guard macro does not repeat a namespace that is also the folder of the header
   (`APP_DIALOGS_ABOUT_HPP` instead of `APP_DIALOGS_DIALOGS_ABOUT_HPP` for `app::dialogs` and `dialogs/About.hpp`)
 

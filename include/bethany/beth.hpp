@@ -1441,6 +1441,69 @@ private:
     static void SetInnerBorderImpl(TObject* owner, const int& value);
 };
 
+// ---- パネルの縁・スクロール・コントロールの枠(docs/adr/0048。値の順は LCL と同じ) ----
+
+// フォームの枠(bsDialog は大きさを変えられず、最小化・最大化のボタンが無い。docs/adr/0041)。
+enum TFormBorderStyle { bsNone, bsSingle, bsSizeable, bsDialog, bsToolWindow, bsSizeToolWin };
+// コントロールの枠(bsNone か bsSingle だけを使う。LCL・VCL の TBorderStyle は TFormBorderStyle の bsNone..bsSingle の範囲)。
+using TBorderStyle = TFormBorderStyle;
+// パネルの縁の凹凸(bvSpace は凹凸の無い余白)。
+enum TPanelBevel { bvNone, bvLowered, bvRaised, bvSpace };
+// 文字の縦の揃え(TPanel の VerticalAlignment)。
+enum TVerticalAlignment { taAlignTop, taAlignBottom, taVerticalCenter };
+// スクロールバーの出し方。ssAuto… は、内容がはみ出したときだけ出す。
+enum TScrollStyle { ssNone, ssHorizontal, ssVertical, ssBoth, ssAutoHorizontal, ssAutoVertical, ssAutoBoth };
+
+enum TScrollBarKind { sbHorizontal, sbVertical };
+
+// TForm・TScrollBox の横・縦のスクロールバー(LCL の TControlScrollBar)。コントロールが所有するものへの非所有のラッパー。
+// Range を領域の幅・高さより大きくすると、スクロールバーが出る(AutoScroll が true なら、Range は子の配置から LCL が決める)。
+class TControlScrollBar : public TPersistent
+{
+public:
+    // sbHorizontal か sbVertical。
+    ReadOnlyProperty<TScrollBarKind> Kind;
+    // スクロールバーの太さ(ピクセル)。
+    ReadOnlyProperty<int> Size;
+    // 矢印を押したときに動く量と、つまみの外を押したときに動く量(ピクセル)。
+    Property<int>  Increment;
+    Property<int>  Page;
+    // 位置(0 から Range - 領域の大きさ まで)。
+    Property<int>  Position;
+    // スクロールする範囲の大きさ(ピクセル)。
+    Property<int>  Range;
+    // true なら、Increment を領域の大きさから決める。
+    Property<bool> Smooth;
+    // true なら、つまみをドラッグしている間も表示を動かす。
+    Property<bool> Tracking;
+    // false なら、Range が大きくてもスクロールバーを出さない。
+    Property<bool> Visible;
+
+    // 今スクロールバーが表示されているか。
+    bool IsScrollBarVisible() const;
+
+    explicit TControlScrollBar(ObjectHandle handle);
+    ~TControlScrollBar() override = default;
+
+private:
+    static TScrollBarKind GetKindImpl(TObject* owner);
+    static int  GetSizeImpl(TObject* owner);
+    static int  GetIncrementImpl(TObject* owner);
+    static void SetIncrementImpl(TObject* owner, const int& value);
+    static int  GetPageImpl(TObject* owner);
+    static void SetPageImpl(TObject* owner, const int& value);
+    static int  GetPositionImpl(TObject* owner);
+    static void SetPositionImpl(TObject* owner, const int& value);
+    static int  GetRangeImpl(TObject* owner);
+    static void SetRangeImpl(TObject* owner, const int& value);
+    static bool GetSmoothImpl(TObject* owner);
+    static void SetSmoothImpl(TObject* owner, const bool& value);
+    static bool GetTrackingImpl(TObject* owner);
+    static void SetTrackingImpl(TObject* owner, const bool& value);
+    static bool GetVisibleImpl(TObject* owner);
+    static void SetVisibleImpl(TObject* owner, const bool& value);
+};
+
 // ---- リスト・コンボの選択・チェックの 3 状態・Application(docs/adr/0043。値の順は LCL と同じ) ----
 
 // コンボボックスの見た目と入力(csDropDownList は一覧から選ぶだけ。csOwnerDraw… は Tier B のオーナードロー)。
@@ -1686,6 +1749,14 @@ public:
 
 protected:
     explicit TWinControl(ObjectHandle handle);
+
+    // 内側の余白(ピクセル)。子を置ける範囲(Align で寄せる範囲)が、四辺ともこの幅だけ狭くなる(docs/adr/0048)。
+    // LCL と同じく、TCustomPanel・TCustomForm・TCustomListView・TCustomTreeView が using で公開する(TTabSheet は、LCL が公開しているが
+    // Windows では効かないため公開しない)。
+    Property<int> BorderWidth;
+    // 枠(bsNone・bsSingle)。LCL と同じく、枠を持てるクラス(TCustomEdit・TCustomListBox・TCustomComboBox・TCustomListView・
+    // TCustomControl)が using で公開する(docs/adr/0048)。
+    Property<TBorderStyle> BorderStyle;
     ~TWinControl() override = default;
 
 private:
@@ -1722,10 +1793,15 @@ private:
     static void         SetOnEnterImpl(TObject* owner, const TNotifyEvent& value);
     static TNotifyEvent GetOnExitImpl(TObject* owner);
     static void         SetOnExitImpl(TObject* owner, const TNotifyEvent& value);
+
+    // ---- docs/adr/0048 ----
+    static int          GetBorderWidthImpl(TObject* owner);
+    static void         SetBorderWidthImpl(TObject* owner, const int& value);
+    static TBorderStyle GetBorderStyleImpl(TObject* owner);
+    static void         SetBorderStyleImpl(TObject* owner, const TBorderStyle& value);
 };
 
-// つまみを左右または上下にドラッグして値を選ぶスクロールバー。
-enum TScrollBarKind { sbHorizontal, sbVertical };
+// つまみを左右または上下にドラッグして値を選ぶスクロールバー(TScrollBarKind は docs/adr/0048 の区間)。
 
 class TCustomScrollBar : public TWinControl
 {
@@ -1847,6 +1923,8 @@ protected:
 class TCustomControl : public TWinControl
 {
 public:
+    using TWinControl::BorderStyle;
+
     // 描く先(docs/adr/0045)。OnPaint(グリッドは OnDrawCell)の中で描く。コントロールが所有する実体への非所有のビュー
     // (TPaintBox::Canvas と同じ)。OnPaint の外で描いたものは、次の再描画で消える。
     TCanvas Canvas;
@@ -1902,9 +1980,27 @@ private:
 
 class TScrollingWinControl : public TCustomControl
 {
+public:
+    // true なら、子がはみ出したときにスクロールバーを出す(Range を子の配置から決める。docs/adr/0048)。
+    Property<bool>               AutoScroll;
+    // 横・縦のスクロールバー。代入は内容のコピー。
+    Property<TControlScrollBar*> HorzScrollBar;
+    Property<TControlScrollBar*> VertScrollBar;
+
 protected:
-    explicit TScrollingWinControl(ObjectHandle handle) : TCustomControl(handle) {}
+    explicit TScrollingWinControl(ObjectHandle handle);
     ~TScrollingWinControl() override = default;
+
+private:
+    TControlScrollBar horzScrollBar_;
+    TControlScrollBar vertScrollBar_;
+
+    static bool               GetAutoScrollImpl(TObject* owner);
+    static void               SetAutoScrollImpl(TObject* owner, const bool& value);
+    static TControlScrollBar* GetHorzScrollBarImpl(TObject* owner);
+    static void               SetHorzScrollBarImpl(TObject* owner, TControlScrollBar* const& value);
+    static TControlScrollBar* GetVertScrollBarImpl(TObject* owner);
+    static void               SetVertScrollBarImpl(TObject* owner, TControlScrollBar* const& value);
 };
 
 // スクロール可能な汎用コンテナ。TScrollingWinControl の直接の派生で、追加のメンバは無い。
@@ -1937,8 +2033,6 @@ const TModalResult mrNoToAll  = 9;
 const TModalResult mrYesToAll = 10;
 const TModalResult mrClose    = 11;
 
-// フォームの枠(bsDialog は大きさを変えられず、最小化・最大化のボタンが無い)。
-enum TFormBorderStyle { bsNone, bsSingle, bsSizeable, bsDialog, bsToolWindow, bsSizeToolWin };
 // 最初に表示する位置(poDesigned は Left・Top のまま。poMainFormCenter はメインフォームの中央)。
 enum TPosition
 {
@@ -1955,6 +2049,7 @@ enum TFormStyle { fsNormal, fsMDIChild, fsMDIForm, fsStayOnTop, fsSplash, fsSyst
 class TCustomForm : public TScrollingWinControl
 {
 public:
+    using TWinControl::BorderWidth;
     using TCustomControl::OnPaint;
 
     // LCL の TCustomForm は Show/Hide を独自に宣言している(TControl のものを隠す)。
@@ -2391,9 +2486,39 @@ void TApplication::CreateForm(T** Reference)
 
 class TCustomPanel : public TCustomControl
 {
+public:
+    using TWinControl::BorderWidth;
+    // ---- docs/adr/0048 ----
+    // Caption の横・縦の揃えと折り返し(既定は中央)。
+    Property<TAlignment>         Alignment;
+    Property<TVerticalAlignment> VerticalAlignment;
+    Property<bool>               WordWrap;
+    // 縁の外側・内側の凹凸(既定は外側が bvRaised、内側が bvNone)と、その幅・色(clDefault は凹凸の既定の色)。
+    // 縁があると、子を置ける範囲(Align で寄せる範囲)がその幅だけ狭くなる。
+    Property<TPanelBevel>        BevelOuter;
+    Property<TPanelBevel>        BevelInner;
+    Property<int>                BevelWidth;
+    Property<TColor>             BevelColor;
+
 protected:
-    explicit TCustomPanel(ObjectHandle handle) : TCustomControl(handle) {}
+    explicit TCustomPanel(ObjectHandle handle);
     ~TCustomPanel() override = default;
+
+private:
+    static TAlignment         GetAlignmentImpl(TObject* owner);
+    static void               SetAlignmentImpl(TObject* owner, const TAlignment& value);
+    static TVerticalAlignment GetVerticalAlignmentImpl(TObject* owner);
+    static void               SetVerticalAlignmentImpl(TObject* owner, const TVerticalAlignment& value);
+    static bool               GetWordWrapImpl(TObject* owner);
+    static void               SetWordWrapImpl(TObject* owner, const bool& value);
+    static TPanelBevel        GetBevelOuterImpl(TObject* owner);
+    static void               SetBevelOuterImpl(TObject* owner, const TPanelBevel& value);
+    static TPanelBevel        GetBevelInnerImpl(TObject* owner);
+    static void               SetBevelInnerImpl(TObject* owner, const TPanelBevel& value);
+    static int                GetBevelWidthImpl(TObject* owner);
+    static void               SetBevelWidthImpl(TObject* owner, const int& value);
+    static TColor             GetBevelColorImpl(TObject* owner);
+    static void               SetBevelColorImpl(TObject* owner, const TColor& value);
 };
 
 class TPanel : public TCustomPanel
@@ -2744,6 +2869,8 @@ protected:
 class TCustomEdit : public TWinControl
 {
 public:
+    using TWinControl::BorderStyle;
+
     // 選択の開始位置(文字の数。0 から)。選択が無ければキャレットの位置。
     Property<int> SelStart;
     // 選択の長さ(文字の数)。
@@ -3295,6 +3422,10 @@ using TTVCollapsingEvent = std::function<void(TObject* Sender, TTreeNode* Node, 
 class TCustomTreeView : public TCustomControl
 {
 public:
+    using TWinControl::BorderWidth;
+    // スクロールバーの出し方(docs/adr/0048)。
+    Property<TScrollStyle> ScrollBars;
+
     ReadOnlyProperty<TTreeNodes*> Items;
     // 選択されているノード(無ければ nullptr)。
     Property<TTreeNode*>          Selected;
@@ -3327,6 +3458,10 @@ private:
     static void SetImagesImpl(TObject* owner, TCustomImageList* const& value);
     static TCustomImageList* GetStateImagesImpl(TObject* owner);
     static void SetStateImagesImpl(TObject* owner, TCustomImageList* const& value);
+
+    // ---- docs/adr/0048 ----
+    static TScrollStyle GetScrollBarsImpl(TObject* owner);
+    static void         SetScrollBarsImpl(TObject* owner, const TScrollStyle& value);
 };
 
 // 以下のメンバは LCL では TCustomTreeView の protected で、TTreeView が published にしている。
@@ -3590,6 +3725,12 @@ using TLVColumnClickEvent = std::function<void(TObject* Sender, TListColumn* Col
 class TCustomListView : public TWinControl
 {
 public:
+    using TWinControl::BorderWidth;
+    // スクロールバーの出し方(docs/adr/0048)。
+    Property<TScrollStyle> ScrollBars;
+
+    using TWinControl::BorderStyle;
+
     ReadOnlyProperty<TListItems*> Items;
     // 選択されている項目(MultiSelect なら最初の 1 つ。無ければ nullptr)と、その位置(無ければ -1)。
     // 表示前(フォームのコンストラクタ等)に設定しても選択される(LCL 単体では選択されないため DLL 側で補っている)。
@@ -3636,6 +3777,10 @@ private:
     static void        SetReadOnlyImpl(TObject* owner, const bool& value);
     static bool        GetRowSelectImpl(TObject* owner);
     static void        SetRowSelectImpl(TObject* owner, const bool& value);
+
+    // ---- docs/adr/0048 ----
+    static TScrollStyle GetScrollBarsImpl(TObject* owner);
+    static void         SetScrollBarsImpl(TObject* owner, const TScrollStyle& value);
 };
 
 // 以下のメンバは LCL では TCustomListView の protected で、TListView が published にしている。
@@ -3791,7 +3936,8 @@ public:
     // 末尾に 1 行加える(Lines->Add と違い、表示を最後の行までスクロールする)。
     void Append(const std::string& S);
 
-    Property<int> ScrollBars;
+    // スクロールバーの出し方(docs/adr/0048 で int から TScrollStyle にした)。
+    Property<TScrollStyle> ScrollBars;
 
     // 文字列の一覧(TStrings。Memo1->Lines->Add("x") のように使う)。
     ReadOnlyProperty<TStrings*> Lines;
@@ -3803,8 +3949,8 @@ protected:
 private:
     TStrings lines_;
     static TStrings* GetLinesImpl(TObject* owner);
-    static int  GetScrollBarsImpl(TObject* owner);
-    static void SetScrollBarsImpl(TObject* owner, const int& value);
+    static TScrollStyle GetScrollBarsImpl(TObject* owner);
+    static void         SetScrollBarsImpl(TObject* owner, const TScrollStyle& value);
 
 private:
     static bool GetWordWrapImpl(TObject* owner);
@@ -3829,6 +3975,8 @@ protected:
 class TCustomComboBox : public TWinControl
 {
 public:
+    using TWinControl::BorderStyle;
+
     // 見た目と入力(csDropDownList は一覧から選ぶだけで、文字を入力できない)。
     Property<TComboBoxStyle> Style;
     // 一覧を開いたときに表示する項目の数。
@@ -3918,6 +4066,8 @@ private:
 class TCustomListBox : public TWinControl
 {
 public:
+    using TWinControl::BorderStyle;
+
     // 複数の項目を選べるようにする(選んだ項目は Selected[i])。
     Property<bool> MultiSelect;
     // MultiSelect のとき、Shift・Ctrl で範囲・追加の選択をする(false なら、クリックのたびに選択を切り替える)。
@@ -4450,6 +4600,9 @@ protected:
 class TCustomDrawGrid : public TCustomGrid
 {
 public:
+    // スクロールバーの出し方(docs/adr/0048)。
+    Property<TScrollStyle> ScrollBars;
+
     // OnDrawCell の中で描画する先は、TCustomControl::Canvas。
 
     Property<int>          ColCount;
@@ -4553,6 +4706,10 @@ private:
     static void               SetOnSelectionImpl(TObject* owner, const TOnSelectEvent& value);
     static THdrEvent          GetOnHeaderClickImpl(TObject* owner);
     static void               SetOnHeaderClickImpl(TObject* owner, const THdrEvent& value);
+
+    // ---- docs/adr/0048 ----
+    static TScrollStyle GetScrollBarsImpl(TObject* owner);
+    static void         SetScrollBarsImpl(TObject* owner, const TScrollStyle& value);
 };
 
 // セルの内容を OnDrawCell で利用者が描画するグリッド(セルの文字列は持たない)。

@@ -2601,6 +2601,20 @@ int main()
         };
     }
 
+    // パネルの縁・スクロール・コントロールの枠(docs/adr/0048)。LayoutPanel の中の alClient のパネルを、二重の縁(外側がくぼみ、
+    // 内側が盛り上がり。BevelWidth 2)にし、Caption を左上に寄せる。alTop のパネルの Caption は右に寄せる。
+    {
+        Form1->AlignClientPanel->BevelOuter = bvLowered;
+        Form1->AlignClientPanel->BevelInner = bvRaised;
+        Form1->AlignClientPanel->BevelWidth = 2;
+        Form1->AlignClientPanel->Alignment = taLeftJustify;
+        Form1->AlignClientPanel->VerticalAlignment = taAlignTop;
+        Form1->AlignTopPanel->Alignment = taRightJustify;
+        std::printf("AlignClientPanel BevelOuter/BevelInner=%d/%d (expected 1/2), TreeView ScrollBars=%d (expected 3 = ssBoth)\n",
+                    int(Form1->AlignClientPanel->BevelOuter), int(Form1->AlignClientPanel->BevelInner),
+                    int(Form1->TreeView1->ScrollBars));
+    }
+
     // ステータスバーのパネル(docs/adr/0044)。StatusBar1 の上に、パネルを持つ 2 つ目のステータスバーを置く。
     {
         TStatusBar* panelBar = new TStatusBar(Form1);

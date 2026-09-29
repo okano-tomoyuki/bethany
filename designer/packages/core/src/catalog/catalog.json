@@ -5,10 +5,12 @@
     "Align",
     "AllowDropFiles",
     "Anchors",
+    "AutoScroll",
     "AutoSize",
     "BorderIcons",
     "BorderSpacing",
     "BorderStyle",
+    "BorderWidth",
     "BringToFront",
     "CanFocus",
     "Canvas",
@@ -30,6 +32,7 @@
     "Height",
     "Hide",
     "Hint",
+    "HorzScrollBar",
     "Icon",
     "Invalidate",
     "KeyPreview",
@@ -81,6 +84,7 @@
     "Text",
     "Top",
     "Update",
+    "VertScrollBar",
     "Visible",
     "Width",
     "WindowState",
@@ -1875,6 +1879,60 @@
           },
           "declaredIn": "TWinControl",
           "default": false
+        },
+        "BorderStyle": {
+          "type": {
+            "kind": "enum",
+            "enum": "TFormBorderStyle",
+            "values": [
+              "bsNone",
+              "bsSingle"
+            ]
+          },
+          "declaredIn": "TWinControl",
+          "default": "bsSingle",
+          "doc": "枠(bsNone・bsSingle)。LCL と同じく、枠を持てるクラス(TCustomEdit・TCustomListBox・TCustomComboBox・TCustomListView・ TCustomControl)が using で公開する(docs/adr/0048)。"
+        },
+        "AutoScroll": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TScrollingWinControl",
+          "default": true,
+          "doc": "true なら、子がはみ出したときにスクロールバーを出す(Range を子の配置から決める。docs/adr/0048)。"
+        },
+        "HorzScrollBar": {
+          "type": {
+            "kind": "object",
+            "class": "TControlScrollBar"
+          },
+          "declaredIn": "TScrollingWinControl",
+          "default": {
+            "Increment": 8,
+            "Page": 80,
+            "Position": 0,
+            "Range": 0,
+            "Smooth": false,
+            "Tracking": false,
+            "Visible": true
+          },
+          "doc": "横・縦のスクロールバー。代入は内容のコピー。"
+        },
+        "VertScrollBar": {
+          "type": {
+            "kind": "object",
+            "class": "TControlScrollBar"
+          },
+          "declaredIn": "TScrollingWinControl",
+          "default": {
+            "Increment": 8,
+            "Page": 80,
+            "Position": 0,
+            "Range": 0,
+            "Smooth": false,
+            "Tracking": false,
+            "Visible": true
+          }
         }
       },
       "events": {
@@ -2112,6 +2170,63 @@
           "declaredIn": "TControl",
           "default": "crDefault"
         },
+        "BorderStyle": {
+          "type": {
+            "kind": "enum",
+            "enum": "TFormBorderStyle"
+          },
+          "declaredIn": "TCustomForm",
+          "default": "bsSizeable"
+        },
+        "AutoScroll": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TScrollingWinControl",
+          "default": false,
+          "doc": "true なら、子がはみ出したときにスクロールバーを出す(Range を子の配置から決める。docs/adr/0048)。"
+        },
+        "HorzScrollBar": {
+          "type": {
+            "kind": "object",
+            "class": "TControlScrollBar"
+          },
+          "declaredIn": "TScrollingWinControl",
+          "default": {
+            "Increment": 8,
+            "Page": 80,
+            "Position": 0,
+            "Range": 0,
+            "Smooth": false,
+            "Tracking": false,
+            "Visible": true
+          },
+          "doc": "横・縦のスクロールバー。代入は内容のコピー。"
+        },
+        "VertScrollBar": {
+          "type": {
+            "kind": "object",
+            "class": "TControlScrollBar"
+          },
+          "declaredIn": "TScrollingWinControl",
+          "default": {
+            "Increment": 8,
+            "Page": 80,
+            "Position": 0,
+            "Range": 0,
+            "Smooth": false,
+            "Tracking": false,
+            "Visible": true
+          }
+        },
+        "BorderWidth": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TWinControl",
+          "default": 0,
+          "doc": "内側の余白(ピクセル)。子を置ける範囲(Align で寄せる範囲)が、四辺ともこの幅だけ狭くなる(docs/adr/0048)。 LCL と同じく、TCustomPanel・TCustomForm・TCustomListView・TCustomTreeView が using で公開する(TTabSheet は、LCL が公開しているが Windows では効かないため公開しない)。"
+        },
         "Menu": {
           "type": {
             "kind": "ref",
@@ -2120,14 +2235,6 @@
           "declaredIn": "TCustomForm",
           "default": null,
           "doc": "フォームのメニューバー。nullptr を代入すると外す(メニュー自体は破棄されない)。"
-        },
-        "BorderStyle": {
-          "type": {
-            "kind": "enum",
-            "enum": "TFormBorderStyle"
-          },
-          "declaredIn": "TCustomForm",
-          "default": "bsSizeable"
         },
         "Position": {
           "type": {
@@ -2532,6 +2639,83 @@
           },
           "declaredIn": "TWinControl",
           "default": false
+        },
+        "BorderStyle": {
+          "type": {
+            "kind": "enum",
+            "enum": "TFormBorderStyle",
+            "values": [
+              "bsNone",
+              "bsSingle"
+            ]
+          },
+          "declaredIn": "TWinControl",
+          "default": "bsNone",
+          "doc": "枠(bsNone・bsSingle)。LCL と同じく、枠を持てるクラス(TCustomEdit・TCustomListBox・TCustomComboBox・TCustomListView・ TCustomControl)が using で公開する(docs/adr/0048)。"
+        },
+        "BorderWidth": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TWinControl",
+          "default": 0,
+          "doc": "内側の余白(ピクセル)。子を置ける範囲(Align で寄せる範囲)が、四辺ともこの幅だけ狭くなる(docs/adr/0048)。 LCL と同じく、TCustomPanel・TCustomForm・TCustomListView・TCustomTreeView が using で公開する(TTabSheet は、LCL が公開しているが Windows では効かないため公開しない)。"
+        },
+        "Alignment": {
+          "type": {
+            "kind": "enum",
+            "enum": "TAlignment"
+          },
+          "declaredIn": "TCustomPanel",
+          "default": "taCenter",
+          "doc": "---- docs/adr/0048 ---- Caption の横・縦の揃えと折り返し(既定は中央)。"
+        },
+        "VerticalAlignment": {
+          "type": {
+            "kind": "enum",
+            "enum": "TVerticalAlignment"
+          },
+          "declaredIn": "TCustomPanel",
+          "default": "taVerticalCenter"
+        },
+        "WordWrap": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomPanel",
+          "default": false
+        },
+        "BevelOuter": {
+          "type": {
+            "kind": "enum",
+            "enum": "TPanelBevel"
+          },
+          "declaredIn": "TCustomPanel",
+          "default": "bvRaised",
+          "doc": "縁の外側・内側の凹凸(既定は外側が bvRaised、内側が bvNone)と、その幅・色(clDefault は凹凸の既定の色)。 縁があると、子を置ける範囲(Align で寄せる範囲)がその幅だけ狭くなる。"
+        },
+        "BevelInner": {
+          "type": {
+            "kind": "enum",
+            "enum": "TPanelBevel"
+          },
+          "declaredIn": "TCustomPanel",
+          "default": "bvNone"
+        },
+        "BevelWidth": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TCustomPanel",
+          "default": 1
+        },
+        "BevelColor": {
+          "type": {
+            "kind": "alias",
+            "alias": "TColor"
+          },
+          "declaredIn": "TCustomPanel",
+          "default": "clDefault"
         }
       },
       "events": {
@@ -6006,6 +6190,19 @@
           "declaredIn": "TWinControl",
           "default": true
         },
+        "BorderStyle": {
+          "type": {
+            "kind": "enum",
+            "enum": "TFormBorderStyle",
+            "values": [
+              "bsNone",
+              "bsSingle"
+            ]
+          },
+          "declaredIn": "TWinControl",
+          "default": "bsSingle",
+          "doc": "枠(bsNone・bsSingle)。LCL と同じく、枠を持てるクラス(TCustomEdit・TCustomListBox・TCustomComboBox・TCustomListView・ TCustomControl)が using で公開する(docs/adr/0048)。"
+        },
         "PasswordChar": {
           "type": {
             "kind": "char"
@@ -6390,6 +6587,19 @@
           },
           "declaredIn": "TWinControl",
           "default": true
+        },
+        "BorderStyle": {
+          "type": {
+            "kind": "enum",
+            "enum": "TFormBorderStyle",
+            "values": [
+              "bsNone",
+              "bsSingle"
+            ]
+          },
+          "declaredIn": "TWinControl",
+          "default": "bsSingle",
+          "doc": "枠(bsNone・bsSingle)。LCL と同じく、枠を持てるクラス(TCustomEdit・TCustomListBox・TCustomComboBox・TCustomListView・ TCustomControl)が using で公開する(docs/adr/0048)。"
         },
         "PasswordChar": {
           "type": {
@@ -6797,6 +7007,19 @@
           "declaredIn": "TWinControl",
           "default": true
         },
+        "BorderStyle": {
+          "type": {
+            "kind": "enum",
+            "enum": "TFormBorderStyle",
+            "values": [
+              "bsNone",
+              "bsSingle"
+            ]
+          },
+          "declaredIn": "TWinControl",
+          "default": "bsSingle",
+          "doc": "枠(bsNone・bsSingle)。LCL と同じく、枠を持てるクラス(TCustomEdit・TCustomListBox・TCustomComboBox・TCustomListView・ TCustomControl)が using で公開する(docs/adr/0048)。"
+        },
         "PasswordChar": {
           "type": {
             "kind": "char"
@@ -7194,6 +7417,19 @@
           "declaredIn": "TWinControl",
           "default": true
         },
+        "BorderStyle": {
+          "type": {
+            "kind": "enum",
+            "enum": "TFormBorderStyle",
+            "values": [
+              "bsNone",
+              "bsSingle"
+            ]
+          },
+          "declaredIn": "TWinControl",
+          "default": "bsSingle",
+          "doc": "枠(bsNone・bsSingle)。LCL と同じく、枠を持てるクラス(TCustomEdit・TCustomListBox・TCustomComboBox・TCustomListView・ TCustomControl)が using で公開する(docs/adr/0048)。"
+        },
         "PasswordChar": {
           "type": {
             "kind": "char"
@@ -7585,6 +7821,19 @@
           },
           "declaredIn": "TWinControl",
           "default": true
+        },
+        "BorderStyle": {
+          "type": {
+            "kind": "enum",
+            "enum": "TFormBorderStyle",
+            "values": [
+              "bsNone",
+              "bsSingle"
+            ]
+          },
+          "declaredIn": "TWinControl",
+          "default": "bsSingle",
+          "doc": "枠(bsNone・bsSingle)。LCL と同じく、枠を持てるクラス(TCustomEdit・TCustomListBox・TCustomComboBox・TCustomListView・ TCustomControl)が using で公開する(docs/adr/0048)。"
         },
         "PasswordChar": {
           "type": {
@@ -9003,6 +9252,36 @@
           "declaredIn": "TWinControl",
           "default": true
         },
+        "BorderStyle": {
+          "type": {
+            "kind": "enum",
+            "enum": "TFormBorderStyle",
+            "values": [
+              "bsNone",
+              "bsSingle"
+            ]
+          },
+          "declaredIn": "TWinControl",
+          "default": "bsSingle",
+          "doc": "枠(bsNone・bsSingle)。LCL と同じく、枠を持てるクラス(TCustomEdit・TCustomListBox・TCustomComboBox・TCustomListView・ TCustomControl)が using で公開する(docs/adr/0048)。"
+        },
+        "BorderWidth": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TWinControl",
+          "default": 0,
+          "doc": "内側の余白(ピクセル)。子を置ける範囲(Align で寄せる範囲)が、四辺ともこの幅だけ狭くなる(docs/adr/0048)。 LCL と同じく、TCustomPanel・TCustomForm・TCustomListView・TCustomTreeView が using で公開する(TTabSheet は、LCL が公開しているが Windows では効かないため公開しない)。"
+        },
+        "ScrollBars": {
+          "type": {
+            "kind": "enum",
+            "enum": "TScrollStyle"
+          },
+          "declaredIn": "TCustomTreeView",
+          "default": "ssBoth",
+          "doc": "スクロールバーの出し方(docs/adr/0048)。"
+        },
         "Images": {
           "type": {
             "kind": "ref",
@@ -9391,6 +9670,36 @@
           },
           "declaredIn": "TWinControl",
           "default": true
+        },
+        "BorderWidth": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TWinControl",
+          "default": 0,
+          "doc": "内側の余白(ピクセル)。子を置ける範囲(Align で寄せる範囲)が、四辺ともこの幅だけ狭くなる(docs/adr/0048)。 LCL と同じく、TCustomPanel・TCustomForm・TCustomListView・TCustomTreeView が using で公開する(TTabSheet は、LCL が公開しているが Windows では効かないため公開しない)。"
+        },
+        "ScrollBars": {
+          "type": {
+            "kind": "enum",
+            "enum": "TScrollStyle"
+          },
+          "declaredIn": "TCustomListView",
+          "default": "ssBoth",
+          "doc": "スクロールバーの出し方(docs/adr/0048)。"
+        },
+        "BorderStyle": {
+          "type": {
+            "kind": "enum",
+            "enum": "TFormBorderStyle",
+            "values": [
+              "bsNone",
+              "bsSingle"
+            ]
+          },
+          "declaredIn": "TWinControl",
+          "default": "bsSingle",
+          "doc": "枠(bsNone・bsSingle)。LCL と同じく、枠を持てるクラス(TCustomEdit・TCustomListBox・TCustomComboBox・TCustomListView・ TCustomControl)が using で公開する(docs/adr/0048)。"
         },
         "Checkboxes": {
           "type": {
@@ -10144,6 +10453,19 @@
           "declaredIn": "TWinControl",
           "default": true
         },
+        "BorderStyle": {
+          "type": {
+            "kind": "enum",
+            "enum": "TFormBorderStyle",
+            "values": [
+              "bsNone",
+              "bsSingle"
+            ]
+          },
+          "declaredIn": "TWinControl",
+          "default": "bsSingle",
+          "doc": "枠(bsNone・bsSingle)。LCL と同じく、枠を持てるクラス(TCustomEdit・TCustomListBox・TCustomComboBox・TCustomListView・ TCustomControl)が using で公開する(docs/adr/0048)。"
+        },
         "CharCase": {
           "type": {
             "kind": "enum",
@@ -10218,10 +10540,12 @@
         },
         "ScrollBars": {
           "type": {
-            "kind": "int"
+            "kind": "enum",
+            "enum": "TScrollStyle"
           },
           "declaredIn": "TCustomMemo",
-          "default": 0
+          "default": "ssNone",
+          "doc": "スクロールバーの出し方(docs/adr/0048 で int から TScrollStyle にした)。"
         },
         "Lines": {
           "type": {
@@ -10525,6 +10849,19 @@
           },
           "declaredIn": "TWinControl",
           "default": true
+        },
+        "BorderStyle": {
+          "type": {
+            "kind": "enum",
+            "enum": "TFormBorderStyle",
+            "values": [
+              "bsNone",
+              "bsSingle"
+            ]
+          },
+          "declaredIn": "TWinControl",
+          "default": "bsNone",
+          "doc": "枠(bsNone・bsSingle)。LCL と同じく、枠を持てるクラス(TCustomEdit・TCustomListBox・TCustomComboBox・TCustomListView・ TCustomControl)が using で公開する(docs/adr/0048)。"
         },
         "Style": {
           "type": {
@@ -10901,6 +11238,19 @@
           "declaredIn": "TWinControl",
           "default": true
         },
+        "BorderStyle": {
+          "type": {
+            "kind": "enum",
+            "enum": "TFormBorderStyle",
+            "values": [
+              "bsNone",
+              "bsSingle"
+            ]
+          },
+          "declaredIn": "TWinControl",
+          "default": "bsSingle",
+          "doc": "枠(bsNone・bsSingle)。LCL と同じく、枠を持てるクラス(TCustomEdit・TCustomListBox・TCustomComboBox・TCustomListView・ TCustomControl)が using で公開する(docs/adr/0048)。"
+        },
         "MultiSelect": {
           "type": {
             "kind": "bool"
@@ -11236,6 +11586,19 @@
           },
           "declaredIn": "TWinControl",
           "default": true
+        },
+        "BorderStyle": {
+          "type": {
+            "kind": "enum",
+            "enum": "TFormBorderStyle",
+            "values": [
+              "bsNone",
+              "bsSingle"
+            ]
+          },
+          "declaredIn": "TWinControl",
+          "default": "bsSingle",
+          "doc": "枠(bsNone・bsSingle)。LCL と同じく、枠を持てるクラス(TCustomEdit・TCustomListBox・TCustomComboBox・TCustomListView・ TCustomControl)が using で公開する(docs/adr/0048)。"
         },
         "MultiSelect": {
           "type": {
@@ -13398,6 +13761,28 @@
           "declaredIn": "TWinControl",
           "default": true
         },
+        "BorderStyle": {
+          "type": {
+            "kind": "enum",
+            "enum": "TFormBorderStyle",
+            "values": [
+              "bsNone",
+              "bsSingle"
+            ]
+          },
+          "declaredIn": "TWinControl",
+          "default": "bsSingle",
+          "doc": "枠(bsNone・bsSingle)。LCL と同じく、枠を持てるクラス(TCustomEdit・TCustomListBox・TCustomComboBox・TCustomListView・ TCustomControl)が using で公開する(docs/adr/0048)。"
+        },
+        "ScrollBars": {
+          "type": {
+            "kind": "enum",
+            "enum": "TScrollStyle"
+          },
+          "declaredIn": "TCustomDrawGrid",
+          "default": "ssAutoBoth",
+          "doc": "スクロールバーの出し方(docs/adr/0048)。"
+        },
         "ColCount": {
           "type": {
             "kind": "int"
@@ -13781,6 +14166,28 @@
           },
           "declaredIn": "TWinControl",
           "default": true
+        },
+        "BorderStyle": {
+          "type": {
+            "kind": "enum",
+            "enum": "TFormBorderStyle",
+            "values": [
+              "bsNone",
+              "bsSingle"
+            ]
+          },
+          "declaredIn": "TWinControl",
+          "default": "bsSingle",
+          "doc": "枠(bsNone・bsSingle)。LCL と同じく、枠を持てるクラス(TCustomEdit・TCustomListBox・TCustomComboBox・TCustomListView・ TCustomControl)が using で公開する(docs/adr/0048)。"
+        },
+        "ScrollBars": {
+          "type": {
+            "kind": "enum",
+            "enum": "TScrollStyle"
+          },
+          "declaredIn": "TCustomDrawGrid",
+          "default": "ssAutoBoth",
+          "doc": "スクロールバーの出し方(docs/adr/0048)。"
         },
         "ColCount": {
           "type": {
@@ -16427,6 +16834,58 @@
         }
       }
     },
+    "TControlScrollBar": {
+      "properties": {
+        "Increment": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TControlScrollBar",
+          "doc": "矢印を押したときに動く量と、つまみの外を押したときに動く量(ピクセル)。"
+        },
+        "Page": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TControlScrollBar"
+        },
+        "Position": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TControlScrollBar",
+          "doc": "位置(0 から Range - 領域の大きさ まで)。"
+        },
+        "Range": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TControlScrollBar",
+          "doc": "スクロールする範囲の大きさ(ピクセル)。"
+        },
+        "Smooth": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TControlScrollBar",
+          "doc": "true なら、Increment を領域の大きさから決める。"
+        },
+        "Tracking": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TControlScrollBar",
+          "doc": "true なら、つまみをドラッグしている間も表示を動かす。"
+        },
+        "Visible": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TControlScrollBar",
+          "doc": "false なら、Range が大きくてもスクロールバーを出さない。"
+        }
+      }
+    },
     "TStatusPanel": {
       "properties": {
         "Text": {
@@ -16575,6 +17034,38 @@
       "akRight",
       "akBottom"
     ],
+    "TFormBorderStyle": [
+      "bsNone",
+      "bsSingle",
+      "bsSizeable",
+      "bsDialog",
+      "bsToolWindow",
+      "bsSizeToolWin"
+    ],
+    "TPanelBevel": [
+      "bvNone",
+      "bvLowered",
+      "bvRaised",
+      "bvSpace"
+    ],
+    "TVerticalAlignment": [
+      "taAlignTop",
+      "taAlignBottom",
+      "taVerticalCenter"
+    ],
+    "TScrollStyle": [
+      "ssNone",
+      "ssHorizontal",
+      "ssVertical",
+      "ssBoth",
+      "ssAutoHorizontal",
+      "ssAutoVertical",
+      "ssAutoBoth"
+    ],
+    "TScrollBarKind": [
+      "sbHorizontal",
+      "sbVertical"
+    ],
     "TComboBoxStyle": [
       "csDropDown",
       "csSimple",
@@ -16608,18 +17099,6 @@
       "ecNormal",
       "ecUpperCase",
       "ecLowerCase"
-    ],
-    "TScrollBarKind": [
-      "sbHorizontal",
-      "sbVertical"
-    ],
-    "TFormBorderStyle": [
-      "bsNone",
-      "bsSingle",
-      "bsSizeable",
-      "bsDialog",
-      "bsToolWindow",
-      "bsSizeToolWin"
     ],
     "TPosition": [
       "poDesigned",

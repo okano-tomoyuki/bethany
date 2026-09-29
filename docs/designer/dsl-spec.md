@@ -183,13 +183,13 @@
 | `int`・`double` | 数値 | `75`、`2.5` |
 | `bool` | 真偽 | `true` |
 | `std::string` | 文字列 | `"&OK"` |
-| 列挙型(`TAlign` 等) | 要素名の文字列 | `"alClient"` |
+| 列挙型(`TAlign` 等) | 要素名の文字列(TBorderStyle は `bsNone`・`bsSingle` だけ。古いファイルの要素の順番の整数は、読み込むときに名前にする。[ADR 0048](../adr/0048-panel-bevel-scroll-border.md)) | `"alClient"` |
 | 集合型(`Set<E>` の TAnchors と、ビット集合の TFontStyles・Options 等) | 要素名の配列 | `["akLeft", "akTop"]`、`["fsBold"]` |
 | `TColor` | 定数名、または `"#RRGGBB"` | `"clYellow"`、`"#FF8000"`(§10 Q8) |
 | `TCursor` | 定数名 | `"crHandPoint"` |
 | `TShortCut` | 表記の文字列(`TextToShortCut` と同じ) | `"Ctrl+S"` |
 | コンポーネントへの参照(`TPopupMenu*`・`TCustomImageList*`・`TMainMenu*` 等) | 同じフォームのコンポーネントの `name` | `"PopupMenu1"` |
-| 入れ子のオブジェクト(`TFont*`・`TSizeConstraints*`・`TControlBorderSpacing*`) | そのプロパティのオブジェクト(一部だけ書ける) | `{ "Size": 12, "Style": ["fsBold"] }` |
+| 入れ子のオブジェクト(`TFont*`・`TSizeConstraints*`・`TControlBorderSpacing*`・`TControlScrollBar*`) | そのプロパティのオブジェクト(一部だけ書ける) | `{ "Size": 12, "Style": ["fsBold"] }` |
 | `TStrings*`(Items・Lines・Tabs 等) | 文字列の配列 | `["a", "b"]` |
 | コレクション(TStatusBar の `Panels`。[ADR 0044](../adr/0044-statusbar-panels-and-designer-collections.md)) | 項目のオブジェクトの配列(各項目は一部だけ書ける) | `[{ "Text": "Ready", "Width": 120 }, {}]` |
 

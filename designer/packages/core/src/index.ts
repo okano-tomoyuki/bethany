@@ -32,7 +32,14 @@ export {
   type NodeLocation,
 } from './dsl/tree.ts';
 
-export { findClass, findProperty, getCatalog, isSubclassOf, setTypeOf } from './catalog/catalog.ts';
+export {
+  enumItems,
+  findClass,
+  findProperty,
+  getCatalog,
+  isSubclassOf,
+  setTypeOf,
+} from './catalog/catalog.ts';
 export type {
   Catalog,
   ClassInfo,

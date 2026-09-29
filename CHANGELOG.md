@@ -39,11 +39,15 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
   `Clear`・`Open`・`Close`・`Formats[i]`・画像の `Assign`、`CF_Text()` 等)。クリップボードの画像は `Image1->Picture->Assign(Clipboard())` で読む
   ([ADR 0047](docs/adr/0047-screen-clipboard-icon-drop-files.md))
 - アイコン(`TIcon`)と、フォーム・`Application`・`TPicture` の `Icon`、フォームのファイルのドロップ(`AllowDropFiles`・`OnDropFiles`)
+- パネルの縁と Caption の揃え(`BevelOuter`・`BevelInner`・`BevelWidth`・`BevelColor`・`Alignment`・`VerticalAlignment`・`WordWrap`)、
+  コントロールの枠(`BorderStyle`: `bsNone`・`bsSingle`)と `BorderWidth`、グリッド・TTreeView・TListView の `ScrollBars`(`TScrollStyle`)、
+  TForm・TScrollBox の `AutoScroll`・`HorzScrollBar`・`VertScrollBar`(`TControlScrollBar`)([ADR 0048](docs/adr/0048-panel-bevel-scroll-border.md))
 
 ### 変更
 
 - グリッドの `Canvas` は `TCustomControl` のものになった(使い方は変わらない)
 - `ShowModal()` の戻り値の型を `TModalResult`(中身は同じ int)にした
+- TMemo の `ScrollBars` の型を `int` から `TScrollStyle` にした(`Memo1->ScrollBars = 3` は `ssBoth` に書き換える)
 
 ### 修正
 

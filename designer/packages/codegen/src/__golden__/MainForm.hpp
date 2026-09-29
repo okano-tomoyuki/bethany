@@ -24,6 +24,7 @@ public:
     beth::TMemo* Memo1;
     beth::TPanel* BottomPanel;
     beth::TLabel* StatusLabel;
+    beth::TPanel* HintPanel;
     beth::TMainMenu* MainMenu1;
     beth::TMenuItem* FileMenu;
     beth::TMenuItem* FileOpenItem;
@@ -48,7 +49,7 @@ public:
     void ClearItemClick(beth::TObject* Sender);
     void Timer1Timer(beth::TObject* Sender);
     void FileSaveActionExecute(beth::TObject* Sender);
-    // <bethany-designer:end id="declarations" hash="ca882746">
+    // <bethany-designer:end id="declarations" hash="84cd6a91">
 
     explicit TMainForm(beth::TComponent* AOwner);
 

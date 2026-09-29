@@ -7,6 +7,7 @@ import {
   collectionItems,
   findClass,
   hasOwnBounds,
+  propertyValue,
   type ControlNode,
   type FormNode,
   type NodeLocation,
@@ -16,6 +17,7 @@ import { useDocumentStore } from '../store/stores.ts';
 import { createContext, useContext, type CSSProperties, type ReactNode } from 'react';
 import { boundsOf } from '../editing.ts';
 import {
+  colorToCss,
   flag,
   fontStyle,
   number,
@@ -87,7 +89,7 @@ function ControlView({
   const bounds = canvas.preview.get(node.name) ?? boundsOf(location);
   const accepts = findClass(node.class)?.acceptsControls ?? false;
   // 子の座標の原点(TPanel は外側の左上、TGroupBox 等はクライアント領域の左上。記録した値)
-  const { origin, insets } = clientMetrics(node.class);
+  const { origin, insets } = clientMetrics(node.class, node.properties);
 
   // TTabSheet は親の TPageControl で表示しているものだけを描く
   if (node.class === 'TTabSheet' && location.parent.class === 'TPageControl') {
@@ -220,9 +222,10 @@ function Body({
       const value = text(location, 'Text');
       return (
         <div
-          className={
-            value === '' && text(location, 'TextHint') !== '' ? 'look-edit hint' : 'look-edit'
-          }
+          className={bordered(
+            location,
+            value === '' && text(location, 'TextHint') !== '' ? 'look-edit hint' : 'look-edit',
+          )}
           style={{
             ...background,
             justifyContent: EDIT_ALIGN[text(location, 'Alignment')] ?? 'flex-start',
@@ -237,7 +240,7 @@ function Body({
       const value = number(location, 'Value');
       const decimals = node.class === 'TFloatSpinEdit' ? number(location, 'DecimalPlaces') : 0;
       return (
-        <div className="look-edit spin" style={background}>
+        <div className={bordered(location, 'look-edit spin')} style={background}>
           <span>{value.toFixed(Math.max(0, decimals))}</span>
           <span className="look-spin" />
         </div>
@@ -253,7 +256,10 @@ function Body({
     case 'TMemo':
       return (
         <div
-          className={flag(location, 'WordWrap') ? 'look-box lines wrap' : 'look-box lines'}
+          className={bordered(
+            location,
+            flag(location, 'WordWrap') ? 'look-box lines wrap' : 'look-box lines',
+          )}
           style={{ ...background, textAlign: textAlign(text(location, 'Alignment')) }}
         >
           {strings(location, 'Lines').map((line, i) => (
@@ -264,7 +270,7 @@ function Body({
     case 'TListBox':
     case 'TCheckListBox':
       return (
-        <div className="look-box lines" style={background}>
+        <div className={bordered(location, 'look-box lines')} style={background}>
           {strings(location, 'Items').map((item, i) => (
             <div key={i} className={i === number(location, 'ItemIndex') ? 'item selected' : 'item'}>
               {node.class === 'TCheckListBox' && <span className="look-check small" />}
@@ -314,11 +320,7 @@ function Body({
         </Frame>
       );
     case 'TPanel':
-      return (
-        <div className="look-panel" style={background}>
-          {caption}
-        </div>
-      );
+      return <Panel location={location} background={background} caption={caption} />;
     case 'TPageControl':
       return <PageTabs location={location} />;
     case 'TTabControl':
@@ -340,7 +342,7 @@ function Body({
     case 'TTabSheet':
       return <div className="look-fill" style={{ background: '#f9f9f9' }} />;
     case 'TScrollBox':
-      return <div className="look-box" style={background} />;
+      return <div className={bordered(location, 'look-box')} style={background} />;
     case 'TProgressBar': {
       const range = number(location, 'Max') - number(location, 'Min');
       const ratio =
@@ -376,7 +378,7 @@ function Body({
       return <div className="look-header" />;
     case 'TTreeView':
     case 'TListView':
-      return <div className="look-box" style={background} />;
+      return <div className={bordered(location, 'look-box')} style={background} />;
     case 'TStringGrid':
     case 'TDrawGrid':
       return <Grid location={location} />;
@@ -488,7 +490,7 @@ function Grid({ location }: { readonly location: NodeLocation & { readonly kind:
   const fixedCols = number(location, 'FixedCols');
   const fixedRows = number(location, 'FixedRows');
   return (
-    <div className="look-box grid">
+    <div className={bordered(location, 'look-box grid')}>
       {Array.from({ length: rows }, (_, r) => (
         <div key={r} className="look-grid-row" style={{ height }}>
           {Array.from({ length: cols }, (_, c) => (
@@ -500,6 +502,70 @@ function Grid({ location }: { readonly location: NodeLocation & { readonly kind:
           ))}
         </div>
       ))}
+    </div>
+  );
+}
+
+/** BorderStyle が bsNone なら枠を描かない(docs/adr/0048) */
+function bordered(location: NodeLocation, className: string): string {
+  return text(location, 'BorderStyle') === 'bsNone' ? `${className} no-border` : className;
+}
+
+/** TVerticalAlignment → 縦の位置(flex) */
+const VERTICAL_ALIGN: Readonly<Record<string, string>> = {
+  taAlignTop: 'flex-start',
+  taAlignBottom: 'flex-end',
+};
+
+/**
+ * TPanel(docs/adr/0048)。外から枠(BorderStyle が bsSingle)・外側の縁・内側の縁・BorderWidth の余白を重ね、
+ * Caption を Alignment・VerticalAlignment・WordWrap に従って置く。
+ */
+function Panel({
+  location,
+  background,
+  caption,
+}: {
+  readonly location: NodeLocation & { readonly kind: 'control' };
+  readonly background: CSSProperties;
+  readonly caption: ReactNode;
+}) {
+  const width = number(location, 'BevelWidth');
+  const color = colorToCss(propertyValue(location, ['BevelColor']));
+  const edge = (bevel: string): CSSProperties => {
+    if (bevel === 'bvNone' || bevel === '') return {};
+    if (bevel === 'bvSpace') return { border: `${String(width)}px solid transparent` };
+    const [light, dark] = color ? [color, color] : ['#fff', '#a0a0a0'];
+    const [topLeft, bottomRight] = bevel === 'bvLowered' ? [dark, light] : [light, dark];
+    return {
+      borderStyle: 'solid',
+      borderWidth: width,
+      borderColor: `${topLeft} ${bottomRight} ${bottomRight} ${topLeft}`,
+    };
+  };
+  const alignment = text(location, 'Alignment');
+  const wrap = flag(location, 'WordWrap');
+  return (
+    <div
+      className={text(location, 'BorderStyle') === 'bsSingle' ? 'look-panel framed' : 'look-panel'}
+      style={background}
+    >
+      <div className="look-panel-part" style={edge(text(location, 'BevelOuter'))}>
+        <div className="look-panel-part" style={edge(text(location, 'BevelInner'))}>
+          <div
+            className="look-panel-part"
+            style={{
+              padding: number(location, 'BorderWidth'),
+              justifyContent: EDIT_ALIGN[alignment] ?? 'flex-start',
+              alignItems: VERTICAL_ALIGN[text(location, 'VerticalAlignment')] ?? 'center',
+              textAlign: textAlign(alignment),
+              whiteSpace: wrap ? 'pre-wrap' : 'pre',
+            }}
+          >
+            <span className={wrap ? 'look-panel-text wrap' : 'look-panel-text'}>{caption}</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

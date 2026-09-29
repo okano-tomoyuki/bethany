@@ -14369,6 +14369,480 @@ begin
   end;
 end;
 
+{ ---------------- パネルの縁・スクロール・コントロールの枠(docs/adr/0048) ----------------
+  列挙型は Ord の整数で受け渡す。BorderStyle は TWinControl の仮想の SetBorderStyle で設定する(グリッドは自分の欄に持つため、
+  読むときだけ TCustomGrid の BorderStyle を使う)。 }
+
+type
+  TCustomGridAccess048 = class(TCustomGrid);
+  TCustomTreeViewAccess048 = class(TCustomTreeView);
+  TCustomListViewAccess048 = class(TCustomListView);
+  TScrollingWinControlAccess048 = class(TScrollingWinControl);
+  TCustomPanelAccess048 = class(TCustomPanel);
+
+{ TWinControl の BorderStyle・BorderWidth }
+
+function TWinControl_GetBorderStyle(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    if TObject(Obj) is TCustomGrid then
+      Result := Ord(TCustomGridAccess048(Obj).BorderStyle)
+    else
+      Result := Ord(TWinControlAccess(Obj).BorderStyle);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TWinControl_SetBorderStyle(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TWinControlAccess(Obj).BorderStyle := TBorderStyle(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TWinControl_GetBorderWidth(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TWinControlAccess(Obj).BorderWidth;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TWinControl_SetBorderWidth(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TWinControlAccess(Obj).BorderWidth := Value;
+  except
+    ReportException;
+  end;
+end;
+
+{ TCustomPanel }
+
+function TCustomPanel_GetAlignment(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomPanelAccess048(Obj).Alignment);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomPanel_SetAlignment(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomPanelAccess048(Obj).Alignment := TAlignment(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomPanel_GetVerticalAlignment(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomPanelAccess048(Obj).VerticalAlignment);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomPanel_SetVerticalAlignment(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomPanelAccess048(Obj).VerticalAlignment := TVerticalAlignment(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomPanel_GetWordWrap(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomPanelAccess048(Obj).WordWrap;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomPanel_SetWordWrap(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomPanelAccess048(Obj).WordWrap := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomPanel_GetBevelColor(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomPanelAccess048(Obj).BevelColor;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomPanel_SetBevelColor(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomPanelAccess048(Obj).BevelColor := TColor(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomPanel_GetBevelInner(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomPanelAccess048(Obj).BevelInner);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomPanel_SetBevelInner(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomPanelAccess048(Obj).BevelInner := TPanelBevel(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomPanel_GetBevelOuter(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomPanelAccess048(Obj).BevelOuter);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomPanel_SetBevelOuter(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomPanelAccess048(Obj).BevelOuter := TPanelBevel(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomPanel_GetBevelWidth(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomPanelAccess048(Obj).BevelWidth;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomPanel_SetBevelWidth(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomPanelAccess048(Obj).BevelWidth := Value;
+  except
+    ReportException;
+  end;
+end;
+
+{ ScrollBars }
+
+function TCustomDrawGrid_GetScrollBars(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomGridAccess048(Obj).ScrollBars);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetScrollBars(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomGridAccess048(Obj).ScrollBars := TScrollStyle(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomTreeView_GetScrollBars(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomTreeViewAccess048(Obj).ScrollBars);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomTreeView_SetScrollBars(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomTreeViewAccess048(Obj).ScrollBars := TScrollStyle(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomListView_GetScrollBars(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomListViewAccess048(Obj).ScrollBars);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomListView_SetScrollBars(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomListViewAccess048(Obj).ScrollBars := TScrollStyle(Value);
+  except
+    ReportException;
+  end;
+end;
+
+{ TControlScrollBar }
+
+function TControlScrollBar_GetKind(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TControlScrollBar(Obj).Kind);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function TControlScrollBar_GetSize(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TControlScrollBar(Obj).Size;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function TControlScrollBar_IsScrollBarVisible(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TControlScrollBar(Obj).IsScrollBarVisible;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+function TControlScrollBar_GetIncrement(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TControlScrollBar(Obj).Increment;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TControlScrollBar_SetIncrement(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TControlScrollBar(Obj).Increment := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TControlScrollBar_GetPage(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TControlScrollBar(Obj).Page;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TControlScrollBar_SetPage(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TControlScrollBar(Obj).Page := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TControlScrollBar_GetPosition(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TControlScrollBar(Obj).Position;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TControlScrollBar_SetPosition(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TControlScrollBar(Obj).Position := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TControlScrollBar_GetRange(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TControlScrollBar(Obj).Range;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TControlScrollBar_SetRange(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TControlScrollBar(Obj).Range := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TControlScrollBar_GetSmooth(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TControlScrollBar(Obj).Smooth;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TControlScrollBar_SetSmooth(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TControlScrollBar(Obj).Smooth := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TControlScrollBar_GetTracking(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TControlScrollBar(Obj).Tracking;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TControlScrollBar_SetTracking(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TControlScrollBar(Obj).Tracking := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TControlScrollBar_GetVisible(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TControlScrollBar(Obj).Visible;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TControlScrollBar_SetVisible(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TControlScrollBar(Obj).Visible := Value;
+  except
+    ReportException;
+  end;
+end;
+
+{ TScrollingWinControl }
+
+function TScrollingWinControl_GetAutoScroll(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TScrollingWinControlAccess048(Obj).AutoScroll;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TScrollingWinControl_SetAutoScroll(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TScrollingWinControlAccess048(Obj).AutoScroll := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TScrollingWinControl_GetHorzScrollBar(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TScrollingWinControlAccess048(Obj).HorzScrollBar);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TScrollingWinControl_SetHorzScrollBar(Obj: Pointer; Value: Pointer); BETH_CALL;
+begin
+  try
+    if Value <> nil then
+      TScrollingWinControlAccess048(Obj).HorzScrollBar := TControlScrollBar(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TScrollingWinControl_GetVertScrollBar(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TScrollingWinControlAccess048(Obj).VertScrollBar);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TScrollingWinControl_SetVertScrollBar(Obj: Pointer; Value: Pointer); BETH_CALL;
+begin
+  try
+    if Value <> nil then
+      TScrollingWinControlAccess048(Obj).VertScrollBar := TControlScrollBar(Value);
+  except
+    ReportException;
+  end;
+end;
+
 exports
   FreeNotify_SetCallback,
   Error_SetCallback,
@@ -15737,7 +16211,54 @@ exports
   TPicture_SetIcon,
   TCustomForm_GetAllowDropFiles,
   TCustomForm_SetAllowDropFiles,
-  TCustomForm_SetOnDropFiles;
+  TCustomForm_SetOnDropFiles,
+  TWinControl_GetBorderStyle,
+  TWinControl_SetBorderStyle,
+  TWinControl_GetBorderWidth,
+  TWinControl_SetBorderWidth,
+  TCustomPanel_GetAlignment,
+  TCustomPanel_SetAlignment,
+  TCustomPanel_GetVerticalAlignment,
+  TCustomPanel_SetVerticalAlignment,
+  TCustomPanel_GetWordWrap,
+  TCustomPanel_SetWordWrap,
+  TCustomPanel_GetBevelColor,
+  TCustomPanel_SetBevelColor,
+  TCustomPanel_GetBevelInner,
+  TCustomPanel_SetBevelInner,
+  TCustomPanel_GetBevelOuter,
+  TCustomPanel_SetBevelOuter,
+  TCustomPanel_GetBevelWidth,
+  TCustomPanel_SetBevelWidth,
+  TCustomDrawGrid_GetScrollBars,
+  TCustomDrawGrid_SetScrollBars,
+  TCustomTreeView_GetScrollBars,
+  TCustomTreeView_SetScrollBars,
+  TCustomListView_GetScrollBars,
+  TCustomListView_SetScrollBars,
+  TControlScrollBar_GetKind,
+  TControlScrollBar_GetSize,
+  TControlScrollBar_IsScrollBarVisible,
+  TControlScrollBar_GetIncrement,
+  TControlScrollBar_SetIncrement,
+  TControlScrollBar_GetPage,
+  TControlScrollBar_SetPage,
+  TControlScrollBar_GetPosition,
+  TControlScrollBar_SetPosition,
+  TControlScrollBar_GetRange,
+  TControlScrollBar_SetRange,
+  TControlScrollBar_GetSmooth,
+  TControlScrollBar_SetSmooth,
+  TControlScrollBar_GetTracking,
+  TControlScrollBar_SetTracking,
+  TControlScrollBar_GetVisible,
+  TControlScrollBar_SetVisible,
+  TScrollingWinControl_GetAutoScroll,
+  TScrollingWinControl_SetAutoScroll,
+  TScrollingWinControl_GetHorzScrollBar,
+  TScrollingWinControl_SetHorzScrollBar,
+  TScrollingWinControl_GetVertScrollBar,
+  TScrollingWinControl_SetVertScrollBar;
 
 begin
   RequireDerivedFormResource := False;

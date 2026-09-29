@@ -26,11 +26,13 @@ sys.path.insert(0, str(PY_DIR))
 import gen_api  # noqa: E402
 
 # 所有者が持つオブジェクトのビューで、中のプロパティを入れ子で書けるもの(DSL の「入れ子のオブジェクト」)。
-OBJECT_CLASSES = ["TFont", "TSizeConstraints", "TControlBorderSpacing"]
+OBJECT_CLASSES = ["TFont", "TSizeConstraints", "TControlBorderSpacing", "TControlScrollBar"]
 # 項目の一覧(TCollection)のビューで、項目を DSL の配列で書けるもの(DSL の「コレクション」。docs/adr/0044)。
 # 一覧のクラス → 項目のクラス。項目のプロパティは objects に載せる(Index は配列の並びで決まるので載せない)。
 COLLECTION_CLASSES = {"TStatusPanels": "TStatusPanel"}
 COLLECTION_ITEM_SKIP = {"Index"}
+# 列挙型の別名で、選べる要素が一部だけのもの(LCL の部分範囲の型。docs/adr/0048)。
+ENUM_ALIAS_VALUES = {"TBorderStyle": ["bsNone", "bsSingle"]}
 
 PROPERTY_RE = re.compile(r"(ReadOnly)?(Indexed)?Property(2)?<(.+)>\s+(\w+)")
 USING_RE = re.compile(r"using (\w+)::(\w+)")
@@ -76,6 +78,10 @@ class Extractor:
             return {"kind": "alias", "alias": t}
         if t in self.m.enums:
             return {"kind": "enum", "enum": t}
+        if t in self.m.enum_aliases:
+            target = self.m.enum_aliases[t]
+            values = ENUM_ALIAS_VALUES.get(t)
+            return {"kind": "enum", "enum": target, **({"values": values} if values else {})}
         if t in self.m.flags:
             return {"kind": "flags", "flags": t}
         if t in self.m.sets:

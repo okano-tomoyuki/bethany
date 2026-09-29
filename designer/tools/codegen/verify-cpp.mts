@@ -144,6 +144,8 @@ ${controls
     check(first, "dialogOptions", std::to_string(f->OpenDialog1->Options));
     check(first, "actionLink", std::string(f->FileSaveItem->Caption) + "/" + ShortCutToText(f->FileSaveItem->ShortCut) + "/" + std::to_string(f->ActionList1->ActionCount));
     check(first, "allowDropFiles", std::to_string((int)f->AllowDropFiles));
+    check(first, "panelBevel", std::to_string((int)(TPanelBevel)f->BottomPanel->BevelOuter) + "/" + std::to_string((int)(TPanelBevel)f->BottomPanel->BevelInner) + "/" + std::to_string(f->BottomPanel->BevelWidth) + "/" + std::to_string(f->BottomPanel->BorderWidth));
+    check(first, "memoBorder", std::to_string((int)(TBorderStyle)f->Memo1->BorderStyle) + "/" + std::to_string((int)(TScrollStyle)f->Memo1->ScrollBars));
     check(first, "timer", std::to_string((int)f->Timer1->Enabled) + "/" + std::to_string(f->Timer1->Interval));
     check(first, "caption", f->Caption);
     check(first, "spinValue", std::to_string(f->SizeSpin->Value));

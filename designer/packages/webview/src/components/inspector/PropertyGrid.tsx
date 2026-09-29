@@ -4,6 +4,7 @@
  */
 import {
   classOf,
+  enumItems,
   findClass,
   formatValue,
   getCatalog,
@@ -573,7 +574,7 @@ function Editor({
         />
       );
     case 'enum':
-      return select(catalog.enums[type.enum] ?? []);
+      return select(enumItems(type));
     case 'alias':
       // 定数を持つ別名(TCursor・TModalResult 等)は定数の選択肢。TColor・TShortCut は下の専用の入力
       if (type.alias !== 'TColor' && type.alias !== 'TShortCut')

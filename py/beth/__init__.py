@@ -196,6 +196,57 @@ class TAnchorKind(enum.IntEnum):
 akTop, akLeft, akRight, akBottom = TAnchorKind.akTop, TAnchorKind.akLeft, TAnchorKind.akRight, TAnchorKind.akBottom
 
 
+# フォームの枠(bsDialog は大きさを変えられず、最小化・最大化のボタンが無い。docs/adr/0041)。
+class TFormBorderStyle(enum.IntEnum):
+    bsNone = 0
+    bsSingle = 1
+    bsSizeable = 2
+    bsDialog = 3
+    bsToolWindow = 4
+    bsSizeToolWin = 5
+
+bsNone, bsSingle, bsSizeable, bsDialog, bsToolWindow, bsSizeToolWin = TFormBorderStyle.bsNone, TFormBorderStyle.bsSingle, TFormBorderStyle.bsSizeable, TFormBorderStyle.bsDialog, TFormBorderStyle.bsToolWindow, TFormBorderStyle.bsSizeToolWin
+
+
+# パネルの縁の凹凸(bvSpace は凹凸の無い余白)。
+class TPanelBevel(enum.IntEnum):
+    bvNone = 0
+    bvLowered = 1
+    bvRaised = 2
+    bvSpace = 3
+
+bvNone, bvLowered, bvRaised, bvSpace = TPanelBevel.bvNone, TPanelBevel.bvLowered, TPanelBevel.bvRaised, TPanelBevel.bvSpace
+
+
+# 文字の縦の揃え(TPanel の VerticalAlignment)。
+class TVerticalAlignment(enum.IntEnum):
+    taAlignTop = 0
+    taAlignBottom = 1
+    taVerticalCenter = 2
+
+taAlignTop, taAlignBottom, taVerticalCenter = TVerticalAlignment.taAlignTop, TVerticalAlignment.taAlignBottom, TVerticalAlignment.taVerticalCenter
+
+
+# スクロールバーの出し方。ssAuto… は、内容がはみ出したときだけ出す。
+class TScrollStyle(enum.IntEnum):
+    ssNone = 0
+    ssHorizontal = 1
+    ssVertical = 2
+    ssBoth = 3
+    ssAutoHorizontal = 4
+    ssAutoVertical = 5
+    ssAutoBoth = 6
+
+ssNone, ssHorizontal, ssVertical, ssBoth, ssAutoHorizontal, ssAutoVertical, ssAutoBoth = TScrollStyle.ssNone, TScrollStyle.ssHorizontal, TScrollStyle.ssVertical, TScrollStyle.ssBoth, TScrollStyle.ssAutoHorizontal, TScrollStyle.ssAutoVertical, TScrollStyle.ssAutoBoth
+
+
+class TScrollBarKind(enum.IntEnum):
+    sbHorizontal = 0
+    sbVertical = 1
+
+sbHorizontal, sbVertical = TScrollBarKind.sbHorizontal, TScrollBarKind.sbVertical
+
+
 # コンボボックスの見た目と入力(csDropDownList は一覧から選ぶだけ。csOwnerDraw… は Tier B のオーナードロー)。
 class TComboBoxStyle(enum.IntEnum):
     csDropDown = 0
@@ -252,26 +303,6 @@ class TEditCharCase(enum.IntEnum):
     ecLowerCase = 2
 
 ecNormal, ecUpperCase, ecLowerCase = TEditCharCase.ecNormal, TEditCharCase.ecUpperCase, TEditCharCase.ecLowerCase
-
-
-# つまみを左右または上下にドラッグして値を選ぶスクロールバー。
-class TScrollBarKind(enum.IntEnum):
-    sbHorizontal = 0
-    sbVertical = 1
-
-sbHorizontal, sbVertical = TScrollBarKind.sbHorizontal, TScrollBarKind.sbVertical
-
-
-# フォームの枠(bsDialog は大きさを変えられず、最小化・最大化のボタンが無い)。
-class TFormBorderStyle(enum.IntEnum):
-    bsNone = 0
-    bsSingle = 1
-    bsSizeable = 2
-    bsDialog = 3
-    bsToolWindow = 4
-    bsSizeToolWin = 5
-
-bsNone, bsSingle, bsSizeable, bsDialog, bsToolWindow, bsSizeToolWin = TFormBorderStyle.bsNone, TFormBorderStyle.bsSingle, TFormBorderStyle.bsSizeable, TFormBorderStyle.bsDialog, TFormBorderStyle.bsToolWindow, TFormBorderStyle.bsSizeToolWin
 
 
 # 最初に表示する位置(poDesigned は Left・Top のまま。poMainFormCenter はメインフォームの中央)。
@@ -569,6 +600,9 @@ class TActionListState(enum.IntEnum):
     asSuspendedEnabled = 2
 
 asNormal, asSuspended, asSuspendedEnabled = TActionListState.asNormal, TActionListState.asSuspended, TActionListState.asSuspendedEnabled
+
+
+TBorderStyle = TFormBorderStyle
 
 
 # ---------------- 集合・定数 ----------------
@@ -1354,6 +1388,32 @@ class TControlBorderSpacing(TPersistent):
     InnerBorder = _Prop("TControlBorderSpacing_GetInnerBorder", "TControlBorderSpacing_SetInnerBorder", _int)
 
 
+class TControlScrollBar(TPersistent):
+    """TForm・TScrollBox の横・縦のスクロールバー(LCL の TControlScrollBar)。コントロールが所有するものへの非所有のラッパー。
+    Range を領域の幅・高さより大きくすると、スクロールバーが出る(AutoScroll が true なら、Range は子の配置から LCL が決める)。"""
+    # sbHorizontal か sbVertical。
+    Kind = _Prop("TControlScrollBar_GetKind", None, _enum("TScrollBarKind"))
+    # スクロールバーの太さ(ピクセル)。
+    Size = _Prop("TControlScrollBar_GetSize", None, _int)
+    # 矢印を押したときに動く量と、つまみの外を押したときに動く量(ピクセル)。
+    Increment = _Prop("TControlScrollBar_GetIncrement", "TControlScrollBar_SetIncrement", _int)
+    Page = _Prop("TControlScrollBar_GetPage", "TControlScrollBar_SetPage", _int)
+    # 位置(0 から Range - 領域の大きさ まで)。
+    Position = _Prop("TControlScrollBar_GetPosition", "TControlScrollBar_SetPosition", _int)
+    # スクロールする範囲の大きさ(ピクセル)。
+    Range = _Prop("TControlScrollBar_GetRange", "TControlScrollBar_SetRange", _int)
+    # true なら、Increment を領域の大きさから決める。
+    Smooth = _Prop("TControlScrollBar_GetSmooth", "TControlScrollBar_SetSmooth", _bool)
+    # true なら、つまみをドラッグしている間も表示を動かす。
+    Tracking = _Prop("TControlScrollBar_GetTracking", "TControlScrollBar_SetTracking", _bool)
+    # false なら、Range が大きくてもスクロールバーを出さない。
+    Visible = _Prop("TControlScrollBar_GetVisible", "TControlScrollBar_SetVisible", _bool)
+    # 今スクロールバーが表示されているか。
+    def IsScrollBarVisible(self):
+        _r = lib.TControlScrollBar_IsScrollBarVisible(self._current())
+        return _r != 0
+
+
 class TControl(TComponent):
     # クライアント領域(枠・タイトルバー・メニューの内側)の幅。設定するとそれに合わせて Width が変わる。
     ClientWidth = _Prop("TControl_GetClientWidth", "TControl_SetClientWidth", _int)
@@ -1455,6 +1515,13 @@ class TWinControl(TControl):
     # Tab キーでのフォーカスの移動の順(同じ Parent の中での位置。-1 は末尾)と、移動の対象にするか(docs/adr/0034)。
     TabOrder = _Prop("TWinControl_GetTabOrder", "TWinControl_SetTabOrder", _int)
     TabStop = _Prop("TWinControl_GetTabStop", "TWinControl_SetTabStop", _bool)
+    # 内側の余白(ピクセル)。子を置ける範囲(Align で寄せる範囲)が、四辺ともこの幅だけ狭くなる(docs/adr/0048)。
+    # LCL と同じく、TCustomPanel・TCustomForm・TCustomListView・TCustomTreeView が using で公開する(TTabSheet は、LCL が公開しているが
+    # Windows では効かないため公開しない)。
+    _BorderWidth = _Prop("TWinControl_GetBorderWidth", "TWinControl_SetBorderWidth", _int)
+    # 枠(bsNone・bsSingle)。LCL と同じく、枠を持てるクラス(TCustomEdit・TCustomListBox・TCustomComboBox・TCustomListView・
+    # TCustomControl)が using で公開する(docs/adr/0048)。
+    _BorderStyle = _Prop("TWinControl_GetBorderStyle", "TWinControl_SetBorderStyle", _enum("TFormBorderStyle"))
 
 
 class TCustomScrollBar(TWinControl):
@@ -1502,6 +1569,7 @@ class TGraphicControl(TControl):
 
 class TCustomControl(TWinControl):
     """自分で描くことのできるウィンドウのコントロール(TForm・TPanel・TScrollBox・グリッド等の基底)。"""
+    BorderStyle = TWinControl._BorderStyle
     # 描く先(docs/adr/0045)。OnPaint(グリッドは OnDrawCell)の中で描く。コントロールが所有する実体への非所有のビュー
     # (TPaintBox::Canvas と同じ)。OnPaint の外で描いたものは、次の再描画で消える。
     Canvas = _Prop("TCustomControl_GetCanvas", None, _obj("TCanvas"))
@@ -1525,7 +1593,11 @@ class TUpDown(TCustomControl):
 
 
 class TScrollingWinControl(TCustomControl):
-    pass
+    # true なら、子がはみ出したときにスクロールバーを出す(Range を子の配置から決める。docs/adr/0048)。
+    AutoScroll = _Prop("TScrollingWinControl_GetAutoScroll", "TScrollingWinControl_SetAutoScroll", _bool)
+    # 横・縦のスクロールバー。代入は内容のコピー。
+    HorzScrollBar = _Prop("TScrollingWinControl_GetHorzScrollBar", "TScrollingWinControl_SetHorzScrollBar", _obj("TControlScrollBar"))
+    VertScrollBar = _Prop("TScrollingWinControl_GetVertScrollBar", "TScrollingWinControl_SetVertScrollBar", _obj("TControlScrollBar"))
 
 
 class TScrollBox(TScrollingWinControl):
@@ -1536,6 +1608,7 @@ class TScrollBox(TScrollingWinControl):
 
 
 class TCustomForm(_mixins["TCustomForm"], TScrollingWinControl):
+    BorderWidth = TWinControl._BorderWidth
     OnPaint = TCustomControl._OnPaint
     # LCL の TCustomForm は Show/Hide を独自に宣言している(TControl のものを隠す)。
     def Show(self):
@@ -1689,7 +1762,18 @@ class TClipboard(_mixins["TClipboard"], TPersistent):
 
 
 class TCustomPanel(TCustomControl):
-    pass
+    BorderWidth = TWinControl._BorderWidth
+    # ---- docs/adr/0048 ----
+    # Caption の横・縦の揃えと折り返し(既定は中央)。
+    Alignment = _Prop("TCustomPanel_GetAlignment", "TCustomPanel_SetAlignment", _enum("TAlignment"))
+    VerticalAlignment = _Prop("TCustomPanel_GetVerticalAlignment", "TCustomPanel_SetVerticalAlignment", _enum("TVerticalAlignment"))
+    WordWrap = _Prop("TCustomPanel_GetWordWrap", "TCustomPanel_SetWordWrap", _bool)
+    # 縁の外側・内側の凹凸(既定は外側が bvRaised、内側が bvNone)と、その幅・色(clDefault は凹凸の既定の色)。
+    # 縁があると、子を置ける範囲(Align で寄せる範囲)がその幅だけ狭くなる。
+    BevelOuter = _Prop("TCustomPanel_GetBevelOuter", "TCustomPanel_SetBevelOuter", _enum("TPanelBevel"))
+    BevelInner = _Prop("TCustomPanel_GetBevelInner", "TCustomPanel_SetBevelInner", _enum("TPanelBevel"))
+    BevelWidth = _Prop("TCustomPanel_GetBevelWidth", "TCustomPanel_SetBevelWidth", _int)
+    BevelColor = _Prop("TCustomPanel_GetBevelColor", "TCustomPanel_SetBevelColor", _int)
 
 
 class TPanel(TCustomPanel):
@@ -1836,6 +1920,7 @@ class TToggleBox(TCustomCheckBox):
 
 
 class TCustomEdit(TWinControl):
+    BorderStyle = TWinControl._BorderStyle
     # 選択の開始位置(文字の数。0 から)。選択が無ければキャレットの位置。
     SelStart = _Prop("TCustomEdit_GetSelStart", "TCustomEdit_SetSelStart", _int)
     # 選択の長さ(文字の数)。
@@ -2133,6 +2218,9 @@ class TTreeNodes(TPersistent):
 
 class TCustomTreeView(TCustomControl):
     """以下のメンバは LCL の TCustomTreeView の public。"""
+    BorderWidth = TWinControl._BorderWidth
+    # スクロールバーの出し方(docs/adr/0048)。
+    ScrollBars = _Prop("TCustomTreeView_GetScrollBars", "TCustomTreeView_SetScrollBars", _enum("TScrollStyle"))
     Items = _Prop("TCustomTreeView_GetItems", None, _obj("TTreeNodes"))
     # 選択されているノード(無ければ nullptr)。
     Selected = _Prop("TCustomTreeView_GetSelected", "TCustomTreeView_SetSelected", _item("TTreeNode"))
@@ -2268,6 +2356,10 @@ class TListColumns(TPersistent):
 
 class TCustomListView(TWinControl):
     """以下のメンバは LCL の TCustomListView の public。"""
+    BorderWidth = TWinControl._BorderWidth
+    # スクロールバーの出し方(docs/adr/0048)。
+    ScrollBars = _Prop("TCustomListView_GetScrollBars", "TCustomListView_SetScrollBars", _enum("TScrollStyle"))
+    BorderStyle = TWinControl._BorderStyle
     Items = _Prop("TCustomListView_GetItems", None, _obj("TListItems"))
     # 選択されている項目(MultiSelect なら最初の 1 つ。無ければ nullptr)と、その位置(無ければ -1)。
     # 表示前(フォームのコンストラクタ等)に設定しても選択される(LCL 単体では選択されないため DLL 側で補っている)。
@@ -2362,7 +2454,8 @@ class TCustomMemo(TCustomEdit):
     # 末尾に 1 行加える(Lines->Add と違い、表示を最後の行までスクロールする)。
     def Append(self, S):
         lib.TCustomMemo_Append(self._current(), _enc(S))
-    ScrollBars = _Prop("TCustomMemo_GetScrollBars", "TCustomMemo_SetScrollBars", _int)
+    # スクロールバーの出し方(docs/adr/0048 で int から TScrollStyle にした)。
+    ScrollBars = _Prop("TCustomMemo_GetScrollBars", "TCustomMemo_SetScrollBars", _enum("TScrollStyle"))
     # 文字列の一覧(TStrings。Memo1->Lines->Add("x") のように使う)。
     Lines = _Prop("TCustomMemo_GetLines", None, _view("TStrings"))
 
@@ -2373,6 +2466,7 @@ class TMemo(TCustomMemo):
 
 
 class TCustomComboBox(TWinControl):
+    BorderStyle = TWinControl._BorderStyle
     # 見た目と入力(csDropDownList は一覧から選ぶだけで、文字を入力できない)。
     Style = _Prop("TCustomComboBox_GetStyle", "TCustomComboBox_SetStyle", _enum("TComboBoxStyle"))
     # 一覧を開いたときに表示する項目の数。
@@ -2407,6 +2501,7 @@ class TComboBox(TCustomComboBox):
 class TCustomListBox(TWinControl):
     """利用者による選択の変更(マウス・キー操作とも)では OnClick が呼ばれる(VCL と同じ)。
     プログラムからの ItemIndex の変更では呼ばれない。"""
+    BorderStyle = TWinControl._BorderStyle
     # 複数の項目を選べるようにする(選んだ項目は Selected[i])。
     MultiSelect = _Prop("TCustomListBox_GetMultiSelect", "TCustomListBox_SetMultiSelect", _bool)
     # MultiSelect のとき、Shift・Ctrl で範囲・追加の選択をする(false なら、クリックのたびに選択を切り替える)。
@@ -2625,6 +2720,8 @@ class TCustomGrid(TCustomControl):
 
 class TCustomDrawGrid(TCustomGrid):
     """以下のメンバは LCL では TCustomGrid の protected で、TCustomDrawGrid が public にしている。"""
+    # スクロールバーの出し方(docs/adr/0048)。
+    ScrollBars = _Prop("TCustomDrawGrid_GetScrollBars", "TCustomDrawGrid_SetScrollBars", _enum("TScrollStyle"))
     ColCount = _Prop("TCustomDrawGrid_GetColCount", "TCustomDrawGrid_SetColCount", _int)
     RowCount = _Prop("TCustomDrawGrid_GetRowCount", "TCustomDrawGrid_SetRowCount", _int)
     # 固定列・固定行(見出し)の数。既定は 1。
@@ -3191,34 +3288,37 @@ __all__ = [
     "pfDevice", "pf1bit", "pf4bit", "pf8bit", "pf15bit", "pf16bit", "pf24bit", "pf32bit", "pfCustom",
     "TTransparentMode", "tmAuto", "tmFixed", "TDrawingStyle", "dsFocus", "dsSelected", "dsNormal", "dsTransparent",
     "TAlign", "alNone", "alTop", "alBottom", "alLeft", "alRight", "alClient", "alCustom", "TAnchorKind", "akTop",
-    "akLeft", "akRight", "akBottom", "TComboBoxStyle", "csDropDown", "csSimple", "csDropDownList",
-    "csOwnerDrawFixed", "csOwnerDrawVariable", "csOwnerDrawEditableFixed", "csOwnerDrawEditableVariable",
-    "TCheckBoxState", "cbUnchecked", "cbChecked", "cbGrayed", "TAlignment", "taLeftJustify", "taRightJustify",
-    "taCenter", "TTextLayout", "tlTop", "tlCenter", "tlBottom", "TEchoMode", "emNormal", "emNone", "emPassword",
-    "TEditCharCase", "ecNormal", "ecUpperCase", "ecLowerCase", "TScrollBarKind", "sbHorizontal", "sbVertical",
-    "TFormBorderStyle", "bsNone", "bsSingle", "bsSizeable", "bsDialog", "bsToolWindow", "bsSizeToolWin",
-    "TPosition", "poDesigned", "poDefault", "poDefaultPosOnly", "poDefaultSizeOnly", "poScreenCenter",
-    "poDesktopCenter", "poMainFormCenter", "poOwnerFormCenter", "poWorkAreaCenter", "TWindowState", "wsNormal",
-    "wsMinimized", "wsMaximized", "wsFullScreen", "TBorderIcon", "biSystemMenu", "biMinimize", "biMaximize",
-    "biHelp", "TFormStyle", "fsNormal", "fsMDIChild", "fsMDIForm", "fsStayOnTop", "fsSplash", "fsSystemStayOnTop",
-    "TMsgDlgType", "mtWarning", "mtError", "mtInformation", "mtConfirmation", "mtCustom", "TMsgDlgBtn", "mbYes",
-    "mbNo", "mbOK", "mbCancel", "mbAbort", "mbRetry", "mbIgnore", "mbAll", "mbNoToAll", "mbYesToAll", "mbHelp",
-    "mbClose", "TBevelShape", "bsBox", "bsFrame", "bsTopLine", "bsBottomLine", "bsLeftLine", "bsRightLine",
-    "bsSpacer", "TBevelStyle", "bsLowered", "bsRaised", "TBitBtnKind", "bkCustom", "bkOK", "bkCancel", "bkHelp",
-    "bkYes", "bkNo", "bkClose", "bkAbort", "bkRetry", "bkIgnore", "bkAll", "bkNoToAll", "bkYesToAll",
-    "TButtonLayout", "blGlyphLeft", "blGlyphRight", "blGlyphTop", "blGlyphBottom", "TLabelPosition", "lpAbove",
-    "lpBelow", "lpLeft", "lpRight", "TTabPosition", "tpTop", "tpBottom", "tpLeft", "tpRight", "TNodeAttachMode",
-    "naAdd", "naAddFirst", "naAddChild", "naAddChildFirst", "naInsert", "naInsertBehind", "TViewStyle", "vsIcon",
-    "vsSmallIcon", "vsList", "vsReport", "TSortType", "stNone", "stData", "stText", "stBoth", "TSortDirection",
-    "sdAscending", "sdDescending", "TItemChange", "ctText", "ctImage", "ctState", "TResizeStyle", "rsLine",
-    "rsNone", "rsPattern", "rsUpdate", "TStaticBorderStyle", "sbsNone", "sbsSingle", "sbsSunken",
-    "TStatusPanelStyle", "psText", "psOwnerDraw", "TStatusPanelBevel", "pbNone", "pbLowered", "pbRaised",
-    "TShapeType", "stRectangle", "stSquare", "stRoundRect", "stRoundSquare", "stEllipse", "stCircle",
-    "stSquaredDiamond", "stDiamond", "stTriangle", "stTriangleLeft", "stTriangleRight", "stTriangleDown", "stStar",
-    "stStarDown", "stPolygon", "TSectionTrackState", "tsTrackBegin", "tsTrackMove", "tsTrackEnd", "TEdgeStyle",
-    "esNone", "esRaised", "esLowered", "TToolButtonStyle", "tbsButton", "tbsCheck", "tbsDropDown", "tbsSeparator",
-    "tbsDivider", "tbsButtonDrop", "TGrabStyle", "gsSimple", "gsDouble", "gsHorLines", "gsVerLines", "gsGripper",
-    "gsButton", "TActionListState", "asNormal", "asSuspended", "asSuspendedEnabled", "TShiftState", "ssShift",
+    "akLeft", "akRight", "akBottom", "TFormBorderStyle", "bsNone", "bsSingle", "bsSizeable", "bsDialog",
+    "bsToolWindow", "bsSizeToolWin", "TPanelBevel", "bvNone", "bvLowered", "bvRaised", "bvSpace",
+    "TVerticalAlignment", "taAlignTop", "taAlignBottom", "taVerticalCenter", "TScrollStyle", "ssNone",
+    "ssHorizontal", "ssVertical", "ssBoth", "ssAutoHorizontal", "ssAutoVertical", "ssAutoBoth", "TScrollBarKind",
+    "sbHorizontal", "sbVertical", "TComboBoxStyle", "csDropDown", "csSimple", "csDropDownList", "csOwnerDrawFixed",
+    "csOwnerDrawVariable", "csOwnerDrawEditableFixed", "csOwnerDrawEditableVariable", "TCheckBoxState",
+    "cbUnchecked", "cbChecked", "cbGrayed", "TAlignment", "taLeftJustify", "taRightJustify", "taCenter",
+    "TTextLayout", "tlTop", "tlCenter", "tlBottom", "TEchoMode", "emNormal", "emNone", "emPassword",
+    "TEditCharCase", "ecNormal", "ecUpperCase", "ecLowerCase", "TPosition", "poDesigned", "poDefault",
+    "poDefaultPosOnly", "poDefaultSizeOnly", "poScreenCenter", "poDesktopCenter", "poMainFormCenter",
+    "poOwnerFormCenter", "poWorkAreaCenter", "TWindowState", "wsNormal", "wsMinimized", "wsMaximized",
+    "wsFullScreen", "TBorderIcon", "biSystemMenu", "biMinimize", "biMaximize", "biHelp", "TFormStyle", "fsNormal",
+    "fsMDIChild", "fsMDIForm", "fsStayOnTop", "fsSplash", "fsSystemStayOnTop", "TMsgDlgType", "mtWarning",
+    "mtError", "mtInformation", "mtConfirmation", "mtCustom", "TMsgDlgBtn", "mbYes", "mbNo", "mbOK", "mbCancel",
+    "mbAbort", "mbRetry", "mbIgnore", "mbAll", "mbNoToAll", "mbYesToAll", "mbHelp", "mbClose", "TBevelShape",
+    "bsBox", "bsFrame", "bsTopLine", "bsBottomLine", "bsLeftLine", "bsRightLine", "bsSpacer", "TBevelStyle",
+    "bsLowered", "bsRaised", "TBitBtnKind", "bkCustom", "bkOK", "bkCancel", "bkHelp", "bkYes", "bkNo", "bkClose",
+    "bkAbort", "bkRetry", "bkIgnore", "bkAll", "bkNoToAll", "bkYesToAll", "TButtonLayout", "blGlyphLeft",
+    "blGlyphRight", "blGlyphTop", "blGlyphBottom", "TLabelPosition", "lpAbove", "lpBelow", "lpLeft", "lpRight",
+    "TTabPosition", "tpTop", "tpBottom", "tpLeft", "tpRight", "TNodeAttachMode", "naAdd", "naAddFirst",
+    "naAddChild", "naAddChildFirst", "naInsert", "naInsertBehind", "TViewStyle", "vsIcon", "vsSmallIcon", "vsList",
+    "vsReport", "TSortType", "stNone", "stData", "stText", "stBoth", "TSortDirection", "sdAscending",
+    "sdDescending", "TItemChange", "ctText", "ctImage", "ctState", "TResizeStyle", "rsLine", "rsNone", "rsPattern",
+    "rsUpdate", "TStaticBorderStyle", "sbsNone", "sbsSingle", "sbsSunken", "TStatusPanelStyle", "psText",
+    "psOwnerDraw", "TStatusPanelBevel", "pbNone", "pbLowered", "pbRaised", "TShapeType", "stRectangle", "stSquare",
+    "stRoundRect", "stRoundSquare", "stEllipse", "stCircle", "stSquaredDiamond", "stDiamond", "stTriangle",
+    "stTriangleLeft", "stTriangleRight", "stTriangleDown", "stStar", "stStarDown", "stPolygon",
+    "TSectionTrackState", "tsTrackBegin", "tsTrackMove", "tsTrackEnd", "TEdgeStyle", "esNone", "esRaised",
+    "esLowered", "TToolButtonStyle", "tbsButton", "tbsCheck", "tbsDropDown", "tbsSeparator", "tbsDivider",
+    "tbsButtonDrop", "TGrabStyle", "gsSimple", "gsDouble", "gsHorLines", "gsVerLines", "gsGripper", "gsButton",
+    "TActionListState", "asNormal", "asSuspended", "asSuspendedEnabled", "TBorderStyle", "TShiftState", "ssShift",
     "ssAlt", "ssCtrl", "ssLeft", "ssRight", "ssMiddle", "ssDouble", "ssMeta", "ssSuper", "ssHyper", "ssAltGr",
     "ssCaps", "ssNum", "ssScroll", "ssTriple", "ssQuad", "ssExtra1", "ssExtra2", "TFontStyles", "fsBold",
     "fsItalic", "fsUnderline", "fsStrikeOut", "TGridOptions", "goFixedVertLine", "goFixedHorzLine", "goVertLine",
@@ -3250,10 +3350,10 @@ __all__ = [
     "mbAbortRetryIgnore", "TStrings", "TStringList", "TPen", "TBrush", "TFont", "TCanvas", "TGraphic",
     "TRasterImage", "TCustomBitmap", "TBitmap", "TPortableNetworkGraphic", "TJPEGImage", "TIcon", "TPicture",
     "TCustomImageList", "TImageList", "TMenuItem", "TMenu", "TMainMenu", "TPopupMenu", "TSizeConstraints",
-    "TControlBorderSpacing", "TControl", "TWinControl", "TCustomScrollBar", "TScrollBar", "TCustomTrackBar",
-    "TTrackBar", "TCustomProgressBar", "TProgressBar", "TGraphicControl", "TCustomControl", "TUpDown",
-    "TScrollingWinControl", "TScrollBox", "TCustomForm", "TForm", "TApplication", "TScreen", "TClipboard",
-    "TCustomPanel", "TPanel", "TCustomGroupBox", "TGroupBox", "TCustomRadioGroup", "TRadioGroup",
+    "TControlBorderSpacing", "TControlScrollBar", "TControl", "TWinControl", "TCustomScrollBar", "TScrollBar",
+    "TCustomTrackBar", "TTrackBar", "TCustomProgressBar", "TProgressBar", "TGraphicControl", "TCustomControl",
+    "TUpDown", "TScrollingWinControl", "TScrollBox", "TCustomForm", "TForm", "TApplication", "TScreen",
+    "TClipboard", "TCustomPanel", "TPanel", "TCustomGroupBox", "TGroupBox", "TCustomRadioGroup", "TRadioGroup",
     "TCustomCheckGroup", "TCheckGroup", "TCustomLabel", "TLabel", "TBoundLabel", "TBevel", "TButtonControl",
     "TCustomButton", "TButton", "TCustomBitBtn", "TBitBtn", "TCustomCheckBox", "TCheckBox", "TRadioButton",
     "TToggleBox", "TCustomEdit", "TEdit", "TCustomFloatSpinEdit", "TFloatSpinEdit", "TCustomSpinEdit", "TSpinEdit",

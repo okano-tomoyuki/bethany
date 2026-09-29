@@ -645,6 +645,8 @@ TWinControl::TWinControl(ObjectHandle handle)
     , OnKeyPress(this, &TWinControl::GetOnKeyPressImpl, &TWinControl::SetOnKeyPressImpl)
     , TabOrder(this, &TWinControl::GetTabOrderImpl, &TWinControl::SetTabOrderImpl)
     , TabStop(this, &TWinControl::GetTabStopImpl, &TWinControl::SetTabStopImpl)
+    , BorderWidth(this, &TWinControl::GetBorderWidthImpl, &TWinControl::SetBorderWidthImpl)
+    , BorderStyle(this, &TWinControl::GetBorderStyleImpl, &TWinControl::SetBorderStyleImpl)
 {}
 
 // ---- docs/adr/0042 ----
@@ -2634,6 +2636,7 @@ int  TTreeNodes::GetCountImpl(TObject* owner) { return internal::TTreeNodes_GetC
 
 TCustomTreeView::TCustomTreeView(ObjectHandle handle)
     : TCustomControl(handle)
+    , ScrollBars(this, &TCustomTreeView::GetScrollBarsImpl, &TCustomTreeView::SetScrollBarsImpl)
     , Items(this, &TCustomTreeView::GetItemsImpl)
     , Selected(this, &TCustomTreeView::GetSelectedImpl, &TCustomTreeView::SetSelectedImpl)
     , Images(this, &TCustomTreeView::GetImagesImpl, &TCustomTreeView::SetImagesImpl)
@@ -2903,6 +2906,7 @@ int  TListColumns::GetCountImpl(TObject* owner)     { return internal::TListColu
 
 TCustomListView::TCustomListView(ObjectHandle handle)
     : TWinControl(handle)
+    , ScrollBars(this, &TCustomListView::GetScrollBarsImpl, &TCustomListView::SetScrollBarsImpl)
     , Items(this, &TCustomListView::GetItemsImpl)
     , Selected(this, &TCustomListView::GetSelectedImpl, &TCustomListView::SetSelectedImpl)
     , ItemIndex(this, &TCustomListView::GetItemIndexImpl, &TCustomListView::SetItemIndexImpl)
@@ -3164,8 +3168,14 @@ void TCustomMemo::Append(const std::string& S) { internal::TCustomMemo_Append(ha
 
 TStrings* TCustomMemo::GetLinesImpl(TObject* owner) { return &static_cast<TCustomMemo*>(owner)->lines_; }
 
-int  TCustomMemo::GetScrollBarsImpl(TObject* owner)                   { return internal::TCustomMemo_GetScrollBars(owner->Handle()); }
-void TCustomMemo::SetScrollBarsImpl(TObject* owner, const int& value) { internal::TCustomMemo_SetScrollBars(owner->Handle(), value); }
+TScrollStyle TCustomMemo::GetScrollBarsImpl(TObject* owner)
+{
+    return static_cast<TScrollStyle>(internal::TCustomMemo_GetScrollBars(owner->Handle()));
+}
+void TCustomMemo::SetScrollBarsImpl(TObject* owner, const TScrollStyle& value)
+{
+    internal::TCustomMemo_SetScrollBars(owner->Handle(), value);
+}
 
 TMemo::TMemo(TComponent* AOwner)
     : TCustomMemo(internal::TMemo_Create(HandleOf(AOwner)))
@@ -4673,6 +4683,7 @@ void TCustomGrid::MouseToCell(int X, int Y, int& ACol, int& ARow) const
 
 TCustomDrawGrid::TCustomDrawGrid(ObjectHandle handle)
     : TCustomGrid(handle)
+    , ScrollBars(this, &TCustomDrawGrid::GetScrollBarsImpl, &TCustomDrawGrid::SetScrollBarsImpl)
     , ColCount(this, &TCustomDrawGrid::GetColCountImpl, &TCustomDrawGrid::SetColCountImpl)
     , RowCount(this, &TCustomDrawGrid::GetRowCountImpl, &TCustomDrawGrid::SetRowCountImpl)
     , FixedCols(this, &TCustomDrawGrid::GetFixedColsImpl, &TCustomDrawGrid::SetFixedColsImpl)
@@ -5653,5 +5664,101 @@ void BETH_CALL TFindDialog::ReplaceTrampoline(ObjectHandle sender, void*)
 TReplaceDialog::TReplaceDialog(TComponent* AOwner)
     : TFindDialog(internal::TReplaceDialog_Create(HandleOf(AOwner)), DerivedTag())
 {}
+
+/* ---------------- パネルの縁・スクロール・コントロールの枠(docs/adr/0048) ---------------- */
+
+int TWinControl::GetBorderWidthImpl(TObject* owner) { return internal::TWinControl_GetBorderWidth(owner->Handle()); }
+void TWinControl::SetBorderWidthImpl(TObject* owner, const int& value) { internal::TWinControl_SetBorderWidth(owner->Handle(), value); }
+TBorderStyle TWinControl::GetBorderStyleImpl(TObject* owner) { return static_cast<TBorderStyle>(internal::TWinControl_GetBorderStyle(owner->Handle())); }
+void TWinControl::SetBorderStyleImpl(TObject* owner, const TBorderStyle& value) { internal::TWinControl_SetBorderStyle(owner->Handle(), value); }
+
+TScrollStyle TCustomDrawGrid::GetScrollBarsImpl(TObject* owner) { return static_cast<TScrollStyle>(internal::TCustomDrawGrid_GetScrollBars(owner->Handle())); }
+void TCustomDrawGrid::SetScrollBarsImpl(TObject* owner, const TScrollStyle& value) { internal::TCustomDrawGrid_SetScrollBars(owner->Handle(), value); }
+TScrollStyle TCustomTreeView::GetScrollBarsImpl(TObject* owner) { return static_cast<TScrollStyle>(internal::TCustomTreeView_GetScrollBars(owner->Handle())); }
+void TCustomTreeView::SetScrollBarsImpl(TObject* owner, const TScrollStyle& value) { internal::TCustomTreeView_SetScrollBars(owner->Handle(), value); }
+TScrollStyle TCustomListView::GetScrollBarsImpl(TObject* owner) { return static_cast<TScrollStyle>(internal::TCustomListView_GetScrollBars(owner->Handle())); }
+void TCustomListView::SetScrollBarsImpl(TObject* owner, const TScrollStyle& value) { internal::TCustomListView_SetScrollBars(owner->Handle(), value); }
+
+TCustomPanel::TCustomPanel(ObjectHandle handle)
+    : TCustomControl(handle)
+    , Alignment(this, &TCustomPanel::GetAlignmentImpl, &TCustomPanel::SetAlignmentImpl)
+    , VerticalAlignment(this, &TCustomPanel::GetVerticalAlignmentImpl, &TCustomPanel::SetVerticalAlignmentImpl)
+    , WordWrap(this, &TCustomPanel::GetWordWrapImpl, &TCustomPanel::SetWordWrapImpl)
+    , BevelOuter(this, &TCustomPanel::GetBevelOuterImpl, &TCustomPanel::SetBevelOuterImpl)
+    , BevelInner(this, &TCustomPanel::GetBevelInnerImpl, &TCustomPanel::SetBevelInnerImpl)
+    , BevelWidth(this, &TCustomPanel::GetBevelWidthImpl, &TCustomPanel::SetBevelWidthImpl)
+    , BevelColor(this, &TCustomPanel::GetBevelColorImpl, &TCustomPanel::SetBevelColorImpl)
+{}
+
+TAlignment TCustomPanel::GetAlignmentImpl(TObject* owner) { return static_cast<TAlignment>(internal::TCustomPanel_GetAlignment(owner->Handle())); }
+void TCustomPanel::SetAlignmentImpl(TObject* owner, const TAlignment& value) { internal::TCustomPanel_SetAlignment(owner->Handle(), value); }
+TVerticalAlignment TCustomPanel::GetVerticalAlignmentImpl(TObject* owner) { return static_cast<TVerticalAlignment>(internal::TCustomPanel_GetVerticalAlignment(owner->Handle())); }
+void TCustomPanel::SetVerticalAlignmentImpl(TObject* owner, const TVerticalAlignment& value) { internal::TCustomPanel_SetVerticalAlignment(owner->Handle(), value); }
+bool TCustomPanel::GetWordWrapImpl(TObject* owner) { return internal::TCustomPanel_GetWordWrap(owner->Handle()) != 0; }
+void TCustomPanel::SetWordWrapImpl(TObject* owner, const bool& value) { internal::TCustomPanel_SetWordWrap(owner->Handle(), value ? 1 : 0); }
+TPanelBevel TCustomPanel::GetBevelOuterImpl(TObject* owner) { return static_cast<TPanelBevel>(internal::TCustomPanel_GetBevelOuter(owner->Handle())); }
+void TCustomPanel::SetBevelOuterImpl(TObject* owner, const TPanelBevel& value) { internal::TCustomPanel_SetBevelOuter(owner->Handle(), value); }
+TPanelBevel TCustomPanel::GetBevelInnerImpl(TObject* owner) { return static_cast<TPanelBevel>(internal::TCustomPanel_GetBevelInner(owner->Handle())); }
+void TCustomPanel::SetBevelInnerImpl(TObject* owner, const TPanelBevel& value) { internal::TCustomPanel_SetBevelInner(owner->Handle(), value); }
+int TCustomPanel::GetBevelWidthImpl(TObject* owner) { return internal::TCustomPanel_GetBevelWidth(owner->Handle()); }
+void TCustomPanel::SetBevelWidthImpl(TObject* owner, const int& value) { internal::TCustomPanel_SetBevelWidth(owner->Handle(), value); }
+TColor TCustomPanel::GetBevelColorImpl(TObject* owner) { return internal::TCustomPanel_GetBevelColor(owner->Handle()); }
+void TCustomPanel::SetBevelColorImpl(TObject* owner, const TColor& value) { internal::TCustomPanel_SetBevelColor(owner->Handle(), value); }
+
+TControlScrollBar::TControlScrollBar(ObjectHandle handle)
+    : TPersistent(handle)
+    , Kind(this, &TControlScrollBar::GetKindImpl)
+    , Size(this, &TControlScrollBar::GetSizeImpl)
+    , Increment(this, &TControlScrollBar::GetIncrementImpl, &TControlScrollBar::SetIncrementImpl)
+    , Page(this, &TControlScrollBar::GetPageImpl, &TControlScrollBar::SetPageImpl)
+    , Position(this, &TControlScrollBar::GetPositionImpl, &TControlScrollBar::SetPositionImpl)
+    , Range(this, &TControlScrollBar::GetRangeImpl, &TControlScrollBar::SetRangeImpl)
+    , Smooth(this, &TControlScrollBar::GetSmoothImpl, &TControlScrollBar::SetSmoothImpl)
+    , Tracking(this, &TControlScrollBar::GetTrackingImpl, &TControlScrollBar::SetTrackingImpl)
+    , Visible(this, &TControlScrollBar::GetVisibleImpl, &TControlScrollBar::SetVisibleImpl)
+{}
+
+bool TControlScrollBar::IsScrollBarVisible() const { return internal::TControlScrollBar_IsScrollBarVisible(handle_) != 0; }
+TScrollBarKind TControlScrollBar::GetKindImpl(TObject* owner)
+{
+    return static_cast<TScrollBarKind>(internal::TControlScrollBar_GetKind(owner->Handle()));
+}
+int TControlScrollBar::GetSizeImpl(TObject* owner) { return internal::TControlScrollBar_GetSize(owner->Handle()); }
+int TControlScrollBar::GetIncrementImpl(TObject* owner) { return internal::TControlScrollBar_GetIncrement(owner->Handle()); }
+void TControlScrollBar::SetIncrementImpl(TObject* owner, const int& value) { internal::TControlScrollBar_SetIncrement(owner->Handle(), value); }
+int TControlScrollBar::GetPageImpl(TObject* owner) { return internal::TControlScrollBar_GetPage(owner->Handle()); }
+void TControlScrollBar::SetPageImpl(TObject* owner, const int& value) { internal::TControlScrollBar_SetPage(owner->Handle(), value); }
+int TControlScrollBar::GetPositionImpl(TObject* owner) { return internal::TControlScrollBar_GetPosition(owner->Handle()); }
+void TControlScrollBar::SetPositionImpl(TObject* owner, const int& value) { internal::TControlScrollBar_SetPosition(owner->Handle(), value); }
+int TControlScrollBar::GetRangeImpl(TObject* owner) { return internal::TControlScrollBar_GetRange(owner->Handle()); }
+void TControlScrollBar::SetRangeImpl(TObject* owner, const int& value) { internal::TControlScrollBar_SetRange(owner->Handle(), value); }
+bool TControlScrollBar::GetSmoothImpl(TObject* owner) { return internal::TControlScrollBar_GetSmooth(owner->Handle()) != 0; }
+void TControlScrollBar::SetSmoothImpl(TObject* owner, const bool& value) { internal::TControlScrollBar_SetSmooth(owner->Handle(), value ? 1 : 0); }
+bool TControlScrollBar::GetTrackingImpl(TObject* owner) { return internal::TControlScrollBar_GetTracking(owner->Handle()) != 0; }
+void TControlScrollBar::SetTrackingImpl(TObject* owner, const bool& value) { internal::TControlScrollBar_SetTracking(owner->Handle(), value ? 1 : 0); }
+bool TControlScrollBar::GetVisibleImpl(TObject* owner) { return internal::TControlScrollBar_GetVisible(owner->Handle()) != 0; }
+void TControlScrollBar::SetVisibleImpl(TObject* owner, const bool& value) { internal::TControlScrollBar_SetVisible(owner->Handle(), value ? 1 : 0); }
+
+TScrollingWinControl::TScrollingWinControl(ObjectHandle handle)
+    : TCustomControl(handle)
+    , AutoScroll(this, &TScrollingWinControl::GetAutoScrollImpl, &TScrollingWinControl::SetAutoScrollImpl)
+    , HorzScrollBar(this, &TScrollingWinControl::GetHorzScrollBarImpl, &TScrollingWinControl::SetHorzScrollBarImpl)
+    , VertScrollBar(this, &TScrollingWinControl::GetVertScrollBarImpl, &TScrollingWinControl::SetVertScrollBarImpl)
+    , horzScrollBar_(handle ? internal::TScrollingWinControl_GetHorzScrollBar(handle) : nullptr)
+    , vertScrollBar_(handle ? internal::TScrollingWinControl_GetVertScrollBar(handle) : nullptr)
+{}
+
+bool TScrollingWinControl::GetAutoScrollImpl(TObject* owner) { return internal::TScrollingWinControl_GetAutoScroll(owner->Handle()) != 0; }
+void TScrollingWinControl::SetAutoScrollImpl(TObject* owner, const bool& value) { internal::TScrollingWinControl_SetAutoScroll(owner->Handle(), value ? 1 : 0); }
+TControlScrollBar* TScrollingWinControl::GetHorzScrollBarImpl(TObject* owner) { return &static_cast<TScrollingWinControl*>(owner)->horzScrollBar_; }
+void TScrollingWinControl::SetHorzScrollBarImpl(TObject* owner, TControlScrollBar* const& value)
+{
+    internal::TScrollingWinControl_SetHorzScrollBar(owner->Handle(), value ? value->Handle() : nullptr);
+}
+TControlScrollBar* TScrollingWinControl::GetVertScrollBarImpl(TObject* owner) { return &static_cast<TScrollingWinControl*>(owner)->vertScrollBar_; }
+void TScrollingWinControl::SetVertScrollBarImpl(TObject* owner, TControlScrollBar* const& value)
+{
+    internal::TScrollingWinControl_SetVertScrollBar(owner->Handle(), value ? value->Handle() : nullptr);
+}
 
 } // namespace beth

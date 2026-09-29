@@ -1,7 +1,7 @@
 /**
  * 意味の検証(docs/designer/dsl-spec.md §7)。構造の検証(schema.ts)を通ったドキュメントを、カタログと照合する。
  */
-import { findClass, getCatalog, isSubclassOf } from '../catalog/catalog.ts';
+import { enumItems, findClass, getCatalog, isSubclassOf } from '../catalog/catalog.ts';
 import type { ClassInfo, PropertyInfo, PropertyType } from '../catalog/types.ts';
 import { isValidIdentifier, memberNameProblem } from '../identifier.ts';
 import { l10n } from '../l10n.ts';
@@ -199,7 +199,7 @@ export function validateDocument(doc: BfmDocument): Diagnostic[] {
         return;
       }
       case 'enum': {
-        const items = catalog.enums[type.enum] ?? [];
+        const items = enumItems(type);
         if (typeof value !== 'string' || !items.includes(value))
           invalid(l10n.t('one of {0}', items.join(', ')));
         return;
