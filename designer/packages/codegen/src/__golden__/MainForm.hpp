@@ -19,6 +19,7 @@ public:
     beth::TTabSheet* OptionSheet;
     beth::TCheckBox* WrapCheck;
     beth::TSpinEdit* SizeSpin;
+    beth::TStatusBar* OptionStatus;
     beth::TTabSheet* MemoSheet;
     beth::TMemo* Memo1;
     beth::TPanel* BottomPanel;
@@ -42,7 +43,7 @@ public:
     void FileExitItemClick(beth::TObject* Sender);
     void ClearItemClick(beth::TObject* Sender);
     void Timer1Timer(beth::TObject* Sender);
-    // <bethany-designer:end id="declarations" hash="1bec7ee9">
+    // <bethany-designer:end id="declarations" hash="fc9c5a81">
 
     explicit TMainForm(beth::TComponent* AOwner);
 

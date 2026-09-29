@@ -145,6 +145,7 @@ ${controls
     check(first, "timer", std::to_string((int)f->Timer1->Enabled) + "/" + std::to_string(f->Timer1->Interval));
     check(first, "caption", f->Caption);
     check(first, "spinValue", std::to_string(f->SizeSpin->Value));
+    check(first, "statusPanels", std::to_string(f->OptionStatus->Panels->Count) + "/" + std::string(f->OptionStatus->Panels->Items[0]->Text) + "/" + std::to_string(f->OptionStatus->Panels->Items[0]->Width) + "/" + std::to_string((int)(TStatusPanelStyle)f->OptionStatus->Panels->Items[1]->Style) + "/" + std::to_string((int)(TAlignment)f->OptionStatus->Panels->Items[2]->Alignment) + "/" + std::to_string((int)(TStatusPanelBevel)f->OptionStatus->Panels->Items[2]->Bevel));
 
     // Anchors: フォームを広げると、右に寄せたものは動き、左右に寄せたものは広がる
     f->Width = f->Width + 100;
@@ -192,5 +193,13 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(verify PRIVATE -Wall -Wextra -Wno-unused-parameter -Werror)
 endif()
 set_target_properties(verify PROPERTIES RUNTIME_OUTPUT_DIRECTORY \${CMAKE_BINARY_DIR})
+if(WIN32)
+    # beth::beth をリンクした exe と同じく Common-Controls 6.0 の manifest を埋め込む(無いと comctl32 v5 になり、
+    # TStatusBar の高さ等が実際のアプリ・python.exe と変わる)
+    enable_language(RC)
+    set(BETH_MANIFEST_PATH \${BETH_DIR}/win32/beth.manifest)
+    configure_file(\${BETH_DIR}/win32/beth_manifest.rc.in \${CMAKE_BINARY_DIR}/beth_manifest.rc @ONLY)
+    target_sources(verify PRIVATE \${CMAKE_BINARY_DIR}/beth_manifest.rc)
+endif()
 `;
 }

@@ -1976,6 +1976,8 @@ class TApplication : public TComponent
 public:
     // 実行ファイルのフルパス。
     ReadOnlyProperty<std::string> ExeName;
+    // 表示中(マウスの下のコントロール)のヒント。TStatusBar::OnHint の中で使う(docs/adr/0044)。
+    Property<std::string> Hint;
     // false なら、アプリケーションのすべてのヒントを表示しない。
     Property<bool> ShowHint;
     // マウスを止めてからヒントを表示するまでの時間(ミリ秒)。
@@ -2043,6 +2045,8 @@ private:
 
 private:
     static std::string GetExeNameImpl(TObject* owner);
+    static std::string GetHintImpl(TObject* owner);
+    static void SetHintImpl(TObject* owner, const std::string& value);
     static bool GetShowHintImpl(TObject* owner);
     static void SetShowHintImpl(TObject* owner, const bool& value);
     static int GetHintPauseImpl(TObject* owner);
@@ -3766,8 +3770,90 @@ protected:
     ~TStaticText() override = default;
 };
 
+class TStatusBar;
+
+// パネルの描き方(LCL の TStatusPanelStyle と同じ値)。psOwnerDraw なら TStatusBar::OnDrawPanel で描く。
+enum TStatusPanelStyle
+{
+    psText,
+    psOwnerDraw
+};
+
+// パネルの縁(LCL の TStatusPanelBevel と同じ値)。
+enum TStatusPanelBevel
+{
+    pbNone,
+    pbLowered,
+    pbRaised
+};
+
+// ステータスバーのパネル(LCL の TStatusPanel。TCollectionItem。docs/adr/0044)。同じパネルには常に同じポインタが返る。
+// ラッパーは、パネルが破棄されたとき(TStatusPanels::Delete・Clear、ステータスバーの破棄)に delete される。
+class TStatusPanel : public TPersistent
+{
+public:
+    Property<std::string>       Text;
+    // 幅(最後のパネルは残りの幅いっぱいに広がる)。
+    Property<int>               Width;
+    Property<TAlignment>        Alignment;
+    Property<TStatusPanelBevel> Bevel;
+    Property<TStatusPanelStyle> Style;
+    // 並び順。書き換えるとパネルが移動する。
+    Property<int>               Index;
+
+private:
+    friend class ItemRegistry;
+    friend class TStatusPanels;
+    friend class TStatusBar;
+
+    explicit TStatusPanel(ObjectHandle handle);
+    ~TStatusPanel() override = default;
+    static TStatusPanel* Wrap(ObjectHandle handle) { return ItemRegistry::Wrap<TStatusPanel>(handle); }
+
+    static std::string       GetTextImpl(TObject* owner);
+    static void              SetTextImpl(TObject* owner, const std::string& value);
+    static int               GetWidthImpl(TObject* owner);
+    static void              SetWidthImpl(TObject* owner, const int& value);
+    static TAlignment        GetAlignmentImpl(TObject* owner);
+    static void              SetAlignmentImpl(TObject* owner, const TAlignment& value);
+    static TStatusPanelBevel GetBevelImpl(TObject* owner);
+    static void              SetBevelImpl(TObject* owner, const TStatusPanelBevel& value);
+    static TStatusPanelStyle GetStyleImpl(TObject* owner);
+    static void              SetStyleImpl(TObject* owner, const TStatusPanelStyle& value);
+    static int               GetIndexImpl(TObject* owner);
+    static void              SetIndexImpl(TObject* owner, const int& value);
+};
+
+// パネルの一覧(LCL の TStatusPanels。TCollection)。ステータスバーの値メンバとして持つ非所有のビュー。
+class TStatusPanels : public TPersistent
+{
+public:
+    explicit TStatusPanels(ObjectHandle handle);
+    ~TStatusPanels() override = default;
+
+    ReadOnlyProperty<int> Count;
+    // StatusBar1->Panels->Items[i]。
+    ReadOnlyIndexedProperty<TStatusPanel*> Items;
+
+    // 末尾に(Insert は Index の位置に)空のパネルを追加して返す(Text・Width はその後で設定する。VCL と同じ)。
+    TStatusPanel* Add();
+    TStatusPanel* Insert(int Index);
+    // パネルを削除する(パネルのラッパーも delete される)。
+    void          Delete(int Index);
+    void          Clear();
+    void          BeginUpdate();
+    void          EndUpdate();
+
+private:
+    static TStatusPanel* GetItemsImpl(TObject* owner, int Index);
+    static int           GetCountImpl(TObject* owner);
+};
+
+// Style が psOwnerDraw のパネルを描くとき(Rect はパネルのクライアント座標での矩形。描画は TStatusBar::Canvas に行う)。
+using TDrawPanelEvent = std::function<void(TStatusBar* StatusBar, TStatusPanel* Panel, const TRect& Rect)>;
+
 // ステータス行。LCL では中間の TCustomStatusBar が無く、TWinControl の直接の派生。
-// Panels(複数区画のコレクション)は今回未対応で、SimpleText/SimplePanel のみ。
+// パネルを表示するには SimplePanel を false にする(LCL の既定は true で、SimpleText だけを表示する。VCL の既定は false)。
 // 他のコントロールと同じく、フォームのコンストラクタの中で生成・配置してよい
 // (LCL の Win32 実装が DLL で失敗する問題は DLL 側で回避済み。docs/adr/0015-... を参照)。
 class TStatusBar : public TWinControl
@@ -3777,15 +3863,53 @@ public:
 
     Property<std::string> SimpleText;
     Property<bool>         SimplePanel;
+    ReadOnlyProperty<TStatusPanels*> Panels;
+    // 右下のサイズ変更のつまみを出すか(フォームの右下にあり、フォームの大きさを変えられるときだけ出る)。
+    Property<bool>         SizeGrip;
+    // true なら、Application のヒント(コントロールの Hint)をステータスバーに表示する
+    // (SimplePanel なら SimpleText、そうでなければ最初のパネルに。OnHint を設定すると、代わりに OnHint を呼ぶ)。
+    // LCL は ShowHint が true のコントロール(か親)にだけ Application のヒントを設定する(VCL は ShowHint によらない)。
+    Property<bool>         AutoHint;
+    // OnDrawPanel の中で描画する先。ステータスバーが所有する実体への非所有のビュー(TPaintBox::Canvas と同じ)。
+    TCanvas                Canvas;
+
+    Property<TDrawPanelEvent> OnDrawPanel;
+    // AutoHint のとき、ヒントを表示する代わりに呼ばれる(ヒントは Application->Hint)。
+    Property<TNotifyEvent>    OnHint;
+
+    // クライアント座標 (X, Y) にあるパネルの位置。無ければ -1。
+    int  GetPanelIndexAt(int X, int Y) const;
+    // パネルをまとめて変えるとき、EndUpdate まで再描画を止める。
+    void BeginUpdate();
+    void EndUpdate();
 
 protected:
     ~TStatusBar() override = default;
 
 private:
+    TStatusPanels   panels_;
+    TDrawPanelEvent onDrawPanel_;
+    TNotifyEvent    onHint_;
+    bool onDrawPanelHooked_ = false;
+    bool onHintHooked_      = false;
+
+    static void BETH_CALL DrawPanelTrampoline(ObjectHandle sender, ObjectHandle panel, internal::int_t left, internal::int_t top,
+                                              internal::int_t right, internal::int_t bottom, void* data);
+    static void BETH_CALL HintTrampoline(ObjectHandle sender, void* data);
+
     static std::string GetSimpleTextImpl(TObject* owner);
     static void         SetSimpleTextImpl(TObject* owner, const std::string& value);
     static bool         GetSimplePanelImpl(TObject* owner);
     static void          SetSimplePanelImpl(TObject* owner, const bool& value);
+    static TStatusPanels* GetPanelsImpl(TObject* owner);
+    static bool         GetSizeGripImpl(TObject* owner);
+    static void         SetSizeGripImpl(TObject* owner, const bool& value);
+    static bool         GetAutoHintImpl(TObject* owner);
+    static void         SetAutoHintImpl(TObject* owner, const bool& value);
+    static TDrawPanelEvent GetOnDrawPanelImpl(TObject* owner);
+    static void            SetOnDrawPanelImpl(TObject* owner, const TDrawPanelEvent& value);
+    static TNotifyEvent    GetOnHintImpl(TObject* owner);
+    static void            SetOnHintImpl(TObject* owner, const TNotifyEvent& value);
 };
 
 /* ---------------- Shape / SpeedButton / PaintBox / Image ---------------- */

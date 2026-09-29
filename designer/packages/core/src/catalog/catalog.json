@@ -11453,6 +11453,30 @@
           },
           "declaredIn": "TStatusBar",
           "default": true
+        },
+        "Panels": {
+          "type": {
+            "kind": "collection",
+            "item": "TStatusPanel"
+          },
+          "declaredIn": "TStatusBar",
+          "default": []
+        },
+        "SizeGrip": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TStatusBar",
+          "default": true,
+          "doc": "右下のサイズ変更のつまみを出すか(フォームの右下にあり、フォームの大きさを変えられるときだけ出る)。"
+        },
+        "AutoHint": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TStatusBar",
+          "default": false,
+          "doc": "true なら、Application のヒント(コントロールの Hint)をステータスバーに表示する (SimplePanel なら SimpleText、そうでなければ最初のパネルに。OnHint を設定すると、代わりに OnHint を呼ぶ)。 LCL は ShowHint が true のコントロール(か親)にだけ Application のヒントを設定する(VCL は ShowHint によらない)。"
         }
       },
       "events": {
@@ -11513,6 +11537,15 @@
         "OnKeyPress": {
           "type": "TKeyPressEvent",
           "declaredIn": "TWinControl"
+        },
+        "OnDrawPanel": {
+          "type": "TDrawPanelEvent",
+          "declaredIn": "TStatusBar"
+        },
+        "OnHint": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TStatusBar",
+          "doc": "AutoHint のとき、ヒントを表示する代わりに呼ばれる(ヒントは Application->Hint)。"
         }
       }
     },
@@ -15639,6 +15672,49 @@
           "declaredIn": "TControlBorderSpacing"
         }
       }
+    },
+    "TStatusPanel": {
+      "properties": {
+        "Text": {
+          "type": {
+            "kind": "string"
+          },
+          "declaredIn": "TStatusPanel",
+          "default": ""
+        },
+        "Width": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TStatusPanel",
+          "default": 50,
+          "doc": "幅(最後のパネルは残りの幅いっぱいに広がる)。"
+        },
+        "Alignment": {
+          "type": {
+            "kind": "enum",
+            "enum": "TAlignment"
+          },
+          "declaredIn": "TStatusPanel",
+          "default": "taLeftJustify"
+        },
+        "Bevel": {
+          "type": {
+            "kind": "enum",
+            "enum": "TStatusPanelBevel"
+          },
+          "declaredIn": "TStatusPanel",
+          "default": "pbLowered"
+        },
+        "Style": {
+          "type": {
+            "kind": "enum",
+            "enum": "TStatusPanelStyle"
+          },
+          "declaredIn": "TStatusPanel",
+          "default": "psText"
+        }
+      }
     }
   },
   "enums": {
@@ -15879,6 +15955,15 @@
       "sbsNone",
       "sbsSingle",
       "sbsSunken"
+    ],
+    "TStatusPanelStyle": [
+      "psText",
+      "psOwnerDraw"
+    ],
+    "TStatusPanelBevel": [
+      "pbNone",
+      "pbLowered",
+      "pbRaised"
     ],
     "TShapeType": [
       "stRectangle",
@@ -16396,6 +16481,20 @@
       {
         "name": "Column",
         "type": "TListColumn*"
+      }
+    ],
+    "TDrawPanelEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "Panel",
+        "type": "TStatusPanel*"
+      },
+      {
+        "name": "Rect",
+        "type": "const TRect&"
       }
     ],
     "TOnDrawCell": [

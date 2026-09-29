@@ -25,6 +25,9 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
 - チェックボックスの `State`(`cbGrayed`)・`AllowGrayed`・`OnChange`
 - `Application` の `ExeName`・`ShowHint`・`HintPause`・`HintHidePause`・`Minimize`・`Restore`・`BringToFront`・`OnIdle`・`OnException`
   (ハンドラから送出された例外を、既定のエラーのダイアログの代わりに受ける)
+- ステータスバーのパネル(`TStatusPanel`・`TStatusPanels`。`Panels->Add()` 等)と、ステータスバーの `SizeGrip`・`AutoHint`・`Canvas`・
+  `OnDrawPanel`・`OnHint`・`GetPanelIndexAt`・`BeginUpdate`・`EndUpdate`、`Application->Hint`
+  ([ADR 0044](docs/adr/0044-statusbar-panels-and-designer-collections.md))。パネルを表示するには `SimplePanel` を false にする(LCL の既定は true)
 
 ### 変更
 

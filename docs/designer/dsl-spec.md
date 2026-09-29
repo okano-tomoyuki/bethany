@@ -175,6 +175,7 @@
 | コンポーネントへの参照(`TPopupMenu*`・`TCustomImageList*`・`TMainMenu*` 等) | 同じフォームのコンポーネントの `name` | `"PopupMenu1"` |
 | 入れ子のオブジェクト(`TFont*`・`TSizeConstraints*`・`TControlBorderSpacing*`) | そのプロパティのオブジェクト(一部だけ書ける) | `{ "Size": 12, "Style": ["fsBold"] }` |
 | `TStrings*`(Items・Lines・Tabs 等) | 文字列の配列 | `["a", "b"]` |
+| コレクション(TStatusBar の `Panels`。[ADR 0044](../adr/0044-statusbar-panels-and-designer-collections.md)) | 項目のオブジェクトの配列(各項目は一部だけ書ける) | `[{ "Text": "Ready", "Width": 120 }, {}]` |
 
 - カタログにないプロパティ、デザイン時に設定できないもの(読み取り専用・実行時だけのもの)はエラー。
 - 参照は、型が合うコンポーネントでなければならない(`PopupMenu` に TMainMenu は書けない)。

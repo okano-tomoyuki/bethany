@@ -12653,6 +12653,25 @@ begin
   end;
 end;
 
+function TApplication_GetHint(Obj: Pointer): PChar; BETH_CALL;
+begin
+  try
+    Result := ReturnStr(TApplication(Obj).Hint);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TApplication_SetHint(Obj: Pointer; Value: PChar); BETH_CALL;
+begin
+  try
+    TApplication(Obj).Hint := Value;
+  except
+    ReportException;
+  end;
+end;
+
 function TApplication_GetShowHint(Obj: Pointer): LongBool; BETH_CALL;
 begin
   try
@@ -12750,6 +12769,343 @@ procedure TApplication_SetOnException(Obj: Pointer; Cb: TBethExceptionCallback; 
 begin
   try
     TApplication(Obj).OnException := @ExceptionBridgeFor(TComponent(Obj), MethodData(TApplication(Obj).OnException), Cb, Data).DoException;
+  except
+    ReportException;
+  end;
+end;
+
+{ ---------------- StatusBar のパネル(docs/adr/0044) ----------------
+  パネル(TStatusPanel。TCollectionItem)は THeaderSection と同じく、ハンドルを C 側へ渡すときに WatchItem で観察者を付け、
+  破棄を知らせる。Panels(TStatusPanels)はステータスバーが所有し、ステータスバーと寿命が一致する。 }
+
+type
+  { OnDrawPanel(StatusBar, Panel, Rect)用。 }
+  TBethItemRectCallback = procedure(Sender: Pointer; Item: Pointer; Left, Top, Right, Bottom: Integer; Data: Pointer); BETH_CALL;
+
+  TItemRectCallbackBridge = class(TComponent)
+  private
+    FCallback: TBethItemRectCallback;
+    FData: Pointer;
+  public
+    procedure DoDrawPanel(StatusBar: TStatusBar; Panel: TStatusPanel; const Rect: TRect);
+  end;
+
+procedure TItemRectCallbackBridge.DoDrawPanel(StatusBar: TStatusBar; Panel: TStatusPanel; const Rect: TRect);
+begin
+  if not Assigned(FCallback) or GDetaching then
+    Exit;
+  FCallback(Pointer(StatusBar), WatchItem(Panel), Rect.Left, Rect.Top, Rect.Right, Rect.Bottom, FData);
+  CheckCallbackError;
+end;
+
+function ItemRectBridgeFor(Owner: TComponent; Current: Pointer; Cb: TBethItemRectCallback; Data: Pointer): TItemRectCallbackBridge;
+begin
+  if (Current <> nil) and (TObject(Current) is TItemRectCallbackBridge) and (TItemRectCallbackBridge(Current).Owner = Owner) then
+    Result := TItemRectCallbackBridge(Current)
+  else
+    Result := TItemRectCallbackBridge.Create(Owner);
+  Result.FCallback := Cb;
+  Result.FData := Data;
+end;
+
+function MethodData(const M: TDrawPanelEvent): Pointer; overload;
+begin
+  Result := TMethod(M).Data;
+end;
+
+function TStatusBar_GetPanels(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TStatusBar(Obj).Panels);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+function TStatusBar_GetSizeGrip(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TStatusBar(Obj).SizeGrip;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TStatusBar_SetSizeGrip(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TStatusBar(Obj).SizeGrip := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TStatusBar_GetAutoHint(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TStatusBar(Obj).AutoHint;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TStatusBar_SetAutoHint(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TStatusBar(Obj).AutoHint := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TStatusBar_GetCanvas(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TStatusBar(Obj).Canvas);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+function TStatusBar_GetPanelIndexAt(Obj: Pointer; X, Y: Integer): Integer; BETH_CALL;
+begin
+  try
+    Result := TStatusBar(Obj).GetPanelIndexAt(X, Y);
+  except
+    Result := -1;
+    ReportException;
+  end;
+end;
+
+procedure TStatusBar_BeginUpdate(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TStatusBar(Obj).BeginUpdate;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TStatusBar_EndUpdate(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TStatusBar(Obj).EndUpdate;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TStatusBar_SetOnDrawPanel(Obj: Pointer; Cb: TBethItemRectCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TStatusBar(Obj).OnDrawPanel := @ItemRectBridgeFor(TComponent(Obj), MethodData(TStatusBar(Obj).OnDrawPanel), Cb, Data).DoDrawPanel;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TStatusBar_SetOnHint(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TStatusBar(Obj).OnHint := @BridgeFor(TComponent(Obj), MethodData(TStatusBar(Obj).OnHint), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
+end;
+
+{ TStatusPanels(TCollection)。パネルを返す関数は WatchItem してから返す。 }
+
+function TStatusPanels_Add(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := WatchItem(TStatusPanels(Obj).Add);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+function TStatusPanels_Insert(Obj: Pointer; Index: Integer): Pointer; BETH_CALL;
+begin
+  try
+    Result := WatchItem(TStatusPanels(Obj).Insert(Index));
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TStatusPanels_Delete(Obj: Pointer; Index: Integer); BETH_CALL;
+begin
+  try
+    TStatusPanels(Obj).Delete(Index);
+  except
+    ReportException;
+  end;
+end;
+
+procedure TStatusPanels_Clear(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TStatusPanels(Obj).Clear;
+  except
+    ReportException;
+  end;
+end;
+
+function TStatusPanels_GetCount(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TStatusPanels(Obj).Count;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function TStatusPanels_GetItem(Obj: Pointer; Index: Integer): Pointer; BETH_CALL;
+begin
+  try
+    Result := WatchItem(TStatusPanels(Obj).Items[Index]);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TStatusPanels_BeginUpdate(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TStatusPanels(Obj).BeginUpdate;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TStatusPanels_EndUpdate(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TStatusPanels(Obj).EndUpdate;
+  except
+    ReportException;
+  end;
+end;
+
+{ TStatusPanel }
+
+function TStatusPanel_GetText(Obj: Pointer): PChar; BETH_CALL;
+begin
+  try
+    Result := ReturnStr(TStatusPanel(Obj).Text);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TStatusPanel_SetText(Obj: Pointer; Value: PChar); BETH_CALL;
+begin
+  try
+    TStatusPanel(Obj).Text := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TStatusPanel_GetWidth(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TStatusPanel(Obj).Width;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TStatusPanel_SetWidth(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TStatusPanel(Obj).Width := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TStatusPanel_GetAlignment(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TStatusPanel(Obj).Alignment);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TStatusPanel_SetAlignment(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TStatusPanel(Obj).Alignment := TAlignment(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TStatusPanel_GetBevel(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TStatusPanel(Obj).Bevel);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TStatusPanel_SetBevel(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TStatusPanel(Obj).Bevel := TStatusPanelBevel(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TStatusPanel_GetStyle(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TStatusPanel(Obj).Style);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TStatusPanel_SetStyle(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TStatusPanel(Obj).Style := TStatusPanelStyle(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TStatusPanel_GetIndex(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TStatusPanel(Obj).Index;
+  except
+    Result := -1;
+    ReportException;
+  end;
+end;
+
+procedure TStatusPanel_SetIndex(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TStatusPanel(Obj).Index := Value;
   except
     ReportException;
   end;
@@ -13964,6 +14320,8 @@ exports
   TCustomCheckBox_SetAllowGrayed,
   TCustomCheckBox_SetOnChange,
   TApplication_GetExeName,
+  TApplication_GetHint,
+  TApplication_SetHint,
   TApplication_GetShowHint,
   TApplication_SetShowHint,
   TApplication_GetHintPause,
@@ -13974,7 +14332,38 @@ exports
   TApplication_Restore,
   TApplication_BringToFront,
   TApplication_SetOnIdle,
-  TApplication_SetOnException;
+  TApplication_SetOnException,
+  TStatusBar_GetPanels,
+  TStatusBar_GetSizeGrip,
+  TStatusBar_SetSizeGrip,
+  TStatusBar_GetAutoHint,
+  TStatusBar_SetAutoHint,
+  TStatusBar_GetCanvas,
+  TStatusBar_GetPanelIndexAt,
+  TStatusBar_BeginUpdate,
+  TStatusBar_EndUpdate,
+  TStatusBar_SetOnDrawPanel,
+  TStatusBar_SetOnHint,
+  TStatusPanels_Add,
+  TStatusPanels_Insert,
+  TStatusPanels_Delete,
+  TStatusPanels_Clear,
+  TStatusPanels_GetCount,
+  TStatusPanels_GetItem,
+  TStatusPanels_BeginUpdate,
+  TStatusPanels_EndUpdate,
+  TStatusPanel_GetText,
+  TStatusPanel_SetText,
+  TStatusPanel_GetWidth,
+  TStatusPanel_SetWidth,
+  TStatusPanel_GetAlignment,
+  TStatusPanel_SetAlignment,
+  TStatusPanel_GetBevel,
+  TStatusPanel_SetBevel,
+  TStatusPanel_GetStyle,
+  TStatusPanel_SetStyle,
+  TStatusPanel_GetIndex,
+  TStatusPanel_SetIndex;
 
 begin
   RequireDerivedFormResource := False;

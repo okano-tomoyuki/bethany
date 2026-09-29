@@ -65,11 +65,11 @@ C++Builder の入門的なアプリ(ダイアログ・入力のフォーム・�
 
 ### Tier B — よく使う(中〜高コスト)
 
-実用的なアプリでよく使うが、新しい型やコレクション・グローバルなオブジェクトの設計が要るもの。
+実用的なアプリでよく使うが、新しい型やコレクション・グローバルなオブジェクトの設計が要るもの。✅ は実装済み(B1 は [ADR 0044](adr/0044-statusbar-panels-and-designer-collections.md))。
 
 | # | 項目 | 対象 | コスト | 備考 |
 |---|---|---|---|---|
-| B1 | **ステータスバーのパネル** | `TStatusBar.Panels`(`TStatusPanels`・`TStatusPanel` の `Text`・`Width`・`Alignment`・`Style`)・`SizeGrip`・`AutoHint`・`OnDrawPanel` | L | コレクション。TCoolBar の Bands・THeaderControl の Sections と同じ作り([ADR 0024](adr/0024-headercontrol.md)・[0026](adr/0026-coolbar-and-item-free-observer.md)) |
+| B1 | ✅ **ステータスバーのパネル** | `TStatusBar.Panels`(`TStatusPanels`・`TStatusPanel` の `Text`・`Width`・`Alignment`・`Style`)・`SizeGrip`・`AutoHint`・`OnDrawPanel` | L | コレクション。TCoolBar の Bands・THeaderControl の Sections と同じ作り([ADR 0024](adr/0024-headercontrol.md)・[0026](adr/0026-coolbar-and-item-free-observer.md)) |
 | B2 | **Screen** | `TScreen`(`Screen`)の `Cursor`・`Width`・`Height`・`WorkArea…`・`Forms`・`FormCount`・`ActiveForm`・`ActiveControl` | L | グローバルなオブジェクト。`Application` と同じく DLL の読み込み時に作る |
 | B3 | **Clipboard** | `TClipboard`(`Clipboard()`)の `AsText`・`HasFormat`・`Clear`、画像の `Assign` | M〜L | A7 の `CopyToClipboard` 等とは別に、プログラムからクリップボードを読み書きするもの |
 | B4 | **Action** | `TActionList`・`TAction`(`Caption`・`Enabled`・`Checked`・`ShortCut`・`OnExecute`・`OnUpdate`)と、コントロール・メニュー項目の `Action` | L | C++Builder のアプリでよく使う(メニューとツールボタンの状態をまとめる)。デザイナーにも非ビジュアルコンポーネントとして要る。ADR を書く |

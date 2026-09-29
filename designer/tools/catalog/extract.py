@@ -27,6 +27,10 @@ import gen_api  # noqa: E402
 
 # 所有者が持つオブジェクトのビューで、中のプロパティを入れ子で書けるもの(DSL の「入れ子のオブジェクト」)。
 OBJECT_CLASSES = ["TFont", "TSizeConstraints", "TControlBorderSpacing"]
+# 項目の一覧(TCollection)のビューで、項目を DSL の配列で書けるもの(DSL の「コレクション」。docs/adr/0044)。
+# 一覧のクラス → 項目のクラス。項目のプロパティは objects に載せる(Index は配列の並びで決まるので載せない)。
+COLLECTION_CLASSES = {"TStatusPanels": "TStatusPanel"}
+COLLECTION_ITEM_SKIP = {"Index"}
 
 PROPERTY_RE = re.compile(r"(ReadOnly)?(Indexed)?Property(2)?<(.+)>\s+(\w+)")
 USING_RE = re.compile(r"using (\w+)::(\w+)")
@@ -83,6 +87,8 @@ class Extractor:
                 return {"kind": "object", "class": c}
             if c == "TStrings":
                 return {"kind": "strings"}
+            if c in COLLECTION_CLASSES:
+                return {"kind": "collection", "item": COLLECTION_CLASSES[c]}
             if self.derives(c, "TComponent"):
                 return {"kind": "ref", "class": c}
             return {"kind": "other", "type": t}
@@ -205,6 +211,9 @@ class Extractor:
         for name in OBJECT_CLASSES:
             props, _ = self.members(name)
             objects[name] = {"properties": props}
+        for name in COLLECTION_CLASSES.values():
+            props, _ = self.members(name)
+            objects[name] = {"properties": {n: i for n, i in props.items() if n not in COLLECTION_ITEM_SKIP}}
         enums = {e: [i for i, _, _ in items] for e, items in self.m.enums.items()}
         flags = {f: [i for i, _, _ in items] for f, items in self.m.flags.items()}
         constants = {}
@@ -222,8 +231,8 @@ class Extractor:
 
 def designable(info):
     k = info["type"]["kind"]
-    if k == "strings":
-        return True  # TStrings は読み取り専用のプロパティだが、中身(Add)を設定する
+    if k in ("strings", "collection"):
+        return True  # TStrings・コレクションは読み取り専用のプロパティだが、中身(Add)を設定する
     if info["readOnly"]:
         return False
     return k in ("int", "float", "bool", "string", "char", "alias", "enum", "flags", "set", "ref", "object")
@@ -298,15 +307,35 @@ def measure(cat):
         if k == "strings":
             return [value.Strings[i] for i in range(value.Count)]
         if k == "object":
-            obj = {}
-            for pname, info in cat["objects"][t["class"]]["properties"].items():
-                if info["designable"]:
-                    obj[pname] = to_dsl(info["type"], getattr(value, pname))
-            return obj
+            return object_dsl(t["class"], value)
+        if k == "collection":
+            return [object_dsl(t["item"], value.Items[i]) for i in range(value.Count)]
         raise ValueError(k)
+
+    def object_dsl(class_name, value):
+        obj = {}
+        for pname, info in cat["objects"][class_name]["properties"].items():
+            if info["designable"]:
+                obj[pname] = to_dsl(info["type"], getattr(value, pname))
+        return obj
+
+    def measure_items(obj, cls):
+        """コレクションの項目の既定値: 空の項目を 1 つ加えて読む(項目のクラスごとに 1 度)。"""
+        for pname, info in cls["properties"].items():
+            t = info["type"]
+            if t["kind"] != "collection" or not info["designable"] or t["item"] in measured_items:
+                continue
+            measured_items.add(t["item"])
+            collection = getattr(obj, pname)
+            item = collection.Add()
+            for iname, iinfo in cat["objects"][t["item"]]["properties"].items():
+                if iinfo["designable"]:
+                    iinfo["default"] = to_dsl(iinfo["type"], getattr(item, iname))
+            collection.Clear()
 
     owner = beth.TForm(beth.Application)
     failures = []
+    measured_items = set()
     for name, cls in cat["classes"].items():
         try:
             obj = getattr(beth, name)(beth.Application if cls["kind"] == "form" else owner)
@@ -322,6 +351,10 @@ def measure(cat):
                 failures.append(f"{name}.{pname}: 読めない ({e})")
         if cls["kind"] in ("control", "form"):
             cls["defaultSize"] = {"width": obj.Width, "height": obj.Height}
+        try:
+            measure_items(obj, cls)
+        except Exception as e:  # noqa: BLE001
+            failures.append(f"{name}: コレクションの項目の既定値を読めない ({e})")
         obj.Free()
     owner.Free()
     return failures
@@ -337,6 +370,14 @@ def keep_defaults(cat, old):
             cls["defaultSize"] = oc["defaultSize"]
         for pname, info in cls["properties"].items():
             op = oc["properties"].get(pname)
+            if op and "default" in op and info["designable"]:
+                info["default"] = op["default"]
+    for name, obj in cat["objects"].items():
+        oo = old.get("objects", {}).get(name)
+        if not oo:
+            continue
+        for pname, info in obj["properties"].items():
+            op = oo["properties"].get(pname)
             if op and "default" in op and info["designable"]:
                 info["default"] = op["default"]
 

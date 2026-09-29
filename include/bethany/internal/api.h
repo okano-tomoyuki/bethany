@@ -49,6 +49,7 @@ using cell_allow_callback_t = void (BETH_CALL *)(obj_t sender, int_t col, int_t 
 using draw_cell_callback_t = void (BETH_CALL *)(obj_t sender, int_t col, int_t row, int_t left, int_t top, int_t right, int_t bottom, uint_t state, void* data);
 using section_track_callback_t = void (BETH_CALL *)(obj_t sender, obj_t section, int_t width, int_t state, void* data);
 using section_drag_callback_t = void (BETH_CALL *)(obj_t sender, obj_t fromSection, obj_t toSection, bool_t* allow, void* data);
+using item_rect_callback_t = void (BETH_CALL *)(obj_t sender, obj_t item, int_t left, int_t top, int_t right, int_t bottom, void* data);
 
 #define BETH_DECLARE_FUNC(ret, name, params, args) ret name params;
 BETH_FUNCS(BETH_DECLARE_FUNC)

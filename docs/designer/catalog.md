@@ -34,7 +34,7 @@ python designer/tools/catalog/extract.py --check      # カタログが beth.hpp
 
 1. **静的な抽出**: `parse_hpp` の結果から、クラス・プロパティ・イベント・列挙型を取り出す。
 2. **実測**: DLL をビルドした状態で、フォームを 1 つ作り、利用者が生成できる各クラスを生成して、読める各プロパティ
-   (入れ子の TFont・TSizeConstraints・TControlBorderSpacing の中も)の値を読む。値は Windows(Win32)のものを基準にする
+   (入れ子の TFont・TSizeConstraints・TControlBorderSpacing の中と、コレクションの項目(空の項目を 1 つ加えて読む)も)の値を読む。値は Windows(Win32)のものを基準にする
    (GTK2 では既定の高さ等が違う。tk-designer ADR 0013 がキャンバスの寸法を Windows の Tk に合わせたのと同じ考え方)。
 3. **補足を重ねる**: 手書きの補足(`overlay.json`)を重ねて、最終的なカタログにする。
 
@@ -43,7 +43,7 @@ python designer/tools/catalog/extract.py --check      # カタログが beth.hpp
 [designer/tools/catalog/overlay.json](../../designer/tools/catalog/overlay.json)。
 
 - デザイン時に設定できるかは、まず型で決める(読み書きできて、添字が無く、値・列挙型・集合型・参照・入れ子のオブジェクトのいずれか。
-  TStrings は読み取り専用のプロパティでも中身を設定するので含める。画像(TBitmap*・TPicture*)は dsl-spec.md §10 Q7 まで含めない)。
+  TStrings・コレクション(ADR 0044)は読み取り専用のプロパティでも中身を設定するので含める。画像(TBitmap*・TPicture*)は dsl-spec.md §10 Q7 まで含めない)。
   そのうえで `notDesignable`(そのクラスと派生で除外)と `designable`(除外の取り消し)を重ねる。
   例: Caption は TControl で除外し、表示するクラス(TCustomLabel・TButtonControl・TCustomPanel 等)で取り消す(VCL で Caption を
   公開しているクラスに揃える)。Parent は DSL の木で表すので除外する。

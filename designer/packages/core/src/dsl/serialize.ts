@@ -88,6 +88,13 @@ function properties(
     const type = known && Object.hasOwn(known, name) ? known[name]?.type : undefined;
     if (type?.kind === 'object' && isPlainObject(value))
       sorted[name] = properties(value, catalog.objects[type.class]?.properties);
+    // コレクションの項目の中もカタログの順
+    if (type?.kind === 'collection' && Array.isArray(value)) {
+      const itemProperties = catalog.objects[type.item]?.properties;
+      sorted[name] = value.map((item) =>
+        isPlainObject(item) ? properties(item, itemProperties) : item,
+      );
+    }
   }
   return sorted;
 }

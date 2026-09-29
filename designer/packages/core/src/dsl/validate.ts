@@ -196,6 +196,22 @@ export function validateDocument(doc: BfmDocument): Diagnostic[] {
         checkProperties(value as Properties, known, type.class, path);
         return;
       }
+      case 'collection': {
+        if (!Array.isArray(value)) {
+          invalid(l10n.t('an array of objects'));
+          return;
+        }
+        const known = catalog.objects[type.item]?.properties ?? {};
+        value.forEach((item, i) => {
+          if (typeof item !== 'object' || item === null || Array.isArray(item))
+            error('invalid-property-value', l10n.t('Expected {0}', l10n.t('an object')), [
+              ...path,
+              i,
+            ]);
+          else checkProperties(item as Properties, known, type.item, [...path, i]);
+        });
+        return;
+      }
       case 'ref': {
         if (typeof value !== 'string') {
           invalid(l10n.t('the name of a component'));

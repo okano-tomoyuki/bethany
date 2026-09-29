@@ -115,6 +115,18 @@ function statement(s: Exclude<Statement, { kind: 'blank' }>): string[] {
         ...s.lines.map((line) => `${target}.Add(${stringLiteral(line)})`),
       ];
     }
+    case 'collection': {
+      // 項目ごとに Add し、プロパティを設定するものは item に受けて設定する
+      const target = access(s.target, [s.property]);
+      return s.items.flatMap((assigns) =>
+        assigns.length === 0
+          ? [`${target}.Add()`]
+          : [
+              `item = ${target}.Add()`,
+              ...assigns.map((a) => `item.${a.path.join('.')} = ${value(a.value)}`),
+            ],
+      );
+    }
     case 'event':
       return [`${access(s.target, [s.event])} = self.${s.handler}`];
     case 'menuAdd':

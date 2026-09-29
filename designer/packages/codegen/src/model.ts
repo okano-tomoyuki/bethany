@@ -61,6 +61,18 @@ export type Statement =
       readonly lines: readonly string[];
       readonly clear: boolean;
     }
+  /** コレクション(TStatusBar の Panels 等)の項目を 1 つずつ Add して、項目のプロパティを設定する(docs/adr/0044) */
+  | {
+      readonly kind: 'collection';
+      readonly target: Target;
+      readonly property: string;
+      readonly itemClass: string;
+      /** 項目ごとの、項目のプロパティへの代入(path は項目からのパス) */
+      readonly items: readonly (readonly {
+        readonly path: readonly string[];
+        readonly value: Value;
+      }[])[];
+    }
   | {
       readonly kind: 'event';
       readonly target: Target;
@@ -213,6 +225,19 @@ function propertyStatements(
       },
     ];
   }
+  if (type.kind === 'collection') {
+    const known = getCatalog().objects[type.item]?.properties ?? {};
+    const items = (value as Record<string, unknown>[]).map((item) =>
+      Object.entries(known)
+        .filter(([name]) => Object.hasOwn(item, name))
+        .flatMap(([name, sub]) => propertyStatements(undefined, [name], sub, item[name]))
+        .map((s) => {
+          if (s.kind !== 'assign') throw new Error(`not a scalar in ${type.item}: ${s.kind}`);
+          return { path: s.path, value: s.value };
+        }),
+    );
+    return [{ kind: 'collection', target, property: path.join('.'), itemClass: type.item, items }];
+  }
   if (type.kind === 'object') {
     const known = getCatalog().objects[type.class]?.properties ?? {};
     const given = value as Record<string, unknown>;
@@ -254,6 +279,7 @@ function toValue(type: PropertyType, value: unknown): Value {
     }
     case 'strings':
     case 'object':
+    case 'collection':
       throw new Error(`not a scalar: ${type.kind}`);
   }
 }

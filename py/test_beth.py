@@ -2029,8 +2029,49 @@ def main():
     gray_check.AllowGrayed = True
     gray_check.State = cbGrayed
     gray_check.OnChange = lambda Sender: pr(f"grayCheck State={int(gray_check.State)}")
+    # 下のパネルのステータスバーの AutoHint・OnHint の確認用(docs/adr/0044)。
+    # LCL は ShowHint が true のコントロール(か親)にだけ Application.Hint を設定する(VCL は ShowHint によらない)
+    multi_list.Hint = "multi-select list"
+    multi_list.ShowHint = True
+    gray_check.Hint = "three-state check box"
+    gray_check.ShowHint = True
     pr(f"grayCheck State={int(gray_check.State)} (expected cbGrayed={int(cbGrayed)}), "
        f"ExeName is python: {'yes' if Application.ExeName.lower().endswith('python.exe') else 'no'}")
+
+    # ステータスバーのパネル(docs/adr/0044)。StatusBar1 の上に、パネルを持つ 2 つ目のステータスバーを置く。
+    panel_bar = TStatusBar(Form1)
+    panel_bar.Parent = Form1
+    panel_bar.SimplePanel = False
+    panel_bar.AutoHint = True
+    hint_panel = panel_bar.Panels.Add()
+    hint_panel.Width = 220
+    hint_panel.Text = "Hover the multi-select list"
+    draw_panel = panel_bar.Panels.Add()
+    draw_panel.Width = 90
+    draw_panel.Style = psOwnerDraw
+    center_panel = panel_bar.Panels.Insert(1)
+    center_panel.Width = 120
+    center_panel.Text = "center"
+    center_panel.Alignment = taCenter
+    center_panel.Bevel = pbRaised
+    center_panel.Index = 2  # 末尾へ移す(draw_panel が 1 番目になる)
+    panel_bar.Panels.Add().Text = "Click a panel"
+
+    def draw_owner_panel(StatusBar, Panel, Rect):
+        StatusBar.Canvas.Brush.Color = clBlue
+        StatusBar.Canvas.FillRect(Rect)
+        StatusBar.Canvas.Font.Color = clWhite
+        StatusBar.Canvas.TextOut(Rect.Left + 4, Rect.Top + 1, f"owner {Panel.Index}")
+
+    panel_bar.OnDrawPanel = draw_owner_panel
+    # AutoHint: ヒントのあるコントロールにマウスを載せると、OnHint(無ければ最初のパネル)に届く
+    panel_bar.OnHint = lambda Sender: setattr(panel_bar.Panels.Items[0], "Text", "Hint: " + Application.Hint)
+    panel_bar.OnMouseDown = lambda Sender, Button, Shift, X, Y: pr(
+        f"panelBar GetPanelIndexAt({X}, {Y})={panel_bar.GetPanelIndexAt(X, Y)}")
+    pr(f"panelBar Panels Count={panel_bar.Panels.Count} (expected 4), "
+       f"Items[1] Style={int(panel_bar.Panels.Items[1].Style)} (expected psOwnerDraw={int(psOwnerDraw)}), "
+       f"Items[2] Text={panel_bar.Panels.Items[2].Text} (expected center), "
+       f"SizeGrip={'true' if panel_bar.SizeGrip else 'false'}")
     try:
         tempLabel.Caption
         pr("must not be reached")

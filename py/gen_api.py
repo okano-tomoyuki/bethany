@@ -368,6 +368,9 @@ class Gen:
         if t == "const Exception&":
             # 例外(Application->OnException)。DLL はクラス名とメッセージの 2 つの文字列で渡す
             return "_a_exception"
+        if t.startswith("const ") and t.endswith("&"):
+            # 読み取り専用の参照(OnDrawPanel の const TRect& 等)は値と同じに渡す
+            t = t[len("const "):-1].strip()
         ref = t.endswith("&")
         base = t[:-1].strip() if ref else t
         s = self.scalar(base)

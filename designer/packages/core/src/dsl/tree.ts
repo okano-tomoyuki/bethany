@@ -1,4 +1,4 @@
-import { findClass } from '../catalog/catalog.ts';
+import { findClass, getCatalog } from '../catalog/catalog.ts';
 import type { JsonPath } from './diagnostics.ts';
 import type { ComponentNode, ControlNode, FormNode, MenuItemNode, BfmDocument } from './schema.ts';
 
@@ -91,4 +91,27 @@ export function propertyValue(
       ? (object as Record<string, unknown>)[sub]
       : undefined;
   return pick(own) ?? pick(fallback);
+}
+
+/**
+ * コレクションのプロパティ(TStatusBar の Panels 等。docs/adr/0044)の項目。書いていない項目のプロパティはカタログの既定値で埋める。
+ * コレクションでないプロパティなら空。
+ */
+export function collectionItems(
+  location: NodeLocation,
+  name: string,
+): readonly Readonly<Record<string, unknown>>[] {
+  const info = findClass(classOf(location));
+  const type =
+    info && Object.hasOwn(info.properties, name) ? info.properties[name]?.type : undefined;
+  if (type?.kind !== 'collection') return [];
+  const value = propertyValue(location, [name]);
+  if (!Array.isArray(value)) return [];
+  const known = getCatalog().objects[type.item]?.properties ?? {};
+  const defaults = Object.fromEntries(Object.entries(known).map(([k, p]) => [k, p.default]));
+  return value.map((item: unknown) =>
+    typeof item === 'object' && item !== null && !Array.isArray(item)
+      ? { ...defaults, ...(item as Record<string, unknown>) }
+      : defaults,
+  );
 }

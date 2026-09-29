@@ -24,6 +24,7 @@ void TMainForm::beth_CreateComponents()
     OptionSheet = new TTabSheet(this);
     WrapCheck = new TCheckBox(this);
     SizeSpin = new TSpinEdit(this);
+    OptionStatus = new TStatusBar(this);
     MemoSheet = new TTabSheet(this);
     Memo1 = new TMemo(this);
     BottomPanel = new TPanel(this);
@@ -92,6 +93,29 @@ void TMainForm::beth_CreateComponents()
     SizeSpin->MaxValue = 200;
     SizeSpin->Value = 150;
 
+    OptionStatus->Parent = OptionSheet;
+    OptionStatus->Left = 0;
+    OptionStatus->Top = 68;
+    OptionStatus->Width = 355;
+    OptionStatus->Height = 24;
+    OptionStatus->SimplePanel = false;
+    {
+        TStatusPanel* item = OptionStatus->Panels->Add();
+        item->Text = "Ready";
+        item->Width = 120;
+    }
+    {
+        TStatusPanel* item = OptionStatus->Panels->Add();
+        item->Width = 60;
+        item->Style = psOwnerDraw;
+    }
+    {
+        TStatusPanel* item = OptionStatus->Panels->Add();
+        item->Text = "right";
+        item->Alignment = taRightJustify;
+        item->Bevel = pbNone;
+    }
+
     MemoSheet->PageControl = PageControl1;
     MemoSheet->Caption = "Memo";
 
@@ -152,7 +176,7 @@ void TMainForm::beth_CreateComponents()
     Timer1->Enabled = false;
     Timer1->OnTimer = [this](TObject* Sender) { Timer1Timer(Sender); };
 }
-// <bethany-designer:end id="beth_CreateComponents" hash="c7aa4e9a">
+// <bethany-designer:end id="beth_CreateComponents" hash="1da8efec">
 
 // <bethany-designer:handler-stubs>
 

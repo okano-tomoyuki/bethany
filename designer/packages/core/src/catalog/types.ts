@@ -20,6 +20,8 @@ export type PropertyType =
   /** 入れ子のオブジェクト(TFont・TSizeConstraints・TControlBorderSpacing) */
   | { readonly kind: 'object'; readonly class: string }
   | { readonly kind: 'strings' }
+  /** 項目の一覧(TStatusPanels 等。docs/adr/0044)。項目のプロパティは Catalog.objects[item] */
+  | { readonly kind: 'collection'; readonly item: string }
   /** 同じフォームのコンポーネントへの参照 */
   | { readonly kind: 'ref'; readonly class: string };
 

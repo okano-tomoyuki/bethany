@@ -396,6 +396,18 @@ input[aria-invalid='true'] {
   padding: 2px 0 4px 14px;
 }
 
+.collection-actions {
+  justify-content: flex-end;
+}
+
+.collection-actions button:disabled {
+  opacity: 0.4;
+}
+
+.collection-add {
+  margin-top: 2px;
+}
+
 .prop-check {
   display: flex;
   gap: 4px;
@@ -975,6 +987,34 @@ input[aria-invalid='true'] {
   white-space: pre;
   background: #f0f0f0;
   border-top: 1px solid #d9d9d9;
+}
+
+.look-status.panels {
+  display: flex;
+  gap: 2px;
+  padding: 2px 2px 1px;
+}
+
+.look-status-panel {
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 0 3px;
+  white-space: pre;
+}
+
+.look-status-panel.pbLowered {
+  border: 1px solid;
+  border-color: #c8c8c8 #fff #fff #c8c8c8;
+}
+
+.look-status-panel.pbRaised {
+  border: 1px solid;
+  border-color: #fff #c8c8c8 #c8c8c8 #fff;
+}
+
+.look-owner-draw {
+  font-style: italic;
+  color: #888;
 }
 
 .look-bar {

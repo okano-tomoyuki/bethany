@@ -143,7 +143,8 @@ function PropertyRow({
     type.kind === 'object' ||
     type.kind === 'set' ||
     type.kind === 'flags' ||
-    type.kind === 'strings';
+    type.kind === 'strings' ||
+    type.kind === 'collection';
 
   const rowClass = [
     'prop-row',
@@ -202,6 +203,7 @@ function PropertyRow({
           path={path}
           type={type}
           value={value}
+          mixed={mixed}
           commit={commit}
         />
       )}
@@ -209,13 +211,14 @@ function PropertyRow({
   );
 }
 
-/** 展開した中身: 入れ子のオブジェクトのプロパティ、集合の要素のチェック、TStrings の複数行の入力 */
+/** 展開した中身: 入れ子のオブジェクトのプロパティ、集合の要素のチェック、TStrings の複数行の入力、コレクションの項目 */
 function Expanded({
   document,
   nodes,
   path,
   type,
   value,
+  mixed,
   commit,
 }: {
   readonly document: BfmDocument;
@@ -223,6 +226,7 @@ function Expanded({
   readonly path: Path;
   readonly type: PropertyType;
   readonly value: unknown;
+  readonly mixed: boolean;
   readonly commit: (value: PropertyValue | undefined) => string | undefined;
 }) {
   const catalog = getCatalog();
@@ -269,9 +273,203 @@ function Expanded({
     }
     case 'strings':
       return <StringsEditor value={value} commit={commit} />;
+    case 'collection':
+      return mixed ? (
+        <div className="prop-children muted">{l10n.t('(different values)')}</div>
+      ) : (
+        <CollectionEditor document={document} itemClass={type.item} value={value} commit={commit} />
+      );
     default:
       return null;
   }
+}
+
+type Item = Readonly<Record<string, PropertyValue>>;
+
+/**
+ * コレクション(TStatusBar の Panels 等。docs/adr/0044)の項目の一覧。項目の追加・削除・並べ替えと、開いた項目のプロパティの編集。
+ * どの操作も、配列全体を 1 つのプロパティの値として設定する(元に戻すと 1 操作ずつ戻る)。
+ */
+function CollectionEditor({
+  document,
+  itemClass,
+  value,
+  commit,
+}: {
+  readonly document: BfmDocument;
+  readonly itemClass: string;
+  readonly value: unknown;
+  readonly commit: (value: PropertyValue | undefined) => string | undefined;
+}) {
+  const [open, setOpen] = useState<number | undefined>(undefined);
+  const known = getCatalog().objects[itemClass]?.properties ?? {};
+  const items: readonly Item[] = Array.isArray(value)
+    ? (value as unknown[]).map((v) =>
+        typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Item) : {},
+      )
+    : [];
+  // 空の一覧は既定値(書かない)
+  const update = (next: readonly Item[]) => commit(next.length === 0 ? undefined : [...next]);
+  const move = (from: number, to: number) => {
+    const next = [...items];
+    const [moved] = next.splice(from, 1);
+    if (moved === undefined) return;
+    next.splice(to, 0, moved);
+    update(next);
+    if (open === from) setOpen(to);
+    else if (open === to) setOpen(from);
+  };
+  const remove = (index: number) => {
+    update(items.filter((_, i) => i !== index));
+    if (open === index) setOpen(undefined);
+    else if (open !== undefined && open > index) setOpen(open - 1);
+  };
+
+  return (
+    <div className="prop-children prop-collection">
+      {items.map((item, i) => {
+        const caption = typeof item.Text === 'string' && item.Text !== '' ? item.Text : itemClass;
+        return (
+          <div key={i}>
+            <div className="prop-row collection-item" role="row">
+              <span className="prop-name" role="cell">
+                <button
+                  type="button"
+                  className="prop-toggle"
+                  aria-expanded={open === i}
+                  onClick={() => {
+                    setOpen(open === i ? undefined : i);
+                  }}
+                >
+                  {open === i ? '▾' : '▸'} {`${String(i)}: ${caption}`}
+                </button>
+              </span>
+              <span className="prop-value collection-actions" role="cell">
+                <button
+                  type="button"
+                  className="prop-reset"
+                  title={l10n.t('Move up')}
+                  disabled={i === 0}
+                  onClick={() => {
+                    move(i, i - 1);
+                  }}
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  className="prop-reset"
+                  title={l10n.t('Move down')}
+                  disabled={i === items.length - 1}
+                  onClick={() => {
+                    move(i, i + 1);
+                  }}
+                >
+                  ↓
+                </button>
+                <button
+                  type="button"
+                  className="prop-reset"
+                  title={l10n.t('Delete the item')}
+                  onClick={() => {
+                    remove(i);
+                  }}
+                >
+                  ×
+                </button>
+              </span>
+            </div>
+            {open === i && (
+              <div className="prop-children">
+                {Object.entries(known).map(([name, info]) => (
+                  <ItemPropertyRow
+                    key={name}
+                    document={document}
+                    name={name}
+                    info={info}
+                    item={item}
+                    commit={(next) =>
+                      update(
+                        items.map((it, j) => (j === i ? withProperty(it, name, info, next) : it)),
+                      )
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <button
+        type="button"
+        className="prop-reset collection-add"
+        title={l10n.t('Add an item ({0})', itemClass)}
+        onClick={() => {
+          update([...items, {}]);
+          setOpen(items.length);
+        }}
+      >
+        + {l10n.t('Add')}
+      </button>
+    </div>
+  );
+}
+
+/** 項目のプロパティの 1 行(既定値と同じ値は書かない) */
+function ItemPropertyRow({
+  document,
+  name,
+  info,
+  item,
+  commit,
+}: {
+  readonly document: BfmDocument;
+  readonly name: string;
+  readonly info: PropertyInfo;
+  readonly item: Item;
+  readonly commit: (value: PropertyValue | undefined) => string | undefined;
+}) {
+  const isSet = item[name] !== undefined;
+  return (
+    <div className={isSet ? 'prop-row nested set' : 'prop-row nested'} role="row">
+      <span className="prop-name" role="cell" title={info.doc}>
+        {name}
+      </span>
+      <span className="prop-value" role="cell">
+        <Editor
+          document={document}
+          type={info.type}
+          value={item[name] ?? info.default}
+          mixed={false}
+          fallback={info.default}
+          commit={commit}
+        />
+        {isSet && (
+          <button
+            type="button"
+            className="prop-reset"
+            title={l10n.t('Reset to the default')}
+            onClick={() => commit(undefined)}
+          >
+            ×
+          </button>
+        )}
+      </span>
+    </div>
+  );
+}
+
+/** 項目の name を value にした項目(undefined・既定値と同じ値なら、その項目から除く) */
+function withProperty(
+  item: Item,
+  name: string,
+  info: PropertyInfo,
+  value: PropertyValue | undefined,
+): Item {
+  const rest = Object.fromEntries(Object.entries(item).filter(([k]) => k !== name));
+  return value === undefined || JSON.stringify(value) === JSON.stringify(info.default)
+    ? rest
+    : { ...rest, [name]: value };
 }
 
 function StringsEditor({
@@ -418,6 +616,10 @@ function Editor({
     case 'strings': {
       const lines = Array.isArray(value) ? value.length : 0;
       return <span className="muted">{l10n.t('({0} lines)', lines)}</span>;
+    }
+    case 'collection': {
+      const count = Array.isArray(value) ? value.length : 0;
+      return <span className="muted">{l10n.t('({0} items)', count)}</span>;
     }
     default:
       break;

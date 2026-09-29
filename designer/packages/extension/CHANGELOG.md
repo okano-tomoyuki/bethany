@@ -12,6 +12,10 @@
   `Sorted`, `ReadOnly` and `AutoComplete` of combo boxes, `State` and `AllowGrayed` of check boxes, and the `OnSelectionChange`,
   `OnSelect`, `OnDropDown`, `OnCloseUp` and `OnChange` (check boxes) events. The canvas draws the grayed state of check boxes
 - Integer properties with named constants (`ModalResult`, `Cursor`) are chosen from a list in the Object Inspector
+- Status bar panels: the `Panels` property of status bars lists its items in the Object Inspector, where you can add, delete and
+  reorder panels and set their `Text`, `Width`, `Alignment`, `Bevel` and `Style`. The canvas draws the panels when `SimplePanel` is off.
+  Also new: `SizeGrip` and `AutoHint`, and the `OnDrawPanel` and `OnHint` events
+- The C++ header declares handler parameters of const reference types with the namespace (`const beth::TRect& Rect`)
 - The include guard macro does not repeat a namespace that is also the folder of the header
   (`APP_DIALOGS_ABOUT_HPP` instead of `APP_DIALOGS_DIALOGS_ABOUT_HPP` for `app::dialogs` and `dialogs/About.hpp`)
 

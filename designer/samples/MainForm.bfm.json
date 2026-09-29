@@ -82,6 +82,22 @@
                   "MaxValue": 200,
                   "Value": 150
                 }
+              },
+              {
+                "name": "OptionStatus",
+                "class": "TStatusBar",
+                "properties": {
+                  "Left": 0,
+                  "Top": 68,
+                  "Width": 355,
+                  "Height": 24,
+                  "SimplePanel": false,
+                  "Panels": [
+                    { "Text": "Ready", "Width": 120 },
+                    { "Width": 60, "Style": "psOwnerDraw" },
+                    { "Text": "right", "Alignment": "taRightJustify", "Bevel": "pbNone" }
+                  ]
+                }
               }
             ]
           },

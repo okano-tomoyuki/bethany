@@ -1163,6 +1163,8 @@
     X(void,          TCustomCheckBox_SetAllowGrayed,        (obj_t o, bool_t v),                                           (o, v)) \
     X(void,          TCustomCheckBox_SetOnChange,           (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
     X(str_t,         TApplication_GetExeName,               (obj_t o),                                                     (o)) \
+    X(str_t,         TApplication_GetHint,                  (obj_t o),                                                     (o)) \
+    X(void,          TApplication_SetHint,                  (obj_t o, str_t v),                                            (o, v)) \
     X(bool_t,        TApplication_GetShowHint,              (obj_t o),                                                     (o)) \
     X(void,          TApplication_SetShowHint,              (obj_t o, bool_t v),                                           (o, v)) \
     X(int_t,         TApplication_GetHintPause,             (obj_t o),                                                     (o)) \
@@ -1173,6 +1175,37 @@
     X(void,          TApplication_Restore,                  (obj_t o),                                                     (o)) \
     X(void,          TApplication_BringToFront,             (obj_t o),                                                     (o)) \
     X(void,          TApplication_SetOnIdle,                (obj_t o, close_query_callback_t cb, void* d),                 (o, cb, d)) \
-    X(void,          TApplication_SetOnException,           (obj_t o, exception_callback_t cb, void* d),                   (o, cb, d))
+    X(void,          TApplication_SetOnException,           (obj_t o, exception_callback_t cb, void* d),                   (o, cb, d)) \
+    X(obj_t,         TStatusBar_GetPanels,                  (obj_t o),                                                     (o)) \
+    X(bool_t,        TStatusBar_GetSizeGrip,                (obj_t o),                                                     (o)) \
+    X(void,          TStatusBar_SetSizeGrip,                (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TStatusBar_GetAutoHint,                (obj_t o),                                                     (o)) \
+    X(void,          TStatusBar_SetAutoHint,                (obj_t o, bool_t v),                                           (o, v)) \
+    X(obj_t,         TStatusBar_GetCanvas,                  (obj_t o),                                                     (o)) \
+    X(int_t,         TStatusBar_GetPanelIndexAt,            (obj_t o, int_t x, int_t y),                                   (o, x, y)) \
+    X(void,          TStatusBar_BeginUpdate,                (obj_t o),                                                     (o)) \
+    X(void,          TStatusBar_EndUpdate,                  (obj_t o),                                                     (o)) \
+    X(void,          TStatusBar_SetOnDrawPanel,             (obj_t o, item_rect_callback_t cb, void* d),                   (o, cb, d)) \
+    X(void,          TStatusBar_SetOnHint,                  (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(obj_t,         TStatusPanels_Add,                     (obj_t o),                                                     (o)) \
+    X(obj_t,         TStatusPanels_Insert,                  (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          TStatusPanels_Delete,                  (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          TStatusPanels_Clear,                   (obj_t o),                                                     (o)) \
+    X(int_t,         TStatusPanels_GetCount,                (obj_t o),                                                     (o)) \
+    X(obj_t,         TStatusPanels_GetItem,                 (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          TStatusPanels_BeginUpdate,             (obj_t o),                                                     (o)) \
+    X(void,          TStatusPanels_EndUpdate,               (obj_t o),                                                     (o)) \
+    X(str_t,         TStatusPanel_GetText,                  (obj_t o),                                                     (o)) \
+    X(void,          TStatusPanel_SetText,                  (obj_t o, str_t v),                                            (o, v)) \
+    X(int_t,         TStatusPanel_GetWidth,                 (obj_t o),                                                     (o)) \
+    X(void,          TStatusPanel_SetWidth,                 (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TStatusPanel_GetAlignment,             (obj_t o),                                                     (o)) \
+    X(void,          TStatusPanel_SetAlignment,             (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TStatusPanel_GetBevel,                 (obj_t o),                                                     (o)) \
+    X(void,          TStatusPanel_SetBevel,                 (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TStatusPanel_GetStyle,                 (obj_t o),                                                     (o)) \
+    X(void,          TStatusPanel_SetStyle,                 (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TStatusPanel_GetIndex,                 (obj_t o),                                                     (o)) \
+    X(void,          TStatusPanel_SetIndex,                 (obj_t o, int_t v),                                            (o, v))
 
 #endif

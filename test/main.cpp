@@ -2521,9 +2521,54 @@ int main()
         grayCheck->AllowGrayed = true;
         grayCheck->State = cbGrayed;
         grayCheck->OnChange = [grayCheck](TObject*) { std::printf("grayCheck State=%d\n", (int)(TCheckBoxState)grayCheck->State); };
+        // 下のパネルのステータスバーの AutoHint・OnHint の確認用(docs/adr/0044)。
+        // LCL は ShowHint が true のコントロール(か親)にだけ Application->Hint を設定する(VCL は ShowHint によらない)
+        multiList->Hint = "multi-select list";
+        multiList->ShowHint = true;
+        grayCheck->Hint = "three-state check box";
+        grayCheck->ShowHint = true;
         std::printf("grayCheck State=%d (expected cbGrayed=%d), ExeName ends with test_cpp.exe: %s\n",
                     (int)(TCheckBoxState)grayCheck->State, (int)cbGrayed,
                     std::string(Application->ExeName).find("test_cpp.exe") != std::string::npos ? "yes" : "no");
+    }
+
+    // ステータスバーのパネル(docs/adr/0044)。StatusBar1 の上に、パネルを持つ 2 つ目のステータスバーを置く。
+    {
+        TStatusBar* panelBar = new TStatusBar(Form1);
+        panelBar->Parent = Form1;
+        panelBar->SimplePanel = false;
+        panelBar->AutoHint = true;
+        TStatusPanel* hintPanel = panelBar->Panels->Add();
+        hintPanel->Width = 220;
+        hintPanel->Text = "Hover the multi-select list";
+        TStatusPanel* drawPanel = panelBar->Panels->Add();
+        drawPanel->Width = 90;
+        drawPanel->Style = psOwnerDraw;
+        TStatusPanel* lastPanel = panelBar->Panels->Insert(1);
+        lastPanel->Width = 120;
+        lastPanel->Text = "center";
+        lastPanel->Alignment = taCenter;
+        lastPanel->Bevel = pbRaised;
+        lastPanel->Index = 2;  // 末尾へ移す(drawPanel が 1 番目になる)
+        TStatusPanel* tailPanel = panelBar->Panels->Add();
+        tailPanel->Text = "Click a panel";
+        panelBar->OnDrawPanel = [](TStatusBar* StatusBar, TStatusPanel* Panel, const TRect& Rect) {
+            StatusBar->Canvas.Brush.Color = clBlue;
+            StatusBar->Canvas.FillRect(Rect);
+            StatusBar->Canvas.Font.Color = clWhite;
+            StatusBar->Canvas.TextOut(Rect.Left + 4, Rect.Top + 1, "owner " + std::to_string((int)Panel->Index));
+        };
+        // AutoHint: ヒントのあるコントロールにマウスを載せると、OnHint(無ければ最初のパネル)に届く
+        panelBar->OnHint = [panelBar](TObject*) {
+            panelBar->Panels->Items[0]->Text = "Hint: " + std::string(Application->Hint);
+        };
+        panelBar->OnMouseDown = [panelBar](TObject*, TMouseButton, TShiftState, int X, int Y) {
+            std::printf("panelBar GetPanelIndexAt(%d, %d)=%d\n", X, Y, panelBar->GetPanelIndexAt(X, Y));
+        };
+        std::printf("panelBar Panels Count=%d (expected 4), Items[1] Style=%d (expected psOwnerDraw=%d), "
+                    "Items[2] Text=%s (expected center), SizeGrip=%s\n",
+                    (int)panelBar->Panels->Count, (int)(TStatusPanelStyle)panelBar->Panels->Items[1]->Style, (int)psOwnerDraw,
+                    std::string(panelBar->Panels->Items[2]->Text).c_str(), panelBar->SizeGrip ? "true" : "false");
     }
 
     std::printf("Running (click the buttons, then close the window three times: the first two closes are blocked, or press Quit)...\n");

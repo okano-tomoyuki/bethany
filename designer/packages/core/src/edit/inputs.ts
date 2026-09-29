@@ -101,6 +101,8 @@ export function parseInput(type: PropertyType, text: string): InputResult {
       return ok(trimmed);
     case 'object':
       return error(l10n.t('Set the properties inside {0}', type.class));
+    case 'collection':
+      return error(l10n.t('Set the properties inside {0}', type.item));
   }
 }
 
@@ -114,6 +116,7 @@ export function formatValue(type: PropertyType, value: unknown): string {
     case 'strings':
       return Array.isArray(value) ? value.join('\n') : '';
     case 'object':
+    case 'collection':
       return '';
     default:
       return typeof value === 'string' ? value : JSON.stringify(value);

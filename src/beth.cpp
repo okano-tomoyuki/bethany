@@ -1176,6 +1176,7 @@ TApplication* Application = NewApplication();
 TApplication::TApplication(ObjectHandle handle)
     : TComponent(handle)
     , ExeName(this, &TApplication::GetExeNameImpl)
+    , Hint(this, &TApplication::GetHintImpl, &TApplication::SetHintImpl)
     , ShowHint(this, &TApplication::GetShowHintImpl, &TApplication::SetShowHintImpl)
     , HintPause(this, &TApplication::GetHintPauseImpl, &TApplication::SetHintPauseImpl)
     , HintHidePause(this, &TApplication::GetHintHidePauseImpl, &TApplication::SetHintHidePauseImpl)
@@ -1196,6 +1197,16 @@ TApplication::TApplication(ObjectHandle handle)
 std::string TApplication::GetExeNameImpl(TObject* owner)
 {
     return internal::TApplication_GetExeName(owner->Handle());
+}
+
+std::string TApplication::GetHintImpl(TObject* owner)
+{
+    return internal::TApplication_GetHint(owner->Handle());
+}
+
+void TApplication::SetHintImpl(TObject* owner, const std::string& value)
+{
+    internal::TApplication_SetHint(owner->Handle(), value.c_str());
 }
 
 bool TApplication::GetShowHintImpl(TObject* owner)
@@ -3269,11 +3280,105 @@ TStaticText::TStaticText(TComponent* AOwner)
     : TCustomStaticText(internal::TStaticText_Create(HandleOf(AOwner)))
 {}
 
+TStatusPanel::TStatusPanel(ObjectHandle handle)
+    : TPersistent(handle)
+    , Text(this, &TStatusPanel::GetTextImpl, &TStatusPanel::SetTextImpl)
+    , Width(this, &TStatusPanel::GetWidthImpl, &TStatusPanel::SetWidthImpl)
+    , Alignment(this, &TStatusPanel::GetAlignmentImpl, &TStatusPanel::SetAlignmentImpl)
+    , Bevel(this, &TStatusPanel::GetBevelImpl, &TStatusPanel::SetBevelImpl)
+    , Style(this, &TStatusPanel::GetStyleImpl, &TStatusPanel::SetStyleImpl)
+    , Index(this, &TStatusPanel::GetIndexImpl, &TStatusPanel::SetIndexImpl)
+{}
+
+std::string TStatusPanel::GetTextImpl(TObject* owner) { return std::string(internal::TStatusPanel_GetText(owner->Handle())); }
+void TStatusPanel::SetTextImpl(TObject* owner, const std::string& value) { internal::TStatusPanel_SetText(owner->Handle(), value.c_str()); }
+int  TStatusPanel::GetWidthImpl(TObject* owner)                  { return internal::TStatusPanel_GetWidth(owner->Handle()); }
+void TStatusPanel::SetWidthImpl(TObject* owner, const int& value) { internal::TStatusPanel_SetWidth(owner->Handle(), value); }
+TAlignment TStatusPanel::GetAlignmentImpl(TObject* owner) { return static_cast<TAlignment>(internal::TStatusPanel_GetAlignment(owner->Handle())); }
+void TStatusPanel::SetAlignmentImpl(TObject* owner, const TAlignment& value) { internal::TStatusPanel_SetAlignment(owner->Handle(), value); }
+TStatusPanelBevel TStatusPanel::GetBevelImpl(TObject* owner) { return static_cast<TStatusPanelBevel>(internal::TStatusPanel_GetBevel(owner->Handle())); }
+void TStatusPanel::SetBevelImpl(TObject* owner, const TStatusPanelBevel& value) { internal::TStatusPanel_SetBevel(owner->Handle(), value); }
+TStatusPanelStyle TStatusPanel::GetStyleImpl(TObject* owner) { return static_cast<TStatusPanelStyle>(internal::TStatusPanel_GetStyle(owner->Handle())); }
+void TStatusPanel::SetStyleImpl(TObject* owner, const TStatusPanelStyle& value) { internal::TStatusPanel_SetStyle(owner->Handle(), value); }
+int  TStatusPanel::GetIndexImpl(TObject* owner)                  { return internal::TStatusPanel_GetIndex(owner->Handle()); }
+void TStatusPanel::SetIndexImpl(TObject* owner, const int& value) { internal::TStatusPanel_SetIndex(owner->Handle(), value); }
+
+TStatusPanels::TStatusPanels(ObjectHandle handle)
+    : TPersistent(handle)
+    , Count(this, &TStatusPanels::GetCountImpl)
+    , Items(this, &TStatusPanels::GetItemsImpl)
+{}
+
+TStatusPanel* TStatusPanels::Add()             { return TStatusPanel::Wrap(internal::TStatusPanels_Add(handle_)); }
+TStatusPanel* TStatusPanels::Insert(int Index) { return TStatusPanel::Wrap(internal::TStatusPanels_Insert(handle_, Index)); }
+void TStatusPanels::Delete(int Index)          { internal::TStatusPanels_Delete(handle_, Index); }
+void TStatusPanels::Clear()                    { internal::TStatusPanels_Clear(handle_); }
+void TStatusPanels::BeginUpdate()              { internal::TStatusPanels_BeginUpdate(handle_); }
+void TStatusPanels::EndUpdate()                { internal::TStatusPanels_EndUpdate(handle_); }
+TStatusPanel* TStatusPanels::GetItemsImpl(TObject* owner, int Index) { return TStatusPanel::Wrap(internal::TStatusPanels_GetItem(owner->Handle(), Index)); }
+int  TStatusPanels::GetCountImpl(TObject* owner) { return internal::TStatusPanels_GetCount(owner->Handle()); }
+
 TStatusBar::TStatusBar(TComponent* AOwner)
     : TWinControl(internal::TStatusBar_Create(HandleOf(AOwner)))
     , SimpleText(this, &TStatusBar::GetSimpleTextImpl, &TStatusBar::SetSimpleTextImpl)
     , SimplePanel(this, &TStatusBar::GetSimplePanelImpl, &TStatusBar::SetSimplePanelImpl)
+    , Panels(this, &TStatusBar::GetPanelsImpl)
+    , SizeGrip(this, &TStatusBar::GetSizeGripImpl, &TStatusBar::SetSizeGripImpl)
+    , AutoHint(this, &TStatusBar::GetAutoHintImpl, &TStatusBar::SetAutoHintImpl)
+    , Canvas(internal::TStatusBar_GetCanvas(handle_))
+    , OnDrawPanel(this, &TStatusBar::GetOnDrawPanelImpl, &TStatusBar::SetOnDrawPanelImpl)
+    , OnHint(this, &TStatusBar::GetOnHintImpl, &TStatusBar::SetOnHintImpl)
+    , panels_(internal::TStatusBar_GetPanels(handle_))
 {}
+
+int  TStatusBar::GetPanelIndexAt(int X, int Y) const { return internal::TStatusBar_GetPanelIndexAt(handle_, X, Y); }
+void TStatusBar::BeginUpdate()                        { internal::TStatusBar_BeginUpdate(handle_); }
+void TStatusBar::EndUpdate()                          { internal::TStatusBar_EndUpdate(handle_); }
+
+TStatusPanels* TStatusBar::GetPanelsImpl(TObject* owner) { return &static_cast<TStatusBar*>(owner)->panels_; }
+bool TStatusBar::GetSizeGripImpl(TObject* owner) { return internal::TStatusBar_GetSizeGrip(owner->Handle()) != 0; }
+void TStatusBar::SetSizeGripImpl(TObject* owner, const bool& value) { internal::TStatusBar_SetSizeGrip(owner->Handle(), value ? 1 : 0); }
+bool TStatusBar::GetAutoHintImpl(TObject* owner) { return internal::TStatusBar_GetAutoHint(owner->Handle()) != 0; }
+void TStatusBar::SetAutoHintImpl(TObject* owner, const bool& value) { internal::TStatusBar_SetAutoHint(owner->Handle(), value ? 1 : 0); }
+
+TDrawPanelEvent TStatusBar::GetOnDrawPanelImpl(TObject* owner) { return static_cast<TStatusBar*>(owner)->onDrawPanel_; }
+void TStatusBar::SetOnDrawPanelImpl(TObject* owner, const TDrawPanelEvent& value)
+{
+    TStatusBar* self = static_cast<TStatusBar*>(owner);
+    SetSimpleEvent(self->handle_, self->onDrawPanel_, self->onDrawPanelHooked_, value,
+                   &internal::TStatusBar_SetOnDrawPanel, &TStatusBar::DrawPanelTrampoline);
+}
+
+TNotifyEvent TStatusBar::GetOnHintImpl(TObject* owner) { return static_cast<TStatusBar*>(owner)->onHint_; }
+void TStatusBar::SetOnHintImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TStatusBar* self = static_cast<TStatusBar*>(owner);
+    SetSimpleEvent(self->handle_, self->onHint_, self->onHintHooked_, value,
+                   &internal::TStatusBar_SetOnHint, &TStatusBar::HintTrampoline);
+}
+
+void BETH_CALL TStatusBar::DrawPanelTrampoline(ObjectHandle sender, ObjectHandle panel, internal::int_t left, internal::int_t top,
+                                               internal::int_t right, internal::int_t bottom, void*)
+{
+    GuardCallback([&] {
+        TStatusBar* self = static_cast<TStatusBar*>(FromHandle(sender));
+        if (!self || !self->onDrawPanel_)
+            return;
+        TDrawPanelEvent handler = self->onDrawPanel_;
+        handler(self, TStatusPanel::Wrap(panel), TRect{left, top, right, bottom});
+    });
+}
+
+void BETH_CALL TStatusBar::HintTrampoline(ObjectHandle sender, void*)
+{
+    GuardCallback([&] {
+        TStatusBar* self = static_cast<TStatusBar*>(FromHandle(sender));
+        if (!self || !self->onHint_)
+            return;
+        TNotifyEvent handler = self->onHint_;
+        handler(self);
+    });
+}
 
 std::string TStatusBar::GetSimpleTextImpl(TObject* owner)
 {

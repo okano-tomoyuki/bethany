@@ -13,6 +13,7 @@ class TMainForm(TForm):
         self.OptionSheet: TTabSheet
         self.WrapCheck: TCheckBox
         self.SizeSpin: TSpinEdit
+        self.OptionStatus: TStatusBar
         self.MemoSheet: TTabSheet
         self.Memo1: TMemo
         self.BottomPanel: TPanel
@@ -26,7 +27,7 @@ class TMainForm(TForm):
         self.ClearItem: TMenuItem
         self.OpenDialog1: TOpenDialog
         self.Timer1: TTimer
-        # <bethany-designer:end id="declarations" hash="1f1fd0a6">
+        # <bethany-designer:end id="declarations" hash="94ef224e">
         self.beth_CreateComponents()
 
     # <bethany-designer:begin id="beth_CreateComponents">
@@ -38,6 +39,7 @@ class TMainForm(TForm):
         self.OptionSheet = TTabSheet(self)
         self.WrapCheck = TCheckBox(self)
         self.SizeSpin = TSpinEdit(self)
+        self.OptionStatus = TStatusBar(self)
         self.MemoSheet = TTabSheet(self)
         self.Memo1 = TMemo(self)
         self.BottomPanel = TPanel(self)
@@ -106,6 +108,23 @@ class TMainForm(TForm):
         self.SizeSpin.MaxValue = 200
         self.SizeSpin.Value = 150
 
+        self.OptionStatus.Parent = self.OptionSheet
+        self.OptionStatus.Left = 0
+        self.OptionStatus.Top = 68
+        self.OptionStatus.Width = 355
+        self.OptionStatus.Height = 24
+        self.OptionStatus.SimplePanel = False
+        item = self.OptionStatus.Panels.Add()
+        item.Text = "Ready"
+        item.Width = 120
+        item = self.OptionStatus.Panels.Add()
+        item.Width = 60
+        item.Style = psOwnerDraw
+        item = self.OptionStatus.Panels.Add()
+        item.Text = "right"
+        item.Alignment = taRightJustify
+        item.Bevel = pbNone
+
         self.MemoSheet.PageControl = self.PageControl1
         self.MemoSheet.Caption = "Memo"
 
@@ -165,7 +184,7 @@ class TMainForm(TForm):
         self.Timer1.Interval = 500
         self.Timer1.Enabled = False
         self.Timer1.OnTimer = self.Timer1Timer
-    # <bethany-designer:end id="beth_CreateComponents" hash="826cc170">
+    # <bethany-designer:end id="beth_CreateComponents" hash="81040610">
 
     # <bethany-designer:handler-stubs>
 

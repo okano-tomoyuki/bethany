@@ -74,10 +74,26 @@ describe('意味の検証', () => {
     ).toEqual([
       ['wrong-class-kind', 'form.controls.0.class'],
       ['controls-not-allowed', 'form.controls.1.controls.0.class'],
-      ['invalid-parent-class', 'form.controls.2.controls.0.controls.2.class'],
+      ['invalid-parent-class', 'form.controls.2.controls.0.controls.3.class'],
       ['invalid-parent-class', 'form.controls.4.class'],
       ['items-not-allowed', 'components.2.items'],
       ['wrong-class-kind', 'components.3.class'],
+    ]);
+  });
+
+  it('コレクションの項目(docs/adr/0044)', () => {
+    expect(
+      diagnose((doc) => {
+        doc.form.controls[2].controls[0].controls[2].properties.Panels = [
+          { Text: 'a', Index: 1 },
+          'x',
+          { Style: 'bad' },
+        ];
+      }),
+    ).toEqual([
+      ['unknown-property', 'form.controls.2.controls.0.controls.2.properties.Panels.0'],
+      ['invalid-property-value', 'form.controls.2.controls.0.controls.2.properties.Panels.1'],
+      ['invalid-property-value', 'form.controls.2.controls.0.controls.2.properties.Panels.2.Style'],
     ]);
   });
 

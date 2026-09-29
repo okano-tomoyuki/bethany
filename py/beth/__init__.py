@@ -416,6 +416,23 @@ class TStaticBorderStyle(enum.IntEnum):
 sbsNone, sbsSingle, sbsSunken = TStaticBorderStyle.sbsNone, TStaticBorderStyle.sbsSingle, TStaticBorderStyle.sbsSunken
 
 
+# パネルの描き方(LCL の TStatusPanelStyle と同じ値)。psOwnerDraw なら TStatusBar::OnDrawPanel で描く。
+class TStatusPanelStyle(enum.IntEnum):
+    psText = 0
+    psOwnerDraw = 1
+
+psText, psOwnerDraw = TStatusPanelStyle.psText, TStatusPanelStyle.psOwnerDraw
+
+
+# パネルの縁(LCL の TStatusPanelBevel と同じ値)。
+class TStatusPanelBevel(enum.IntEnum):
+    pbNone = 0
+    pbLowered = 1
+    pbRaised = 2
+
+pbNone, pbLowered, pbRaised = TStatusPanelBevel.pbNone, TStatusPanelBevel.pbLowered, TStatusPanelBevel.pbRaised
+
+
 # 矩形・楕円等の図形を描画する表示専用コントロール。Pen/Brush は TCanvas と同じく、
 # コントロールが所有する実体への非所有のビュー(コントロールと寿命が一致する)。
 class TShapeType(enum.IntEnum):
@@ -1445,6 +1462,8 @@ class TApplication(_mixins["TApplication"], TComponent):
     プログラムの終了時(main から戻った後)にまとめて破棄され、ラッパーのデストラクタも呼ばれる。"""
     # 実行ファイルのフルパス。
     ExeName = _Prop("TApplication_GetExeName", None, _str)
+    # 表示中(マウスの下のコントロール)のヒント。TStatusBar::OnHint の中で使う(docs/adr/0044)。
+    Hint = _Prop("TApplication_GetHint", "TApplication_SetHint", _str)
     # false なら、アプリケーションのすべてのヒントを表示しない。
     ShowHint = _Prop("TApplication_GetShowHint", "TApplication_SetShowHint", _bool)
     # マウスを止めてからヒントを表示するまでの時間(ミリ秒)。
@@ -2250,15 +2269,72 @@ class TStaticText(TCustomStaticText):
         self._attach(lib.TStaticText_Create(_h(AOwner)))
 
 
+class TStatusPanel(TPersistent, _ItemMixin):
+    """ステータスバーのパネル(LCL の TStatusPanel。TCollectionItem。docs/adr/0044)。同じパネルには常に同じポインタが返る。
+    ラッパーは、パネルが破棄されたとき(TStatusPanels::Delete・Clear、ステータスバーの破棄)に delete される。"""
+    Text = _Prop("TStatusPanel_GetText", "TStatusPanel_SetText", _str)
+    # 幅(最後のパネルは残りの幅いっぱいに広がる)。
+    Width = _Prop("TStatusPanel_GetWidth", "TStatusPanel_SetWidth", _int)
+    Alignment = _Prop("TStatusPanel_GetAlignment", "TStatusPanel_SetAlignment", _enum("TAlignment"))
+    Bevel = _Prop("TStatusPanel_GetBevel", "TStatusPanel_SetBevel", _enum("TStatusPanelBevel"))
+    Style = _Prop("TStatusPanel_GetStyle", "TStatusPanel_SetStyle", _enum("TStatusPanelStyle"))
+    # 並び順。書き換えるとパネルが移動する。
+    Index = _Prop("TStatusPanel_GetIndex", "TStatusPanel_SetIndex", _int)
+
+
+class TStatusPanels(TPersistent):
+    """パネルの一覧(LCL の TStatusPanels。TCollection)。ステータスバーの値メンバとして持つ非所有のビュー。"""
+    Count = _Prop("TStatusPanels_GetCount", None, _int)
+    # StatusBar1->Panels->Items[i]。
+    Items = _Indexed("TStatusPanels_GetItem", None, _item("TStatusPanel"))
+    # 末尾に(Insert は Index の位置に)空のパネルを追加して返す(Text・Width はその後で設定する。VCL と同じ)。
+    def Add(self):
+        _r = lib.TStatusPanels_Add(self._current())
+        return _to_item("TStatusPanel", _r)
+    def Insert(self, Index):
+        _r = lib.TStatusPanels_Insert(self._current(), int(Index))
+        return _to_item("TStatusPanel", _r)
+    # パネルを削除する(パネルのラッパーも delete される)。
+    def Delete(self, Index):
+        lib.TStatusPanels_Delete(self._current(), int(Index))
+    def Clear(self):
+        lib.TStatusPanels_Clear(self._current())
+    def BeginUpdate(self):
+        lib.TStatusPanels_BeginUpdate(self._current())
+    def EndUpdate(self):
+        lib.TStatusPanels_EndUpdate(self._current())
+
+
 class TStatusBar(TWinControl):
     """ステータス行。LCL では中間の TCustomStatusBar が無く、TWinControl の直接の派生。
-    Panels(複数区画のコレクション)は今回未対応で、SimpleText/SimplePanel のみ。
+    パネルを表示するには SimplePanel を false にする(LCL の既定は true で、SimpleText だけを表示する。VCL の既定は false)。
     他のコントロールと同じく、フォームのコンストラクタの中で生成・配置してよい
     (LCL の Win32 実装が DLL で失敗する問題は DLL 側で回避済み。docs/adr/0015-... を参照)。"""
     def __init__(self, AOwner):
         self._attach(lib.TStatusBar_Create(_h(AOwner)))
     SimpleText = _Prop("TStatusBar_GetSimpleText", "TStatusBar_SetSimpleText", _str)
     SimplePanel = _Prop("TStatusBar_GetSimplePanel", "TStatusBar_SetSimplePanel", _bool)
+    Panels = _Prop("TStatusBar_GetPanels", None, _obj("TStatusPanels"))
+    # 右下のサイズ変更のつまみを出すか(フォームの右下にあり、フォームの大きさを変えられるときだけ出る)。
+    SizeGrip = _Prop("TStatusBar_GetSizeGrip", "TStatusBar_SetSizeGrip", _bool)
+    # true なら、Application のヒント(コントロールの Hint)をステータスバーに表示する
+    # (SimplePanel なら SimpleText、そうでなければ最初のパネルに。OnHint を設定すると、代わりに OnHint を呼ぶ)。
+    # LCL は ShowHint が true のコントロール(か親)にだけ Application のヒントを設定する(VCL は ShowHint によらない)。
+    AutoHint = _Prop("TStatusBar_GetAutoHint", "TStatusBar_SetAutoHint", _bool)
+    # OnDrawPanel の中で描画する先。ステータスバーが所有する実体への非所有のビュー(TPaintBox::Canvas と同じ)。
+    Canvas = _Prop("TStatusBar_GetCanvas", None, _obj("TCanvas"))
+    OnDrawPanel = _Event("TStatusBar_SetOnDrawPanel", "TDrawPanelEvent")
+    # AutoHint のとき、ヒントを表示する代わりに呼ばれる(ヒントは Application->Hint)。
+    OnHint = _Event("TStatusBar_SetOnHint", "TNotifyEvent")
+    # クライアント座標 (X, Y) にあるパネルの位置。無ければ -1。
+    def GetPanelIndexAt(self, X, Y):
+        _r = lib.TStatusBar_GetPanelIndexAt(self._current(), int(X), int(Y))
+        return _r
+    # パネルをまとめて変えるとき、EndUpdate まで再描画を止める。
+    def BeginUpdate(self):
+        lib.TStatusBar_BeginUpdate(self._current())
+    def EndUpdate(self):
+        lib.TStatusBar_EndUpdate(self._current())
 
 
 class TCustomShape(TGraphicControl):
@@ -2817,6 +2893,7 @@ _event_types.update({
     "TLVSelectItemEvent": (_a_item("TListItem"), _a_bool, ),  # (Sender, Item, Selected)
     "TLVChangeEvent": (_a_item("TListItem"), _a_enum("TItemChange"), ),  # (Sender, Item, Change)
     "TLVColumnClickEvent": (_a_item("TListColumn"), ),  # (Sender, Column)
+    "TDrawPanelEvent": (_a_item("TStatusPanel"), _a_rect, ),  # (Sender, Panel, Rect)
     "TOnDrawCell": (_a_int, _a_int, _a_rect, _a_enum("TGridDrawState"), ),  # (Sender, ACol, ARow, ARect, AState)
     "TOnSelectCellEvent": (_a_int, _a_int, _a_ref_bool, ),  # (Sender, ACol, ARow, CanSelect)
     "TOnSelectEvent": (_a_int, _a_int, ),  # (Sender, ACol, ARow)
@@ -2862,7 +2939,8 @@ __all__ = [
     "naAddChild", "naAddChildFirst", "naInsert", "naInsertBehind", "TViewStyle", "vsIcon", "vsSmallIcon", "vsList",
     "vsReport", "TSortType", "stNone", "stData", "stText", "stBoth", "TSortDirection", "sdAscending",
     "sdDescending", "TItemChange", "ctText", "ctImage", "ctState", "TResizeStyle", "rsLine", "rsNone", "rsPattern",
-    "rsUpdate", "TStaticBorderStyle", "sbsNone", "sbsSingle", "sbsSunken", "TShapeType", "stRectangle", "stSquare",
+    "rsUpdate", "TStaticBorderStyle", "sbsNone", "sbsSingle", "sbsSunken", "TStatusPanelStyle", "psText",
+    "psOwnerDraw", "TStatusPanelBevel", "pbNone", "pbLowered", "pbRaised", "TShapeType", "stRectangle", "stSquare",
     "stRoundRect", "stRoundSquare", "stEllipse", "stCircle", "stSquaredDiamond", "stDiamond", "stTriangle",
     "stTriangleLeft", "stTriangleRight", "stTriangleDown", "stStar", "stStarDown", "stPolygon",
     "TSectionTrackState", "tsTrackBegin", "tsTrackMove", "tsTrackEnd", "TEdgeStyle", "esNone", "esRaised",
@@ -2910,10 +2988,11 @@ __all__ = [
     "TCustomPage", "TTabSheet", "TTreeNode", "TTreeNodes", "TCustomTreeView", "TTreeView", "TListItem",
     "TListItems", "TListColumn", "TListColumns", "TCustomListView", "TListView", "TCustomSplitter", "TSplitter",
     "TCustomMemo", "TMemo", "TCustomComboBox", "TComboBox", "TCustomListBox", "TListBox", "TCustomCheckListBox",
-    "TCheckListBox", "TCustomStaticText", "TStaticText", "TStatusBar", "TCustomShape", "TShape",
-    "TCustomSpeedButton", "TSpeedButton", "TPaintBox", "TCustomImage", "TImage", "TCustomGrid", "TCustomDrawGrid",
-    "TDrawGrid", "TCustomStringGrid", "TStringGrid", "THeaderSection", "THeaderSections", "TCustomHeaderControl",
-    "THeaderControl", "TToolWindow", "TToolBar", "TToolButton", "TCoolBand", "TCoolBands", "TCustomCoolBar",
-    "TCoolBar", "TCustomTimer", "TTimer", "TCommonDialog", "TFileDialog", "TOpenDialog", "TSaveDialog",
-    "TSelectDirectoryDialog", "TColorDialog", "TFontDialog", "TFindDialog", "TReplaceDialog",
+    "TCheckListBox", "TCustomStaticText", "TStaticText", "TStatusPanel", "TStatusPanels", "TStatusBar",
+    "TCustomShape", "TShape", "TCustomSpeedButton", "TSpeedButton", "TPaintBox", "TCustomImage", "TImage",
+    "TCustomGrid", "TCustomDrawGrid", "TDrawGrid", "TCustomStringGrid", "TStringGrid", "THeaderSection",
+    "THeaderSections", "TCustomHeaderControl", "THeaderControl", "TToolWindow", "TToolBar", "TToolButton",
+    "TCoolBand", "TCoolBands", "TCustomCoolBar", "TCoolBar", "TCustomTimer", "TTimer", "TCommonDialog",
+    "TFileDialog", "TOpenDialog", "TSaveDialog", "TSelectDirectoryDialog", "TColorDialog", "TFontDialog",
+    "TFindDialog", "TReplaceDialog",
 ]

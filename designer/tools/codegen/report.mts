@@ -77,6 +77,8 @@ export const EXPECTED_CHECKS: Readonly<Record<string, string>> = {
   timer: '0/500',
   caption: 'Sample',
   spinValue: '150',
+  // コレクション(docs/adr/0044): 数/Text/Width/Style(psOwnerDraw)/Alignment(taRightJustify)/Bevel(pbNone)
+  statusPanels: '3/Ready/120/1/1/0',
   // フォームの Width を 100 広げた後の OkButton.Left(右寄せ)・NameEdit.Width(左右寄せ)・BottomPanel.Width(alBottom)
   anchors: '404/380/500',
 };

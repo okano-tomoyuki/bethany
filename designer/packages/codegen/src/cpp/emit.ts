@@ -242,6 +242,22 @@ function statement(s: Exclude<Statement, { kind: 'blank' }>): string {
         ...s.lines.map((line) => `${target}->Add(${stringLiteral(line)});`),
       ].join(`\n${INDENT}`);
     }
+    case 'collection': {
+      // 項目ごとに Add し、プロパティを設定するものは波括弧の中で item に設定する
+      const target = access(s.target, [s.property]);
+      return s.items.map((assigns) =>
+        assigns.length === 0
+          ? `${target}->Add();`
+          : [
+              '{',
+              `${INDENT}${s.itemClass}* item = ${target}->Add();`,
+              ...assigns.map((a) => `${INDENT}${access('item', a.path)} = ${value(a.value)};`),
+              '}',
+            ].join(`
+${INDENT}`),
+      ).join(`
+${INDENT}`);
+    }
     case 'event': {
       const args = s.params.map((p) => p.name).join(', ');
       return `${access(s.target, [s.event])} = [this](${paramList(s.params, false)}) { ${s.handler}(${args}); };`;
@@ -287,7 +303,9 @@ function value(v: Value): string {
 /** ハンドラの引数の並び。ヘッダでは Bethany の型を修飾する */
 function paramList(params: readonly EventParam[], qualify: boolean): string {
   return params
-    .map((p) => `${qualify && /^T[A-Z]/.test(p.type) ? `beth::${p.type}` : p.type} ${p.name}`)
+    .map(
+      (p) => `${qualify ? p.type.replace(/^(const )?(T[A-Z])/, '$1beth::$2') : p.type} ${p.name}`,
+    )
     .join(', ');
 }
 

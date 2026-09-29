@@ -4,6 +4,7 @@
  */
 import {
   clientMetrics,
+  collectionItems,
   findClass,
   hasOwnBounds,
   type ControlNode,
@@ -360,7 +361,7 @@ function Body({
     case 'TUpDown':
       return <div className="look-updown" />;
     case 'TStatusBar':
-      return <div className="look-status">{text(location, 'SimpleText')}</div>;
+      return <StatusBar location={location} />;
     case 'TToolBar':
     case 'TCoolBar':
       return <div className="look-bar" style={background} />;
@@ -430,6 +431,44 @@ function PageTabs({
         ))}
       </div>
       <div className="look-tabs-body" />
+    </div>
+  );
+}
+
+/** ステータスバー。SimplePanel なら SimpleText、そうでなければパネルを並べる(最後のパネルは残りの幅いっぱい。docs/adr/0044) */
+function StatusBar({
+  location,
+}: {
+  readonly location: NodeLocation & { readonly kind: 'control' };
+}) {
+  if (flag(location, 'SimplePanel'))
+    return <div className="look-status">{text(location, 'SimpleText')}</div>;
+  const panels = collectionItems(location, 'Panels');
+  return (
+    <div className="look-status panels">
+      {panels.map((panel, i) => {
+        const last = i === panels.length - 1;
+        const width = typeof panel.Width === 'number' ? Math.max(0, panel.Width) : 0;
+        const bevel = typeof panel.Bevel === 'string' ? panel.Bevel : 'pbLowered';
+        return (
+          <div
+            key={i}
+            className={`look-status-panel ${bevel}`}
+            style={{
+              ...(last ? { flex: '1 1 0' } : { flex: 'none', width: `${String(width)}px` }),
+              textAlign: textAlign(typeof panel.Alignment === 'string' ? panel.Alignment : ''),
+            }}
+          >
+            {panel.Style === 'psOwnerDraw' ? (
+              <span className="look-owner-draw">OnDrawPanel</span>
+            ) : typeof panel.Text === 'string' ? (
+              panel.Text
+            ) : (
+              ''
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

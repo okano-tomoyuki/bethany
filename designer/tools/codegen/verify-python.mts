@@ -102,6 +102,8 @@ checks["dialogOptions"] = str(int(f.OpenDialog1.Options))
 checks["timer"] = f"{int(f.Timer1.Enabled)}/{f.Timer1.Interval}"
 checks["caption"] = f.Caption
 checks["spinValue"] = str(f.SizeSpin.Value)
+_panels = f.OptionStatus.Panels
+checks["statusPanels"] = f"{_panels.Count}/{_panels.Items[0].Text}/{_panels.Items[0].Width}/{int(_panels.Items[1].Style)}/{int(_panels.Items[2].Alignment)}/{int(_panels.Items[2].Bevel)}"
 
 # Anchors: フォームを広げると、右に寄せたものは動き、左右に寄せたものは広がる
 f.Width = f.Width + 100

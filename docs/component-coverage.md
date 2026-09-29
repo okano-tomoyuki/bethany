@@ -39,7 +39,7 @@ TScrollingWinControl のいずれかで、いずれも実装済み。既存パ�
 | ✅ TBevel | extctrls.pp | TGraphicControl(実装済み) | Shape/Style(ADR 0015) |
 | ✅ TShape | extctrls.pp(TCustomShape) | TGraphicControl(実装済み) | Shape/Pen/Brush(ADR 0015) |
 | ✅ TStaticText | stdctrls.pp(TCustomStaticText) | TWinControl(実装済み) | BorderStyle(ADR 0015) |
-| ✅ TStatusBar | comctrls.pp | TWinControl(実装済み) | SimpleText/SimplePanel のみ(Panels は未対応)。Run() 開始前の生成が失敗する LCL 側の問題は DLL 側で回避済み([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.md)) |
+| ✅ TStatusBar | comctrls.pp | TWinControl(実装済み) | SimpleText/SimplePanel と Panels([ADR 0044](adr/0044-statusbar-panels-and-designer-collections.md))。Run() 開始前の生成が失敗する LCL 側の問題は DLL 側で回避済み([ADR 0015](adr/0015-tier1-batch1-and-statusbar-issue.md)) |
 | ✅ TSplitter | extctrls.pp(TCustomSplitter) | TCustomControl(実装済み) | `TControl.Align` の追加とあわせて実装([ADR 0016](adr/0016-control-align-and-splitter.md))。AutoSnap/Beveled/MinSize/ResizeAnchor/ResizeStyle/SplitterPosition/OnMoved。OnCanResize/OnCanOffset は未対応 |
 | ✅ TScrollBar | stdctrls.pp(TCustomScrollBar) | TWinControl(実装済み) | Kind/Min/Max/Position/PageSize/OnChange(ADR 0015 の 2 バッチ目) |
 | ✅ TRadioGroup | extctrls.pp(TCustomRadioGroup) | TCustomGroupBox(実装済み) | Items/ItemIndex/OnClick(ADR 0015 の 3 バッチ目)。OnClick は TControl のものとは別の独自フィールド |
