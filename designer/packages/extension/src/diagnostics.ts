@@ -105,6 +105,18 @@ async function projectDiagnostics(uri: vscode.Uri, text: string): Promise<Diagno
           ),
           path: ['codegen', 'commentLocale'],
         });
+      const moduleDir = project.codegen?.python?.moduleDir ?? '';
+      const otherModuleDir = other.doc.codegen?.python?.moduleDir ?? '';
+      if (project.codegen?.python && other.doc.codegen?.python && moduleDir !== otherModuleDir)
+        result.push({
+          severity: 'warning',
+          code: 'python-settings-conflict',
+          message: vscode.l10n.t(
+            '{0} shares forms with this project but uses a different python.moduleDir. The forms are generated with the settings of the first project',
+            other.name,
+          ),
+          path: ['codegen', 'python'],
+        });
       // 共有するフォームごとに、overrides を重ねた設定を比べる。どちらも C++ を生成するときだけ(片方だけなら、その設定が使われる)
       const otherDoc = other.doc;
       const conflict = (project.forms ?? []).some((form, index) => {

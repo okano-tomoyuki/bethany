@@ -158,7 +158,7 @@ describe('generateAll', () => {
     const result = generateAll(
       SAMPLE,
       DSL_FILE,
-      { cpp: undefined, python: false },
+      { cpp: undefined, python: undefined },
       () => undefined,
     );
     expect('error' in result).toBe(true);

@@ -171,7 +171,14 @@ export function serializeProject(doc: BfprojDocument): string {
   const codegen = doc.codegen && {
     ...(doc.codegen.commentLocale !== undefined && { commentLocale: doc.codegen.commentLocale }),
     ...(doc.codegen.cpp && { cpp: orderCpp(doc.codegen.cpp) }),
-    ...(doc.codegen.python && { python: doc.codegen.python }),
+    ...(doc.codegen.python && {
+      python: {
+        ...(doc.codegen.python.main !== undefined && { main: doc.codegen.python.main }),
+        ...(doc.codegen.python.moduleDir !== undefined && {
+          moduleDir: doc.codegen.python.moduleDir,
+        }),
+      },
+    }),
   };
   const ordered = {
     ...(doc.$schema !== undefined && { $schema: doc.$schema }),

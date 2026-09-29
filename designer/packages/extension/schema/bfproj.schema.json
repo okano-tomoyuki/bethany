@@ -124,6 +124,9 @@
           "properties": {
             "main": {
               "type": "string"
+            },
+            "moduleDir": {
+              "type": "string"
             }
           },
           "additionalProperties": false

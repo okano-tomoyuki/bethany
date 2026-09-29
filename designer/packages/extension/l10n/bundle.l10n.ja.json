@@ -171,6 +171,7 @@
   "{0} line {1}": "{0} の {1} 行目",
   "{0} selected": "{0} 個を選択",
   "{0} shares forms with this project but uses a different commentLocale ({1})": "{0} はこのプロジェクトとフォームを共有していますが、commentLocale が異なります({1})",
+  "{0} shares forms with this project but uses a different python.moduleDir. The forms are generated with the settings of the first project": "{0} はこのプロジェクトとフォームを共有していますが、python.moduleDir が異なります。フォームは最初のプロジェクトの設定で生成されます",
   "{0} shares forms with this project but uses different C++ settings (namespace, include guard, extensions or folders). The forms are generated with the settings of the first project": "{0} はこのプロジェクトとフォームを共有していますが、C++ の設定(名前空間・インクルードガード・拡張子・フォルダ)が異なります。フォームは最初のプロジェクトの設定で生成されます",
   "{0}: created{1}": "{0}: 作成しました{1}",
   "{0}: generated regions ({1}) have been edited by hand. Specify --force to overwrite them": "{0}: 生成した区間({1})が手で編集されています。上書きするには --force を指定してください",

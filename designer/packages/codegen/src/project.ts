@@ -92,7 +92,11 @@ export function generateProject(
     // フォームごとに overrides を重ねた設定(名前空間・ヘッダの置き場所がフォームで違いうる)
     const cpp = project.codegen?.cpp ? cppOptions(project.codegen.cpp, path) : DEFAULT_CPP_OPTIONS;
     const dir = path.slice(0, path.lastIndexOf('/') + 1);
-    const t = resolveTargets(form.doc, fileNameOf(path), { cpp, python: true, formPath: path });
+    const t = resolveTargets(form.doc, fileNameOf(path), {
+      cpp,
+      python: { moduleDir: project.codegen?.python?.moduleDir, formPath: path },
+      formPath: path,
+    });
     return {
       name: form.doc.form.name,
       className: t.cpp?.className ?? `T${form.doc.form.name}`,

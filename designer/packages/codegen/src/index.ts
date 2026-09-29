@@ -10,11 +10,13 @@ import { emitPython } from './python/emit.ts';
 import { PYTHON_NAMES, PYTHON_SYNTAX } from './python/syntax.ts';
 import {
   DEFAULT_CPP_OPTIONS,
+  DEFAULT_PYTHON_OPTIONS,
   fileNameOf,
   resolveTargets,
   type CppOptions,
   type CppTarget,
   type FormCodegenSettings,
+  type PythonOptions,
   type PythonTarget,
 } from './names.ts';
 import { createFile, mergeFile, type GeneratedCode, type MergeResult } from './region.ts';
@@ -27,11 +29,13 @@ export {
   cppOptions,
   DEFAULT_CPP_OPTIONS,
   DEFAULT_FORM_CODEGEN,
+  DEFAULT_PYTHON_OPTIONS,
   formCodegenSettings,
   resolveTargets,
   type CppOptions,
   type FormCodegenSettings,
   type FormProject,
+  type PythonOptions,
   type CppTarget,
   type PythonTarget,
   type ResolvedTargets,
@@ -67,8 +71,9 @@ export function generatePython(
   dslFileName: string,
   existing: string | undefined,
   commentLocale?: CommentLocale,
+  options: PythonOptions = DEFAULT_PYTHON_OPTIONS,
 ): GenerateResult {
-  const { className, file } = pythonTarget(doc, dslFileName);
+  const { className, file } = pythonTarget(doc, dslFileName, options);
   const generated = emitPython(buildModel(doc, className), fileNameOf(dslFileName), commentLocale);
   if (existing === undefined) {
     return {
@@ -182,7 +187,7 @@ export function generateAll(
   }
   if (targets.python) {
     const existing = readExisting(targets.python.file);
-    const result = generatePython(doc, dslFileName, existing, commentLocale);
+    const result = generatePython(doc, dslFileName, existing, commentLocale, settings.python);
     files.push({ path: targets.python.file, result });
     if (existing !== undefined && result.ok) {
       staleChecks.push({
@@ -206,13 +211,13 @@ function cppTarget(
   cpp: CppOptions,
   formPath: string | undefined,
 ): CppTarget {
-  const target = resolveTargets(doc, dslFileName, { cpp, python: false, formPath }).cpp;
+  const target = resolveTargets(doc, dslFileName, { cpp, python: undefined, formPath }).cpp;
   if (!target) throw new Error('unreachable');
   return target;
 }
 
-function pythonTarget(doc: BfmDocument, dslFileName: string): PythonTarget {
-  const target = resolveTargets(doc, dslFileName, { cpp: undefined, python: true }).python;
+function pythonTarget(doc: BfmDocument, dslFileName: string, options: PythonOptions): PythonTarget {
+  const target = resolveTargets(doc, dslFileName, { cpp: undefined, python: options }).python;
   if (!target) throw new Error('unreachable');
   return target;
 }

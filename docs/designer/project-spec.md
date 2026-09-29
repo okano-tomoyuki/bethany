@@ -50,7 +50,7 @@ C++Builder のプロジェクト(`Project1.cbproj`・`Project1.cpp`)のうち、
 | `forms` の各要素のファイルがあること(拡張が調べる) | 警告 |
 | `codegen.cpp.namespace` の `::` で区切った各部分が識別子であること | エラー |
 | `codegen.cpp.includeGuardPrefix` が英字・数字・`_` だけで、数字で始まらないこと | エラー |
-| `codegen.cpp.headerDir`・`sourceDir` が相対パスであること | エラー |
+| `codegen.cpp.headerDir`・`sourceDir`・`codegen.python.moduleDir` が相対パスであること | エラー |
 | `codegen.cpp.overrides` の各要素の `forms` が空でなく、パターンが相対パスであること(各要素の値も上の 3 つと同じく調べる) | エラー |
 | `codegen.cpp.overrides` のパターンが `forms` のどれかに当てはまること | 警告 |
 
@@ -87,7 +87,7 @@ C++Builder の `.dfm` と `.cbproj` の分け方と同じ)。
 |---|---|---|
 | `commentLocale` | 生成するコードのコメントの言語(`en`・`ja`) | `en` |
 | `cpp` | 書けば C++ を生成する。中のキーは下の表 | |
-| `python` | 書けば Python を生成する。`python.main` は起動部分の出力先 | `Project1.py` |
+| `python` | 書けば Python を生成する。`python.main` は起動部分の出力先、`python.moduleDir` はフォームのモジュール(.py)を置くフォルダ | `Project1.py`・フォームと同じフォルダ |
 
 `cpp` の中のキー(パスはプロジェクトファイルのフォルダからの相対パスで、区切りは `/`):
 
@@ -113,6 +113,24 @@ C++Builder の `.dfm` と `.cbproj` の分け方と同じ)。
   }
 }
 ```
+
+- **Python のフォルダ**: `python.moduleDir` も `headerDir`・`sourceDir` と同じく、その下の、プロジェクトのフォルダからフォームのフォルダまでと同じ場所に置く
+  (`dialogs/About.bfm.json` なら `py/dialogs/About.py`)。起動部分からは `python.main` のフォルダからのモジュール名で import するので
+  (`import dialogs.About`)、フォームのモジュールは `python.main` と同じフォルダかその下に置く。たとえば、C++ と Python を別のフォルダに分ける構成は次のように書く。
+
+  ```
+  example/
+    Project1.bfproj.json   MainForm.bfm.json
+    cpp/                   Project1.cpp  MainForm.hpp  MainForm.cpp
+    py/                    Project1.py   MainForm.py
+  ```
+
+  ```json
+  "codegen": {
+    "cpp": { "main": "cpp/Project1.cpp", "headerDir": "cpp", "sourceDir": "cpp" },
+    "python": { "main": "py/Project1.py", "moduleDir": "py" }
+  }
+  ```
 
 - **Bethany のヘッダ**は、山括弧のシステムインクルードで `#include <bethany/beth.hpp>` と書く(設定はできない。[ADR 0040](../adr/0040-system-include-path.md))。
 - **フォルダ**: `headerDir`・`sourceDir` を書くと、その下の、プロジェクトのフォルダからフォームのフォルダまでと同じ場所に置く
@@ -148,7 +166,7 @@ C++Builder の `.dfm` と `.cbproj` の分け方と同じ)。
 - コメントの言語は、そのフォームを含むプロジェクトのうち最初に `commentLocale` を書いたもの。フォームを共有するプロジェクトの間で
   `commentLocale` が食い違えば、プロジェクトファイルに警告を出す。
 - C++ の設定(`cpp` の `main` 以外。そのフォームに当てはまる `overrides` を重ねたもの)も、そのフォームを含むプロジェクトのうち
-  最初に `cpp` を書いたものを使う。共有するフォームの設定が食い違えば同じく警告を出す。
+  最初に `cpp` を書いたものを使う。共有するフォームの設定が食い違えば同じく警告を出す。`python.moduleDir` も同じ。
 - どのプロジェクトにも属さないフォームは、C++ と Python の両方をコメントは英語で生成する(プロジェクトを作らなくても試せるように)。
 - 出力先とクラス名は決まった規則で決まる([dsl-spec.md](dsl-spec.md) §9)。
 - CLI(`beth generate MainForm.bfm.json`)は、フォームのフォルダから上へたどってプロジェクトファイルを探す。

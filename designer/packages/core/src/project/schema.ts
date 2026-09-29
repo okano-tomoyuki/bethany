@@ -54,7 +54,14 @@ export type ProjectCppSettings = z.infer<typeof ProjectCppSettings>;
 export const ProjectCodegenSettings = z.strictObject({
   commentLocale: CommentLocale.optional(),
   cpp: ProjectCppSettings.optional(),
-  python: z.strictObject({ main: z.string().optional() }).optional(),
+  python: z
+    .strictObject({
+      /** 起動部分の出力先(既定はプロジェクト名 + .py) */
+      main: z.string().optional(),
+      /** フォームのモジュール(.py)の出力先のフォルダ(既定はフォームと同じフォルダ) */
+      moduleDir: z.string().optional(),
+    })
+    .optional(),
 });
 export type ProjectCodegenSettings = z.infer<typeof ProjectCodegenSettings>;
 

@@ -1,7 +1,12 @@
 import type { BfprojDocument } from '@bethany-designer/core';
 import { describe, expect, it } from 'vitest';
 import { generateAll, generateCpp } from '../index.ts';
-import { cppOptions, DEFAULT_CPP_OPTIONS, resolveTargets } from '../names.ts';
+import {
+  cppOptions,
+  DEFAULT_CPP_OPTIONS,
+  DEFAULT_PYTHON_OPTIONS,
+  resolveTargets,
+} from '../names.ts';
 import { generateProject } from '../project.ts';
 import { DSL_FILE, SAMPLE } from '../testing.ts';
 
@@ -86,7 +91,7 @@ describe('C++ の設定(codegen.cpp)', () => {
         headerDir: 'include',
         sourceDir: 'src',
       }),
-      python: true,
+      python: DEFAULT_PYTHON_OPTIONS,
       formPath: 'forms/MainForm.bfm.json',
     });
     expect(targets.cpp).toMatchObject({
@@ -102,7 +107,7 @@ describe('C++ の設定(codegen.cpp)', () => {
   it('プロジェクトのフォルダの外のフォームは、フォルダの設定を使わずフォームと同じフォルダに置く', () => {
     const targets = resolveTargets(SAMPLE, DSL_FILE, {
       cpp: cppOptions({ headerDir: 'include' }),
-      python: false,
+      python: undefined,
       formPath: '../shared/MainForm.bfm.json',
     });
     expect(targets.cpp).toMatchObject({ header: 'MainForm.hpp', headerInclude: 'MainForm.hpp' });
@@ -163,7 +168,7 @@ describe('以前の生成物の移行', () => {
     const all = generateAll(
       SAMPLE,
       DSL_FILE,
-      { cpp: DEFAULT_CPP_OPTIONS, python: false },
+      { cpp: DEFAULT_CPP_OPTIONS, python: undefined },
       (path) => (path === 'MainForm.hpp' ? header : undefined),
     );
     if ('error' in all) throw new Error(all.error);

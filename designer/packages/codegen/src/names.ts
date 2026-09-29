@@ -100,11 +100,20 @@ function withoutUndefined<T extends object>(value: T): Partial<T> {
   return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined)) as Partial<T>;
 }
 
+/** Python のコード生成の設定(プロジェクトの codegen.python。project-spec.md §5) */
+export interface PythonOptions {
+  /** プロジェクトファイルのフォルダからの相対パス。undefined ならフォームと同じフォルダ */
+  readonly moduleDir: string | undefined;
+  /** この設定を取ったプロジェクトのフォルダからの、フォームのファイルの相対パス(プロジェクトに属さなければ undefined) */
+  readonly formPath: string | undefined;
+}
+
 /** フォームのコード生成の設定(docs/designer/project-spec.md §5)。フォームが属するプロジェクトの codegen から決める */
 export interface FormCodegenSettings {
   /** C++ を生成しなければ undefined */
   readonly cpp: CppOptions | undefined;
-  readonly python: boolean;
+  /** Python を生成しなければ undefined */
+  readonly python: PythonOptions | undefined;
   readonly commentLocale?: CommentLocale | undefined;
   /**
    * C++ の設定を取ったプロジェクトのフォルダからの、フォームのファイルの相対パス(headerDir・sourceDir の下の置き場所を決める)。
@@ -113,8 +122,13 @@ export interface FormCodegenSettings {
   readonly formPath?: string | undefined;
 }
 
+export const DEFAULT_PYTHON_OPTIONS: PythonOptions = { moduleDir: undefined, formPath: undefined };
+
 /** プロジェクトに属さないフォームの設定: C++ と Python の両方、コメントは英語 */
-export const DEFAULT_FORM_CODEGEN: FormCodegenSettings = { cpp: DEFAULT_CPP_OPTIONS, python: true };
+export const DEFAULT_FORM_CODEGEN: FormCodegenSettings = {
+  cpp: DEFAULT_CPP_OPTIONS,
+  python: DEFAULT_PYTHON_OPTIONS,
+};
 
 /** フォームが属する 1 つのプロジェクト */
 export interface FormProject {
@@ -131,9 +145,13 @@ export interface FormProject {
 export function formCodegenSettings(projects: readonly FormProject[]): FormCodegenSettings {
   if (projects.length === 0) return DEFAULT_FORM_CODEGEN;
   const cpp = projects.find((p) => p.doc.codegen?.cpp !== undefined);
+  const python = projects.find((p) => p.doc.codegen?.python !== undefined);
   return {
     cpp: cpp?.doc.codegen?.cpp && cppOptions(cpp.doc.codegen.cpp, cpp.formPath),
-    python: projects.some((p) => p.doc.codegen?.python !== undefined),
+    python: python?.doc.codegen?.python && {
+      moduleDir: python.doc.codegen.python.moduleDir,
+      formPath: python.formPath,
+    },
     commentLocale: projects.find((p) => p.doc.codegen?.commentLocale)?.doc.codegen?.commentLocale,
     ...(cpp && { formPath: cpp.formPath }),
   };
@@ -155,7 +173,12 @@ export function resolveTargets(
   const { cpp } = settings;
   return {
     ...(cpp && { cpp: cppTarget(className, base, cpp, settings.formPath) }),
-    ...(settings.python && { python: { className, file: `${base}.py` } }),
+    ...(settings.python && {
+      python: {
+        className,
+        file: placeOutput(`${base}.py`, settings.python.moduleDir, settings.python.formPath).path,
+      },
+    }),
   };
 }
 

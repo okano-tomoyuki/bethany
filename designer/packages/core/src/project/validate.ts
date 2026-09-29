@@ -47,6 +47,9 @@ export function validateProject(doc: BfprojDocument): Diagnostic[] {
       });
   });
   diagnostics.push(...validateCpp(doc));
+  const moduleDir = doc.codegen?.python?.moduleDir;
+  if (moduleDir !== undefined && !isValidDirectory(moduleDir))
+    diagnostics.push(invalidDirectory(moduleDir, ['codegen', 'python', 'moduleDir']));
   if (doc.mainForm !== undefined && !forms.some((form) => sameFormPath(form, doc.mainForm ?? '')))
     diagnostics.push({
       severity: 'error',
@@ -125,15 +128,19 @@ function validateCppSettings(
     });
   for (const key of ['headerDir', 'sourceDir'] as const) {
     const dir = cpp[key];
-    if (dir === undefined || isValidDirectory(dir)) continue;
-    diagnostics.push({
-      severity: 'error',
-      code: 'invalid-directory',
-      message: l10n.t('"{0}" is not a folder path: use a relative path separated by /', dir),
-      path: [...base, key],
-    });
+    if (dir !== undefined && !isValidDirectory(dir))
+      diagnostics.push(invalidDirectory(dir, [...base, key]));
   }
   return diagnostics;
+}
+
+function invalidDirectory(dir: string, path: readonly (string | number)[]): Diagnostic {
+  return {
+    severity: 'error',
+    code: 'invalid-directory',
+    message: l10n.t('"{0}" is not a folder path: use a relative path separated by /', dir),
+    path: [...path],
+  };
 }
 
 /** プロジェクトファイルのフォルダからの相対パスのフォルダか(`.` はプロジェクトのフォルダ) */

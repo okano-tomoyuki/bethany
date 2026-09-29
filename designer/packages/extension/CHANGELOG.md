@@ -6,6 +6,8 @@
   It requires the C++ library 0.2.0 or later, which moved the headers to `include/bethany/`
 - C++ settings in `codegen.cpp` of the project file: `namespace` (`app` or `app::ui`), `includeGuard` (`macro`, the default, or `pragma`),
   `includeGuardPrefix`, `headerExtension` / `sourceExtension`, and `headerDir` / `sourceDir` to put headers and sources in separate folders
+- `moduleDir` in `codegen.python` puts the Python modules of the forms in a folder
+  (for example, `cpp/` and `py/` folders next to the project file)
 - `overrides` in `codegen.cpp` change these settings for some forms only, matched by paths or patterns
   (`{ "forms": ["dialogs"], "namespace": "app::dialogs" }`). The last matching entry wins
 - **Changed**: the header uses an include guard macro (`#ifndef MAINFORM_HPP`) instead of `#pragma once` by default.

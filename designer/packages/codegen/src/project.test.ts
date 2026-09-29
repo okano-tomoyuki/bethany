@@ -1,7 +1,13 @@
 import { createDocument, createProject, type BfprojDocument } from '@bethany-designer/core';
 import { describe, expect, it } from 'vitest';
 import type { GenerateAllResult } from './index.ts';
-import { DEFAULT_CPP_OPTIONS, formCodegenSettings } from './names.ts';
+import {
+  DEFAULT_CPP_OPTIONS,
+  DEFAULT_PYTHON_OPTIONS,
+  formCodegenSettings,
+  resolveTargets,
+} from './names.ts';
+import { SAMPLE } from './testing.ts';
 import { generateProject, resolveProjectTargets } from './project.ts';
 
 const mainForm = { doc: createDocument('MainForm'), path: 'MainForm.bfm.json' };
@@ -133,7 +139,10 @@ describe('起動時に作るフォーム(autoCreate)', () => {
 
 describe('formCodegenSettings', () => {
   it('プロジェクトに属さなければ C++ と Python の両方、コメントは英語', () => {
-    expect(formCodegenSettings([])).toEqual({ cpp: DEFAULT_CPP_OPTIONS, python: true });
+    expect(formCodegenSettings([])).toEqual({
+      cpp: DEFAULT_CPP_OPTIONS,
+      python: DEFAULT_PYTHON_OPTIONS,
+    });
   });
 
   it('言語は属するプロジェクトの和集合、コメントの言語と C++ の設定は最初に書かれているもの', () => {
@@ -150,16 +159,56 @@ describe('formCodegenSettings', () => {
       ]),
     ).toEqual({
       cpp: { ...DEFAULT_CPP_OPTIONS, namespace: ['app', 'ui'] },
-      python: true,
+      python: { moduleDir: undefined, formPath: 'a/Main.bfm.json' },
       commentLocale: 'ja',
       formPath: 'Main.bfm.json',
     });
     expect(formCodegenSettings([{ doc: { formatVersion: 1 }, formPath: 'Main.bfm.json' }])).toEqual(
       {
         cpp: undefined,
-        python: false,
+        python: undefined,
         commentLocale: undefined,
       },
+    );
+  });
+});
+
+describe('Python の出力先のフォルダ(codegen.python.moduleDir)', () => {
+  const example: BfprojDocument = {
+    formatVersion: 1,
+    codegen: {
+      cpp: { main: 'cpp/Project1.cpp', headerDir: 'cpp', sourceDir: 'cpp' },
+      python: { main: 'py/Project1.py', moduleDir: 'py' },
+    },
+    mainForm: 'MainForm.bfm.json',
+    forms: ['MainForm.bfm.json', 'dialogs/About.bfm.json'],
+  };
+  const about = { ...SAMPLE, form: { ...SAMPLE.form, name: 'About' } };
+
+  it('フォームのモジュールは moduleDir の下の、フォームのフォルダと同じ場所', () => {
+    const settings = formCodegenSettings([{ doc: example, formPath: 'dialogs/About.bfm.json' }]);
+    expect(resolveTargets(about, 'About.bfm.json', settings)).toMatchObject({
+      cpp: { header: '../cpp/dialogs/About.hpp', source: '../cpp/dialogs/About.cpp' },
+      python: { file: '../py/dialogs/About.py' },
+    });
+  });
+
+  it('起動部分は moduleDir からのモジュール名で import する', () => {
+    const result = files(
+      generateProject(
+        example,
+        'Project1.bfproj.json',
+        [
+          { doc: SAMPLE, path: 'MainForm.bfm.json' },
+          { doc: about, path: 'dialogs/About.bfm.json' },
+        ],
+        () => undefined,
+      ),
+    );
+    expect(Object.keys(result)).toEqual(['cpp/Project1.cpp', 'py/Project1.py']);
+    expect(result['py/Project1.py']).toContain('import MainForm\nimport dialogs.About\n');
+    expect(result['cpp/Project1.cpp']).toContain(
+      '#include "MainForm.hpp"\n#include "dialogs/About.hpp"\n',
     );
   });
 });

@@ -36,6 +36,7 @@ export type DiagnosticCode =
   | 'missing-form-file'
   | 'comment-locale-conflict'
   | 'cpp-settings-conflict'
+  | 'python-settings-conflict'
   | 'unknown-auto-create'
   | 'invalid-namespace'
   | 'invalid-include-guard-prefix'
