@@ -45,8 +45,27 @@ if(WIN32)
 else()
     set(BETH_DLL_NAME libbeth.so)
 endif()
-set(BETH_DLL "${PROJECT_SOURCE_DIR}/${BETH_DLL_NAME}" CACHE FILEPATH "The Bethany shared library built by FPC")
-set_property(GLOBAL PROPERTY BETH_DLL "${BETH_DLL}")
+# BETH_DLL は利用者が別の DLL を指定するためのもの。空(既定)なら、このソースのフォルダの DLL を使う。
+# 既定の値をキャッシュに保存すると、FetchContent の取り込み先(FETCHCONTENT_SOURCE_DIR_BETH 等)を変えたときに古い DLL を写し続けるため、
+# 既定の値は configure のたびに決める。
+set(BETH_DLL "" CACHE FILEPATH "The Bethany shared library built by FPC (empty: the one in the source folder of Bethany)")
+# 0.2.0 までは既定の値(そのときのソースのフォルダの DLL)をキャッシュに保存していた。取り込み先を変えた後も古い DLL を写さないよう、
+# 別の Bethany のソースのフォルダ(beth.pas がある)の DLL を指していれば、以前の既定の値とみなして捨てる。
+if(BETH_DLL)
+    get_filename_component(BETH_DLL_DIR "${BETH_DLL}" DIRECTORY)
+    get_filename_component(BETH_DLL_DIR "${BETH_DLL_DIR}" REALPATH)
+    get_filename_component(BETH_SOURCE_DIR_REAL "${PROJECT_SOURCE_DIR}" REALPATH)
+    if(NOT BETH_DLL_DIR STREQUAL BETH_SOURCE_DIR_REAL AND EXISTS "${BETH_DLL_DIR}/beth.pas")
+        message(STATUS "Bethany: BETH_DLL pointed to another Bethany source (${BETH_DLL}); using ${PROJECT_SOURCE_DIR}")
+        set(BETH_DLL "" CACHE FILEPATH "The Bethany shared library built by FPC (empty: the one in the source folder of Bethany)" FORCE)
+    endif()
+endif()
+if(BETH_DLL)
+    set(BETH_DLL_PATH "${BETH_DLL}")
+else()
+    set(BETH_DLL_PATH "${PROJECT_SOURCE_DIR}/${BETH_DLL_NAME}")
+endif()
+set_property(GLOBAL PROPERTY BETH_DLL "${BETH_DLL_PATH}")
 include(cmake/BethDeploy.cmake)
 
 # Windows では、Bethany をリンクした exe に manifest(Common-Controls 6.0 の宣言)を埋め込む。
@@ -69,9 +88,9 @@ if(BETH_INSTALL)
     install(TARGETS beth EXPORT bethTargets ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
     install(DIRECTORY include/bethany DESTINATION include)
     if(WIN32)
-        install(FILES "${BETH_DLL}" DESTINATION ${CMAKE_INSTALL_BINDIR} OPTIONAL)
+        install(FILES "${BETH_DLL_PATH}" DESTINATION ${CMAKE_INSTALL_BINDIR} OPTIONAL)
     else()
-        install(FILES "${BETH_DLL}" DESTINATION ${CMAKE_INSTALL_LIBDIR} OPTIONAL)
+        install(FILES "${BETH_DLL_PATH}" DESTINATION ${CMAKE_INSTALL_LIBDIR} OPTIONAL)
     endif()
     install(FILES win32/beth.manifest win32/beth_manifest.rc.in cmake/BethDeploy.cmake
             DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/beth)

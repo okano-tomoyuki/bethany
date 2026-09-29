@@ -29,8 +29,7 @@ FetchContent_MakeAvailable(beth)
 add_executable(Notepad WIN32
     cpp/Notepad.cpp
     cpp/MainForm.cpp
-    cpp/dialogs/AboutForm.cpp
-    cpp/dialogs/ConfirmSaveForm.cpp)
+    cpp/dialogs/AboutForm.cpp)
 # 生成したコードは、ヘッダを cpp/ からのパスで include する(プロジェクトの codegen.cpp.headerDir)
 target_include_directories(Notepad PRIVATE cpp)
 target_link_libraries(Notepad PRIVATE beth::beth)

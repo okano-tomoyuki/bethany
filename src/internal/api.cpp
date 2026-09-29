@@ -1,6 +1,7 @@
 #include <bethany/internal/api.h>
 
-#include <cassert>
+#include <cstdio>
+#include <cstdlib>
 #include <mutex>
 #include <string>
 
@@ -80,6 +81,21 @@ struct Checked<void>
     }
 };
 
+/*
+ * DLL が見つからない・DLL に関数が無い(ヘッダより古い DLL を読み込んだ)ときに、理由を知らせて終了する。
+ * assert にすると Release のビルドでは消えて、ヌルポインタの呼び出しで落ちるため。GUI のアプリでは標準エラー出力が見えないので、
+ * Windows ではメッセージボックスも出す。
+ */
+[[noreturn]] void beth_fatal(const std::string& message)
+{
+    std::fprintf(stderr, "Bethany: %s\n", message.c_str());
+    std::fflush(stderr);
+#if defined(_WIN32) || defined(_WIN64)
+    ::MessageBoxA(nullptr, message.c_str(), "Bethany", MB_OK | MB_ICONERROR);
+#endif
+    std::abort();
+}
+
 /* 関数ポインタマッピング */
 template<typename Func>
 void beth_map(Func& f, beth_module_t m, const char* n)
@@ -105,10 +121,18 @@ void beth_init(void)
 #else
             m = ::dlopen("libbeth.so", RTLD_LAZY);
 #endif
+#if defined(_WIN32) || defined(_WIN64)
+            if (!m)
+                beth_fatal("beth.dll was not found. Put beth.dll next to the executable (beth_deploy() in CMake).");
+#else
+            if (!m)
+                beth_fatal("libbeth.so was not found.");
+#endif
             // エラーの通知先は DLL 全体で 1 つ。
             void (BETH_CALL *setErrorCallback)(error_callback_t) = nullptr;
             beth_map(setErrorCallback, m, "Error_SetCallback");
-            assert(setErrorCallback != nullptr);
+            if (!setErrorCallback)
+                beth_fatal("The Bethany shared library does not export Error_SetCallback.");
             setErrorCallback(&OnDllError);
         });
     }
@@ -118,13 +142,15 @@ void beth_init(void)
 #undef BETH_MAP
 }
 
-#define BETH_INIT_CHECK(f) \
+#define BETH_INIT_CHECK(name) \
     do { \
-        if (!f) \
+        if (!name##_) \
         { \
             beth_init(); \
+            if (!name##_) \
+                beth_fatal(std::string("The Bethany shared library has no function ") + #name + \
+                           ". It is probably older than the headers: use the beth.dll of the same version."); \
         } \
-        assert(f != nullptr); \
     } while (0)
 
 } // namespace
@@ -133,7 +159,7 @@ void beth_init(void)
 #define BETH_DEFINE(ret, name, params, args) \
     ret name params \
     { \
-        BETH_INIT_CHECK(name##_); \
+        BETH_INIT_CHECK(name); \
         g_lastError.set = false; \
         return Checked<ret>::Call([&]() { return name##_ args; }); \
     }

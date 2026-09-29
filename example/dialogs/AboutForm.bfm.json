@@ -6,7 +6,9 @@
     "properties": {
       "Width": 360,
       "Height": 150,
-      "Caption": "About Bethany Notepad"
+      "Caption": "About Bethany Notepad",
+      "BorderStyle": "bsDialog",
+      "Position": "poMainFormCenter"
     },
     "controls": [
       {
@@ -18,7 +20,12 @@
           "Width": 150,
           "Height": 21,
           "Caption": "Bethany Notepad",
-          "Font": { "Size": 12, "Style": ["fsBold"] }
+          "Font": {
+            "Size": 12,
+            "Style": [
+              "fsBold"
+            ]
+          }
         }
       },
       {
@@ -41,9 +48,14 @@
           "Width": 80,
           "Height": 25,
           "Caption": "OK",
-          "Anchors": ["akRight", "akBottom"]
-        },
-        "events": { "OnClick": "OkButtonClick" }
+          "Anchors": [
+            "akRight",
+            "akBottom"
+          ],
+          "ModalResult": "mrOk",
+          "Default": true,
+          "Cancel": true
+        }
       }
     ]
   }

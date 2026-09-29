@@ -1029,6 +1029,34 @@
     X(int_t,         TControlBorderSpacing_GetAround,       (obj_t o),                                                     (o)) \
     X(void,          TControlBorderSpacing_SetAround,       (obj_t o, int_t v),                                            (o, v)) \
     X(int_t,         TControlBorderSpacing_GetInnerBorder,  (obj_t o),                                                     (o)) \
-    X(void,          TControlBorderSpacing_SetInnerBorder,  (obj_t o, int_t v),                                            (o, v))
+    X(void,          TControlBorderSpacing_SetInnerBorder,  (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomForm_GetModalResult,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomForm_SetModalResult,            (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomForm_GetBorderStyle,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomForm_SetBorderStyle,            (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomForm_GetPosition,               (obj_t o),                                                     (o)) \
+    X(void,          TCustomForm_SetPosition,               (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomForm_GetWindowState,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomForm_SetWindowState,            (obj_t o, int_t v),                                            (o, v)) \
+    X(uint_t,        TCustomForm_GetBorderIcons,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomForm_SetBorderIcons,            (obj_t o, uint_t v),                                           (o, v)) \
+    X(int_t,         TCustomForm_GetFormStyle,              (obj_t o),                                                     (o)) \
+    X(void,          TCustomForm_SetFormStyle,              (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TCustomForm_GetKeyPreview,             (obj_t o),                                                     (o)) \
+    X(void,          TCustomForm_SetKeyPreview,             (obj_t o, bool_t v),                                           (o, v)) \
+    X(obj_t,         TCustomForm_GetActiveControl,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomForm_SetActiveControl,          (obj_t o, obj_t v),                                            (o, v)) \
+    X(int_t,         TCustomButton_GetModalResult,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomButton_SetModalResult,          (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TCustomButton_GetDefault,              (obj_t o),                                                     (o)) \
+    X(void,          TCustomButton_SetDefault,              (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomButton_GetCancel,               (obj_t o),                                                     (o)) \
+    X(void,          TCustomButton_SetCancel,               (obj_t o, bool_t v),                                           (o, v)) \
+    X(void,          Dialogs_ShowMessage,                   (str_t m),                                                     (m)) \
+    X(int_t,         Dialogs_MessageDlg,                    (str_t c, str_t m, int_t t, uint_t b, int_t h),                (c, m, t, b, h)) \
+    X(str_t,         Dialogs_InputBox,                      (str_t c, str_t p, str_t d),                                   (c, p, d)) \
+    X(str_t,         Dialogs_PasswordBox,                   (str_t c, str_t p),                                            (c, p)) \
+    X(str_t,         Dialogs_InputQuery,                    (str_t c, str_t p, str_t v, bool_t* ok),                       (c, p, v, ok)) \
+    X(int_t,         TApplication_MessageBox,               (obj_t o, str_t t, str_t c, int_t f),                          (o, t, c, f))
 
 #endif

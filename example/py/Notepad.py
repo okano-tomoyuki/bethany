@@ -4,8 +4,7 @@ from beth import *
 # <bethany-designer:begin id="imports">
 import MainForm
 import dialogs.AboutForm
-import dialogs.ConfirmSaveForm
-# <bethany-designer:end id="imports" hash="2146414d">
+# <bethany-designer:end id="imports" hash="62157782">
 
 
 def main():
@@ -13,8 +12,7 @@ def main():
     # <bethany-designer:begin id="beth_CreateForms">
     MainForm.MainForm = Application.CreateForm(MainForm.TMainForm)
     dialogs.AboutForm.AboutForm = Application.CreateForm(dialogs.AboutForm.TAboutForm)
-    dialogs.ConfirmSaveForm.ConfirmSaveForm = Application.CreateForm(dialogs.ConfirmSaveForm.TConfirmSaveForm)
-    # <bethany-designer:end id="beth_CreateForms" hash="9891bee5">
+    # <bethany-designer:end id="beth_CreateForms" hash="40a1ce77">
     Application.Run()
 
 

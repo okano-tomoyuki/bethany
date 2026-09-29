@@ -53,7 +53,7 @@ CMake 3.25 以降なら、`FetchContent_Declare` に `SYSTEM` を付けると、
 |---|---|---|
 | `BETH_STATIC_RUNTIME` | ON | MinGW のランタイム(libgcc・libstdc++・winpthread)を exe に静的にリンクする |
 | `BETH_EMBED_MANIFEST` | ON | exe に Common-Controls 6.0 の manifest を埋め込む(自前の manifest を持つ exe では OFF) |
-| `BETH_DLL` | ソースのフォルダの `beth.dll` | `beth_deploy()` が写す DLL |
+| `BETH_DLL` | (空: Bethany のソースのフォルダの `beth.dll`) | `beth_deploy()` が写す DLL |
 
 ## Python で使う
 

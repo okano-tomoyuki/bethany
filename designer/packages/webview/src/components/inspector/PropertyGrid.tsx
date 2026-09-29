@@ -366,7 +366,9 @@ function Editor({
     case 'enum':
       return select(catalog.enums[type.enum] ?? []);
     case 'alias':
-      if (type.alias === 'TCursor') return select(Object.keys(catalog.constants.TCursor ?? {}));
+      // 定数を持つ別名(TCursor・TModalResult 等)は定数の選択肢。TColor・TShortCut は下の専用の入力
+      if (type.alias !== 'TColor' && type.alias !== 'TShortCut')
+        return select(Object.keys(catalog.constants[type.alias] ?? {}));
       if (type.alias === 'TColor')
         return (
           <span className="prop-color">
@@ -389,25 +391,24 @@ function Editor({
             </datalist>
           </span>
         );
-      if (type.alias === 'TShortCut')
-        return (
-          <>
-            <TextEditor
-              type={type}
-              value={value}
-              mixed={mixed}
-              fallback={fallback}
-              list="beth-shortcuts"
-              commit={commit}
-            />
-            <datalist id="beth-shortcuts">
-              {SHORTCUTS.map((s) => (
-                <option key={s} value={s} />
-              ))}
-            </datalist>
-          </>
-        );
-      break;
+      // TShortCut
+      return (
+        <>
+          <TextEditor
+            type={type}
+            value={value}
+            mixed={mixed}
+            fallback={fallback}
+            list="beth-shortcuts"
+            commit={commit}
+          />
+          <datalist id="beth-shortcuts">
+            {SHORTCUTS.map((s) => (
+              <option key={s} value={s} />
+            ))}
+          </datalist>
+        </>
+      );
     case 'ref': {
       const candidates = [...referenceCandidates(document, type.class)];
       return select(['', ...candidates], (v) => (v === '' ? l10n.t('(none)') : v));

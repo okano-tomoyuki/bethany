@@ -4,7 +4,6 @@ from beth import *
 
 # ほかのフォームは import してモジュールの変数で使う(from ... import ... と書かない。README の Using other forms)
 import dialogs.AboutForm
-import dialogs.ConfirmSaveForm
 
 
 class TMainForm(TForm):
@@ -207,12 +206,11 @@ class TMainForm(TForm):
         """変更を保存するか聞く。続けてよければ True(保存した・保存しない)、取りやめなら False"""
         if not self.Modified:
             return True
-        confirm = dialogs.ConfirmSaveForm.ConfirmSaveForm
-        confirm.MessageLabel.Caption = "Do you want to save the changes to " + self.DisplayName() + "?"
-        confirm.ShowModal()
-        if confirm.Choice == dialogs.ConfirmSaveForm.SAVE:
+        answer = MessageDlg("Bethany Notepad", "Do you want to save the changes to " + self.DisplayName() + "?",
+                            mtConfirmation, mbYesNoCancel)
+        if answer == mrYes:
             return self.Save()
-        return confirm.Choice == dialogs.ConfirmSaveForm.DONT_SAVE
+        return answer == mrNo  # mrCancel(× で閉じたときも)なら取りやめ
 
 
 # <bethany-designer:begin id="beth_FormVariable">

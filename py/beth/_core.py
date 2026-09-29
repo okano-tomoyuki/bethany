@@ -734,6 +734,11 @@ class TApplication:
     def Initialize(self):
         """LCL 側は DLL の読み込み時に初期化済みのため何もしない(C++Builder のコードとの互換のために置く)。"""
 
+    def MessageBox(self, Text, Caption, Flags=0):
+        """Windows のメッセージボックス(LCL の TApplication.MessageBox)。Flags は MB_…(MB_YESNO | MB_ICONQUESTION 等)、
+        戻り値は ID…(IDYES 等)。docs/adr/0041。"""
+        return lib.TApplication_MessageBox(self._handle, _enc(Text), _enc(Caption), int(Flags))
+
     def CreateForm(self, FormClass):
         """C++Builder の Application->CreateForm(__classid(TForm1), &Form1) に相当する: Form1 = Application.CreateForm(TForm1)。
         FormClass は TForm の派生で、(AOwner) を受け取って TForm.__init__(AOwner) を呼ぶこと。生成したフォームを返す。"""
@@ -761,6 +766,71 @@ def _shutdown():
         lib.TComponent_DestroyComponents(app._handle)
     lib.FreeNotify_SetCallback(None, None)
     lib.ItemFree_SetCallback(None, None)
+
+
+# ---------------- メッセージのダイアログ(docs/adr/0041。LCL の Dialogs ユニットの関数) ----------------
+
+# Application.MessageBox の Flags と戻り値(Windows の値)。
+MB_OK = 0x00
+MB_OKCANCEL = 0x01
+MB_ABORTRETRYIGNORE = 0x02
+MB_YESNOCANCEL = 0x03
+MB_YESNO = 0x04
+MB_RETRYCANCEL = 0x05
+MB_ICONERROR = 0x10
+MB_ICONQUESTION = 0x20
+MB_ICONWARNING = 0x30
+MB_ICONINFORMATION = 0x40
+MB_DEFBUTTON1 = 0x000
+MB_DEFBUTTON2 = 0x100
+MB_DEFBUTTON3 = 0x200
+IDOK = 1
+IDCANCEL = 2
+IDABORT = 3
+IDRETRY = 4
+IDIGNORE = 5
+IDYES = 6
+IDNO = 7
+
+
+def ShowMessage(Msg):
+    """メッセージと OK のボタンだけのダイアログ。"""
+    lib.Dialogs_ShowMessage(_enc(Msg))
+
+
+def MessageDlg(*args):
+    """ボタンを選ぶダイアログ。押したボタンの ModalResult(mbYes なら mrYes)を返す。
+    MessageDlg(Msg, DlgType, Buttons, HelpCtx=0) か、題名を付ける MessageDlg(Caption, Msg, DlgType, Buttons, HelpCtx=0)。
+    Buttons は TMsgDlgBtn の集まり({mbYes, mbNo} や定数の mbYesNo)。"""
+    if len(args) >= 2 and isinstance(args[1], str):
+        caption, msg, dlg_type, buttons, *rest = args
+    else:
+        caption = ""
+        msg, dlg_type, buttons, *rest = args
+    help_ctx = rest[0] if rest else 0
+    bits = sum(1 << int(b) for b in set(buttons))
+    return lib.Dialogs_MessageDlg(_enc(caption), _enc(msg), int(dlg_type), bits, int(help_ctx))
+
+
+def InputBox(ACaption, APrompt, ADefault):
+    """1 行の文字列を入力するダイアログ。取りやめたら ADefault を返す。"""
+    return _dec(lib.Dialogs_InputBox(_enc(ACaption), _enc(APrompt), _enc(ADefault)))
+
+
+def PasswordBox(ACaption, APrompt):
+    """入力した文字を隠すダイアログ。取りやめたら空文字列を返す。"""
+    return _dec(lib.Dialogs_PasswordBox(_enc(ACaption), _enc(APrompt)))
+
+
+def InputQuery(ACaption, APrompt, Value):
+    """1 行の文字列を入力するダイアログ。Value は Ref(C++ の std::string&)で、OK なら Value.value を入力した文字列にして True、
+    取りやめたら Value.value のままで False を返す。"""
+    ok = ctypes.c_int(0)
+    result = _dec(lib.Dialogs_InputQuery(_enc(ACaption), _enc(APrompt), _enc(Value.value or ""), ctypes.byref(ok)))
+    if not ok.value:
+        return False
+    Value.value = result
+    return True
 
 
 def ShortCut(Key, Shift):

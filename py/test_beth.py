@@ -1948,6 +1948,43 @@ def main():
     quitButton.Top = 320
     quitButton.OnClick = lambda Sender: Application.Terminate()
 
+    # メッセージのダイアログと、ボタンの ModalResult で閉じるモーダルのフォーム(docs/adr/0041)。
+    def dialogs_click(Sender):
+        answer = MessageDlg("Save the changes?", mtConfirmation, mbYesNoCancel)
+        pr(f"MessageDlg = {answer} (mrYes={mrYes}, mrNo={mrNo}, mrCancel={mrCancel})")
+        name = Ref("Bethany")
+        ok = InputQuery("InputQuery", "Name:", name)
+        pr(f"InputQuery = {'true' if ok else 'false'}, Value = {name.value}")
+
+        # Enter で OK(Default)、Esc で Cancel(Cancel)。押したボタンの ModalResult が ShowModal() の戻り値になる。
+        dialog = TForm(Form1)
+        dialog.Caption = "ModalResult"
+        dialog.BorderStyle = bsDialog
+        dialog.Position = poMainFormCenter
+        dialog.Width = 240
+        dialog.Height = 90
+        ok_button = TButton(dialog)
+        ok_button.Parent = dialog
+        ok_button.Caption = "OK"
+        ok_button.Left, ok_button.Top, ok_button.Width, ok_button.Height = 40, 30, 75, 25
+        ok_button.ModalResult = mrOk
+        ok_button.Default = True
+        cancel_button = TButton(dialog)
+        cancel_button.Parent = dialog
+        cancel_button.Caption = "Cancel"
+        cancel_button.Left, cancel_button.Top, cancel_button.Width, cancel_button.Height = 125, 30, 75, 25
+        cancel_button.ModalResult = mrCancel
+        cancel_button.Cancel = True
+        pr(f"ShowModal = {dialog.ShowModal()} (mrOk={mrOk}, mrCancel={mrCancel})")
+        dialog.Release()
+
+    dialogsButton = TButton(Form1)
+    dialogsButton.Parent = Form1
+    dialogsButton.Caption = "Dialogs..."
+    dialogsButton.Left = 110
+    dialogsButton.Top = 320
+    dialogsButton.OnClick = dialogs_click
+
     # Free() で個別に破棄すると、ラッパーも破棄済みになる(触ると ReferenceError)。
     tempLabel = TTracedLabel(Form1)
     tempLabel.Parent = Form1

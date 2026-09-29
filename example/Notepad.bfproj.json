@@ -9,7 +9,9 @@
       "sourceDir": "cpp",
       "overrides": [
         {
-          "forms": ["dialogs"],
+          "forms": [
+            "dialogs"
+          ],
           "namespace": "notepad::dialogs"
         }
       ]
@@ -22,7 +24,6 @@
   "mainForm": "MainForm.bfm.json",
   "forms": [
     "MainForm.bfm.json",
-    "dialogs/AboutForm.bfm.json",
-    "dialogs/ConfirmSaveForm.bfm.json"
+    "dialogs/AboutForm.bfm.json"
   ]
 }

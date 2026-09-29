@@ -12,10 +12,19 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 HPP = ROOT / "include" / "bethany" / "beth.hpp"
+CPP = ROOT / "src" / "beth.cpp"
 FUNCS_HEADER = ROOT / "include" / "bethany" / "internal" / "funcs.h"
 API_HEADER = ROOT / "include" / "bethany" / "internal" / "api.h"
 CORE_FILE = HERE / "beth" / "_core.py"
 OUTPUT_FILE = HERE / "beth" / "__init__.py"
+
+# Application.MessageBox の Flags と戻り値(Windows の MB_…・ID…。C++ は <windows.h> の定数を使う。beth/_core.py で定義する)。
+MESSAGE_BOX_CONSTANTS = [
+    "MB_OK", "MB_OKCANCEL", "MB_ABORTRETRYIGNORE", "MB_YESNOCANCEL", "MB_YESNO", "MB_RETRYCANCEL",
+    "MB_ICONERROR", "MB_ICONQUESTION", "MB_ICONWARNING", "MB_ICONINFORMATION",
+    "MB_DEFBUTTON1", "MB_DEFBUTTON2", "MB_DEFBUTTON3",
+    "IDOK", "IDCANCEL", "IDABORT", "IDRETRY", "IDIGNORE", "IDYES", "IDNO",
+]
 
 # 手書き(beth/_core.py)のクラスと、C++ の実装のための補助クラス(生成しない)。
 CORE_CLASSES = {"TObject", "TPersistent", "TComponent"}
@@ -160,6 +169,7 @@ class Model:
         self.events = {}       # 名前 → [引数の型](Sender を除く)
         self.event_aliases = {}
         self.classes = {}      # 名前 → (基底, 本体, コメント)
+        self.set_constants = []  # 集合の定数 [(名前, 集合の型, [要素])](mbYesNo 等。beth.cpp の定義から)
         self.class_order = []
 
 
@@ -223,6 +233,11 @@ def parse_hpp():
             target = model.flags.get(m.group(1), model.int_aliases.get(m.group(1)))
             target.append((m.group(2), cxx_value(m.group(3)), st.comments))
             continue
+    # 集合の定数(beth.hpp では extern const で宣言し、beth.cpp で const TMsgDlgButtons mbYesNo = TMsgDlgButtons() << mbYes << mbNo; と定義する)
+    cpp = CPP.read_text(encoding="utf-8")
+    for m in re.finditer(r"^const (\w+) (\w+)\s*=\s*\1\(\)((?:\s*<<\s*\w+)+);", cpp, re.M):
+        if m.group(1) in model.sets:
+            model.set_constants.append((m.group(2), m.group(1), re.findall(r"\w+", m.group(3))))
     return model
 
 
@@ -396,7 +411,9 @@ class Gen:
 
     def public_names(self):
         names = ["BethError", "Ref", "TRect", "TPoint", "TObject", "TPersistent", "TComponent",
-                 "ShortCut", "TextToShortCut", "ShortCutToText", "Application"]
+                 "ShortCut", "TextToShortCut", "ShortCutToText", "Application",
+                 "ShowMessage", "MessageDlg", "InputBox", "PasswordBox", "InputQuery"]
+        names += MESSAGE_BOX_CONSTANTS
         for e, items in self.m.enums.items():
             names.append(e)
             names += [i for i, _, _ in items]
@@ -406,6 +423,7 @@ class Gen:
         for a, items in self.m.int_aliases.items():
             names.append(a)
             names += [i for i, _, _ in items]
+        names += [n for n, _, _ in self.m.set_constants]
         names += [c for c in self.m.class_order if c not in CORE_CLASSES and c not in HELPER_CLASSES]
         lines, cur = [], "    "
         for n in names:
@@ -449,6 +467,10 @@ class Gen:
             for item, value, comments in items:
                 trailing = f"  # {' '.join(comments)}" if comments else ""
                 out.append(f"{item} = {value}{trailing}")
+            out.append("")
+        for name, set_type, items in self.m.set_constants:
+            out.append(f"{name} = frozenset({{{', '.join(items)}}})  # {set_type}")
+        if self.m.set_constants:
             out.append("")
         out.append("")
         return out
@@ -738,7 +760,12 @@ import ctypes
 import enum
 
 from ._core import (BethError, Ref, TRect, TPoint, TObject, TPersistent, TComponent,
-                   ShortCut, TextToShortCut, ShortCutToText)
+                   ShortCut, TextToShortCut, ShortCutToText,
+                   ShowMessage, MessageDlg, InputBox, PasswordBox, InputQuery,
+                   MB_OK, MB_OKCANCEL, MB_ABORTRETRYIGNORE, MB_YESNOCANCEL, MB_YESNO, MB_RETRYCANCEL,
+                   MB_ICONERROR, MB_ICONQUESTION, MB_ICONWARNING, MB_ICONINFORMATION,
+                   MB_DEFBUTTON1, MB_DEFBUTTON2, MB_DEFBUTTON3,
+                   IDOK, IDCANCEL, IDABORT, IDRETRY, IDIGNORE, IDYES, IDNO)
 from ._core import (lib, _mixins, _register, _event_types, _ItemMixin, _Prop, _Indexed, _Event,
                    _int, _float, _bool, _str, _char, _ptr, _rect_conv, _enum, _set, _comp, _existing, _item, _obj, _view,
                    _str_key, _enc, _dec, _h, _b, _rect, _point, _to_enum, _to_comp, _to_existing, _to_item, _to_obj,

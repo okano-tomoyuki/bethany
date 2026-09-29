@@ -2425,6 +2425,49 @@ int main()
     quitButton->Top = 320;
     quitButton->OnClick = [](TObject*) { Application->Terminate(); };
 
+    // メッセージのダイアログと、ボタンの ModalResult で閉じるモーダルのフォーム(docs/adr/0041)。
+    TButton* dialogsButton = new TButton(Form1);
+    dialogsButton->Parent = Form1;
+    dialogsButton->Caption = "Dialogs...";
+    dialogsButton->Left = 110;
+    dialogsButton->Top = 320;
+    dialogsButton->OnClick = [](TObject*) {
+        const TModalResult answer = MessageDlg("Save the changes?", mtConfirmation, mbYesNoCancel);
+        std::printf("MessageDlg = %d (mrYes=%d, mrNo=%d, mrCancel=%d)\n", (int)answer, (int)mrYes, (int)mrNo, (int)mrCancel);
+        std::string name = "Bethany";
+        const bool ok = InputQuery("InputQuery", "Name:", name);
+        std::printf("InputQuery = %s, Value = %s\n", ok ? "true" : "false", name.c_str());
+
+        // Enter で OK(Default)、Esc で Cancel(Cancel)。押したボタンの ModalResult が ShowModal() の戻り値になる。
+        TForm* dialog = new TForm(Form1);
+        dialog->Caption = "ModalResult";
+        dialog->BorderStyle = bsDialog;
+        dialog->Position = poMainFormCenter;
+        dialog->Width = 240;
+        dialog->Height = 90;
+        TButton* okButton = new TButton(dialog);
+        okButton->Parent = dialog;
+        okButton->Caption = "OK";
+        okButton->Left = 40;
+        okButton->Top = 30;
+        okButton->Width = 75;
+        okButton->Height = 25;
+        okButton->ModalResult = mrOk;
+        okButton->Default = true;
+        TButton* cancelButton = new TButton(dialog);
+        cancelButton->Parent = dialog;
+        cancelButton->Caption = "Cancel";
+        cancelButton->Left = 125;
+        cancelButton->Top = 30;
+        cancelButton->Width = 75;
+        cancelButton->Height = 25;
+        cancelButton->ModalResult = mrCancel;
+        cancelButton->Cancel = true;
+        std::printf("ShowModal = %d (mrOk=%d, mrCancel=%d)\n", (int)dialog->ShowModal(), (int)mrOk, (int)mrCancel);
+        std::fflush(stdout);
+        dialog->Release();
+    };
+
     // Free() で個別に破棄すると、ラッパーも破棄される。
     TTracedLabel* tempLabel = new TTracedLabel(Form1);
     tempLabel->Parent = Form1;

@@ -1727,13 +1727,47 @@ protected:
     ~TScrollBox() override = default;
 };
 
+// ---- フォームの表示・ModalResult(docs/adr/0041。値の順は LCL と同じ) ----
+
+// モーダルの結果(LCL・VCL と同じ値)。ボタンの ModalResult を設定すると、押したときにフォームが閉じて ShowModal() がその値を返す。
+// VCL と同じく、利用者が独自の値(mrOk + 100 等)も使えるよう、列挙型ではなく整数にする。
+using TModalResult = std::int32_t;
+const TModalResult mrNone     = 0;
+const TModalResult mrOk       = 1;
+const TModalResult mrCancel   = 2;
+const TModalResult mrAbort    = 3;
+const TModalResult mrRetry    = 4;
+const TModalResult mrIgnore   = 5;
+const TModalResult mrYes      = 6;
+const TModalResult mrNo       = 7;
+const TModalResult mrAll      = 8;
+const TModalResult mrNoToAll  = 9;
+const TModalResult mrYesToAll = 10;
+const TModalResult mrClose    = 11;
+
+// フォームの枠(bsDialog は大きさを変えられず、最小化・最大化のボタンが無い)。
+enum TFormBorderStyle { bsNone, bsSingle, bsSizeable, bsDialog, bsToolWindow, bsSizeToolWin };
+// 最初に表示する位置(poDesigned は Left・Top のまま。poMainFormCenter はメインフォームの中央)。
+enum TPosition
+{
+    poDesigned, poDefault, poDefaultPosOnly, poDefaultSizeOnly, poScreenCenter,
+    poDesktopCenter, poMainFormCenter, poOwnerFormCenter, poWorkAreaCenter
+};
+enum TWindowState { wsNormal, wsMinimized, wsMaximized, wsFullScreen };
+// タイトルバーのボタン。
+enum TBorderIcon { biSystemMenu, biMinimize, biMaximize, biHelp };
+using TBorderIcons = Set<TBorderIcon>;
+// fsStayOnTop は常に手前に表示する。MDI(fsMDIChild・fsMDIForm)は LCL の Win32 でも対応が限られる。
+enum TFormStyle { fsNormal, fsMDIChild, fsMDIForm, fsStayOnTop, fsSplash, fsSystemStayOnTop };
+
 class TCustomForm : public TScrollingWinControl
 {
 public:
     // LCL の TCustomForm は Show/Hide を独自に宣言している(TControl のものを隠す)。
     void Show();
     void Hide();
-    int  ShowModal();
+    // モーダルで表示し、閉じられたときの ModalResult を返す(× で閉じたときは mrCancel)。
+    TModalResult ShowModal();
     void Close();
 
     // 保留中のメッセージを処理し終えてから破棄する(破棄後はラッパーも delete される)。
@@ -1755,6 +1789,18 @@ public:
     Property<TNotifyEvent>     OnDestroy;
     // フォームのメニューバー。nullptr を代入すると外す(メニュー自体は破棄されない)。
     Property<TMainMenu*>       Menu;
+
+    // モーダルの結果。モーダルで表示中に mrNone 以外を設定すると、フォームが閉じて ShowModal() がその値を返す(docs/adr/0041)。
+    Property<TModalResult>     ModalResult;
+    Property<TFormBorderStyle> BorderStyle;
+    Property<TPosition>        Position;
+    Property<TWindowState>     WindowState;
+    Property<TBorderIcons>     BorderIcons;
+    Property<TFormStyle>       FormStyle;
+    // true なら、キーの入力を子のコントロールより先にフォームの OnKeyDown・OnKeyPress・OnKeyUp が受ける。
+    Property<bool>             KeyPreview;
+    // フォーカスを持つ(表示したときに持たせる)コントロール。
+    Property<TWinControl*>     ActiveControl;
 
 protected:
     explicit TCustomForm(ObjectHandle handle);
@@ -1789,6 +1835,23 @@ private:
     static void BETH_CALL CloseQueryTrampoline(ObjectHandle sender, internal::bool_t* canClose, void* data);
     static void BETH_CALL CloseTrampoline(ObjectHandle sender, internal::int_t* action, void* data);
     static void BETH_CALL DestroyTrampoline(ObjectHandle sender, void* data);
+
+    static TModalResult     GetModalResultImpl(TObject* owner);
+    static void             SetModalResultImpl(TObject* owner, const TModalResult& value);
+    static TFormBorderStyle GetBorderStyleImpl(TObject* owner);
+    static void             SetBorderStyleImpl(TObject* owner, const TFormBorderStyle& value);
+    static TPosition        GetPositionImpl(TObject* owner);
+    static void             SetPositionImpl(TObject* owner, const TPosition& value);
+    static TWindowState     GetWindowStateImpl(TObject* owner);
+    static void             SetWindowStateImpl(TObject* owner, const TWindowState& value);
+    static TBorderIcons     GetBorderIconsImpl(TObject* owner);
+    static void             SetBorderIconsImpl(TObject* owner, const TBorderIcons& value);
+    static TFormStyle       GetFormStyleImpl(TObject* owner);
+    static void             SetFormStyleImpl(TObject* owner, const TFormStyle& value);
+    static bool             GetKeyPreviewImpl(TObject* owner);
+    static void             SetKeyPreviewImpl(TObject* owner, const bool& value);
+    static TWinControl*     GetActiveControlImpl(TObject* owner);
+    static void             SetActiveControlImpl(TObject* owner, TWinControl* const& value);
 
     static TNotifyEvent     GetOnCreateImpl(TObject* owner);
     static void             SetOnCreateImpl(TObject* owner, const TNotifyEvent& value);
@@ -1855,12 +1918,22 @@ public:
     void ProcessMessages();
     void Terminate();
 
+    // Windows のメッセージボックス(LCL の TApplication.MessageBox)。Flags と戻り値は Windows の MB_…・ID… の値
+    // (C++ では <windows.h> の定数を使う。docs/adr/0041)。<windows.h> の MessageBox マクロ(MessageBoxA 等への置き換え)と
+    // 翻訳単位ごとに名前がずれないよう、ヘッダの中で定義する。
+    int MessageBox(const std::string& Text, const std::string& Caption, int Flags = 0)
+    {
+        return MessageBoxImpl(Text, Caption, Flags);
+    }
+
 protected:
     ~TApplication() override = default;
 
 private:
     friend TApplication* NewApplication();
     explicit TApplication(ObjectHandle handle);
+
+    int MessageBoxImpl(const std::string& Text, const std::string& Caption, int Flags);
 
     void BeginCreateForm();
     void EndCreateForm();
@@ -1877,6 +1950,34 @@ private:
 // C++Builder と同じく、アプリケーションに 1 つのグローバル変数として公開する。
 // 静的初期化の順序は規定されないため、他の翻訳単位のグローバル変数の初期化子からは使わないこと。
 extern TApplication* Application;
+
+// ---- メッセージのダイアログ(docs/adr/0041。LCL の Dialogs ユニットの関数) ----
+
+enum TMsgDlgType { mtWarning, mtError, mtInformation, mtConfirmation, mtCustom };
+enum TMsgDlgBtn
+{
+    mbYes, mbNo, mbOK, mbCancel, mbAbort, mbRetry, mbIgnore,
+    mbAll, mbNoToAll, mbYesToAll, mbHelp, mbClose
+};
+// 表示するボタン(TMsgDlgButtons() << mbYes << mbNo)。よく使う組み合わせは下の定数。
+using TMsgDlgButtons = Set<TMsgDlgBtn>;
+extern const TMsgDlgButtons mbYesNo;             // mbYes, mbNo
+extern const TMsgDlgButtons mbYesNoCancel;       // mbYes, mbNo, mbCancel
+extern const TMsgDlgButtons mbOKCancel;          // mbOK, mbCancel
+extern const TMsgDlgButtons mbAbortRetryIgnore;  // mbAbort, mbRetry, mbIgnore
+
+// メッセージと OK のボタンだけのダイアログ。
+void ShowMessage(const std::string& Msg);
+// ボタンを選ぶダイアログ。押したボタンの ModalResult(mbYes なら mrYes)を返す。題名を省くと LCL の既定の題名になる。
+TModalResult MessageDlg(const std::string& Msg, TMsgDlgType DlgType, TMsgDlgButtons Buttons, int HelpCtx = 0);
+TModalResult MessageDlg(const std::string& Caption, const std::string& Msg, TMsgDlgType DlgType,
+                        TMsgDlgButtons Buttons, int HelpCtx = 0);
+// 1 行の文字列を入力するダイアログ。取りやめたら Default を返す。
+std::string InputBox(const std::string& ACaption, const std::string& APrompt, const std::string& ADefault);
+// 入力した文字を隠すダイアログ。取りやめたら空文字列を返す。
+std::string PasswordBox(const std::string& ACaption, const std::string& APrompt);
+// 1 行の文字列を入力するダイアログ。OK なら Value を入力した文字列にして true、取りやめたら Value のままで false。
+bool InputQuery(const std::string& ACaption, const std::string& APrompt, std::string& Value);
 
 template<typename T>
 void TApplication::CreateForm(T** Reference)
@@ -2067,9 +2168,25 @@ private:
 
 class TCustomButton : public TButtonControl
 {
+public:
+    // mrNone 以外なら、押したときにフォームの ModalResult をこの値にする(モーダルのフォームが閉じる。docs/adr/0041)。
+    Property<TModalResult> ModalResult;
+    // true なら、フォームで Enter を押したときに押される(既定のボタン)。
+    Property<bool>         Default;
+    // true なら、フォームで Esc を押したときに押される(取り消しのボタン)。
+    Property<bool>         Cancel;
+
 protected:
-    explicit TCustomButton(ObjectHandle handle) : TButtonControl(handle) {}
+    explicit TCustomButton(ObjectHandle handle);
     ~TCustomButton() override = default;
+
+private:
+    static TModalResult GetModalResultImpl(TObject* owner);
+    static void         SetModalResultImpl(TObject* owner, const TModalResult& value);
+    static bool         GetDefaultImpl(TObject* owner);
+    static void         SetDefaultImpl(TObject* owner, const bool& value);
+    static bool         GetCancelImpl(TObject* owner);
+    static void         SetCancelImpl(TObject* owner, const bool& value);
 };
 
 class TButton : public TCustomButton

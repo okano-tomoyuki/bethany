@@ -46,14 +46,14 @@ published のものはデザイナーのカタログ(`designer/tools/catalog/ext
 ### Tier A — 基本的なアプリに必須(最優先)
 
 C++Builder の入門的なアプリ(ダイアログ・入力のフォーム・テキストの編集)をそのままの書き方で作れるようにするもの。
-メモ帳のサンプルで代わりの書き方が要ったものは、すべてここに入る。
+メモ帳のサンプルで代わりの書き方が要ったものは、すべてここに入る。✅ は実装済み(A1〜A4 は [ADR 0041](adr/0041-modal-result-and-message-dialogs.md)。`QuestionDlg` は未対応)。
 
 | # | 項目 | 対象 | 種類 | コスト | 備考 |
 |---|---|---|---|---|---|
-| A1 | **ModalResult** | `TCustomForm.ModalResult`・`TCustomButton.ModalResult`・`TModalResult` と `mrOk`・`mrCancel`・`mrYes`・`mrNo` 等 | P・定数 | M | ボタンの ModalResult を設定すれば、押したときに LCL がフォームを閉じて `ShowModal()` がその値を返す。`ShowModal()` は既に int を返している |
-| A2 | **メッセージのダイアログ** | `ShowMessage`・`MessageDlg`(`TMsgDlgType`・`TMsgDlgButtons`)・`QuestionDlg`・`InputBox`・`InputQuery`・`PasswordBox`・`Application->MessageBox` | 関数 | M | 新しい列挙型と集合型。戻り値は A1 の `TModalResult` |
-| A3 | **フォームの表示** | `TCustomForm` の `BorderStyle`(bsDialog 等)・`Position`(poMainFormCenter 等)・`WindowState`・`BorderIcons`・`FormStyle`(fsStayOnTop)・`KeyPreview`・`ActiveControl` | P | S〜M | 新しい列挙型・集合型。デザイナーに出す |
-| A4 | **既定のボタン** | `TCustomButton.Default`・`Cancel`(Enter・Esc で押す) | P | S | A1 と組み合わせてダイアログを作る |
+| A1 | ✅ **ModalResult** | `TCustomForm.ModalResult`・`TCustomButton.ModalResult`・`TModalResult` と `mrOk`・`mrCancel`・`mrYes`・`mrNo` 等 | P・定数 | M | ボタンの ModalResult を設定すれば、押したときに LCL がフォームを閉じて `ShowModal()` がその値を返す。`ShowModal()` は既に int を返している |
+| A2 | ✅ **メッセージのダイアログ** | `ShowMessage`・`MessageDlg`(`TMsgDlgType`・`TMsgDlgButtons`)・`QuestionDlg`・`InputBox`・`InputQuery`・`PasswordBox`・`Application->MessageBox` | 関数 | M | 新しい列挙型と集合型。戻り値は A1 の `TModalResult` |
+| A3 | ✅ **フォームの表示** | `TCustomForm` の `BorderStyle`(bsDialog 等)・`Position`(poMainFormCenter 等)・`WindowState`・`BorderIcons`・`FormStyle`(fsStayOnTop)・`KeyPreview`・`ActiveControl` | P | S〜M | 新しい列挙型・集合型。デザイナーに出す |
+| A4 | ✅ **既定のボタン** | `TCustomButton.Default`・`Cancel`(Enter・Esc で押す) | P | S | A1 と組み合わせてダイアログを作る |
 | A5 | **フォーカス** | `TWinControl.SetFocus`・`CanFocus`・`Focused`・`OnEnter`・`OnExit` | M・E | S | |
 | A6 | **表示の更新・位置** | `TControl.Invalidate`・`Repaint`・`Refresh`・`Update`・`BringToFront`・`SendToBack`・`SetBounds`・`ClientWidth`・`ClientHeight` | M・P | S | |
 | A7 | **テキストの編集** | `TCustomEdit` の `SelStart`・`SelLength`・`SelText`・`SelectAll`・`ClearSelection`・`Clear`・`CopyToClipboard`・`CutToClipboard`・`PasteFromClipboard`・`Undo`・`CanUndo`・`Modified`・`PasswordChar`・`EchoMode`・`CharCase`・`Alignment`・`TextHint`・`NumbersOnly`・`AutoSelect`・`HideSelection` | P・M | S〜M | 検索・置換(TFindDialog の OnFind で選択する)に要る |

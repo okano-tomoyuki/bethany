@@ -11243,6 +11243,311 @@ begin
   end;
 end;
 
+{ ---------------- ModalResult・メッセージのダイアログ・フォームの表示・既定のボタン(docs/adr/0041) ---------------- }
+
+function TCustomForm_GetModalResult(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomForm(Obj).ModalResult;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomForm_SetModalResult(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomForm(Obj).ModalResult := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomForm_GetBorderStyle(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomForm(Obj).BorderStyle);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomForm_SetBorderStyle(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomForm(Obj).BorderStyle := TFormBorderStyle(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomForm_GetPosition(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomForm(Obj).Position);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomForm_SetPosition(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomForm(Obj).Position := TPosition(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomForm_GetWindowState(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomForm(Obj).WindowState);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomForm_SetWindowState(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomForm(Obj).WindowState := TWindowState(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomForm_GetBorderIcons(Obj: Pointer): LongWord; BETH_CALL;
+var
+  I: TBorderIcon;
+begin
+  try
+    Result := 0;
+    for I := Low(TBorderIcon) to High(TBorderIcon) do
+      if I in TCustomForm(Obj).BorderIcons then
+        Result := Result or (LongWord(1) shl Ord(I));
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomForm_SetBorderIcons(Obj: Pointer; Value: LongWord); BETH_CALL;
+var
+  I: TBorderIcon;
+  Icons: TBorderIcons;
+begin
+  try
+    Icons := [];
+    for I := Low(TBorderIcon) to High(TBorderIcon) do
+      if (Value and (LongWord(1) shl Ord(I))) <> 0 then
+        Include(Icons, I);
+    TCustomForm(Obj).BorderIcons := Icons;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomForm_GetFormStyle(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomForm(Obj).FormStyle);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomForm_SetFormStyle(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomForm(Obj).FormStyle := TFormStyle(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomForm_GetKeyPreview(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomForm(Obj).KeyPreview;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomForm_SetKeyPreview(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomForm(Obj).KeyPreview := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomForm_GetActiveControl(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TCustomForm(Obj).ActiveControl);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TCustomForm_SetActiveControl(Obj: Pointer; Value: Pointer); BETH_CALL;
+begin
+  try
+    TCustomForm(Obj).ActiveControl := TWinControl(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomButton_GetModalResult(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomButton(Obj).ModalResult;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomButton_SetModalResult(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomButton(Obj).ModalResult := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomButton_GetDefault(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomButton(Obj).Default;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomButton_SetDefault(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomButton(Obj).Default := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomButton_GetCancel(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomButton(Obj).Cancel;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomButton_SetCancel(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomButton(Obj).Cancel := Value;
+  except
+    ReportException;
+  end;
+end;
+
+{ メッセージのダイアログ。Buttons は TMsgDlgBtn の順のビット集合。Caption が空なら題名を付けない形(LCL の既定の題名)を使う。 }
+
+function IntToMsgDlgButtons(V: LongWord): TMsgDlgButtons;
+var
+  B: TMsgDlgBtn;
+begin
+  Result := [];
+  for B := Low(TMsgDlgBtn) to High(TMsgDlgBtn) do
+    if (V and (LongWord(1) shl Ord(B))) <> 0 then
+      Include(Result, B);
+end;
+
+procedure Dialogs_ShowMessage(Msg: PChar); BETH_CALL;
+begin
+  try
+    ShowMessage(Msg);
+  except
+    ReportException;
+  end;
+end;
+
+function Dialogs_MessageDlg(Caption, Msg: PChar; DlgType: Integer; Buttons: LongWord;
+  HelpCtx: Integer): Integer; BETH_CALL;
+begin
+  try
+    if (Caption = nil) or (Caption^ = #0) then
+      Result := MessageDlg(Msg, TMsgDlgType(DlgType), IntToMsgDlgButtons(Buttons), HelpCtx)
+    else
+      Result := MessageDlg(Caption, Msg, TMsgDlgType(DlgType), IntToMsgDlgButtons(Buttons), HelpCtx);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function Dialogs_InputBox(Caption, Prompt, DefaultValue: PChar): PChar; BETH_CALL;
+begin
+  try
+    Result := ReturnStr(InputBox(Caption, Prompt, DefaultValue));
+  except
+    Result := '';
+    ReportException;
+  end;
+end;
+
+function Dialogs_PasswordBox(Caption, Prompt: PChar): PChar; BETH_CALL;
+begin
+  try
+    Result := ReturnStr(PasswordBox(Caption, Prompt));
+  except
+    Result := '';
+    ReportException;
+  end;
+end;
+
+{ InputQuery。OK なら Ok^ を真にし、入力された文字列を返す(取りやめなら Value のまま)。 }
+function Dialogs_InputQuery(Caption, Prompt, Value: PChar; Ok: PLongBool): PChar; BETH_CALL;
+var
+  S: AnsiString;
+begin
+  try
+    S := Value;
+    Ok^ := InputQuery(Caption, Prompt, S);
+    Result := ReturnStr(S);
+  except
+    Ok^ := False;
+    Result := '';
+    ReportException;
+  end;
+end;
+
+{ Flags と戻り値は Windows の MB_…・ID… の値(LCL の TApplication.MessageBox と同じ)。 }
+function TApplication_MessageBox(Obj: Pointer; Text, Caption: PChar; Flags: Integer): Integer; BETH_CALL;
+begin
+  try
+    Result := TApplication(Obj).MessageBox(Text, Caption, Flags);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
 exports
   FreeNotify_SetCallback,
   Error_SetCallback,
@@ -12315,7 +12620,36 @@ exports
   TControlBorderSpacing_GetAround,
   TControlBorderSpacing_SetAround,
   TControlBorderSpacing_GetInnerBorder,
-  TControlBorderSpacing_SetInnerBorder;
+  TControlBorderSpacing_SetInnerBorder,
+
+  TCustomForm_GetModalResult,
+  TCustomForm_SetModalResult,
+  TCustomForm_GetBorderStyle,
+  TCustomForm_SetBorderStyle,
+  TCustomForm_GetPosition,
+  TCustomForm_SetPosition,
+  TCustomForm_GetWindowState,
+  TCustomForm_SetWindowState,
+  TCustomForm_GetBorderIcons,
+  TCustomForm_SetBorderIcons,
+  TCustomForm_GetFormStyle,
+  TCustomForm_SetFormStyle,
+  TCustomForm_GetKeyPreview,
+  TCustomForm_SetKeyPreview,
+  TCustomForm_GetActiveControl,
+  TCustomForm_SetActiveControl,
+  TCustomButton_GetModalResult,
+  TCustomButton_SetModalResult,
+  TCustomButton_GetDefault,
+  TCustomButton_SetDefault,
+  TCustomButton_GetCancel,
+  TCustomButton_SetCancel,
+  Dialogs_ShowMessage,
+  Dialogs_MessageDlg,
+  Dialogs_InputBox,
+  Dialogs_PasswordBox,
+  Dialogs_InputQuery,
+  TApplication_MessageBox;
 
 begin
   RequireDerivedFormResource := False;

@@ -2,7 +2,6 @@
 #include "MainForm.hpp"
 // <bethany-designer:end id="beth_SourceBegin" hash="209f96a1">
 #include "dialogs/AboutForm.hpp"
-#include "dialogs/ConfirmSaveForm.hpp"
 
 // <bethany-designer:begin id="beth_NamespaceBegin">
 using namespace beth;
@@ -223,15 +222,14 @@ bool TMainForm::ConfirmDiscard()
 {
     if (!Modified)
         return true;
-    dialogs::ConfirmSaveForm->MessageLabel->Caption = "Do you want to save the changes to " + DisplayName() + "?";
-    dialogs::ConfirmSaveForm->ShowModal();
-    switch (dialogs::ConfirmSaveForm->Choice)
+    switch (MessageDlg("Bethany Notepad", "Do you want to save the changes to " + DisplayName() + "?",
+                       mtConfirmation, mbYesNoCancel))
     {
-    case dialogs::TConfirmSaveForm::Save:
+    case mrYes:
         return Save();
-    case dialogs::TConfirmSaveForm::DontSave:
+    case mrNo:
         return true;
-    default:
+    default:  // mrCancel(× で閉じたときも)
         return false;
     }
 }

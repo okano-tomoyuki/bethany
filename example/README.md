@@ -5,8 +5,12 @@ The same application is written in C++ (`cpp/`) and in Python (`py/`) from the s
 
 - A main form with a menu (_File_, _Format_, _Help_), a memo and a status bar
 - Open, Save and Font dialogs (`TOpenDialog`, `TSaveDialog`, `TFontDialog`)
-- An _About_ form and a "save the changes?" form shown with `ShowModal()`, used from the main form through their form variables
-- Asking to save the changes when closing the window (`OnCloseQuery`)
+- An _About_ form shown with `ShowModal()` from the main form through its form variable, closed by its OK button (`ModalResult = mrOk`,
+  `Default`, `Cancel`)
+- Asking to save the changes with `MessageDlg` when closing the window (`OnCloseQuery`) or opening another file
+
+This example uses Bethany 0.3.0 or later (`ModalResult`, `MessageDlg`). Until 0.3.0 is released, build it with the Bethany in
+this repository (below).
 
 ## Files
 
@@ -16,16 +20,15 @@ example/
   MainForm.bfm.json            forms (open them in VS Code with the Bethany Designer)
   dialogs/
     AboutForm.bfm.json
-    ConfirmSaveForm.bfm.json
   CMakeLists.txt               builds the C++ version
   cpp/                         generated C++ code and the event handlers written by hand
     Notepad.cpp                startup code (main)
     MainForm.hpp / .cpp
-    dialogs/AboutForm.hpp / .cpp, ConfirmSaveForm.hpp / .cpp
+    dialogs/AboutForm.hpp / .cpp
   py/                          generated Python code and the event handlers written by hand
     Notepad.py                 startup code
     MainForm.py
-    dialogs/AboutForm.py, ConfirmSaveForm.py
+    dialogs/AboutForm.py
 ```
 
 The code generation settings in `Notepad.bfproj.json` put the C++ code in `cpp/` and the Python code in `py/`

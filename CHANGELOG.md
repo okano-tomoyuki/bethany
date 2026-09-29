@@ -4,6 +4,27 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
 バージョンは [Semantic Versioning](https://semver.org/lang/ja/) に従う(0.x の間は、マイナーバージョンが上がると互換が無い変更を含みうる)。
 デザイナー(VS Code 拡張)の変更は [designer/packages/extension/CHANGELOG.md](designer/packages/extension/CHANGELOG.md) に書く。
 
+## [Unreleased]
+
+### 追加
+
+- `ModalResult`(`TCustomForm`・`TCustomButton`)と `TModalResult`・`mrOk` 等の定数。ボタンの `ModalResult` で、押したときにモーダルのフォームが閉じ、
+  `ShowModal()` がその値を返す([ADR 0041](docs/adr/0041-modal-result-and-message-dialogs.md))
+- メッセージのダイアログ `ShowMessage`・`MessageDlg`(`TMsgDlgType`・`TMsgDlgButtons`、`mbYesNo` 等)・`InputBox`・`InputQuery`・`PasswordBox` と、
+  `Application->MessageBox`
+- フォームの `BorderStyle`・`Position`・`WindowState`・`BorderIcons`・`FormStyle`・`KeyPreview`・`ActiveControl`、ボタンの `Default`・`Cancel`
+
+### 変更
+
+- `ShowModal()` の戻り値の型を `TModalResult`(中身は同じ int)にした
+
+### 修正
+
+- FetchContent の取り込み先を変えた(`FETCHCONTENT_SOURCE_DIR_BETH` 等)後も、以前の取り込み先の `beth.dll` を exe の隣に写し続けていた。
+  `BETH_DLL` の既定の値をキャッシュに保存しないようにし、以前の版が保存した値(別の Bethany のソースの DLL)は捨てる
+- `beth.dll` が見つからない・`beth.dll` に関数が無い(ヘッダより古い)ときに、assert(Release のビルドではヌルポインタの呼び出し)で落ちていた。
+  理由を標準エラー出力とメッセージボックスで知らせて終了する
+
 ## [0.2.0] - 2026-09-29
 
 Python のパッケージに変更は無い(バージョンは C++ のライブラリと合わせる)。

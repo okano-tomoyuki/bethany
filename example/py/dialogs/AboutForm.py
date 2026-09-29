@@ -23,6 +23,8 @@ class TAboutForm(TForm):
         self.Width = 360
         self.Height = 150
         self.Caption = "About Bethany Notepad"
+        self.BorderStyle = bsDialog
+        self.Position = poMainFormCenter
 
         self.TitleLabel.Parent = self
         self.TitleLabel.Left = 16
@@ -46,14 +48,13 @@ class TAboutForm(TForm):
         self.OkButton.Width = 80
         self.OkButton.Height = 25
         self.OkButton.Caption = "OK"
+        self.OkButton.ModalResult = mrOk
+        self.OkButton.Default = True
+        self.OkButton.Cancel = True
         self.OkButton.Anchors = {akRight, akBottom}
-        self.OkButton.OnClick = self.OkButtonClick
-    # <bethany-designer:end id="beth_CreateComponents" hash="473d8a45">
+    # <bethany-designer:end id="beth_CreateComponents" hash="52767e88">
 
     # <bethany-designer:handler-stubs>
-
-    def OkButtonClick(self, Sender):
-        self.Close()
 
 
 # <bethany-designer:begin id="beth_FormVariable">

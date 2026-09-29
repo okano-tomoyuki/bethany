@@ -5,8 +5,7 @@
 // <bethany-designer:begin id="includes">
 #include "MainForm.hpp"
 #include "dialogs/AboutForm.hpp"
-#include "dialogs/ConfirmSaveForm.hpp"
-// <bethany-designer:end id="includes" hash="7da80395">
+// <bethany-designer:end id="includes" hash="b09008e3">
 
 using namespace beth;
 
@@ -16,8 +15,7 @@ int main()
     // <bethany-designer:begin id="beth_CreateForms">
     Application->CreateForm(&notepad::MainForm);
     Application->CreateForm(&notepad::dialogs::AboutForm);
-    Application->CreateForm(&notepad::dialogs::ConfirmSaveForm);
-    // <bethany-designer:end id="beth_CreateForms" hash="e4abdefc">
+    // <bethany-designer:end id="beth_CreateForms" hash="0144e38a">
     Application->Run();
     return 0;
 }

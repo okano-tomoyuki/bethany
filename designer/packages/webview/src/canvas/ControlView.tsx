@@ -144,7 +144,12 @@ function Body({
   switch (node.class) {
     case 'TButton':
     case 'TBitBtn':
-      return <div className="look-button">{caption}</div>;
+      // 既定のボタン(Default。Enter で押される)は、Windows 11 と同じく強調色の枠で描く
+      return (
+        <div className={flag(location, 'Default') ? 'look-button default' : 'look-button'}>
+          {caption}
+        </div>
+      );
     case 'TToggleBox':
       return (
         <div className={flag(location, 'Checked') ? 'look-button down' : 'look-button'}>

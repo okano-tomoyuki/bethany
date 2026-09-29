@@ -724,6 +724,10 @@ input[aria-invalid='true'] {
   background: #e0e0e0;
 }
 
+.look-button.default {
+  border: 2px solid #0067c0;
+}
+
 .look-button.flat {
   border-color: transparent;
   background: transparent;

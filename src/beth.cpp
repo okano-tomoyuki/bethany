@@ -804,7 +804,7 @@ void TUpDown::SetAssociateImpl(TObject* owner, TWinControl* const& value)
 
 void TCustomForm::Show()      { internal::TCustomForm_Show(handle_); }
 void TCustomForm::Hide()      { internal::TCustomForm_Hide(handle_); }
-int  TCustomForm::ShowModal() { return internal::TCustomForm_ShowModal(handle_); }
+TModalResult TCustomForm::ShowModal() { return internal::TCustomForm_ShowModal(handle_); }
 void TCustomForm::Close()     { internal::TCustomForm_Close(handle_); }
 void TCustomForm::Release()   { internal::TCustomForm_Release(handle_); }
 
@@ -819,6 +819,14 @@ TCustomForm::TCustomForm(ObjectHandle handle)
     , OnClose(this, &TCustomForm::GetOnCloseImpl, &TCustomForm::SetOnCloseImpl)
     , OnDestroy(this, &TCustomForm::GetOnDestroyImpl, &TCustomForm::SetOnDestroyImpl)
     , Menu(this, &TCustomForm::GetMenuImpl, &TCustomForm::SetMenuImpl)
+    , ModalResult(this, &TCustomForm::GetModalResultImpl, &TCustomForm::SetModalResultImpl)
+    , BorderStyle(this, &TCustomForm::GetBorderStyleImpl, &TCustomForm::SetBorderStyleImpl)
+    , Position(this, &TCustomForm::GetPositionImpl, &TCustomForm::SetPositionImpl)
+    , WindowState(this, &TCustomForm::GetWindowStateImpl, &TCustomForm::SetWindowStateImpl)
+    , BorderIcons(this, &TCustomForm::GetBorderIconsImpl, &TCustomForm::SetBorderIconsImpl)
+    , FormStyle(this, &TCustomForm::GetFormStyleImpl, &TCustomForm::SetFormStyleImpl)
+    , KeyPreview(this, &TCustomForm::GetKeyPreviewImpl, &TCustomForm::SetKeyPreviewImpl)
+    , ActiveControl(this, &TCustomForm::GetActiveControlImpl, &TCustomForm::SetActiveControlImpl)
 {
     // OnShow のブリッジは常に登録する。new で直接生成したフォームの OnCreate を、最初の表示の直前に呼ぶため。
     internal::TCustomForm_SetOnShow(handle_, &TCustomForm::ShowTrampoline, nullptr);
@@ -956,6 +964,71 @@ void TCustomForm::SetOnDestroyImpl(TObject* owner, const TNotifyEvent& value)
                  &internal::TCustomForm_SetOnDestroy, &TCustomForm::DestroyTrampoline);
 }
 
+TModalResult TCustomForm::GetModalResultImpl(TObject* owner)
+{
+    return internal::TCustomForm_GetModalResult(owner->Handle());
+}
+void TCustomForm::SetModalResultImpl(TObject* owner, const TModalResult& value)
+{
+    internal::TCustomForm_SetModalResult(owner->Handle(), value);
+}
+TFormBorderStyle TCustomForm::GetBorderStyleImpl(TObject* owner)
+{
+    return static_cast<TFormBorderStyle>(internal::TCustomForm_GetBorderStyle(owner->Handle()));
+}
+void TCustomForm::SetBorderStyleImpl(TObject* owner, const TFormBorderStyle& value)
+{
+    internal::TCustomForm_SetBorderStyle(owner->Handle(), value);
+}
+TPosition TCustomForm::GetPositionImpl(TObject* owner)
+{
+    return static_cast<TPosition>(internal::TCustomForm_GetPosition(owner->Handle()));
+}
+void TCustomForm::SetPositionImpl(TObject* owner, const TPosition& value)
+{
+    internal::TCustomForm_SetPosition(owner->Handle(), value);
+}
+TWindowState TCustomForm::GetWindowStateImpl(TObject* owner)
+{
+    return static_cast<TWindowState>(internal::TCustomForm_GetWindowState(owner->Handle()));
+}
+void TCustomForm::SetWindowStateImpl(TObject* owner, const TWindowState& value)
+{
+    internal::TCustomForm_SetWindowState(owner->Handle(), value);
+}
+TBorderIcons TCustomForm::GetBorderIconsImpl(TObject* owner)
+{
+    return TBorderIcons::FromInt(internal::TCustomForm_GetBorderIcons(owner->Handle()));
+}
+void TCustomForm::SetBorderIconsImpl(TObject* owner, const TBorderIcons& value)
+{
+    internal::TCustomForm_SetBorderIcons(owner->Handle(), value.ToInt());
+}
+TFormStyle TCustomForm::GetFormStyleImpl(TObject* owner)
+{
+    return static_cast<TFormStyle>(internal::TCustomForm_GetFormStyle(owner->Handle()));
+}
+void TCustomForm::SetFormStyleImpl(TObject* owner, const TFormStyle& value)
+{
+    internal::TCustomForm_SetFormStyle(owner->Handle(), value);
+}
+bool TCustomForm::GetKeyPreviewImpl(TObject* owner)
+{
+    return internal::TCustomForm_GetKeyPreview(owner->Handle()) != 0;
+}
+void TCustomForm::SetKeyPreviewImpl(TObject* owner, const bool& value)
+{
+    internal::TCustomForm_SetKeyPreview(owner->Handle(), value ? 1 : 0);
+}
+TWinControl* TCustomForm::GetActiveControlImpl(TObject* owner)
+{
+    return dynamic_cast<TWinControl*>(FromHandle(internal::TCustomForm_GetActiveControl(owner->Handle())));
+}
+void TCustomForm::SetActiveControlImpl(TObject* owner, TWinControl* const& value)
+{
+    internal::TCustomForm_SetActiveControl(owner->Handle(), value ? value->Handle() : nullptr);
+}
+
 TMainMenu* TCustomForm::GetMenuImpl(TObject* owner)
 {
     return static_cast<TMainMenu*>(FromHandle(internal::TCustomForm_GetMenu(owner->Handle())));
@@ -1042,6 +1115,54 @@ void TApplication::EndCreateForm()
 void TApplication::Run()             { internal::TApplication_Run(handle_); }
 void TApplication::ProcessMessages() { internal::TApplication_ProcessMessages(handle_); }
 void TApplication::Terminate()       { internal::TApplication_Terminate(handle_); }
+
+int TApplication::MessageBoxImpl(const std::string& Text, const std::string& Caption, int Flags)
+{
+    return internal::TApplication_MessageBox(handle_, Text.c_str(), Caption.c_str(), Flags);
+}
+
+// ---- メッセージのダイアログ(docs/adr/0041) ----
+
+const TMsgDlgButtons mbYesNo            = TMsgDlgButtons() << mbYes << mbNo;
+const TMsgDlgButtons mbYesNoCancel      = TMsgDlgButtons() << mbYes << mbNo << mbCancel;
+const TMsgDlgButtons mbOKCancel         = TMsgDlgButtons() << mbOK << mbCancel;
+const TMsgDlgButtons mbAbortRetryIgnore = TMsgDlgButtons() << mbAbort << mbRetry << mbIgnore;
+
+void ShowMessage(const std::string& Msg)
+{
+    internal::Dialogs_ShowMessage(Msg.c_str());
+}
+
+TModalResult MessageDlg(const std::string& Msg, TMsgDlgType DlgType, TMsgDlgButtons Buttons, int HelpCtx)
+{
+    return internal::Dialogs_MessageDlg("", Msg.c_str(), DlgType, Buttons.ToInt(), HelpCtx);
+}
+
+TModalResult MessageDlg(const std::string& Caption, const std::string& Msg, TMsgDlgType DlgType,
+                        TMsgDlgButtons Buttons, int HelpCtx)
+{
+    return internal::Dialogs_MessageDlg(Caption.c_str(), Msg.c_str(), DlgType, Buttons.ToInt(), HelpCtx);
+}
+
+std::string InputBox(const std::string& ACaption, const std::string& APrompt, const std::string& ADefault)
+{
+    return internal::Dialogs_InputBox(ACaption.c_str(), APrompt.c_str(), ADefault.c_str());
+}
+
+std::string PasswordBox(const std::string& ACaption, const std::string& APrompt)
+{
+    return internal::Dialogs_PasswordBox(ACaption.c_str(), APrompt.c_str());
+}
+
+bool InputQuery(const std::string& ACaption, const std::string& APrompt, std::string& Value)
+{
+    internal::bool_t ok = 0;
+    std::string result = internal::Dialogs_InputQuery(ACaption.c_str(), APrompt.c_str(), Value.c_str(), &ok);
+    if (ok == 0)
+        return false;
+    Value = result;
+    return true;
+}
 
 TForm* TApplication::GetMainFormImpl(TObject* owner)
 {
@@ -1213,6 +1334,38 @@ TButtonControl::TButtonControl(ObjectHandle handle)
     : TWinControl(handle)
     , Checked(this, &TButtonControl::GetCheckedImpl, &TButtonControl::SetCheckedImpl)
 {}
+
+TCustomButton::TCustomButton(ObjectHandle handle)
+    : TButtonControl(handle)
+    , ModalResult(this, &TCustomButton::GetModalResultImpl, &TCustomButton::SetModalResultImpl)
+    , Default(this, &TCustomButton::GetDefaultImpl, &TCustomButton::SetDefaultImpl)
+    , Cancel(this, &TCustomButton::GetCancelImpl, &TCustomButton::SetCancelImpl)
+{}
+
+TModalResult TCustomButton::GetModalResultImpl(TObject* owner)
+{
+    return internal::TCustomButton_GetModalResult(owner->Handle());
+}
+void TCustomButton::SetModalResultImpl(TObject* owner, const TModalResult& value)
+{
+    internal::TCustomButton_SetModalResult(owner->Handle(), value);
+}
+bool TCustomButton::GetDefaultImpl(TObject* owner)
+{
+    return internal::TCustomButton_GetDefault(owner->Handle()) != 0;
+}
+void TCustomButton::SetDefaultImpl(TObject* owner, const bool& value)
+{
+    internal::TCustomButton_SetDefault(owner->Handle(), value ? 1 : 0);
+}
+bool TCustomButton::GetCancelImpl(TObject* owner)
+{
+    return internal::TCustomButton_GetCancel(owner->Handle()) != 0;
+}
+void TCustomButton::SetCancelImpl(TObject* owner, const bool& value)
+{
+    internal::TCustomButton_SetCancel(owner->Handle(), value ? 1 : 0);
+}
 
 bool TButtonControl::GetCheckedImpl(TObject* owner)
 {

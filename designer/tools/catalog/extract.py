@@ -277,9 +277,9 @@ def measure(cat):
         if k == "enum":
             return value.name if hasattr(value, "name") else int(value)
         if k == "flags":
-            return [n for n in cat["flags"][t["flags"]] if int(value) & int(getattr(nv, n))]
+            return [n for n in cat["flags"][t["flags"]] if int(value) & int(getattr(beth, n))]
         if k == "set":
-            return [n for n in cat["enums"][t["enum"]] if getattr(nv, n) in value]
+            return [n for n in cat["enums"][t["enum"]] if getattr(beth, n) in value]
         if k == "alias":
             v = int(value)
             if t["alias"] == "TColor":
@@ -290,7 +290,9 @@ def measure(cat):
                 return cursors.get(v, v)
             if t["alias"] == "TShortCut":
                 return beth.ShortCutToText(v) if v else ""  # 0 は割り当てなし(LCL は "Unknown" を返す)
-            return v
+            # 定数を持つ別名(TModalResult 等)は定数の名前で書く
+            names = {c: n for n, c in reversed(list(cat["constants"].get(t["alias"], {}).items()))}
+            return names.get(v, v)
         if k == "ref":
             return None if value is None else "?"
         if k == "strings":
@@ -307,7 +309,7 @@ def measure(cat):
     failures = []
     for name, cls in cat["classes"].items():
         try:
-            obj = getattr(nv, name)(beth.Application if cls["kind"] == "form" else owner)
+            obj = getattr(beth, name)(beth.Application if cls["kind"] == "form" else owner)
         except Exception as e:  # noqa: BLE001
             failures.append(f"{name}: 生成できない ({e})")
             continue

@@ -20,9 +20,7 @@ public:
     beth::TLabel* TitleLabel;
     beth::TLabel* InfoLabel;
     beth::TButton* OkButton;
-
-    void OkButtonClick(beth::TObject* Sender);
-    // <bethany-designer:end id="declarations" hash="236cf398">
+    // <bethany-designer:end id="declarations" hash="22a585e3">
 
     explicit TAboutForm(beth::TComponent* AOwner);
 

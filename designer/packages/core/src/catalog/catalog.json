@@ -1,9 +1,12 @@
 {
   "formMembers": [
+    "ActiveControl",
     "Align",
     "Anchors",
     "AutoSize",
+    "BorderIcons",
     "BorderSpacing",
+    "BorderStyle",
     "Caption",
     "Close",
     "Color",
@@ -11,6 +14,7 @@
     "Cursor",
     "Enabled",
     "Font",
+    "FormStyle",
     "Free",
     "FromHandle",
     "Handle",
@@ -18,8 +22,10 @@
     "Height",
     "Hide",
     "Hint",
+    "KeyPreview",
     "Left",
     "Menu",
+    "ModalResult",
     "OnActivate",
     "OnClick",
     "OnClose",
@@ -45,6 +51,7 @@
     "ParentFont",
     "ParentShowHint",
     "PopupMenu",
+    "Position",
     "Release",
     "Show",
     "ShowHint",
@@ -56,6 +63,7 @@
     "Top",
     "Visible",
     "Width",
+    "WindowState",
     "WrapExisting",
     "handle_"
   ],
@@ -1970,6 +1978,67 @@
           "declaredIn": "TCustomForm",
           "default": null,
           "doc": "フォームのメニューバー。nullptr を代入すると外す(メニュー自体は破棄されない)。"
+        },
+        "BorderStyle": {
+          "type": {
+            "kind": "enum",
+            "enum": "TFormBorderStyle"
+          },
+          "declaredIn": "TCustomForm",
+          "default": "bsSizeable"
+        },
+        "Position": {
+          "type": {
+            "kind": "enum",
+            "enum": "TPosition"
+          },
+          "declaredIn": "TCustomForm",
+          "default": "poDesigned"
+        },
+        "WindowState": {
+          "type": {
+            "kind": "enum",
+            "enum": "TWindowState"
+          },
+          "declaredIn": "TCustomForm",
+          "default": "wsNormal"
+        },
+        "BorderIcons": {
+          "type": {
+            "kind": "set",
+            "enum": "TBorderIcon"
+          },
+          "declaredIn": "TCustomForm",
+          "default": [
+            "biSystemMenu",
+            "biMinimize",
+            "biMaximize"
+          ]
+        },
+        "FormStyle": {
+          "type": {
+            "kind": "enum",
+            "enum": "TFormStyle"
+          },
+          "declaredIn": "TCustomForm",
+          "default": "fsNormal"
+        },
+        "KeyPreview": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomForm",
+          "default": false,
+          "doc": "true なら、キーの入力を子のコントロールより先にフォームの OnKeyDown・OnKeyPress・OnKeyUp が受ける。"
+        },
+        "ActiveControl": {
+          "type": {
+            "kind": "ref",
+            "class": "TWinControl"
+          },
+          "declaredIn": "TCustomForm",
+          "default": null,
+          "doc": "フォーカスを持つ(表示したときに持たせる)コントロール。"
         }
       },
       "events": {
@@ -3924,6 +3993,31 @@
           },
           "declaredIn": "TWinControl",
           "default": true
+        },
+        "ModalResult": {
+          "type": {
+            "kind": "alias",
+            "alias": "TModalResult"
+          },
+          "declaredIn": "TCustomButton",
+          "default": "mrNone",
+          "doc": "mrNone 以外なら、押したときにフォームの ModalResult をこの値にする(モーダルのフォームが閉じる。docs/adr/0041)。"
+        },
+        "Default": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomButton",
+          "default": false,
+          "doc": "true なら、フォームで Enter を押したときに押される(既定のボタン)。"
+        },
+        "Cancel": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomButton",
+          "default": false,
+          "doc": "true なら、フォームで Esc を押したときに押される(取り消しのボタン)。"
         }
       },
       "events": {
@@ -4203,6 +4297,31 @@
           },
           "declaredIn": "TWinControl",
           "default": true
+        },
+        "ModalResult": {
+          "type": {
+            "kind": "alias",
+            "alias": "TModalResult"
+          },
+          "declaredIn": "TCustomButton",
+          "default": "mrNone",
+          "doc": "mrNone 以外なら、押したときにフォームの ModalResult をこの値にする(モーダルのフォームが閉じる。docs/adr/0041)。"
+        },
+        "Default": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomButton",
+          "default": false,
+          "doc": "true なら、フォームで Enter を押したときに押される(既定のボタン)。"
+        },
+        "Cancel": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomButton",
+          "default": false,
+          "doc": "true なら、フォームで Esc を押したときに押される(取り消しのボタン)。"
         },
         "Kind": {
           "type": {
@@ -14627,6 +14746,66 @@
       "sbHorizontal",
       "sbVertical"
     ],
+    "TFormBorderStyle": [
+      "bsNone",
+      "bsSingle",
+      "bsSizeable",
+      "bsDialog",
+      "bsToolWindow",
+      "bsSizeToolWin"
+    ],
+    "TPosition": [
+      "poDesigned",
+      "poDefault",
+      "poDefaultPosOnly",
+      "poDefaultSizeOnly",
+      "poScreenCenter",
+      "poDesktopCenter",
+      "poMainFormCenter",
+      "poOwnerFormCenter",
+      "poWorkAreaCenter"
+    ],
+    "TWindowState": [
+      "wsNormal",
+      "wsMinimized",
+      "wsMaximized",
+      "wsFullScreen"
+    ],
+    "TBorderIcon": [
+      "biSystemMenu",
+      "biMinimize",
+      "biMaximize",
+      "biHelp"
+    ],
+    "TFormStyle": [
+      "fsNormal",
+      "fsMDIChild",
+      "fsMDIForm",
+      "fsStayOnTop",
+      "fsSplash",
+      "fsSystemStayOnTop"
+    ],
+    "TMsgDlgType": [
+      "mtWarning",
+      "mtError",
+      "mtInformation",
+      "mtConfirmation",
+      "mtCustom"
+    ],
+    "TMsgDlgBtn": [
+      "mbYes",
+      "mbNo",
+      "mbOK",
+      "mbCancel",
+      "mbAbort",
+      "mbRetry",
+      "mbIgnore",
+      "mbAll",
+      "mbNoToAll",
+      "mbYesToAll",
+      "mbHelp",
+      "mbClose"
+    ],
     "TBevelShape": [
       "bsBox",
       "bsFrame",
@@ -14911,7 +15090,9 @@
     ]
   },
   "sets": {
-    "TAnchors": "TAnchorKind"
+    "TAnchors": "TAnchorKind",
+    "TBorderIcons": "TBorderIcon",
+    "TMsgDlgButtons": "TMsgDlgBtn"
   },
   "constants": {
     "TColor": {
@@ -14961,6 +15142,20 @@
       "crSizeSW": -28,
       "crSizeS": -29,
       "crSizeSE": -30
+    },
+    "TModalResult": {
+      "mrNone": 0,
+      "mrOk": 1,
+      "mrCancel": 2,
+      "mrAbort": 3,
+      "mrRetry": 4,
+      "mrIgnore": 5,
+      "mrYes": 6,
+      "mrNo": 7,
+      "mrAll": 8,
+      "mrNoToAll": 9,
+      "mrYesToAll": 10,
+      "mrClose": 11
     }
   },
   "eventTypes": {

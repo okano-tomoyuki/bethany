@@ -3,7 +3,7 @@
   "palette": ["Standard", "Additional", "Common Controls", "Dialogs", "System", "Misc"],
   "notDesignable": {
     "TControl": ["Parent", "Caption"],
-    "TCustomForm": ["Align", "Anchors", "BorderSpacing", "TabOrder", "TabStop", "Visible"],
+    "TCustomForm": ["Align", "Anchors", "BorderSpacing", "TabOrder", "TabStop", "Visible", "ModalResult"],
     "TCustomMemo": ["Text"],
     "TCustomFloatSpinEdit": ["Text", "MaxLength"],
     "TCustomSpinEdit": ["DecimalPlaces"],

@@ -30,6 +30,8 @@ void TAboutForm::beth_CreateComponents()
     Width = 360;
     Height = 150;
     Caption = "About Bethany Notepad";
+    BorderStyle = bsDialog;
+    Position = poMainFormCenter;
 
     TitleLabel->Parent = this;
     TitleLabel->Left = 16;
@@ -53,17 +55,14 @@ void TAboutForm::beth_CreateComponents()
     OkButton->Width = 80;
     OkButton->Height = 25;
     OkButton->Caption = "OK";
+    OkButton->ModalResult = mrOk;
+    OkButton->Default = true;
+    OkButton->Cancel = true;
     OkButton->Anchors = TAnchors() << akRight << akBottom;
-    OkButton->OnClick = [this](TObject* Sender) { OkButtonClick(Sender); };
 }
-// <bethany-designer:end id="beth_CreateComponents" hash="47a4d3e6">
+// <bethany-designer:end id="beth_CreateComponents" hash="0db24b29">
 
 // <bethany-designer:handler-stubs>
-
-void TAboutForm::OkButtonClick(TObject* Sender)
-{
-    Close();
-}
 
 // <bethany-designer:begin id="beth_NamespaceEnd">
 } // namespace dialogs
