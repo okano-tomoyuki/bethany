@@ -22,6 +22,7 @@ The form is stored in a JSON file (`*.bfm.json`) that you can also edit as text.
 - **Projects**: a project file (`*.bfproj.json`) lists the forms of an application and its main form, and sets the languages to generate (`"codegen": { "cpp": {}, "python": {} }`). With projects, the Forms view groups the forms by project and marks the main form with a star. Renaming, moving or deleting a form in VS Code updates the projects that contain it.
 - **C++ settings**: in `codegen.cpp` of the project file, set a `namespace` for the forms, the include guard (`macro` or `pragma`),
   the file extensions (`.h`, `.cc`, ...) and separate folders for headers and sources (`headerDir`, `sourceDir`).
+  `overrides` change them for some forms only (for example, another namespace for the forms in `dialogs/`).
   The generated code includes Bethany as `#include <bethany/beth.hpp>`.
 - **Application startup code**: _Generate Code_ on a project writes `Project1.cpp` / `Project1.py`, which initializes the application,
   creates the forms (the main form first, then the others as in C++Builder; _Don't Create at Startup_ excludes a form) and runs it.

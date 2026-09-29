@@ -87,9 +87,10 @@ export function generateProject(
   const sourceName = fileNameOf(projectFileName);
   const comments = generatedComments(project.codegen?.commentLocale);
   // フォームの出力先・クラス名は決まった規則で決まる(dsl-spec.md §9)
-  const cpp = project.codegen?.cpp ? cppOptions(project.codegen.cpp) : DEFAULT_CPP_OPTIONS;
   const created: CreatedForm[] = forms.map((form) => {
     const path = normalizePath(form.path);
+    // フォームごとに overrides を重ねた設定(名前空間・ヘッダの置き場所がフォームで違いうる)
+    const cpp = project.codegen?.cpp ? cppOptions(project.codegen.cpp, path) : DEFAULT_CPP_OPTIONS;
     const dir = path.slice(0, path.lastIndexOf('/') + 1);
     const t = resolveTargets(form.doc, fileNameOf(path), { cpp, python: true, formPath: path });
     return {

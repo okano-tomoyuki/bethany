@@ -61,3 +61,48 @@ export function isSameOrInside(path: string, base: string): boolean {
   const b = normalizePath(base);
   return p === b || p.startsWith(b.endsWith('/') ? b : `${b}/`);
 }
+
+/**
+ * プロジェクトファイルに書くフォームのパターン(codegen.cpp.overrides の forms。project-spec.md §5)がフォームに当てはまるか。
+ * どちらもプロジェクトファイルのフォルダからの相対パス。`*` は `/` 以外の 0 文字以上、`?` は `/` 以外の 1 文字、
+ * `**` は 0 個以上のフォルダ。フォルダを指すパターン(`dialogs`・`dialogs/`・`dialogs/**`)は、その下のすべてのフォームに当てはまる。
+ */
+export function matchesFormPattern(pattern: string, formPath: string): boolean {
+  const regex = patternRegex(normalizePath(pattern));
+  const form = normalizePath(formPath);
+  if (regex.test(form)) return true;
+  // フォームのあるフォルダ(とその上のフォルダ)に当てはまれば、その下のフォーム
+  const parts = form.split('/');
+  for (let i = parts.length - 1; i > 0; i--)
+    if (regex.test(parts.slice(0, i).join('/'))) return true;
+  return false;
+}
+
+/** パターンとして書けるか(相対パス・区切りは `/`) */
+export function isValidFormPattern(pattern: string): boolean {
+  return (
+    normalizePath(pattern) !== '' &&
+    !pattern.startsWith('/') &&
+    !pattern.includes('\\') &&
+    !/^[A-Za-z]:/.test(pattern)
+  );
+}
+
+function patternRegex(pattern: string): RegExp {
+  let source = '';
+  const parts = pattern.split('/');
+  parts.forEach((part, index) => {
+    const last = index === parts.length - 1;
+    if (part === '**') {
+      // 0 個以上のフォルダ(末尾の ** はその下のすべて)
+      source += last ? '.*' : '(?:[^/]+/)*';
+      return;
+    }
+    source += part
+      .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+      .replace(/\*/g, '[^/]*')
+      .replace(/\?/g, '[^/]');
+    if (!last) source += '/';
+  });
+  return new RegExp(`^${source}$`);
+}

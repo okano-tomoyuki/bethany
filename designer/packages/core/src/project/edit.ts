@@ -5,7 +5,12 @@
 import * as z from 'zod';
 import type { CommentLocale } from '../dsl/schema.ts';
 import { normalizePath, sameFormPath } from './paths.ts';
-import { BfprojDocument, PROJECT_FORMAT_VERSION, type ProjectCppSettings } from './schema.ts';
+import {
+  BfprojDocument,
+  PROJECT_FORMAT_VERSION,
+  type CppOverride,
+  type ProjectCppSettings,
+} from './schema.ts';
 
 /**
  * 新しいプロジェクト。起動部分は C++ と Python の両方を生成する設定にする(新しいフォームと同じ)。
@@ -103,6 +108,13 @@ export function mapFormPaths(
     }
     result.autoCreate = autoCreate;
   }
+  const cpp = doc.codegen?.cpp;
+  if (cpp?.overrides && doc.codegen) {
+    const overrides = mapOverrides(cpp.overrides, fn);
+    const rest = { ...cpp };
+    delete rest.overrides;
+    result.codegen = { ...doc.codegen, cpp: overrides.length > 0 ? { ...rest, overrides } : rest };
+  }
   if (doc.mainForm === undefined) return result;
   const mainMapped = fn(doc.mainForm);
   const mainForm =
@@ -114,21 +126,44 @@ export function mapFormPaths(
   return result;
 }
 
-/** codegen.cpp のキーを決まった順に並べる(スキーマの順) */
+/**
+ * overrides の forms のうち、フォームのパスそのもの(ワイルドカードを含まず .bfm.json で終わる)を fn で書き換える。
+ * 消えたものは除き、forms が空になった要素は除く。フォルダ・ワイルドカードのパターンはそのまま
+ */
+function mapOverrides(
+  overrides: readonly CppOverride[],
+  fn: (form: string) => string | null,
+): CppOverride[] {
+  return overrides.flatMap((override) => {
+    const forms = override.forms.flatMap((pattern) => {
+      if (/[*?]/.test(pattern) || !pattern.endsWith('.bfm.json')) return [pattern];
+      const mapped = fn(pattern);
+      return mapped === null ? [] : [normalizePath(mapped)];
+    });
+    return forms.length === 0 ? [] : [{ ...override, forms }];
+  });
+}
+
+const CPP_FORM_KEYS = [
+  'namespace',
+  'includeGuard',
+  'includeGuardPrefix',
+  'headerExtension',
+  'sourceExtension',
+  'headerDir',
+  'sourceDir',
+] as const satisfies readonly (keyof CppOverride)[];
+
+/** codegen.cpp のキーを決まった順に並べる(スキーマの順。overrides の各要素は forms が先頭) */
 function orderCpp(cpp: ProjectCppSettings): ProjectCppSettings {
-  const keys = [
-    'main',
-    'namespace',
-    'includeGuard',
-    'includeGuardPrefix',
-    'headerExtension',
-    'sourceExtension',
-    'headerDir',
-    'sourceDir',
-  ] as const satisfies readonly (keyof ProjectCppSettings)[];
-  return Object.fromEntries(
-    keys.flatMap((key) => (cpp[key] === undefined ? [] : [[key, cpp[key]]])),
-  );
+  const pick = <T extends object>(from: T, keys: readonly (keyof T)[]) =>
+    Object.fromEntries(keys.flatMap((key) => (from[key] === undefined ? [] : [[key, from[key]]])));
+  return {
+    ...pick(cpp, ['main', ...CPP_FORM_KEYS]),
+    ...(cpp.overrides && {
+      overrides: cpp.overrides.map((o) => pick(o, ['forms', ...CPP_FORM_KEYS]) as CppOverride),
+    }),
+  };
 }
 
 /** 決まった形で書き出す(キーの順は $schema・formatVersion・codegen・mainForm・forms・autoCreate。一覧は 1 行に 1 つ) */

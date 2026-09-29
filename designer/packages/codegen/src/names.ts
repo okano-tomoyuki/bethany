@@ -1,4 +1,5 @@
 import {
+  matchesFormPattern,
   normalizePath,
   type BfmDocument,
   type BfprojDocument,
@@ -73,8 +74,17 @@ export const DEFAULT_CPP_OPTIONS: CppOptions = {
   sourceDir: undefined,
 };
 
-/** プロジェクトの codegen.cpp に既定値を補う */
-export function cppOptions(settings: ProjectCppSettings): CppOptions {
+/**
+ * プロジェクトの codegen.cpp に既定値を補う。formPath(プロジェクトのフォルダからのフォームのパス)を渡すと、
+ * overrides のうちそのフォームに当てはまるものを書いた順に重ねる(後に書いたものが勝つ)。
+ */
+export function cppOptions(project: ProjectCppSettings, formPath?: string): CppOptions {
+  const settings = (project.overrides ?? [])
+    .filter((o) => formPath !== undefined && o.forms.some((p) => matchesFormPattern(p, formPath)))
+    .reduce<ProjectCppSettings>(
+      (merged, override) => ({ ...merged, ...withoutUndefined(override) }),
+      project,
+    );
   return {
     namespace: settings.namespace === undefined ? [] : settings.namespace.split('::'),
     includeGuard: settings.includeGuard ?? DEFAULT_CPP_OPTIONS.includeGuard,
@@ -84,6 +94,10 @@ export function cppOptions(settings: ProjectCppSettings): CppOptions {
     headerDir: settings.headerDir,
     sourceDir: settings.sourceDir,
   };
+}
+
+function withoutUndefined<T extends object>(value: T): Partial<T> {
+  return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined)) as Partial<T>;
 }
 
 /** フォームのコード生成の設定(docs/designer/project-spec.md §5)。フォームが属するプロジェクトの codegen から決める */
@@ -118,7 +132,7 @@ export function formCodegenSettings(projects: readonly FormProject[]): FormCodeg
   if (projects.length === 0) return DEFAULT_FORM_CODEGEN;
   const cpp = projects.find((p) => p.doc.codegen?.cpp !== undefined);
   return {
-    cpp: cpp?.doc.codegen?.cpp && cppOptions(cpp.doc.codegen.cpp),
+    cpp: cpp?.doc.codegen?.cpp && cppOptions(cpp.doc.codegen.cpp, cpp.formPath),
     python: projects.some((p) => p.doc.codegen?.python !== undefined),
     commentLocale: projects.find((p) => p.doc.codegen?.commentLocale)?.doc.codegen?.commentLocale,
     ...(cpp && { formPath: cpp.formPath }),
@@ -185,7 +199,7 @@ function placeOutput(
   const form = normalizePath(formPath);
   if (form.startsWith('../')) return { path: file };
   const formDir = form.includes('/') ? form.slice(0, form.lastIndexOf('/')) : '';
-  const inDir = normalizePath(`${formDir}/${file}`);
+  const inDir = formDir === '' ? file : normalizePath(`${formDir}/${file}`);
   return { path: relativePath(form, normalizePath(`${dir}/${inDir}`)), inDir };
 }
 

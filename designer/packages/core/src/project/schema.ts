@@ -11,13 +11,8 @@ export const PROJECT_FORMAT_VERSION = 1;
 export const CPP_HEADER_EXTENSIONS = ['.hpp', '.h', '.hh', '.hxx'] as const;
 export const CPP_SOURCE_EXTENSIONS = ['.cpp', '.cc', '.cxx'] as const;
 
-/**
- * C++ のコード生成の設定(project-spec.md §5)。パスはプロジェクトファイルのフォルダからの相対パス。
- * namespace の各部分が識別子か・フォルダが相対パスかは validate.ts で調べる。
- */
-export const ProjectCppSettings = z.strictObject({
-  /** 起動部分の出力先(既定はプロジェクト名 + .cpp) */
-  main: z.string().optional(),
+/** C++ のフォームのファイルの形を決める設定(codegen.cpp と、その overrides で書けるもの。project-spec.md §5) */
+const cppFormSettings = {
   /** フォームのクラスとフォームの変数を入れる名前空間(`app`・`app::ui`) */
   namespace: z.string().optional(),
   /** インクルードガードの書き方(既定は macro) */
@@ -30,6 +25,25 @@ export const ProjectCppSettings = z.strictObject({
   headerDir: z.string().optional(),
   /** フォームのソースの出力先のフォルダ(既定はフォームと同じフォルダ) */
   sourceDir: z.string().optional(),
+};
+
+/** 一部のフォームだけの設定。forms のパターンに当てはまるフォームに、codegen.cpp の値を上書きする(後に書いたものが勝つ) */
+export const CppOverride = z.strictObject({
+  /** 当てはめるフォームのパターン(プロジェクトファイルのフォルダからの相対パス。`*`・`**`・`?`、フォルダ名) */
+  forms: z.array(z.string()).min(1),
+  ...cppFormSettings,
+});
+export type CppOverride = z.infer<typeof CppOverride>;
+
+/**
+ * C++ のコード生成の設定(project-spec.md §5)。パスはプロジェクトファイルのフォルダからの相対パス。
+ * namespace の各部分が識別子か・フォルダが相対パスかは validate.ts で調べる。
+ */
+export const ProjectCppSettings = z.strictObject({
+  /** 起動部分の出力先(既定はプロジェクト名 + .cpp) */
+  main: z.string().optional(),
+  ...cppFormSettings,
+  overrides: z.array(CppOverride).optional(),
 });
 export type ProjectCppSettings = z.infer<typeof ProjectCppSettings>;
 

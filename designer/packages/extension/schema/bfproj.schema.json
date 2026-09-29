@@ -60,6 +60,61 @@
             },
             "sourceDir": {
               "type": "string"
+            },
+            "overrides": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "forms": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "namespace": {
+                    "type": "string"
+                  },
+                  "includeGuard": {
+                    "type": "string",
+                    "enum": [
+                      "macro",
+                      "pragma"
+                    ]
+                  },
+                  "includeGuardPrefix": {
+                    "type": "string"
+                  },
+                  "headerExtension": {
+                    "type": "string",
+                    "enum": [
+                      ".hpp",
+                      ".h",
+                      ".hh",
+                      ".hxx"
+                    ]
+                  },
+                  "sourceExtension": {
+                    "type": "string",
+                    "enum": [
+                      ".cpp",
+                      ".cc",
+                      ".cxx"
+                    ]
+                  },
+                  "headerDir": {
+                    "type": "string"
+                  },
+                  "sourceDir": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "forms"
+                ],
+                "additionalProperties": false
+              }
             }
           },
           "additionalProperties": false

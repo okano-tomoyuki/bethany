@@ -39,7 +39,9 @@ export type DiagnosticCode =
   | 'unknown-auto-create'
   | 'invalid-namespace'
   | 'invalid-include-guard-prefix'
-  | 'invalid-directory';
+  | 'invalid-directory'
+  | 'invalid-form-pattern'
+  | 'unmatched-form-pattern';
 
 export interface Diagnostic {
   readonly severity: Severity;

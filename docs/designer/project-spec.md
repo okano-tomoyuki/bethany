@@ -51,6 +51,8 @@ C++Builder のプロジェクト(`Project1.cbproj`・`Project1.cpp`)のうち、
 | `codegen.cpp.namespace` の `::` で区切った各部分が識別子であること | エラー |
 | `codegen.cpp.includeGuardPrefix` が英字・数字・`_` だけで、数字で始まらないこと | エラー |
 | `codegen.cpp.headerDir`・`sourceDir` が相対パスであること | エラー |
+| `codegen.cpp.overrides` の各要素の `forms` が空でなく、パターンが相対パスであること(各要素の値も上の 3 つと同じく調べる) | エラー |
+| `codegen.cpp.overrides` のパターンが `forms` のどれかに当てはまること | 警告 |
 
 ### 決まった形での書き出し
 
@@ -72,7 +74,8 @@ C++Builder のプロジェクト(`Project1.cbproj`・`Project1.cpp`)のうち、
 - **新しいフォーム**: プロジェクトの「+」から作ると、そのプロジェクトのフォルダに作って加える。ビューの見出しの「+」から作ると、
   プロジェクトが 1 つならそれに加え、複数なら加える先を選ぶ(加えないこともできる)。
 - **名前の変更・移動・削除への追従**: VS Code の中でフォーム(またはそれを含むフォルダ)の名前を変える・移す・消すと、
-  それを含むプロジェクトファイルのパスを書き換える(消したものは外す)。プロジェクトファイル自体を別のフォルダへ移したときは、
+  それを含むプロジェクトファイルのパスを書き換える(消したものは外す)。`codegen.cpp.overrides` の `forms` に書いたフォームのパスそのもの
+  (ワイルドカードを含まず `.bfm.json` で終わるもの)も書き換え、`forms` が空になった要素は除く。フォルダ・ワイルドカードのパターンは変えない。プロジェクトファイル自体を別のフォルダへ移したときは、
   相対パスを移した先から計算し直す。
 
 ## 5. コード生成の設定(`codegen`)
@@ -119,6 +122,23 @@ C++Builder の `.dfm` と `.cbproj` の分け方と同じ)。
   ビルドでは `headerDir` を include パスに入れる(CMake の `target_include_directories`)。書かなければ、include する側のファイルからの相対パスにする。
 - **マクロ名**は、`includeGuardPrefix`・名前空間・ヘッダのパス(`headerDir` からの、書かなければファイル名)を `_` でつないで大文字にしたもの
   (上の例なら `APP_UI_FORMS_MAINFORM_H`)。識別子に使えない文字は `_` にし、続いた `_` は 1 つにする(`__` は処理系の予約)。
+- **一部のフォームだけの設定(`overrides`)**: `cpp.overrides` の各要素は、`forms`(当てはめるフォームのパターン)と、
+  `main` 以外の上のキーを持つ。`forms` に当てはまるフォームには、その値で `cpp` の値を上書きする。複数が当てはまれば書いた順に重ね、
+  後に書いたものが勝つ(tsconfig・ESLint の overrides と同じ)。
+
+  ```json
+  "cpp": {
+    "namespace": "app",
+    "overrides": [
+      { "forms": ["dialogs"], "namespace": "app::dialogs" },
+      { "forms": ["MainForm.bfm.json"], "includeGuard": "pragma" }
+    ]
+  }
+  ```
+
+  パターンはプロジェクトファイルのフォルダからの相対パスで、`*`(`/` 以外の 0 文字以上)・`?`(`/` 以外の 1 文字)・`**`(0 個以上のフォルダ)を使える。
+  フォルダを書くと(`dialogs`・`dialogs/`・`dialogs/**`)、その下のすべてのフォームに当てはまる。起動部分は、フォームごとの名前空間で修飾する
+  (`Application->CreateForm(&app::dialogs::AboutForm)`)。
 - 設定を変えて生成し直すと、既存のファイルにも反映する(ファイルの先頭と末尾をマーカー区間にしている。[codegen-design.md](codegen-design.md) §2)。
   ただし、`headerExtension`・`sourceExtension`・`headerDir`・`sourceDir` を変えると新しい場所に作られ、古いファイルは残る(利用者が消す)。
 
@@ -127,7 +147,8 @@ C++Builder の `.dfm` と `.cbproj` の分け方と同じ)。
 - 生成する言語は、そのフォームを含むすべてのプロジェクトの和集合(Project1 が C++、Project2 が Python なら両方)。
 - コメントの言語は、そのフォームを含むプロジェクトのうち最初に `commentLocale` を書いたもの。フォームを共有するプロジェクトの間で
   `commentLocale` が食い違えば、プロジェクトファイルに警告を出す。
-- C++ の設定(`cpp` の `main` 以外)も、そのフォームを含むプロジェクトのうち最初に `cpp` を書いたものを使う。食い違えば同じく警告を出す。
+- C++ の設定(`cpp` の `main` 以外。そのフォームに当てはまる `overrides` を重ねたもの)も、そのフォームを含むプロジェクトのうち
+  最初に `cpp` を書いたものを使う。共有するフォームの設定が食い違えば同じく警告を出す。
 - どのプロジェクトにも属さないフォームは、C++ と Python の両方をコメントは英語で生成する(プロジェクトを作らなくても試せるように)。
 - 出力先とクラス名は決まった規則で決まる([dsl-spec.md](dsl-spec.md) §9)。
 - CLI(`beth generate MainForm.bfm.json`)は、フォームのフォルダから上へたどってプロジェクトファイルを探す。

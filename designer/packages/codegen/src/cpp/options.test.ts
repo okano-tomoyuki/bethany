@@ -209,3 +209,58 @@ describe('起動部分の C++ の設定', () => {
 it('DEFAULT_CPP_OPTIONS は #pragma once ではなくマクロ', () => {
   expect(DEFAULT_CPP_OPTIONS.includeGuard).toBe('macro');
 });
+
+describe('overrides(一部のフォームだけの設定)', () => {
+  const cpp = {
+    namespace: 'app',
+    headerDir: 'include',
+    overrides: [
+      { forms: ['dialogs'], namespace: 'app::dialogs' },
+      { forms: ['dialogs/About.bfm.json'], includeGuard: 'pragma' as const },
+      { forms: ['**/*.bfm.json'], headerExtension: '.h' as const },
+    ],
+  };
+
+  it('当てはまるものを書いた順に重ね、当てはまらないものは使わない', () => {
+    expect(cppOptions(cpp, 'dialogs/About.bfm.json')).toEqual({
+      ...DEFAULT_CPP_OPTIONS,
+      namespace: ['app', 'dialogs'],
+      includeGuard: 'pragma',
+      headerExtension: '.h',
+      headerDir: 'include',
+    });
+    expect(cppOptions(cpp, 'MainForm.bfm.json')).toEqual({
+      ...DEFAULT_CPP_OPTIONS,
+      namespace: ['app'],
+      headerExtension: '.h',
+      headerDir: 'include',
+    });
+    // フォームのパスが分からなければ(プロジェクトの外から)上書きは使わない
+    expect(cppOptions(cpp).headerExtension).toBe('.hpp');
+  });
+
+  it('起動部分は、フォームごとの名前空間で修飾する', () => {
+    const project: BfprojDocument = {
+      formatVersion: 1,
+      codegen: { cpp },
+      mainForm: 'MainForm.bfm.json',
+      forms: ['MainForm.bfm.json', 'dialogs/About.bfm.json'],
+    };
+    const about = { ...SAMPLE, form: { ...SAMPLE.form, name: 'About' } };
+    const result = generateProject(
+      project,
+      'Project1.bfproj.json',
+      [
+        { doc: SAMPLE, path: 'MainForm.bfm.json' },
+        { doc: about, path: 'dialogs/About.bfm.json' },
+      ],
+      () => undefined,
+    );
+    if ('error' in result) throw new Error(result.error);
+    const text = result.files[0]?.result.ok ? result.files[0].result.text : '';
+    expect(region(text, 'includes')).toBe('#include "MainForm.h"\n#include "dialogs/About.h"');
+    expect(region(text, 'beth_CreateForms')).toBe(
+      '    Application->CreateForm(&app::MainForm);\n    Application->CreateForm(&app::dialogs::About);',
+    );
+  });
+});

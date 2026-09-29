@@ -4,8 +4,8 @@
 import type { Diagnostic } from '../dsl/diagnostics.ts';
 import { describeIdentifierProblem, isValidIdentifier } from '../identifier.ts';
 import { l10n } from '../l10n.ts';
-import { isValidFormPath, sameFormPath } from './paths.ts';
-import type { BfprojDocument } from './schema.ts';
+import { isValidFormPath, isValidFormPattern, matchesFormPattern, sameFormPath } from './paths.ts';
+import type { BfprojDocument, CppOverride } from './schema.ts';
 
 export function validateProject(doc: BfprojDocument): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -57,10 +57,42 @@ export function validateProject(doc: BfprojDocument): Diagnostic[] {
   return diagnostics;
 }
 
-/** codegen.cpp の名前空間・マクロ名の先頭・フォルダ */
+/** codegen.cpp とその overrides */
 function validateCpp(doc: BfprojDocument): Diagnostic[] {
   const cpp = doc.codegen?.cpp;
   if (!cpp) return [];
+  const diagnostics = validateCppSettings(cpp, ['codegen', 'cpp']);
+  (cpp.overrides ?? []).forEach((override, index) => {
+    const path = ['codegen', 'cpp', 'overrides', index];
+    diagnostics.push(...validateCppSettings(override, path));
+    override.forms.forEach((pattern, i) => {
+      if (!isValidFormPattern(pattern))
+        diagnostics.push({
+          severity: 'error',
+          code: 'invalid-form-pattern',
+          message: l10n.t(
+            '"{0}" is not a form pattern: use a relative path separated by /',
+            pattern,
+          ),
+          path: [...path, 'forms', i],
+        });
+      else if (!(doc.forms ?? []).some((form) => matchesFormPattern(pattern, form)))
+        diagnostics.push({
+          severity: 'warning',
+          code: 'unmatched-form-pattern',
+          message: l10n.t('"{0}" matches no form in forms', pattern),
+          path: [...path, 'forms', i],
+        });
+    });
+  });
+  return diagnostics;
+}
+
+/** 名前空間・マクロ名の先頭・フォルダ(codegen.cpp と overrides の各要素) */
+function validateCppSettings(
+  cpp: Omit<CppOverride, 'forms'>,
+  base: readonly (string | number)[],
+): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
   if (cpp.namespace !== undefined) {
     for (const part of cpp.namespace.split('::')) {
@@ -74,7 +106,7 @@ function validateCpp(doc: BfprojDocument): Diagnostic[] {
           cpp.namespace,
           describeIdentifierProblem(problem),
         ),
-        path: ['codegen', 'cpp', 'namespace'],
+        path: [...base, 'namespace'],
       });
       break;
     }
@@ -89,7 +121,7 @@ function validateCpp(doc: BfprojDocument): Diagnostic[] {
       message: l10n.t(
         'includeGuardPrefix can contain only letters, digits and _, and cannot start with a digit',
       ),
-      path: ['codegen', 'cpp', 'includeGuardPrefix'],
+      path: [...base, 'includeGuardPrefix'],
     });
   for (const key of ['headerDir', 'sourceDir'] as const) {
     const dir = cpp[key];
@@ -98,7 +130,7 @@ function validateCpp(doc: BfprojDocument): Diagnostic[] {
       severity: 'error',
       code: 'invalid-directory',
       message: l10n.t('"{0}" is not a folder path: use a relative path separated by /', dir),
-      path: ['codegen', 'cpp', key],
+      path: [...base, key],
     });
   }
   return diagnostics;

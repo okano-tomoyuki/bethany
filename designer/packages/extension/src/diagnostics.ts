@@ -89,7 +89,6 @@ async function projectDiagnostics(uri: vscode.Uri, text: string): Promise<Diagno
   });
   if (project) {
     const locale = project.codegen?.commentLocale ?? 'en';
-    const cpp = cppLayout(project.codegen?.cpp);
     const formUris = (project.forms ?? []).map((form) => formUri(uri, form));
     for (const other of await findProjects()) {
       if (samePath(other.uri, uri) || !other.doc) continue;
@@ -106,9 +105,17 @@ async function projectDiagnostics(uri: vscode.Uri, text: string): Promise<Diagno
           ),
           path: ['codegen', 'commentLocale'],
         });
-      // どちらも C++ を生成するときだけ(片方だけなら、その設定が使われる)
-      const otherCpp = cppLayout(other.doc.codegen?.cpp);
-      if (cpp !== undefined && otherCpp !== undefined && otherCpp !== cpp)
+      // 共有するフォームごとに、overrides を重ねた設定を比べる。どちらも C++ を生成するときだけ(片方だけなら、その設定が使われる)
+      const otherDoc = other.doc;
+      const conflict = (project.forms ?? []).some((form, index) => {
+        const at = other.forms.findIndex((f) => samePath(f, formUris[index] ?? f));
+        const otherForm = otherDoc.forms?.[at];
+        if (at < 0 || otherForm === undefined) return false;
+        const mine = cppLayout(project.codegen?.cpp, form);
+        const theirs = cppLayout(otherDoc.codegen?.cpp, otherForm);
+        return mine !== undefined && theirs !== undefined && mine !== theirs;
+      });
+      if (conflict)
         result.push({
           severity: 'warning',
           code: 'cpp-settings-conflict',
@@ -123,10 +130,13 @@ async function projectDiagnostics(uri: vscode.Uri, text: string): Promise<Diagno
   return result;
 }
 
-/** フォームのファイルの形を決める C++ の設定(起動部分の出力先 main を除く)を比べるための文字列。C++ を生成しなければ undefined */
-function cppLayout(cpp: ProjectCppSettings | undefined): string | undefined {
+/**
+ * フォームのファイルの形を決める C++ の設定(起動部分の出力先 main を除き、そのフォームに当てはまる overrides を重ねたもの)を
+ * 比べるための文字列。C++ を生成しなければ undefined
+ */
+function cppLayout(cpp: ProjectCppSettings | undefined, formPath: string): string | undefined {
   if (!cpp) return undefined;
-  return JSON.stringify(cppOptions(cpp));
+  return JSON.stringify(cppOptions(cpp, formPath));
 }
 
 function toVscode(
