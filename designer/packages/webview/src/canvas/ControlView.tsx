@@ -301,7 +301,7 @@ function Body({
     case 'TCheckGroup':
       return (
         <Frame caption={caption}>
-          <div className="look-group-items">
+          <div className="look-group-items" style={groupColumns(location)}>
             {strings(location, 'Items').map((item, i) => (
               <div key={i} className="look-check-row">
                 <span
@@ -347,15 +347,32 @@ function Body({
       const range = number(location, 'Max') - number(location, 'Min');
       const ratio =
         range > 0 ? (number(location, 'Position') - number(location, 'Min')) / range : 0;
+      // 向き(pbVertical は下から、pbTopDown は上から、pbRightToLeft は右から)と、マーキー(一部だけを描く)。docs/adr/0049
+      const orientation = text(location, 'Orientation');
+      const marquee = text(location, 'Style') === 'pbstMarquee';
+      const size = `${String((marquee ? 0.3 : Math.max(0, Math.min(1, ratio))) * 100)}%`;
+      const start = marquee ? '35%' : 0;
+      const bar: CSSProperties =
+        orientation === 'pbVertical'
+          ? { left: 0, right: 0, bottom: start, height: size }
+          : orientation === 'pbTopDown'
+            ? { left: 0, right: 0, top: start, height: size }
+            : orientation === 'pbRightToLeft'
+              ? { top: 0, bottom: 0, right: start, width: size }
+              : { top: 0, bottom: 0, left: start, width: size };
       return (
         <div className="look-progress">
-          <div style={{ width: `${String(Math.max(0, Math.min(1, ratio)) * 100)}%` }} />
+          <div style={bar} />
         </div>
       );
     }
     case 'TTrackBar':
       return (
-        <div className="look-track">
+        <div
+          className={
+            text(location, 'Orientation') === 'trVertical' ? 'look-track vertical' : 'look-track'
+          }
+        >
           <div className="look-track-line" />
         </div>
       );
@@ -368,7 +385,15 @@ function Body({
         />
       );
     case 'TUpDown':
-      return <div className="look-updown" />;
+      return (
+        <div
+          className={
+            text(location, 'Orientation') === 'udHorizontal'
+              ? 'look-updown horizontal'
+              : 'look-updown'
+          }
+        />
+      );
     case 'TStatusBar':
       return <StatusBar location={location} />;
     case 'TToolBar':
@@ -504,6 +529,24 @@ function Grid({ location }: { readonly location: NodeLocation & { readonly kind:
       ))}
     </div>
   );
+}
+
+/**
+ * TRadioGroup・TCheckGroup の項目の並べ方(docs/adr/0049)。Columns の列に、ColumnLayout の順で並べる。
+ * AutoFill なら項目を高さいっぱいに広げ、そうでなければ上から詰める。
+ */
+function groupColumns(location: NodeLocation): CSSProperties {
+  const columns = Math.max(1, number(location, 'Columns'));
+  const rows = Math.max(1, Math.ceil(strings(location, 'Items').length / columns));
+  const track = flag(location, 'AutoFill') ? '1fr' : 'auto';
+  return {
+    display: 'grid',
+    gridTemplateColumns: `repeat(${String(columns)}, minmax(0, 1fr))`,
+    gridTemplateRows: `repeat(${String(rows)}, ${track})`,
+    gridAutoFlow: text(location, 'ColumnLayout') === 'clVerticalThenHorizontal' ? 'column' : 'row',
+    alignContent: flag(location, 'AutoFill') ? 'stretch' : 'start',
+    alignItems: 'center',
+  };
 }
 
 /** BorderStyle が bsNone なら枠を描かない(docs/adr/0048) */

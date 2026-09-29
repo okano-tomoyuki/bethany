@@ -2111,6 +2111,16 @@ def main():
     Form1.AlignClientPanel.Alignment = taLeftJustify
     Form1.AlignClientPanel.VerticalAlignment = taAlignTop
     Form1.AlignTopPanel.Alignment = taRightJustify
+
+    # 範囲のコントロール・グループの列(docs/adr/0049)。CheckGroup1 を 2 列にし、項目のクリックとスクロールバーの操作を表示する。
+    # TrackBar1 の目盛りは両側に付ける。
+    Form1.CheckGroup1.Columns = 2
+    Form1.CheckGroup1.OnItemClick = lambda Sender, Index: pr(
+        f"CheckGroup1 OnItemClick: Index={Index} Checked={'true' if Sender.Checked[Index] else 'false'}")
+    Form1.ScrollBar1.LargeChange = 10
+    Form1.ScrollBar1.OnScroll = lambda Sender, ScrollCode, ScrollPos: pr(
+        f"ScrollBar1 OnScroll: ScrollCode={int(ScrollCode)} ScrollPos={ScrollPos.value}")
+    Form1.TrackBar1.TickMarks = tmBoth
     pr(f"AlignClientPanel BevelOuter/BevelInner={int(Form1.AlignClientPanel.BevelOuter)}/{int(Form1.AlignClientPanel.BevelInner)} "
        f"(expected 1/2), TreeView ScrollBars={int(Form1.TreeView1.ScrollBars)} (expected 3 = ssBoth)")
 

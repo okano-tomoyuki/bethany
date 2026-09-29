@@ -627,6 +627,21 @@
           },
           "declaredIn": "TCustomScrollBar",
           "default": 0
+        },
+        "LargeChange": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TCustomScrollBar",
+          "default": 1,
+          "doc": "---- docs/adr/0049 ---- つまみの外を押したとき・矢印を押したときに動く量。"
+        },
+        "SmallChange": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TCustomScrollBar",
+          "default": 1
         }
       },
       "events": {
@@ -691,6 +706,11 @@
         "OnChange": {
           "type": "TNotifyEvent",
           "declaredIn": "TCustomScrollBar"
+        },
+        "OnScroll": {
+          "type": "TScrollEvent",
+          "declaredIn": "TCustomScrollBar",
+          "doc": "つまみ・矢印を操作したとき(OnChange より先に呼ばれる)。"
         }
       }
     },
@@ -943,6 +963,86 @@
           },
           "declaredIn": "TCustomTrackBar",
           "default": 0
+        },
+        "Orientation": {
+          "type": {
+            "kind": "enum",
+            "enum": "TTrackBarOrientation"
+          },
+          "declaredIn": "TCustomTrackBar",
+          "default": "trHorizontal",
+          "doc": "---- docs/adr/0049 ---- 縦(trVertical)か横か。"
+        },
+        "Frequency": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TCustomTrackBar",
+          "default": 1,
+          "doc": "目盛りの間隔(TickStyle が tsAuto のとき)。"
+        },
+        "TickMarks": {
+          "type": {
+            "kind": "enum",
+            "enum": "TTickMark"
+          },
+          "declaredIn": "TCustomTrackBar",
+          "default": "tmBottomRight",
+          "doc": "目盛りを付ける側。"
+        },
+        "TickStyle": {
+          "type": {
+            "kind": "enum",
+            "enum": "TTickStyle"
+          },
+          "declaredIn": "TCustomTrackBar",
+          "default": "tsAuto",
+          "doc": "目盛りの付け方(tsNone は付けない)。"
+        },
+        "LineSize": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TCustomTrackBar",
+          "default": 1,
+          "doc": "矢印キーで動く量と、PageUp・PageDown で動く量。"
+        },
+        "PageSize": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TCustomTrackBar",
+          "default": 2
+        },
+        "SelStart": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TCustomTrackBar",
+          "default": 0,
+          "doc": "選択の範囲として強調する区間(ShowSelRange が true のとき)。"
+        },
+        "SelEnd": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TCustomTrackBar",
+          "default": 0
+        },
+        "ShowSelRange": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomTrackBar",
+          "default": true
+        },
+        "Reversed": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomTrackBar",
+          "default": false,
+          "doc": "true なら、Min と Max の側を入れ替える。"
         }
       },
       "events": {
@@ -1259,6 +1359,48 @@
           },
           "declaredIn": "TCustomProgressBar",
           "default": 0
+        },
+        "Orientation": {
+          "type": {
+            "kind": "enum",
+            "enum": "TProgressBarOrientation"
+          },
+          "declaredIn": "TCustomProgressBar",
+          "default": "pbHorizontal",
+          "doc": "---- docs/adr/0049 ---- 伸びる向き(pbVertical は下から上)。"
+        },
+        "Smooth": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomProgressBar",
+          "default": false,
+          "doc": "true なら、区切りの無い棒で描く。"
+        },
+        "Step": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TCustomProgressBar",
+          "default": 10,
+          "doc": "StepIt で進める量。"
+        },
+        "Style": {
+          "type": {
+            "kind": "enum",
+            "enum": "TProgressBarStyle"
+          },
+          "declaredIn": "TCustomProgressBar",
+          "default": "pbstNormal",
+          "doc": "pbstMarquee は、進み具合の分からない処理の間に動き続ける表示。"
+        },
+        "BarShowText": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomProgressBar",
+          "default": false,
+          "doc": "true なら、進み具合を文字でも表示する(Windows では表示されないことがある)。"
         }
       },
       "events": {
@@ -1587,6 +1729,48 @@
           "declaredIn": "TUpDown",
           "default": null,
           "doc": "値を増減させる対象のコントロール(TEdit 等)。"
+        },
+        "Orientation": {
+          "type": {
+            "kind": "enum",
+            "enum": "TUDOrientation"
+          },
+          "declaredIn": "TUpDown",
+          "default": "udVertical",
+          "doc": "---- docs/adr/0049 ---- 矢印の向き(udVertical は上下、udHorizontal は左右)。"
+        },
+        "AlignButton": {
+          "type": {
+            "kind": "enum",
+            "enum": "TUDAlignButton"
+          },
+          "declaredIn": "TUpDown",
+          "default": "udRight",
+          "doc": "Associate のどちら側に付けるか。"
+        },
+        "Wrap": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TUpDown",
+          "default": false,
+          "doc": "true なら、Max を超えると Min に戻る(逆も)。"
+        },
+        "ArrowKeys": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TUpDown",
+          "default": true,
+          "doc": "true なら、Associate の上で矢印キーを押すと値が変わる。"
+        },
+        "Thousands": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TUpDown",
+          "default": true,
+          "doc": "true なら、Associate に表示する値に 3 桁ごとの区切りを入れる。"
         }
       },
       "events": {
@@ -3333,6 +3517,31 @@
           "declaredIn": "TCustomRadioGroup",
           "default": [],
           "doc": "文字列の一覧(TStrings。RadioGroup1->Items->Add(\"x\") のように使う)。"
+        },
+        "Columns": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TCustomRadioGroup",
+          "default": 1,
+          "doc": "---- docs/adr/0049 ---- 項目を並べる列の数。"
+        },
+        "ColumnLayout": {
+          "type": {
+            "kind": "enum",
+            "enum": "TColumnLayout"
+          },
+          "declaredIn": "TCustomRadioGroup",
+          "default": "clHorizontalThenVertical",
+          "doc": "項目を並べる順(clHorizontalThenVertical は横に並べてから次の行)。"
+        },
+        "AutoFill": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomRadioGroup",
+          "default": true,
+          "doc": "true なら、項目をグループの高さいっぱいに広げて並べる。"
         }
       },
       "events": {
@@ -3393,6 +3602,11 @@
         "OnKeyPress": {
           "type": "TKeyPressEvent",
           "declaredIn": "TWinControl"
+        },
+        "OnSelectionChanged": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TCustomRadioGroup",
+          "doc": "ItemIndex が変わったとき(利用者の操作でも、プログラムからの代入でも)。"
         }
       }
     },
@@ -3640,6 +3854,31 @@
           "declaredIn": "TCustomCheckGroup",
           "default": [],
           "doc": "文字列の一覧(TStrings。CheckGroup1->Items->Add(\"x\") のように使う)。"
+        },
+        "Columns": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TCustomCheckGroup",
+          "default": 1,
+          "doc": "---- docs/adr/0049 ---- 項目を並べる列の数。"
+        },
+        "ColumnLayout": {
+          "type": {
+            "kind": "enum",
+            "enum": "TColumnLayout"
+          },
+          "declaredIn": "TCustomCheckGroup",
+          "default": "clHorizontalThenVertical",
+          "doc": "項目を並べる順(clHorizontalThenVertical は横に並べてから次の行)。"
+        },
+        "AutoFill": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomCheckGroup",
+          "default": true,
+          "doc": "true なら、項目をグループの高さいっぱいに広げて並べる。"
         }
       },
       "events": {
@@ -3700,6 +3939,11 @@
         "OnKeyPress": {
           "type": "TKeyPressEvent",
           "declaredIn": "TWinControl"
+        },
+        "OnItemClick": {
+          "type": "TCheckGroupClicked",
+          "declaredIn": "TCustomCheckGroup",
+          "doc": "利用者が項目のチェックを切り替えたとき。"
         }
       }
     },
@@ -17100,6 +17344,55 @@
       "ecUpperCase",
       "ecLowerCase"
     ],
+    "TTrackBarOrientation": [
+      "trHorizontal",
+      "trVertical"
+    ],
+    "TTickMark": [
+      "tmBottomRight",
+      "tmTopLeft",
+      "tmBoth"
+    ],
+    "TTickStyle": [
+      "tsNone",
+      "tsAuto",
+      "tsManual"
+    ],
+    "TProgressBarOrientation": [
+      "pbHorizontal",
+      "pbVertical",
+      "pbRightToLeft",
+      "pbTopDown"
+    ],
+    "TProgressBarStyle": [
+      "pbstNormal",
+      "pbstMarquee"
+    ],
+    "TUDOrientation": [
+      "udHorizontal",
+      "udVertical"
+    ],
+    "TUDAlignButton": [
+      "udLeft",
+      "udRight",
+      "udTop",
+      "udBottom"
+    ],
+    "TColumnLayout": [
+      "clHorizontalThenVertical",
+      "clVerticalThenHorizontal"
+    ],
+    "TScrollCode": [
+      "scLineUp",
+      "scLineDown",
+      "scPageUp",
+      "scPageDown",
+      "scPosition",
+      "scTrack",
+      "scTop",
+      "scBottom",
+      "scEndScroll"
+    ],
     "TPosition": [
       "poDesigned",
       "poDefault",
@@ -17669,6 +17962,30 @@
       {
         "name": "FileNames",
         "type": "const std::vector<std::string>&"
+      }
+    ],
+    "TScrollEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "ScrollCode",
+        "type": "TScrollCode"
+      },
+      {
+        "name": "ScrollPos",
+        "type": "int&"
+      }
+    ],
+    "TCheckGroupClicked": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "Index",
+        "type": "int"
       }
     ],
     "TTabChangingEvent": [

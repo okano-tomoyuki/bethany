@@ -796,6 +796,9 @@ TCustomScrollBar::TCustomScrollBar(ObjectHandle handle)
     , Position(this, &TCustomScrollBar::GetPositionImpl, &TCustomScrollBar::SetPositionImpl)
     , PageSize(this, &TCustomScrollBar::GetPageSizeImpl, &TCustomScrollBar::SetPageSizeImpl)
     , OnChange(this, &TCustomScrollBar::GetOnChangeImpl, &TCustomScrollBar::SetOnChangeImpl)
+    , LargeChange(this, &TCustomScrollBar::GetLargeChangeImpl, &TCustomScrollBar::SetLargeChangeImpl)
+    , SmallChange(this, &TCustomScrollBar::GetSmallChangeImpl, &TCustomScrollBar::SetSmallChangeImpl)
+    , OnScroll(this, &TCustomScrollBar::GetOnScrollImpl, &TCustomScrollBar::SetOnScrollImpl)
 {}
 
 TScrollBarKind TCustomScrollBar::GetKindImpl(TObject* owner) { return static_cast<TScrollBarKind>(internal::TCustomScrollBar_GetKind(owner->Handle())); }
@@ -835,6 +838,16 @@ TCustomTrackBar::TCustomTrackBar(ObjectHandle handle)
     , Max(this, &TCustomTrackBar::GetMaxImpl, &TCustomTrackBar::SetMaxImpl)
     , Position(this, &TCustomTrackBar::GetPositionImpl, &TCustomTrackBar::SetPositionImpl)
     , OnChange(this, &TCustomTrackBar::GetOnChangeImpl, &TCustomTrackBar::SetOnChangeImpl)
+    , Orientation(this, &TCustomTrackBar::GetOrientationImpl, &TCustomTrackBar::SetOrientationImpl)
+    , Frequency(this, &TCustomTrackBar::GetFrequencyImpl, &TCustomTrackBar::SetFrequencyImpl)
+    , TickMarks(this, &TCustomTrackBar::GetTickMarksImpl, &TCustomTrackBar::SetTickMarksImpl)
+    , TickStyle(this, &TCustomTrackBar::GetTickStyleImpl, &TCustomTrackBar::SetTickStyleImpl)
+    , LineSize(this, &TCustomTrackBar::GetLineSizeImpl, &TCustomTrackBar::SetLineSizeImpl)
+    , PageSize(this, &TCustomTrackBar::GetPageSizeImpl, &TCustomTrackBar::SetPageSizeImpl)
+    , SelStart(this, &TCustomTrackBar::GetSelStartImpl, &TCustomTrackBar::SetSelStartImpl)
+    , SelEnd(this, &TCustomTrackBar::GetSelEndImpl, &TCustomTrackBar::SetSelEndImpl)
+    , ShowSelRange(this, &TCustomTrackBar::GetShowSelRangeImpl, &TCustomTrackBar::SetShowSelRangeImpl)
+    , Reversed(this, &TCustomTrackBar::GetReversedImpl, &TCustomTrackBar::SetReversedImpl)
 {}
 
 int  TCustomTrackBar::GetMinImpl(TObject* owner)      { return internal::TCustomTrackBar_GetMin(owner->Handle()); }
@@ -869,6 +882,11 @@ TCustomProgressBar::TCustomProgressBar(ObjectHandle handle)
     , Min(this, &TCustomProgressBar::GetMinImpl, &TCustomProgressBar::SetMinImpl)
     , Max(this, &TCustomProgressBar::GetMaxImpl, &TCustomProgressBar::SetMaxImpl)
     , Position(this, &TCustomProgressBar::GetPositionImpl, &TCustomProgressBar::SetPositionImpl)
+    , Orientation(this, &TCustomProgressBar::GetOrientationImpl, &TCustomProgressBar::SetOrientationImpl)
+    , Smooth(this, &TCustomProgressBar::GetSmoothImpl, &TCustomProgressBar::SetSmoothImpl)
+    , Step(this, &TCustomProgressBar::GetStepImpl, &TCustomProgressBar::SetStepImpl)
+    , Style(this, &TCustomProgressBar::GetStyleImpl, &TCustomProgressBar::SetStyleImpl)
+    , BarShowText(this, &TCustomProgressBar::GetBarShowTextImpl, &TCustomProgressBar::SetBarShowTextImpl)
 {}
 
 int  TCustomProgressBar::GetMinImpl(TObject* owner)      { return internal::TCustomProgressBar_GetMin(owner->Handle()); }
@@ -922,6 +940,11 @@ TUpDown::TUpDown(TComponent* AOwner)
     , Position(this, &TUpDown::GetPositionImpl, &TUpDown::SetPositionImpl)
     , Increment(this, &TUpDown::GetIncrementImpl, &TUpDown::SetIncrementImpl)
     , Associate(this, &TUpDown::GetAssociateImpl, &TUpDown::SetAssociateImpl)
+    , Orientation(this, &TUpDown::GetOrientationImpl, &TUpDown::SetOrientationImpl)
+    , AlignButton(this, &TUpDown::GetAlignButtonImpl, &TUpDown::SetAlignButtonImpl)
+    , Wrap(this, &TUpDown::GetWrapImpl, &TUpDown::SetWrapImpl)
+    , ArrowKeys(this, &TUpDown::GetArrowKeysImpl, &TUpDown::SetArrowKeysImpl)
+    , Thousands(this, &TUpDown::GetThousandsImpl, &TUpDown::SetThousandsImpl)
 {}
 
 int  TUpDown::GetMinImpl(TObject* owner)       { return internal::TUpDown_GetMin(owner->Handle()); }
@@ -1678,6 +1701,10 @@ TCustomRadioGroup::TCustomRadioGroup(ObjectHandle handle)
     , ItemIndex(this, &TCustomRadioGroup::GetItemIndexImpl, &TCustomRadioGroup::SetItemIndexImpl)
     , OnClick(this, &TCustomRadioGroup::GetOnClickImpl, &TCustomRadioGroup::SetOnClickImpl)
     , Items(this, &TCustomRadioGroup::GetItemsImpl)
+    , Columns(this, &TCustomRadioGroup::GetColumnsImpl, &TCustomRadioGroup::SetColumnsImpl)
+    , ColumnLayout(this, &TCustomRadioGroup::GetColumnLayoutImpl, &TCustomRadioGroup::SetColumnLayoutImpl)
+    , AutoFill(this, &TCustomRadioGroup::GetAutoFillImpl, &TCustomRadioGroup::SetAutoFillImpl)
+    , OnSelectionChanged(this, &TCustomRadioGroup::GetOnSelectionChangedImpl, &TCustomRadioGroup::SetOnSelectionChangedImpl)
     , items_(this, &internal::TCustomRadioGroup_GetItems)
 {}
 
@@ -1710,8 +1737,13 @@ TStrings* TCustomCheckGroup::GetItemsImpl(TObject* owner) { return &static_cast<
 
 TCustomCheckGroup::TCustomCheckGroup(ObjectHandle handle)
     : TCustomGroupBox(handle)
-    , Checked(this, &TCustomCheckGroup::GetCheckedImpl, &TCustomCheckGroup::SetCheckedImpl)
     , Items(this, &TCustomCheckGroup::GetItemsImpl)
+    , Checked(this, &TCustomCheckGroup::GetCheckedImpl, &TCustomCheckGroup::SetCheckedImpl)
+    , Columns(this, &TCustomCheckGroup::GetColumnsImpl, &TCustomCheckGroup::SetColumnsImpl)
+    , ColumnLayout(this, &TCustomCheckGroup::GetColumnLayoutImpl, &TCustomCheckGroup::SetColumnLayoutImpl)
+    , AutoFill(this, &TCustomCheckGroup::GetAutoFillImpl, &TCustomCheckGroup::SetAutoFillImpl)
+    , CheckEnabled(this, &TCustomCheckGroup::GetCheckEnabledImpl, &TCustomCheckGroup::SetCheckEnabledImpl)
+    , OnItemClick(this, &TCustomCheckGroup::GetOnItemClickImpl, &TCustomCheckGroup::SetOnItemClickImpl)
     , items_(this, &internal::TCustomCheckGroup_GetItems)
 {}
 
@@ -5759,6 +5791,162 @@ TControlScrollBar* TScrollingWinControl::GetVertScrollBarImpl(TObject* owner) { 
 void TScrollingWinControl::SetVertScrollBarImpl(TObject* owner, TControlScrollBar* const& value)
 {
     internal::TScrollingWinControl_SetVertScrollBar(owner->Handle(), value ? value->Handle() : nullptr);
+}
+
+/* ---------------- 範囲のコントロール・グループの列(docs/adr/0049) ---------------- */
+
+TTrackBarOrientation TCustomTrackBar::GetOrientationImpl(TObject* owner) { return static_cast<TTrackBarOrientation>(internal::TCustomTrackBar_GetOrientation(owner->Handle())); }
+void TCustomTrackBar::SetOrientationImpl(TObject* owner, const TTrackBarOrientation& value) { internal::TCustomTrackBar_SetOrientation(owner->Handle(), value); }
+
+int TCustomTrackBar::GetFrequencyImpl(TObject* owner) { return internal::TCustomTrackBar_GetFrequency(owner->Handle()); }
+void TCustomTrackBar::SetFrequencyImpl(TObject* owner, const int& value) { internal::TCustomTrackBar_SetFrequency(owner->Handle(), value); }
+
+TTickMark TCustomTrackBar::GetTickMarksImpl(TObject* owner) { return static_cast<TTickMark>(internal::TCustomTrackBar_GetTickMarks(owner->Handle())); }
+void TCustomTrackBar::SetTickMarksImpl(TObject* owner, const TTickMark& value) { internal::TCustomTrackBar_SetTickMarks(owner->Handle(), value); }
+
+TTickStyle TCustomTrackBar::GetTickStyleImpl(TObject* owner) { return static_cast<TTickStyle>(internal::TCustomTrackBar_GetTickStyle(owner->Handle())); }
+void TCustomTrackBar::SetTickStyleImpl(TObject* owner, const TTickStyle& value) { internal::TCustomTrackBar_SetTickStyle(owner->Handle(), value); }
+
+int TCustomTrackBar::GetLineSizeImpl(TObject* owner) { return internal::TCustomTrackBar_GetLineSize(owner->Handle()); }
+void TCustomTrackBar::SetLineSizeImpl(TObject* owner, const int& value) { internal::TCustomTrackBar_SetLineSize(owner->Handle(), value); }
+
+int TCustomTrackBar::GetPageSizeImpl(TObject* owner) { return internal::TCustomTrackBar_GetPageSize(owner->Handle()); }
+void TCustomTrackBar::SetPageSizeImpl(TObject* owner, const int& value) { internal::TCustomTrackBar_SetPageSize(owner->Handle(), value); }
+
+int TCustomTrackBar::GetSelStartImpl(TObject* owner) { return internal::TCustomTrackBar_GetSelStart(owner->Handle()); }
+void TCustomTrackBar::SetSelStartImpl(TObject* owner, const int& value) { internal::TCustomTrackBar_SetSelStart(owner->Handle(), value); }
+
+int TCustomTrackBar::GetSelEndImpl(TObject* owner) { return internal::TCustomTrackBar_GetSelEnd(owner->Handle()); }
+void TCustomTrackBar::SetSelEndImpl(TObject* owner, const int& value) { internal::TCustomTrackBar_SetSelEnd(owner->Handle(), value); }
+
+bool TCustomTrackBar::GetShowSelRangeImpl(TObject* owner) { return internal::TCustomTrackBar_GetShowSelRange(owner->Handle()) != 0; }
+void TCustomTrackBar::SetShowSelRangeImpl(TObject* owner, const bool& value) { internal::TCustomTrackBar_SetShowSelRange(owner->Handle(), value ? 1 : 0); }
+
+bool TCustomTrackBar::GetReversedImpl(TObject* owner) { return internal::TCustomTrackBar_GetReversed(owner->Handle()) != 0; }
+void TCustomTrackBar::SetReversedImpl(TObject* owner, const bool& value) { internal::TCustomTrackBar_SetReversed(owner->Handle(), value ? 1 : 0); }
+
+TProgressBarOrientation TCustomProgressBar::GetOrientationImpl(TObject* owner) { return static_cast<TProgressBarOrientation>(internal::TCustomProgressBar_GetOrientation(owner->Handle())); }
+void TCustomProgressBar::SetOrientationImpl(TObject* owner, const TProgressBarOrientation& value) { internal::TCustomProgressBar_SetOrientation(owner->Handle(), value); }
+
+bool TCustomProgressBar::GetSmoothImpl(TObject* owner) { return internal::TCustomProgressBar_GetSmooth(owner->Handle()) != 0; }
+void TCustomProgressBar::SetSmoothImpl(TObject* owner, const bool& value) { internal::TCustomProgressBar_SetSmooth(owner->Handle(), value ? 1 : 0); }
+
+int TCustomProgressBar::GetStepImpl(TObject* owner) { return internal::TCustomProgressBar_GetStep(owner->Handle()); }
+void TCustomProgressBar::SetStepImpl(TObject* owner, const int& value) { internal::TCustomProgressBar_SetStep(owner->Handle(), value); }
+
+TProgressBarStyle TCustomProgressBar::GetStyleImpl(TObject* owner) { return static_cast<TProgressBarStyle>(internal::TCustomProgressBar_GetStyle(owner->Handle())); }
+void TCustomProgressBar::SetStyleImpl(TObject* owner, const TProgressBarStyle& value) { internal::TCustomProgressBar_SetStyle(owner->Handle(), value); }
+
+bool TCustomProgressBar::GetBarShowTextImpl(TObject* owner) { return internal::TCustomProgressBar_GetBarShowText(owner->Handle()) != 0; }
+void TCustomProgressBar::SetBarShowTextImpl(TObject* owner, const bool& value) { internal::TCustomProgressBar_SetBarShowText(owner->Handle(), value ? 1 : 0); }
+
+int TCustomScrollBar::GetLargeChangeImpl(TObject* owner) { return internal::TCustomScrollBar_GetLargeChange(owner->Handle()); }
+void TCustomScrollBar::SetLargeChangeImpl(TObject* owner, const int& value) { internal::TCustomScrollBar_SetLargeChange(owner->Handle(), value); }
+
+int TCustomScrollBar::GetSmallChangeImpl(TObject* owner) { return internal::TCustomScrollBar_GetSmallChange(owner->Handle()); }
+void TCustomScrollBar::SetSmallChangeImpl(TObject* owner, const int& value) { internal::TCustomScrollBar_SetSmallChange(owner->Handle(), value); }
+
+TUDOrientation TUpDown::GetOrientationImpl(TObject* owner) { return static_cast<TUDOrientation>(internal::TUpDown_GetOrientation(owner->Handle())); }
+void TUpDown::SetOrientationImpl(TObject* owner, const TUDOrientation& value) { internal::TUpDown_SetOrientation(owner->Handle(), value); }
+
+TUDAlignButton TUpDown::GetAlignButtonImpl(TObject* owner) { return static_cast<TUDAlignButton>(internal::TUpDown_GetAlignButton(owner->Handle())); }
+void TUpDown::SetAlignButtonImpl(TObject* owner, const TUDAlignButton& value) { internal::TUpDown_SetAlignButton(owner->Handle(), value); }
+
+bool TUpDown::GetWrapImpl(TObject* owner) { return internal::TUpDown_GetWrap(owner->Handle()) != 0; }
+void TUpDown::SetWrapImpl(TObject* owner, const bool& value) { internal::TUpDown_SetWrap(owner->Handle(), value ? 1 : 0); }
+
+bool TUpDown::GetArrowKeysImpl(TObject* owner) { return internal::TUpDown_GetArrowKeys(owner->Handle()) != 0; }
+void TUpDown::SetArrowKeysImpl(TObject* owner, const bool& value) { internal::TUpDown_SetArrowKeys(owner->Handle(), value ? 1 : 0); }
+
+bool TUpDown::GetThousandsImpl(TObject* owner) { return internal::TUpDown_GetThousands(owner->Handle()) != 0; }
+void TUpDown::SetThousandsImpl(TObject* owner, const bool& value) { internal::TUpDown_SetThousands(owner->Handle(), value ? 1 : 0); }
+
+int TCustomRadioGroup::GetColumnsImpl(TObject* owner) { return internal::TCustomRadioGroup_GetColumns(owner->Handle()); }
+void TCustomRadioGroup::SetColumnsImpl(TObject* owner, const int& value) { internal::TCustomRadioGroup_SetColumns(owner->Handle(), value); }
+
+TColumnLayout TCustomRadioGroup::GetColumnLayoutImpl(TObject* owner) { return static_cast<TColumnLayout>(internal::TCustomRadioGroup_GetColumnLayout(owner->Handle())); }
+void TCustomRadioGroup::SetColumnLayoutImpl(TObject* owner, const TColumnLayout& value) { internal::TCustomRadioGroup_SetColumnLayout(owner->Handle(), value); }
+
+bool TCustomRadioGroup::GetAutoFillImpl(TObject* owner) { return internal::TCustomRadioGroup_GetAutoFill(owner->Handle()) != 0; }
+void TCustomRadioGroup::SetAutoFillImpl(TObject* owner, const bool& value) { internal::TCustomRadioGroup_SetAutoFill(owner->Handle(), value ? 1 : 0); }
+
+int TCustomCheckGroup::GetColumnsImpl(TObject* owner) { return internal::TCustomCheckGroup_GetColumns(owner->Handle()); }
+void TCustomCheckGroup::SetColumnsImpl(TObject* owner, const int& value) { internal::TCustomCheckGroup_SetColumns(owner->Handle(), value); }
+
+TColumnLayout TCustomCheckGroup::GetColumnLayoutImpl(TObject* owner) { return static_cast<TColumnLayout>(internal::TCustomCheckGroup_GetColumnLayout(owner->Handle())); }
+void TCustomCheckGroup::SetColumnLayoutImpl(TObject* owner, const TColumnLayout& value) { internal::TCustomCheckGroup_SetColumnLayout(owner->Handle(), value); }
+
+bool TCustomCheckGroup::GetAutoFillImpl(TObject* owner) { return internal::TCustomCheckGroup_GetAutoFill(owner->Handle()) != 0; }
+void TCustomCheckGroup::SetAutoFillImpl(TObject* owner, const bool& value) { internal::TCustomCheckGroup_SetAutoFill(owner->Handle(), value ? 1 : 0); }
+
+void TCustomProgressBar::StepIt() { internal::TCustomProgressBar_StepIt(handle_); }
+void TCustomProgressBar::StepBy(int Delta) { internal::TCustomProgressBar_StepBy(handle_, Delta); }
+
+TScrollEvent TCustomScrollBar::GetOnScrollImpl(TObject* owner) { return static_cast<TCustomScrollBar*>(owner)->onScroll_; }
+void TCustomScrollBar::SetOnScrollImpl(TObject* owner, const TScrollEvent& value)
+{
+    TCustomScrollBar* self = static_cast<TCustomScrollBar*>(owner);
+    SetSimpleEvent(self->handle_, self->onScroll_, self->onScrollHooked_, value, &internal::TCustomScrollBar_SetOnScroll,
+                   &TCustomScrollBar::ScrollTrampoline);
+}
+void BETH_CALL TCustomScrollBar::ScrollTrampoline(ObjectHandle sender, internal::int_t code, internal::int_t* pos, void*)
+{
+    GuardCallback([&] {
+        TCustomScrollBar* self = static_cast<TCustomScrollBar*>(FromHandle(sender));
+        if (!self || !self->onScroll_)
+            return;
+        TScrollEvent handler = self->onScroll_;
+        int scrollPos = *pos;
+        handler(self, static_cast<TScrollCode>(code), scrollPos);
+        *pos = scrollPos;
+    });
+}
+
+TNotifyEvent TCustomRadioGroup::GetOnSelectionChangedImpl(TObject* owner)
+{
+    return static_cast<TCustomRadioGroup*>(owner)->onSelectionChanged_;
+}
+void TCustomRadioGroup::SetOnSelectionChangedImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCustomRadioGroup* self = static_cast<TCustomRadioGroup*>(owner);
+    SetSimpleEvent(self->handle_, self->onSelectionChanged_, self->onSelectionChangedHooked_, value,
+                   &internal::TCustomRadioGroup_SetOnSelectionChanged, &TCustomRadioGroup::SelectionChangedTrampoline);
+}
+void BETH_CALL TCustomRadioGroup::SelectionChangedTrampoline(ObjectHandle sender, void*)
+{
+    GuardCallback([&] {
+        TCustomRadioGroup* self = static_cast<TCustomRadioGroup*>(FromHandle(sender));
+        if (!self || !self->onSelectionChanged_)
+            return;
+        TNotifyEvent handler = self->onSelectionChanged_;
+        handler(self);
+    });
+}
+
+bool TCustomCheckGroup::GetCheckEnabledImpl(TObject* owner, int Index)
+{
+    return internal::TCustomCheckGroup_GetCheckEnabled(owner->Handle(), Index) != 0;
+}
+void TCustomCheckGroup::SetCheckEnabledImpl(TObject* owner, int Index, const bool& value)
+{
+    internal::TCustomCheckGroup_SetCheckEnabled(owner->Handle(), Index, value ? 1 : 0);
+}
+TCheckGroupClicked TCustomCheckGroup::GetOnItemClickImpl(TObject* owner) { return static_cast<TCustomCheckGroup*>(owner)->onItemClick_; }
+void TCustomCheckGroup::SetOnItemClickImpl(TObject* owner, const TCheckGroupClicked& value)
+{
+    TCustomCheckGroup* self = static_cast<TCustomCheckGroup*>(owner);
+    SetSimpleEvent(self->handle_, self->onItemClick_, self->onItemClickHooked_, value, &internal::TCustomCheckGroup_SetOnItemClick,
+                   &TCustomCheckGroup::ItemClickTrampoline);
+}
+void BETH_CALL TCustomCheckGroup::ItemClickTrampoline(ObjectHandle sender, internal::int_t index, void*)
+{
+    GuardCallback([&] {
+        TCustomCheckGroup* self = static_cast<TCustomCheckGroup*>(FromHandle(sender));
+        if (!self || !self->onItemClick_)
+            return;
+        TCheckGroupClicked handler = self->onItemClick_;
+        handler(self, index);
+    });
 }
 
 } // namespace beth

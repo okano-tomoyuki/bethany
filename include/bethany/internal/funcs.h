@@ -1369,6 +1369,69 @@
     X(obj_t,         TScrollingWinControl_GetHorzScrollBar, (obj_t o),                                                     (o)) \
     X(void,          TScrollingWinControl_SetHorzScrollBar, (obj_t o, obj_t v),                                            (o, v)) \
     X(obj_t,         TScrollingWinControl_GetVertScrollBar, (obj_t o),                                                     (o)) \
-    X(void,          TScrollingWinControl_SetVertScrollBar, (obj_t o, obj_t v),                                            (o, v))
+    X(void,          TScrollingWinControl_SetVertScrollBar, (obj_t o, obj_t v),                                            (o, v)) \
+    X(int_t,         TCustomTrackBar_GetOrientation,        (obj_t o),                                                     (o)) \
+    X(void,          TCustomTrackBar_SetOrientation,        (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomTrackBar_GetFrequency,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomTrackBar_SetFrequency,          (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomTrackBar_GetTickMarks,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomTrackBar_SetTickMarks,          (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomTrackBar_GetTickStyle,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomTrackBar_SetTickStyle,          (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomTrackBar_GetLineSize,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomTrackBar_SetLineSize,           (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomTrackBar_GetPageSize,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomTrackBar_SetPageSize,           (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomTrackBar_GetSelStart,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomTrackBar_SetSelStart,           (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomTrackBar_GetSelEnd,             (obj_t o),                                                     (o)) \
+    X(void,          TCustomTrackBar_SetSelEnd,             (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TCustomTrackBar_GetShowSelRange,       (obj_t o),                                                     (o)) \
+    X(void,          TCustomTrackBar_SetShowSelRange,       (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomTrackBar_GetReversed,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomTrackBar_SetReversed,           (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TCustomProgressBar_GetOrientation,     (obj_t o),                                                     (o)) \
+    X(void,          TCustomProgressBar_SetOrientation,     (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TCustomProgressBar_GetSmooth,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomProgressBar_SetSmooth,          (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TCustomProgressBar_GetStep,            (obj_t o),                                                     (o)) \
+    X(void,          TCustomProgressBar_SetStep,            (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomProgressBar_GetStyle,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomProgressBar_SetStyle,           (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TCustomProgressBar_GetBarShowText,     (obj_t o),                                                     (o)) \
+    X(void,          TCustomProgressBar_SetBarShowText,     (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TCustomScrollBar_GetLargeChange,       (obj_t o),                                                     (o)) \
+    X(void,          TCustomScrollBar_SetLargeChange,       (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomScrollBar_GetSmallChange,       (obj_t o),                                                     (o)) \
+    X(void,          TCustomScrollBar_SetSmallChange,       (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TUpDown_GetOrientation,                (obj_t o),                                                     (o)) \
+    X(void,          TUpDown_SetOrientation,                (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TUpDown_GetAlignButton,                (obj_t o),                                                     (o)) \
+    X(void,          TUpDown_SetAlignButton,                (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TUpDown_GetWrap,                       (obj_t o),                                                     (o)) \
+    X(void,          TUpDown_SetWrap,                       (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TUpDown_GetArrowKeys,                  (obj_t o),                                                     (o)) \
+    X(void,          TUpDown_SetArrowKeys,                  (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TUpDown_GetThousands,                  (obj_t o),                                                     (o)) \
+    X(void,          TUpDown_SetThousands,                  (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TCustomRadioGroup_GetColumns,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomRadioGroup_SetColumns,          (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomRadioGroup_GetColumnLayout,     (obj_t o),                                                     (o)) \
+    X(void,          TCustomRadioGroup_SetColumnLayout,     (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TCustomRadioGroup_GetAutoFill,         (obj_t o),                                                     (o)) \
+    X(void,          TCustomRadioGroup_SetAutoFill,         (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TCustomCheckGroup_GetColumns,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomCheckGroup_SetColumns,          (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomCheckGroup_GetColumnLayout,     (obj_t o),                                                     (o)) \
+    X(void,          TCustomCheckGroup_SetColumnLayout,     (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TCustomCheckGroup_GetAutoFill,         (obj_t o),                                                     (o)) \
+    X(void,          TCustomCheckGroup_SetAutoFill,         (obj_t o, bool_t v),                                           (o, v)) \
+    X(void,          TCustomProgressBar_StepIt,             (obj_t o),                                                     (o)) \
+    X(void,          TCustomProgressBar_StepBy,             (obj_t o, int_t delta),                                        (o, delta)) \
+    X(void,          TCustomScrollBar_SetOnScroll,          (obj_t o, scroll_callback_t cb, void* d),                      (o, cb, d)) \
+    X(void,          TCustomRadioGroup_SetOnSelectionChanged, (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(bool_t,        TCustomCheckGroup_GetCheckEnabled,     (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          TCustomCheckGroup_SetCheckEnabled,     (obj_t o, int_t i, bool_t v),                                  (o, i, v)) \
+    X(void,          TCustomCheckGroup_SetOnItemClick,      (obj_t o, int_callback_t cb, void* d),                         (o, cb, d))
 
 #endif

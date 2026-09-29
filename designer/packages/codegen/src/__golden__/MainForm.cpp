@@ -25,6 +25,8 @@ void TMainForm::beth_CreateComponents()
     WrapCheck = new TCheckBox(this);
     SizeSpin = new TSpinEdit(this);
     OptionStatus = new TStatusBar(this);
+    RadioGroup1 = new TRadioGroup(this);
+    ScrollBar1 = new TScrollBar(this);
     MemoSheet = new TTabSheet(this);
     Memo1 = new TMemo(this);
     BottomPanel = new TPanel(this);
@@ -122,6 +124,29 @@ void TMainForm::beth_CreateComponents()
         item->Bevel = pbNone;
     }
 
+    RadioGroup1->Parent = OptionSheet;
+    RadioGroup1->Left = 100;
+    RadioGroup1->Top = 0;
+    RadioGroup1->Width = 120;
+    RadioGroup1->Height = 64;
+    RadioGroup1->Caption = "Size";
+    RadioGroup1->Items->Add("S");
+    RadioGroup1->Items->Add("M");
+    RadioGroup1->Items->Add("L");
+    RadioGroup1->Items->Add("XL");
+    RadioGroup1->Columns = 2;
+    RadioGroup1->ColumnLayout = clVerticalThenHorizontal;
+    RadioGroup1->OnSelectionChanged = [this](TObject* Sender) { RadioGroup1SelectionChanged(Sender); };
+
+    ScrollBar1->Parent = OptionSheet;
+    ScrollBar1->Left = 228;
+    ScrollBar1->Top = 8;
+    ScrollBar1->Width = 120;
+    ScrollBar1->Height = 17;
+    ScrollBar1->LargeChange = 10;
+    ScrollBar1->SmallChange = 2;
+    ScrollBar1->OnScroll = [this](TObject* Sender, TScrollCode ScrollCode, int& ScrollPos) { ScrollBar1Scroll(Sender, ScrollCode, ScrollPos); };
+
     MemoSheet->PageControl = PageControl1;
     MemoSheet->Caption = "Memo";
 
@@ -209,7 +234,7 @@ void TMainForm::beth_CreateComponents()
 
     FileSaveItem->Action = FileSaveAction;
 }
-// <bethany-designer:end id="beth_CreateComponents" hash="78f45f3f">
+// <bethany-designer:end id="beth_CreateComponents" hash="2f417dac">
 
 // <bethany-designer:handler-stubs>
 
@@ -239,6 +264,16 @@ void TMainForm::OkButtonClick(TObject* Sender)
 }
 
 void TMainForm::WrapCheckClick(TObject* Sender)
+{
+    // TODO: implement
+}
+
+void TMainForm::RadioGroup1SelectionChanged(TObject* Sender)
+{
+    // TODO: implement
+}
+
+void TMainForm::ScrollBar1Scroll(TObject* Sender, TScrollCode ScrollCode, int& ScrollPos)
 {
     // TODO: implement
 }

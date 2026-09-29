@@ -62,6 +62,8 @@ export const EXPECTED_CALLS = [
   'Timer1Timer',
   'FormCloseQuery',
   'FormDropFiles',
+  'RadioGroup1SelectionChanged',
+  'ScrollBar1Scroll',
 ];
 
 /** 参照・入れ子のオブジェクト・TStrings・メニュー等(検証のプログラムが読んだ値) */
@@ -82,6 +84,9 @@ export const EXPECTED_CHECKS: Readonly<Record<string, string>> = {
   // パネルの縁・コントロールの枠(docs/adr/0048): BevelOuter/BevelInner/BevelWidth/BorderWidth と、Memo1 の BorderStyle/ScrollBars
   panelBevel: '1/2/2/1',
   memoBorder: '0/3',
+  // 範囲のコントロール・グループの列(docs/adr/0049): RadioGroup1 の Columns/ColumnLayout と、ScrollBar1 の LargeChange/SmallChange
+  groupColumns: '2/1',
+  scrollChange: '10/2',
   dialogOptions: String((1 << 20) | (1 << 23) | (1 << 9)),
   timer: '0/500',
   caption: 'Sample',

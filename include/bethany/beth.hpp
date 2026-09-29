@@ -1801,6 +1801,25 @@ private:
     static void         SetBorderStyleImpl(TObject* owner, const TBorderStyle& value);
 };
 
+// ---- 範囲のコントロール・グループの列(docs/adr/0049。値の順は LCL と同じ) ----
+
+enum TTrackBarOrientation { trHorizontal, trVertical };
+// 目盛りを付ける側(tmBottomRight は横なら下、縦なら右)。
+enum TTickMark { tmBottomRight, tmTopLeft, tmBoth };
+enum TTickStyle { tsNone, tsAuto, tsManual };
+enum TProgressBarOrientation { pbHorizontal, pbVertical, pbRightToLeft, pbTopDown };
+enum TProgressBarStyle { pbstNormal, pbstMarquee };
+enum TUDOrientation { udHorizontal, udVertical };
+enum TUDAlignButton { udLeft, udRight, udTop, udBottom };
+enum TColumnLayout { clHorizontalThenVertical, clVerticalThenHorizontal };
+// スクロールバーの操作(TScrollBar の OnScroll。Windows の SB_… と同じ値)。
+enum TScrollCode { scLineUp, scLineDown, scPageUp, scPageDown, scPosition, scTrack, scTop, scBottom, scEndScroll };
+
+// TScrollBar の OnScroll。ScrollPos を変えると、つまみの位置がその値になる。
+using TScrollEvent = std::function<void(TObject* Sender, TScrollCode ScrollCode, int& ScrollPos)>;
+// TCheckGroup の OnItemClick。Index はチェックを切り替えた項目。
+using TCheckGroupClicked = std::function<void(TObject* Sender, int Index)>;
+
 // つまみを左右または上下にドラッグして値を選ぶスクロールバー(TScrollBarKind は docs/adr/0048 の区間)。
 
 class TCustomScrollBar : public TWinControl
@@ -1812,6 +1831,13 @@ public:
     Property<int>            Position;
     Property<int>            PageSize;
     Property<TNotifyEvent>   OnChange;
+
+    // ---- docs/adr/0049 ----
+    // つまみの外を押したとき・矢印を押したときに動く量。
+    Property<int> LargeChange;
+    Property<int> SmallChange;
+    // つまみ・矢印を操作したとき(OnChange より先に呼ばれる)。
+    Property<TScrollEvent> OnScroll;
 
 protected:
     explicit TCustomScrollBar(ObjectHandle handle);
@@ -1834,6 +1860,17 @@ private:
     static void           SetPageSizeImpl(TObject* owner, const int& value);
     static TNotifyEvent   GetOnChangeImpl(TObject* owner);
     static void           SetOnChangeImpl(TObject* owner, const TNotifyEvent& value);
+
+    // ---- docs/adr/0049 ----
+    static int GetLargeChangeImpl(TObject* owner);
+    static void SetLargeChangeImpl(TObject* owner, const int& value);
+    static int GetSmallChangeImpl(TObject* owner);
+    static void SetSmallChangeImpl(TObject* owner, const int& value);
+    TScrollEvent onScroll_;
+    bool onScrollHooked_ = false;
+    static TScrollEvent GetOnScrollImpl(TObject* owner);
+    static void SetOnScrollImpl(TObject* owner, const TScrollEvent& value);
+    static void BETH_CALL ScrollTrampoline(ObjectHandle sender, internal::int_t code, internal::int_t* pos, void* data);
 };
 
 class TScrollBar : public TCustomScrollBar
@@ -1854,6 +1891,25 @@ public:
     Property<int>          Position;
     Property<TNotifyEvent> OnChange;
 
+    // ---- docs/adr/0049 ----
+    // 縦(trVertical)か横か。
+    Property<TTrackBarOrientation> Orientation;
+    // 目盛りの間隔(TickStyle が tsAuto のとき)。
+    Property<int> Frequency;
+    // 目盛りを付ける側。
+    Property<TTickMark> TickMarks;
+    // 目盛りの付け方(tsNone は付けない)。
+    Property<TTickStyle> TickStyle;
+    // 矢印キーで動く量と、PageUp・PageDown で動く量。
+    Property<int> LineSize;
+    Property<int> PageSize;
+    // 選択の範囲として強調する区間(ShowSelRange が true のとき)。
+    Property<int> SelStart;
+    Property<int> SelEnd;
+    Property<bool> ShowSelRange;
+    // true なら、Min と Max の側を入れ替える。
+    Property<bool> Reversed;
+
 protected:
     explicit TCustomTrackBar(ObjectHandle handle);
     ~TCustomTrackBar() override = default;
@@ -1871,6 +1927,28 @@ private:
     static void         SetPositionImpl(TObject* owner, const int& value);
     static TNotifyEvent GetOnChangeImpl(TObject* owner);
     static void         SetOnChangeImpl(TObject* owner, const TNotifyEvent& value);
+
+    // ---- docs/adr/0049 ----
+    static TTrackBarOrientation GetOrientationImpl(TObject* owner);
+    static void SetOrientationImpl(TObject* owner, const TTrackBarOrientation& value);
+    static int GetFrequencyImpl(TObject* owner);
+    static void SetFrequencyImpl(TObject* owner, const int& value);
+    static TTickMark GetTickMarksImpl(TObject* owner);
+    static void SetTickMarksImpl(TObject* owner, const TTickMark& value);
+    static TTickStyle GetTickStyleImpl(TObject* owner);
+    static void SetTickStyleImpl(TObject* owner, const TTickStyle& value);
+    static int GetLineSizeImpl(TObject* owner);
+    static void SetLineSizeImpl(TObject* owner, const int& value);
+    static int GetPageSizeImpl(TObject* owner);
+    static void SetPageSizeImpl(TObject* owner, const int& value);
+    static int GetSelStartImpl(TObject* owner);
+    static void SetSelStartImpl(TObject* owner, const int& value);
+    static int GetSelEndImpl(TObject* owner);
+    static void SetSelEndImpl(TObject* owner, const int& value);
+    static bool GetShowSelRangeImpl(TObject* owner);
+    static void SetShowSelRangeImpl(TObject* owner, const bool& value);
+    static bool GetReversedImpl(TObject* owner);
+    static void SetReversedImpl(TObject* owner, const bool& value);
 };
 
 class TTrackBar : public TCustomTrackBar
@@ -1890,6 +1968,21 @@ public:
     Property<int> Max;
     Property<int> Position;
 
+    // ---- docs/adr/0049 ----
+    // 伸びる向き(pbVertical は下から上)。
+    Property<TProgressBarOrientation> Orientation;
+    // true なら、区切りの無い棒で描く。
+    Property<bool> Smooth;
+    // StepIt で進める量。
+    Property<int> Step;
+    // pbstMarquee は、進み具合の分からない処理の間に動き続ける表示。
+    Property<TProgressBarStyle> Style;
+    // true なら、進み具合を文字でも表示する(Windows では表示されないことがある)。
+    Property<bool> BarShowText;
+    // Position を Step だけ進める・Delta だけ進める(Max を超えると Min に戻る)。
+    void StepIt();
+    void StepBy(int Delta);
+
 protected:
     explicit TCustomProgressBar(ObjectHandle handle);
     ~TCustomProgressBar() override = default;
@@ -1901,6 +1994,18 @@ private:
     static void SetMaxImpl(TObject* owner, const int& value);
     static int  GetPositionImpl(TObject* owner);
     static void SetPositionImpl(TObject* owner, const int& value);
+
+    // ---- docs/adr/0049 ----
+    static TProgressBarOrientation GetOrientationImpl(TObject* owner);
+    static void SetOrientationImpl(TObject* owner, const TProgressBarOrientation& value);
+    static bool GetSmoothImpl(TObject* owner);
+    static void SetSmoothImpl(TObject* owner, const bool& value);
+    static int GetStepImpl(TObject* owner);
+    static void SetStepImpl(TObject* owner, const int& value);
+    static TProgressBarStyle GetStyleImpl(TObject* owner);
+    static void SetStyleImpl(TObject* owner, const TProgressBarStyle& value);
+    static bool GetBarShowTextImpl(TObject* owner);
+    static void SetBarShowTextImpl(TObject* owner, const bool& value);
 };
 
 class TProgressBar : public TCustomProgressBar
@@ -1960,6 +2065,18 @@ public:
     // 値を増減させる対象のコントロール(TEdit 等)。
     Property<TWinControl*> Associate;
 
+    // ---- docs/adr/0049 ----
+    // 矢印の向き(udVertical は上下、udHorizontal は左右)。
+    Property<TUDOrientation> Orientation;
+    // Associate のどちら側に付けるか。
+    Property<TUDAlignButton> AlignButton;
+    // true なら、Max を超えると Min に戻る(逆も)。
+    Property<bool> Wrap;
+    // true なら、Associate の上で矢印キーを押すと値が変わる。
+    Property<bool> ArrowKeys;
+    // true なら、Associate に表示する値に 3 桁ごとの区切りを入れる。
+    Property<bool> Thousands;
+
 protected:
     ~TUpDown() override = default;
 
@@ -1974,6 +2091,18 @@ private:
     static void         SetIncrementImpl(TObject* owner, const int& value);
     static TWinControl* GetAssociateImpl(TObject* owner);
     static void         SetAssociateImpl(TObject* owner, TWinControl* const& value);
+
+    // ---- docs/adr/0049 ----
+    static TUDOrientation GetOrientationImpl(TObject* owner);
+    static void SetOrientationImpl(TObject* owner, const TUDOrientation& value);
+    static TUDAlignButton GetAlignButtonImpl(TObject* owner);
+    static void SetAlignButtonImpl(TObject* owner, const TUDAlignButton& value);
+    static bool GetWrapImpl(TObject* owner);
+    static void SetWrapImpl(TObject* owner, const bool& value);
+    static bool GetArrowKeysImpl(TObject* owner);
+    static void SetArrowKeysImpl(TObject* owner, const bool& value);
+    static bool GetThousandsImpl(TObject* owner);
+    static void SetThousandsImpl(TObject* owner, const bool& value);
 };
 
 /* ---------------- Form ---------------- */
@@ -2559,6 +2688,16 @@ public:
     // 文字列の一覧(TStrings。RadioGroup1->Items->Add("x") のように使う)。
     ReadOnlyProperty<TStrings*> Items;
 
+    // ---- docs/adr/0049 ----
+    // 項目を並べる列の数。
+    Property<int> Columns;
+    // 項目を並べる順(clHorizontalThenVertical は横に並べてから次の行)。
+    Property<TColumnLayout> ColumnLayout;
+    // true なら、項目をグループの高さいっぱいに広げて並べる。
+    Property<bool> AutoFill;
+    // ItemIndex が変わったとき(利用者の操作でも、プログラムからの代入でも)。
+    Property<TNotifyEvent> OnSelectionChanged;
+
 protected:
     explicit TCustomRadioGroup(ObjectHandle handle);
     ~TCustomRadioGroup() override = default;
@@ -2574,6 +2713,19 @@ private:
     static void          SetItemIndexImpl(TObject* owner, const int& value);
     static TNotifyEvent  GetOnClickImpl(TObject* owner);
     static void          SetOnClickImpl(TObject* owner, const TNotifyEvent& value);
+
+    // ---- docs/adr/0049 ----
+    static int GetColumnsImpl(TObject* owner);
+    static void SetColumnsImpl(TObject* owner, const int& value);
+    static TColumnLayout GetColumnLayoutImpl(TObject* owner);
+    static void SetColumnLayoutImpl(TObject* owner, const TColumnLayout& value);
+    static bool GetAutoFillImpl(TObject* owner);
+    static void SetAutoFillImpl(TObject* owner, const bool& value);
+    TNotifyEvent onSelectionChanged_;
+    bool onSelectionChangedHooked_ = false;
+    static TNotifyEvent GetOnSelectionChangedImpl(TObject* owner);
+    static void SetOnSelectionChangedImpl(TObject* owner, const TNotifyEvent& value);
+    static void BETH_CALL SelectionChangedTrampoline(ObjectHandle sender, void* data);
 };
 
 class TRadioGroup : public TCustomRadioGroup
@@ -2594,6 +2746,18 @@ public:
     // 項目ごとのチェックの状態(CheckGroup1->Checked[i] = true;)。
     IndexedProperty<bool> Checked;
 
+    // ---- docs/adr/0049 ----
+    // 項目を並べる列の数。
+    Property<int> Columns;
+    // 項目を並べる順(clHorizontalThenVertical は横に並べてから次の行)。
+    Property<TColumnLayout> ColumnLayout;
+    // true なら、項目をグループの高さいっぱいに広げて並べる。
+    Property<bool> AutoFill;
+    // 項目ごとに、利用者がチェックを切り替えられるか。
+    IndexedProperty<bool> CheckEnabled;
+    // 利用者が項目のチェックを切り替えたとき。
+    Property<TCheckGroupClicked> OnItemClick;
+
 protected:
     explicit TCustomCheckGroup(ObjectHandle handle);
     ~TCustomCheckGroup() override = default;
@@ -2603,6 +2767,21 @@ private:
     static TStrings* GetItemsImpl(TObject* owner);
     static bool GetCheckedImpl(TObject* owner, int index);
     static void SetCheckedImpl(TObject* owner, int index, const bool& value);
+
+    // ---- docs/adr/0049 ----
+    static int GetColumnsImpl(TObject* owner);
+    static void SetColumnsImpl(TObject* owner, const int& value);
+    static TColumnLayout GetColumnLayoutImpl(TObject* owner);
+    static void SetColumnLayoutImpl(TObject* owner, const TColumnLayout& value);
+    static bool GetAutoFillImpl(TObject* owner);
+    static void SetAutoFillImpl(TObject* owner, const bool& value);
+    static bool GetCheckEnabledImpl(TObject* owner, int Index);
+    static void SetCheckEnabledImpl(TObject* owner, int Index, const bool& value);
+    TCheckGroupClicked onItemClick_;
+    bool onItemClickHooked_ = false;
+    static TCheckGroupClicked GetOnItemClickImpl(TObject* owner);
+    static void SetOnItemClickImpl(TObject* owner, const TCheckGroupClicked& value);
+    static void BETH_CALL ItemClickTrampoline(ObjectHandle sender, internal::int_t index, void* data);
 };
 
 class TCheckGroup : public TCustomCheckGroup

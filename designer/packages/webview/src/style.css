@@ -955,7 +955,7 @@ input[aria-invalid='true'] {
 }
 
 .look-progress > div {
-  height: 100%;
+  position: absolute;
   background: #06b025;
 }
 
@@ -968,6 +968,13 @@ input[aria-invalid='true'] {
   margin-top: -2px;
   background: #c4c4c4;
   border-radius: 2px;
+}
+
+.look-track.vertical .look-track-line {
+  inset: 8px auto 8px 50%;
+  width: 4px;
+  height: auto;
+  margin: 0 0 0 -2px;
 }
 
 .look-scroll {
@@ -999,6 +1006,12 @@ input[aria-invalid='true'] {
   border: 1px solid #d0d0d0;
   background:
     linear-gradient(#d0d0d0, #d0d0d0) center / 100% 1px no-repeat,
+    #fdfdfd;
+}
+
+.look-updown.horizontal {
+  background:
+    linear-gradient(#d0d0d0, #d0d0d0) center / 1px 100% no-repeat,
     #fdfdfd;
 }
 

@@ -14,6 +14,8 @@ class TMainForm(TForm):
         self.WrapCheck: TCheckBox
         self.SizeSpin: TSpinEdit
         self.OptionStatus: TStatusBar
+        self.RadioGroup1: TRadioGroup
+        self.ScrollBar1: TScrollBar
         self.MemoSheet: TTabSheet
         self.Memo1: TMemo
         self.BottomPanel: TPanel
@@ -31,7 +33,7 @@ class TMainForm(TForm):
         self.Timer1: TTimer
         self.ActionList1: TActionList
         self.FileSaveAction: TAction
-        # <bethany-designer:end id="declarations" hash="96160a63">
+        # <bethany-designer:end id="declarations" hash="0b488329">
         self.beth_CreateComponents()
 
     # <bethany-designer:begin id="beth_CreateComponents">
@@ -44,6 +46,8 @@ class TMainForm(TForm):
         self.WrapCheck = TCheckBox(self)
         self.SizeSpin = TSpinEdit(self)
         self.OptionStatus = TStatusBar(self)
+        self.RadioGroup1 = TRadioGroup(self)
+        self.ScrollBar1 = TScrollBar(self)
         self.MemoSheet = TTabSheet(self)
         self.Memo1 = TMemo(self)
         self.BottomPanel = TPanel(self)
@@ -135,6 +139,29 @@ class TMainForm(TForm):
         item.Alignment = taRightJustify
         item.Bevel = pbNone
 
+        self.RadioGroup1.Parent = self.OptionSheet
+        self.RadioGroup1.Left = 100
+        self.RadioGroup1.Top = 0
+        self.RadioGroup1.Width = 120
+        self.RadioGroup1.Height = 64
+        self.RadioGroup1.Caption = "Size"
+        self.RadioGroup1.Items.Add("S")
+        self.RadioGroup1.Items.Add("M")
+        self.RadioGroup1.Items.Add("L")
+        self.RadioGroup1.Items.Add("XL")
+        self.RadioGroup1.Columns = 2
+        self.RadioGroup1.ColumnLayout = clVerticalThenHorizontal
+        self.RadioGroup1.OnSelectionChanged = self.RadioGroup1SelectionChanged
+
+        self.ScrollBar1.Parent = self.OptionSheet
+        self.ScrollBar1.Left = 228
+        self.ScrollBar1.Top = 8
+        self.ScrollBar1.Width = 120
+        self.ScrollBar1.Height = 17
+        self.ScrollBar1.LargeChange = 10
+        self.ScrollBar1.SmallChange = 2
+        self.ScrollBar1.OnScroll = self.ScrollBar1Scroll
+
         self.MemoSheet.PageControl = self.PageControl1
         self.MemoSheet.Caption = "Memo"
 
@@ -221,7 +248,7 @@ class TMainForm(TForm):
         self.FileSaveAction.OnExecute = self.FileSaveActionExecute
 
         self.FileSaveItem.Action = self.FileSaveAction
-    # <bethany-designer:end id="beth_CreateComponents" hash="de509bc8">
+    # <bethany-designer:end id="beth_CreateComponents" hash="79b3fb1a">
 
     # <bethany-designer:handler-stubs>
 
@@ -241,6 +268,12 @@ class TMainForm(TForm):
         pass
 
     def WrapCheckClick(self, Sender):
+        pass
+
+    def RadioGroup1SelectionChanged(self, Sender):
+        pass
+
+    def ScrollBar1Scroll(self, Sender, ScrollCode, ScrollPos):
         pass
 
     def FileOpenItemClick(self, Sender):

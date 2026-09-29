@@ -52,6 +52,9 @@ using section_drag_callback_t = void (BETH_CALL *)(obj_t sender, obj_t fromSecti
 using item_rect_callback_t = void (BETH_CALL *)(obj_t sender, obj_t item, int_t left, int_t top, int_t right, int_t bottom, void* data);
 // ファイル名(UTF-8)の数と配列。呼び出しの間だけ有効(docs/adr/0047)。
 using drop_files_callback_t = void (BETH_CALL *)(obj_t sender, int_t count, str_t* fileNames, void* data);
+// TScrollBar の OnScroll(操作の種類と、つまみの位置)・TCheckGroup の OnItemClick(docs/adr/0049)。
+using scroll_callback_t = void (BETH_CALL *)(obj_t sender, int_t scrollCode, int_t* scrollPos, void* data);
+using int_callback_t = void (BETH_CALL *)(obj_t sender, int_t value, void* data);
 
 #define BETH_DECLARE_FUNC(ret, name, params, args) ret name params;
 BETH_FUNCS(BETH_DECLARE_FUNC)

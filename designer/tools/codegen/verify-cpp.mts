@@ -145,6 +145,8 @@ ${controls
     check(first, "actionLink", std::string(f->FileSaveItem->Caption) + "/" + ShortCutToText(f->FileSaveItem->ShortCut) + "/" + std::to_string(f->ActionList1->ActionCount));
     check(first, "allowDropFiles", std::to_string((int)f->AllowDropFiles));
     check(first, "panelBevel", std::to_string((int)(TPanelBevel)f->BottomPanel->BevelOuter) + "/" + std::to_string((int)(TPanelBevel)f->BottomPanel->BevelInner) + "/" + std::to_string(f->BottomPanel->BevelWidth) + "/" + std::to_string(f->BottomPanel->BorderWidth));
+    check(first, "groupColumns", std::to_string(f->RadioGroup1->Columns) + "/" + std::to_string((int)(TColumnLayout)f->RadioGroup1->ColumnLayout));
+    check(first, "scrollChange", std::to_string(f->ScrollBar1->LargeChange) + "/" + std::to_string(f->ScrollBar1->SmallChange));
     check(first, "memoBorder", std::to_string((int)(TBorderStyle)f->Memo1->BorderStyle) + "/" + std::to_string((int)(TScrollStyle)f->Memo1->ScrollBars));
     check(first, "timer", std::to_string((int)f->Timer1->Enabled) + "/" + std::to_string(f->Timer1->Interval));
     check(first, "caption", f->Caption);
@@ -162,11 +164,15 @@ ${controls
     f->FileOpenItem->Click();
     f->FileSaveItem->Click();
     f->ClearItem->Click();
+    f->RadioGroup1->ItemIndex = 1;  // LCL は代入でも OnSelectionChanged を呼ぶ
     // TButton・TTimer はプログラムから発生させる手段が無いので、接続されたハンドラを呼ぶ
     TNotifyEvent onClick = f->OkButton->OnClick;
     if (onClick) onClick(f->OkButton);
     TNotifyEvent onTimer = f->Timer1->OnTimer;
     if (onTimer) onTimer(f->Timer1);
+    TScrollEvent onScroll = f->ScrollBar1->OnScroll;
+    int scrollPos = 5;
+    if (onScroll) onScroll(f->ScrollBar1, scLineDown, scrollPos);
     TDropFilesEvent onDropFiles = f->OnDropFiles;
     if (onDropFiles) onDropFiles(f, {"C:/temp/a.txt"});
     f->Close();

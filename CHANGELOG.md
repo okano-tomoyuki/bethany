@@ -42,6 +42,10 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
 - パネルの縁と Caption の揃え(`BevelOuter`・`BevelInner`・`BevelWidth`・`BevelColor`・`Alignment`・`VerticalAlignment`・`WordWrap`)、
   コントロールの枠(`BorderStyle`: `bsNone`・`bsSingle`)と `BorderWidth`、グリッド・TTreeView・TListView の `ScrollBars`(`TScrollStyle`)、
   TForm・TScrollBox の `AutoScroll`・`HorzScrollBar`・`VertScrollBar`(`TControlScrollBar`)([ADR 0048](docs/adr/0048-panel-bevel-scroll-border.md))
+- TTrackBar の `Orientation`・`Frequency`・`TickMarks`・`TickStyle`・`LineSize`・`PageSize`・`SelStart`・`SelEnd`・`ShowSelRange`・`Reversed`、
+  TProgressBar の `Orientation`・`Smooth`・`Step`・`Style`・`BarShowText`・`StepIt()`・`StepBy()`、TScrollBar の `LargeChange`・`SmallChange`・`OnScroll`、
+  TUpDown の `Orientation`・`AlignButton`・`Wrap`・`ArrowKeys`・`Thousands`、TRadioGroup・TCheckGroup の `Columns`・`ColumnLayout`・`AutoFill`と、
+  TRadioGroup の `OnSelectionChanged`、TCheckGroup の `CheckEnabled[i]`・`OnItemClick`([ADR 0049](docs/adr/0049-range-controls-and-group-columns.md))
 
 ### 変更
 

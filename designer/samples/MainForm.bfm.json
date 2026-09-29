@@ -103,6 +103,34 @@
                     { "Text": "right", "Alignment": "taRightJustify", "Bevel": "pbNone" }
                   ]
                 }
+              },
+              {
+                "name": "RadioGroup1",
+                "class": "TRadioGroup",
+                "properties": {
+                  "Left": 100,
+                  "Top": 0,
+                  "Width": 120,
+                  "Height": 64,
+                  "Caption": "Size",
+                  "Items": ["S", "M", "L", "XL"],
+                  "Columns": 2,
+                  "ColumnLayout": "clVerticalThenHorizontal"
+                },
+                "events": { "OnSelectionChanged": "RadioGroup1SelectionChanged" }
+              },
+              {
+                "name": "ScrollBar1",
+                "class": "TScrollBar",
+                "properties": {
+                  "Left": 228,
+                  "Top": 8,
+                  "Width": 120,
+                  "Height": 17,
+                  "LargeChange": 10,
+                  "SmallChange": 2
+                },
+                "events": { "OnScroll": "ScrollBar1Scroll" }
               }
             ]
           },

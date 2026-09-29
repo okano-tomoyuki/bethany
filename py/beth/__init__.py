@@ -305,6 +305,84 @@ class TEditCharCase(enum.IntEnum):
 ecNormal, ecUpperCase, ecLowerCase = TEditCharCase.ecNormal, TEditCharCase.ecUpperCase, TEditCharCase.ecLowerCase
 
 
+class TTrackBarOrientation(enum.IntEnum):
+    trHorizontal = 0
+    trVertical = 1
+
+trHorizontal, trVertical = TTrackBarOrientation.trHorizontal, TTrackBarOrientation.trVertical
+
+
+# 目盛りを付ける側(tmBottomRight は横なら下、縦なら右)。
+class TTickMark(enum.IntEnum):
+    tmBottomRight = 0
+    tmTopLeft = 1
+    tmBoth = 2
+
+tmBottomRight, tmTopLeft, tmBoth = TTickMark.tmBottomRight, TTickMark.tmTopLeft, TTickMark.tmBoth
+
+
+class TTickStyle(enum.IntEnum):
+    tsNone = 0
+    tsAuto = 1
+    tsManual = 2
+
+tsNone, tsAuto, tsManual = TTickStyle.tsNone, TTickStyle.tsAuto, TTickStyle.tsManual
+
+
+class TProgressBarOrientation(enum.IntEnum):
+    pbHorizontal = 0
+    pbVertical = 1
+    pbRightToLeft = 2
+    pbTopDown = 3
+
+pbHorizontal, pbVertical, pbRightToLeft, pbTopDown = TProgressBarOrientation.pbHorizontal, TProgressBarOrientation.pbVertical, TProgressBarOrientation.pbRightToLeft, TProgressBarOrientation.pbTopDown
+
+
+class TProgressBarStyle(enum.IntEnum):
+    pbstNormal = 0
+    pbstMarquee = 1
+
+pbstNormal, pbstMarquee = TProgressBarStyle.pbstNormal, TProgressBarStyle.pbstMarquee
+
+
+class TUDOrientation(enum.IntEnum):
+    udHorizontal = 0
+    udVertical = 1
+
+udHorizontal, udVertical = TUDOrientation.udHorizontal, TUDOrientation.udVertical
+
+
+class TUDAlignButton(enum.IntEnum):
+    udLeft = 0
+    udRight = 1
+    udTop = 2
+    udBottom = 3
+
+udLeft, udRight, udTop, udBottom = TUDAlignButton.udLeft, TUDAlignButton.udRight, TUDAlignButton.udTop, TUDAlignButton.udBottom
+
+
+class TColumnLayout(enum.IntEnum):
+    clHorizontalThenVertical = 0
+    clVerticalThenHorizontal = 1
+
+clHorizontalThenVertical, clVerticalThenHorizontal = TColumnLayout.clHorizontalThenVertical, TColumnLayout.clVerticalThenHorizontal
+
+
+# スクロールバーの操作(TScrollBar の OnScroll。Windows の SB_… と同じ値)。
+class TScrollCode(enum.IntEnum):
+    scLineUp = 0
+    scLineDown = 1
+    scPageUp = 2
+    scPageDown = 3
+    scPosition = 4
+    scTrack = 5
+    scTop = 6
+    scBottom = 7
+    scEndScroll = 8
+
+scLineUp, scLineDown, scPageUp, scPageDown, scPosition, scTrack, scTop, scBottom, scEndScroll = TScrollCode.scLineUp, TScrollCode.scLineDown, TScrollCode.scPageUp, TScrollCode.scPageDown, TScrollCode.scPosition, TScrollCode.scTrack, TScrollCode.scTop, TScrollCode.scBottom, TScrollCode.scEndScroll
+
+
 # 最初に表示する位置(poDesigned は Left・Top のまま。poMainFormCenter はメインフォームの中央)。
 class TPosition(enum.IntEnum):
     poDesigned = 0
@@ -1531,6 +1609,12 @@ class TCustomScrollBar(TWinControl):
     Position = _Prop("TCustomScrollBar_GetPosition", "TCustomScrollBar_SetPosition", _int)
     PageSize = _Prop("TCustomScrollBar_GetPageSize", "TCustomScrollBar_SetPageSize", _int)
     OnChange = _Event("TCustomScrollBar_SetOnChange", "TNotifyEvent")
+    # ---- docs/adr/0049 ----
+    # つまみの外を押したとき・矢印を押したときに動く量。
+    LargeChange = _Prop("TCustomScrollBar_GetLargeChange", "TCustomScrollBar_SetLargeChange", _int)
+    SmallChange = _Prop("TCustomScrollBar_GetSmallChange", "TCustomScrollBar_SetSmallChange", _int)
+    # つまみ・矢印を操作したとき(OnChange より先に呼ばれる)。
+    OnScroll = _Event("TCustomScrollBar_SetOnScroll", "TScrollEvent")
 
 
 class TScrollBar(TCustomScrollBar):
@@ -1544,6 +1628,24 @@ class TCustomTrackBar(TWinControl):
     Max = _Prop("TCustomTrackBar_GetMax", "TCustomTrackBar_SetMax", _int)
     Position = _Prop("TCustomTrackBar_GetPosition", "TCustomTrackBar_SetPosition", _int)
     OnChange = _Event("TCustomTrackBar_SetOnChange", "TNotifyEvent")
+    # ---- docs/adr/0049 ----
+    # 縦(trVertical)か横か。
+    Orientation = _Prop("TCustomTrackBar_GetOrientation", "TCustomTrackBar_SetOrientation", _enum("TTrackBarOrientation"))
+    # 目盛りの間隔(TickStyle が tsAuto のとき)。
+    Frequency = _Prop("TCustomTrackBar_GetFrequency", "TCustomTrackBar_SetFrequency", _int)
+    # 目盛りを付ける側。
+    TickMarks = _Prop("TCustomTrackBar_GetTickMarks", "TCustomTrackBar_SetTickMarks", _enum("TTickMark"))
+    # 目盛りの付け方(tsNone は付けない)。
+    TickStyle = _Prop("TCustomTrackBar_GetTickStyle", "TCustomTrackBar_SetTickStyle", _enum("TTickStyle"))
+    # 矢印キーで動く量と、PageUp・PageDown で動く量。
+    LineSize = _Prop("TCustomTrackBar_GetLineSize", "TCustomTrackBar_SetLineSize", _int)
+    PageSize = _Prop("TCustomTrackBar_GetPageSize", "TCustomTrackBar_SetPageSize", _int)
+    # 選択の範囲として強調する区間(ShowSelRange が true のとき)。
+    SelStart = _Prop("TCustomTrackBar_GetSelStart", "TCustomTrackBar_SetSelStart", _int)
+    SelEnd = _Prop("TCustomTrackBar_GetSelEnd", "TCustomTrackBar_SetSelEnd", _int)
+    ShowSelRange = _Prop("TCustomTrackBar_GetShowSelRange", "TCustomTrackBar_SetShowSelRange", _bool)
+    # true なら、Min と Max の側を入れ替える。
+    Reversed = _Prop("TCustomTrackBar_GetReversed", "TCustomTrackBar_SetReversed", _bool)
 
 
 class TTrackBar(TCustomTrackBar):
@@ -1556,6 +1658,22 @@ class TCustomProgressBar(TWinControl):
     Min = _Prop("TCustomProgressBar_GetMin", "TCustomProgressBar_SetMin", _int)
     Max = _Prop("TCustomProgressBar_GetMax", "TCustomProgressBar_SetMax", _int)
     Position = _Prop("TCustomProgressBar_GetPosition", "TCustomProgressBar_SetPosition", _int)
+    # ---- docs/adr/0049 ----
+    # 伸びる向き(pbVertical は下から上)。
+    Orientation = _Prop("TCustomProgressBar_GetOrientation", "TCustomProgressBar_SetOrientation", _enum("TProgressBarOrientation"))
+    # true なら、区切りの無い棒で描く。
+    Smooth = _Prop("TCustomProgressBar_GetSmooth", "TCustomProgressBar_SetSmooth", _bool)
+    # StepIt で進める量。
+    Step = _Prop("TCustomProgressBar_GetStep", "TCustomProgressBar_SetStep", _int)
+    # pbstMarquee は、進み具合の分からない処理の間に動き続ける表示。
+    Style = _Prop("TCustomProgressBar_GetStyle", "TCustomProgressBar_SetStyle", _enum("TProgressBarStyle"))
+    # true なら、進み具合を文字でも表示する(Windows では表示されないことがある)。
+    BarShowText = _Prop("TCustomProgressBar_GetBarShowText", "TCustomProgressBar_SetBarShowText", _bool)
+    # Position を Step だけ進める・Delta だけ進める(Max を超えると Min に戻る)。
+    def StepIt(self):
+        lib.TCustomProgressBar_StepIt(self._current())
+    def StepBy(self, Delta):
+        lib.TCustomProgressBar_StepBy(self._current(), int(Delta))
 
 
 class TProgressBar(TCustomProgressBar):
@@ -1590,6 +1708,17 @@ class TUpDown(TCustomControl):
     Increment = _Prop("TUpDown_GetIncrement", "TUpDown_SetIncrement", _int)
     # 値を増減させる対象のコントロール(TEdit 等)。
     Associate = _Prop("TUpDown_GetAssociate", "TUpDown_SetAssociate", _comp("TWinControl"))
+    # ---- docs/adr/0049 ----
+    # 矢印の向き(udVertical は上下、udHorizontal は左右)。
+    Orientation = _Prop("TUpDown_GetOrientation", "TUpDown_SetOrientation", _enum("TUDOrientation"))
+    # Associate のどちら側に付けるか。
+    AlignButton = _Prop("TUpDown_GetAlignButton", "TUpDown_SetAlignButton", _enum("TUDAlignButton"))
+    # true なら、Max を超えると Min に戻る(逆も)。
+    Wrap = _Prop("TUpDown_GetWrap", "TUpDown_SetWrap", _bool)
+    # true なら、Associate の上で矢印キーを押すと値が変わる。
+    ArrowKeys = _Prop("TUpDown_GetArrowKeys", "TUpDown_SetArrowKeys", _bool)
+    # true なら、Associate に表示する値に 3 桁ごとの区切りを入れる。
+    Thousands = _Prop("TUpDown_GetThousands", "TUpDown_SetThousands", _bool)
 
 
 class TScrollingWinControl(TCustomControl):
@@ -1798,6 +1927,15 @@ class TCustomRadioGroup(TCustomGroupBox):
     OnClick = _Event("TCustomRadioGroup_SetOnClick", "TNotifyEvent")
     # 文字列の一覧(TStrings。RadioGroup1->Items->Add("x") のように使う)。
     Items = _Prop("TCustomRadioGroup_GetItems", None, _view("TStrings"))
+    # ---- docs/adr/0049 ----
+    # 項目を並べる列の数。
+    Columns = _Prop("TCustomRadioGroup_GetColumns", "TCustomRadioGroup_SetColumns", _int)
+    # 項目を並べる順(clHorizontalThenVertical は横に並べてから次の行)。
+    ColumnLayout = _Prop("TCustomRadioGroup_GetColumnLayout", "TCustomRadioGroup_SetColumnLayout", _enum("TColumnLayout"))
+    # true なら、項目をグループの高さいっぱいに広げて並べる。
+    AutoFill = _Prop("TCustomRadioGroup_GetAutoFill", "TCustomRadioGroup_SetAutoFill", _bool)
+    # ItemIndex が変わったとき(利用者の操作でも、プログラムからの代入でも)。
+    OnSelectionChanged = _Event("TCustomRadioGroup_SetOnSelectionChanged", "TNotifyEvent")
 
 
 class TRadioGroup(TCustomRadioGroup):
@@ -1811,6 +1949,17 @@ class TCustomCheckGroup(TCustomGroupBox):
     Items = _Prop("TCustomCheckGroup_GetItems", None, _view("TStrings"))
     # 項目ごとのチェックの状態(CheckGroup1->Checked[i] = true;)。
     Checked = _Indexed("TCustomCheckGroup_GetChecked", "TCustomCheckGroup_SetChecked", _bool)
+    # ---- docs/adr/0049 ----
+    # 項目を並べる列の数。
+    Columns = _Prop("TCustomCheckGroup_GetColumns", "TCustomCheckGroup_SetColumns", _int)
+    # 項目を並べる順(clHorizontalThenVertical は横に並べてから次の行)。
+    ColumnLayout = _Prop("TCustomCheckGroup_GetColumnLayout", "TCustomCheckGroup_SetColumnLayout", _enum("TColumnLayout"))
+    # true なら、項目をグループの高さいっぱいに広げて並べる。
+    AutoFill = _Prop("TCustomCheckGroup_GetAutoFill", "TCustomCheckGroup_SetAutoFill", _bool)
+    # 項目ごとに、利用者がチェックを切り替えられるか。
+    CheckEnabled = _Indexed("TCustomCheckGroup_GetCheckEnabled", "TCustomCheckGroup_SetCheckEnabled", _bool)
+    # 利用者が項目のチェックを切り替えたとき。
+    OnItemClick = _Event("TCustomCheckGroup_SetOnItemClick", "TCheckGroupClicked")
 
 
 class TCheckGroup(TCustomCheckGroup):
@@ -3244,6 +3393,8 @@ _event_types.update({
     "TIdleEvent": (_a_ref_bool, ),  # (Sender, Done)
     "TExceptionEvent": (_a_exception, ),  # (Sender, E)
     "TDropFilesEvent": (_a_strings, ),  # (Sender, FileNames)
+    "TScrollEvent": (_a_enum("TScrollCode"), _a_ref_int, ),  # (Sender, ScrollCode, ScrollPos)
+    "TCheckGroupClicked": (_a_int, ),  # (Sender, Index)
     "TTabChangingEvent": (_a_ref_bool, ),  # (Sender, AllowChange)
     "TTVChangedEvent": (_a_item("TTreeNode"), ),  # (Sender, Node)
     "TTVChangingEvent": (_a_item("TTreeNode"), _a_ref_bool, ),  # (Sender, Node, AllowChange)
@@ -3296,48 +3447,54 @@ __all__ = [
     "csOwnerDrawVariable", "csOwnerDrawEditableFixed", "csOwnerDrawEditableVariable", "TCheckBoxState",
     "cbUnchecked", "cbChecked", "cbGrayed", "TAlignment", "taLeftJustify", "taRightJustify", "taCenter",
     "TTextLayout", "tlTop", "tlCenter", "tlBottom", "TEchoMode", "emNormal", "emNone", "emPassword",
-    "TEditCharCase", "ecNormal", "ecUpperCase", "ecLowerCase", "TPosition", "poDesigned", "poDefault",
-    "poDefaultPosOnly", "poDefaultSizeOnly", "poScreenCenter", "poDesktopCenter", "poMainFormCenter",
-    "poOwnerFormCenter", "poWorkAreaCenter", "TWindowState", "wsNormal", "wsMinimized", "wsMaximized",
-    "wsFullScreen", "TBorderIcon", "biSystemMenu", "biMinimize", "biMaximize", "biHelp", "TFormStyle", "fsNormal",
-    "fsMDIChild", "fsMDIForm", "fsStayOnTop", "fsSplash", "fsSystemStayOnTop", "TMsgDlgType", "mtWarning",
-    "mtError", "mtInformation", "mtConfirmation", "mtCustom", "TMsgDlgBtn", "mbYes", "mbNo", "mbOK", "mbCancel",
-    "mbAbort", "mbRetry", "mbIgnore", "mbAll", "mbNoToAll", "mbYesToAll", "mbHelp", "mbClose", "TBevelShape",
-    "bsBox", "bsFrame", "bsTopLine", "bsBottomLine", "bsLeftLine", "bsRightLine", "bsSpacer", "TBevelStyle",
-    "bsLowered", "bsRaised", "TBitBtnKind", "bkCustom", "bkOK", "bkCancel", "bkHelp", "bkYes", "bkNo", "bkClose",
-    "bkAbort", "bkRetry", "bkIgnore", "bkAll", "bkNoToAll", "bkYesToAll", "TButtonLayout", "blGlyphLeft",
-    "blGlyphRight", "blGlyphTop", "blGlyphBottom", "TLabelPosition", "lpAbove", "lpBelow", "lpLeft", "lpRight",
-    "TTabPosition", "tpTop", "tpBottom", "tpLeft", "tpRight", "TNodeAttachMode", "naAdd", "naAddFirst",
-    "naAddChild", "naAddChildFirst", "naInsert", "naInsertBehind", "TViewStyle", "vsIcon", "vsSmallIcon", "vsList",
-    "vsReport", "TSortType", "stNone", "stData", "stText", "stBoth", "TSortDirection", "sdAscending",
-    "sdDescending", "TItemChange", "ctText", "ctImage", "ctState", "TResizeStyle", "rsLine", "rsNone", "rsPattern",
-    "rsUpdate", "TStaticBorderStyle", "sbsNone", "sbsSingle", "sbsSunken", "TStatusPanelStyle", "psText",
-    "psOwnerDraw", "TStatusPanelBevel", "pbNone", "pbLowered", "pbRaised", "TShapeType", "stRectangle", "stSquare",
-    "stRoundRect", "stRoundSquare", "stEllipse", "stCircle", "stSquaredDiamond", "stDiamond", "stTriangle",
-    "stTriangleLeft", "stTriangleRight", "stTriangleDown", "stStar", "stStarDown", "stPolygon",
-    "TSectionTrackState", "tsTrackBegin", "tsTrackMove", "tsTrackEnd", "TEdgeStyle", "esNone", "esRaised",
-    "esLowered", "TToolButtonStyle", "tbsButton", "tbsCheck", "tbsDropDown", "tbsSeparator", "tbsDivider",
-    "tbsButtonDrop", "TGrabStyle", "gsSimple", "gsDouble", "gsHorLines", "gsVerLines", "gsGripper", "gsButton",
-    "TActionListState", "asNormal", "asSuspended", "asSuspendedEnabled", "TBorderStyle", "TShiftState", "ssShift",
-    "ssAlt", "ssCtrl", "ssLeft", "ssRight", "ssMiddle", "ssDouble", "ssMeta", "ssSuper", "ssHyper", "ssAltGr",
-    "ssCaps", "ssNum", "ssScroll", "ssTriple", "ssQuad", "ssExtra1", "ssExtra2", "TFontStyles", "fsBold",
-    "fsItalic", "fsUnderline", "fsStrikeOut", "TGridOptions", "goFixedVertLine", "goFixedHorzLine", "goVertLine",
-    "goHorzLine", "goRangeSelect", "goDrawFocusSelected", "goRowSizing", "goColSizing", "goRowMoving",
-    "goColMoving", "goEditing", "goAutoAddRows", "goTabs", "goRowSelect", "goAlwaysShowEditor", "goThumbTracking",
-    "goColSpanning", "goRelaxedRowSelect", "goDblClickAutoSize", "goSmoothScroll", "goFixedRowNumbering",
-    "goScrollKeepVisible", "goHeaderHotTracking", "goHeaderPushedLook", "goSelectionActive", "goFixedColSizing",
-    "goDontScrollPartCell", "goCellHints", "goTruncCellHints", "goCellEllipsis", "goAutoAddRowsSkipContentCheck",
-    "goRowHighlight", "TGridDrawState", "gdSelected", "gdFocused", "gdFixed", "gdHot", "gdPushed",
-    "gdRowHighlight", "TEdgeBorders", "ebLeft", "ebTop", "ebRight", "ebBottom", "TOpenOptions", "ofReadOnly",
-    "ofOverwritePrompt", "ofHideReadOnly", "ofNoChangeDir", "ofShowHelp", "ofNoValidate", "ofAllowMultiSelect",
-    "ofExtensionDifferent", "ofPathMustExist", "ofFileMustExist", "ofCreatePrompt", "ofShareAware",
-    "ofNoReadOnlyReturn", "ofNoTestFileCreate", "ofNoNetworkButton", "ofNoLongNames", "ofOldStyleDialog",
-    "ofNoDereferenceLinks", "ofNoResolveLinks", "ofEnableIncludeNotify", "ofEnableSizing", "ofDontAddToRecent",
-    "ofForceShowHidden", "ofViewDetail", "ofAutoPreview", "TColorDialogOptions", "cdFullOpen", "cdPreventFullOpen",
-    "cdShowHelp", "cdSolidColor", "cdAnyColor", "TFontDialogOptions", "fdAnsiOnly", "fdTrueTypeOnly", "fdEffects",
-    "fdFixedPitchOnly", "fdForceFontExist", "fdNoFaceSel", "fdNoOEMFonts", "fdNoSimulations", "fdNoSizeSel",
-    "fdNoStyleSel", "fdNoVectorFonts", "fdShowHelp", "fdWysiwyg", "fdLimitSize", "fdScalableOnly", "fdApplyButton",
-    "TFindOptions", "frDown", "frFindNext", "frHideMatchCase", "frHideWholeWord", "frHideUpDown", "frMatchCase",
+    "TEditCharCase", "ecNormal", "ecUpperCase", "ecLowerCase", "TTrackBarOrientation", "trHorizontal",
+    "trVertical", "TTickMark", "tmBottomRight", "tmTopLeft", "tmBoth", "TTickStyle", "tsNone", "tsAuto",
+    "tsManual", "TProgressBarOrientation", "pbHorizontal", "pbVertical", "pbRightToLeft", "pbTopDown",
+    "TProgressBarStyle", "pbstNormal", "pbstMarquee", "TUDOrientation", "udHorizontal", "udVertical",
+    "TUDAlignButton", "udLeft", "udRight", "udTop", "udBottom", "TColumnLayout", "clHorizontalThenVertical",
+    "clVerticalThenHorizontal", "TScrollCode", "scLineUp", "scLineDown", "scPageUp", "scPageDown", "scPosition",
+    "scTrack", "scTop", "scBottom", "scEndScroll", "TPosition", "poDesigned", "poDefault", "poDefaultPosOnly",
+    "poDefaultSizeOnly", "poScreenCenter", "poDesktopCenter", "poMainFormCenter", "poOwnerFormCenter",
+    "poWorkAreaCenter", "TWindowState", "wsNormal", "wsMinimized", "wsMaximized", "wsFullScreen", "TBorderIcon",
+    "biSystemMenu", "biMinimize", "biMaximize", "biHelp", "TFormStyle", "fsNormal", "fsMDIChild", "fsMDIForm",
+    "fsStayOnTop", "fsSplash", "fsSystemStayOnTop", "TMsgDlgType", "mtWarning", "mtError", "mtInformation",
+    "mtConfirmation", "mtCustom", "TMsgDlgBtn", "mbYes", "mbNo", "mbOK", "mbCancel", "mbAbort", "mbRetry",
+    "mbIgnore", "mbAll", "mbNoToAll", "mbYesToAll", "mbHelp", "mbClose", "TBevelShape", "bsBox", "bsFrame",
+    "bsTopLine", "bsBottomLine", "bsLeftLine", "bsRightLine", "bsSpacer", "TBevelStyle", "bsLowered", "bsRaised",
+    "TBitBtnKind", "bkCustom", "bkOK", "bkCancel", "bkHelp", "bkYes", "bkNo", "bkClose", "bkAbort", "bkRetry",
+    "bkIgnore", "bkAll", "bkNoToAll", "bkYesToAll", "TButtonLayout", "blGlyphLeft", "blGlyphRight", "blGlyphTop",
+    "blGlyphBottom", "TLabelPosition", "lpAbove", "lpBelow", "lpLeft", "lpRight", "TTabPosition", "tpTop",
+    "tpBottom", "tpLeft", "tpRight", "TNodeAttachMode", "naAdd", "naAddFirst", "naAddChild", "naAddChildFirst",
+    "naInsert", "naInsertBehind", "TViewStyle", "vsIcon", "vsSmallIcon", "vsList", "vsReport", "TSortType",
+    "stNone", "stData", "stText", "stBoth", "TSortDirection", "sdAscending", "sdDescending", "TItemChange",
+    "ctText", "ctImage", "ctState", "TResizeStyle", "rsLine", "rsNone", "rsPattern", "rsUpdate",
+    "TStaticBorderStyle", "sbsNone", "sbsSingle", "sbsSunken", "TStatusPanelStyle", "psText", "psOwnerDraw",
+    "TStatusPanelBevel", "pbNone", "pbLowered", "pbRaised", "TShapeType", "stRectangle", "stSquare", "stRoundRect",
+    "stRoundSquare", "stEllipse", "stCircle", "stSquaredDiamond", "stDiamond", "stTriangle", "stTriangleLeft",
+    "stTriangleRight", "stTriangleDown", "stStar", "stStarDown", "stPolygon", "TSectionTrackState", "tsTrackBegin",
+    "tsTrackMove", "tsTrackEnd", "TEdgeStyle", "esNone", "esRaised", "esLowered", "TToolButtonStyle", "tbsButton",
+    "tbsCheck", "tbsDropDown", "tbsSeparator", "tbsDivider", "tbsButtonDrop", "TGrabStyle", "gsSimple", "gsDouble",
+    "gsHorLines", "gsVerLines", "gsGripper", "gsButton", "TActionListState", "asNormal", "asSuspended",
+    "asSuspendedEnabled", "TBorderStyle", "TShiftState", "ssShift", "ssAlt", "ssCtrl", "ssLeft", "ssRight",
+    "ssMiddle", "ssDouble", "ssMeta", "ssSuper", "ssHyper", "ssAltGr", "ssCaps", "ssNum", "ssScroll", "ssTriple",
+    "ssQuad", "ssExtra1", "ssExtra2", "TFontStyles", "fsBold", "fsItalic", "fsUnderline", "fsStrikeOut",
+    "TGridOptions", "goFixedVertLine", "goFixedHorzLine", "goVertLine", "goHorzLine", "goRangeSelect",
+    "goDrawFocusSelected", "goRowSizing", "goColSizing", "goRowMoving", "goColMoving", "goEditing",
+    "goAutoAddRows", "goTabs", "goRowSelect", "goAlwaysShowEditor", "goThumbTracking", "goColSpanning",
+    "goRelaxedRowSelect", "goDblClickAutoSize", "goSmoothScroll", "goFixedRowNumbering", "goScrollKeepVisible",
+    "goHeaderHotTracking", "goHeaderPushedLook", "goSelectionActive", "goFixedColSizing", "goDontScrollPartCell",
+    "goCellHints", "goTruncCellHints", "goCellEllipsis", "goAutoAddRowsSkipContentCheck", "goRowHighlight",
+    "TGridDrawState", "gdSelected", "gdFocused", "gdFixed", "gdHot", "gdPushed", "gdRowHighlight", "TEdgeBorders",
+    "ebLeft", "ebTop", "ebRight", "ebBottom", "TOpenOptions", "ofReadOnly", "ofOverwritePrompt", "ofHideReadOnly",
+    "ofNoChangeDir", "ofShowHelp", "ofNoValidate", "ofAllowMultiSelect", "ofExtensionDifferent", "ofPathMustExist",
+    "ofFileMustExist", "ofCreatePrompt", "ofShareAware", "ofNoReadOnlyReturn", "ofNoTestFileCreate",
+    "ofNoNetworkButton", "ofNoLongNames", "ofOldStyleDialog", "ofNoDereferenceLinks", "ofNoResolveLinks",
+    "ofEnableIncludeNotify", "ofEnableSizing", "ofDontAddToRecent", "ofForceShowHidden", "ofViewDetail",
+    "ofAutoPreview", "TColorDialogOptions", "cdFullOpen", "cdPreventFullOpen", "cdShowHelp", "cdSolidColor",
+    "cdAnyColor", "TFontDialogOptions", "fdAnsiOnly", "fdTrueTypeOnly", "fdEffects", "fdFixedPitchOnly",
+    "fdForceFontExist", "fdNoFaceSel", "fdNoOEMFonts", "fdNoSimulations", "fdNoSizeSel", "fdNoStyleSel",
+    "fdNoVectorFonts", "fdShowHelp", "fdWysiwyg", "fdLimitSize", "fdScalableOnly", "fdApplyButton", "TFindOptions",
+    "frDown", "frFindNext", "frHideMatchCase", "frHideWholeWord", "frHideUpDown", "frMatchCase",
     "frDisableMatchCase", "frDisableUpDown", "frDisableWholeWord", "frReplace", "frReplaceAll", "frWholeWord",
     "frShowHelp", "frEntireScope", "frHideEntireScope", "frPromptOnReplace", "frHidePromptOnReplace",
     "frButtonsAtBottom", "TColor", "clBlack", "clWhite", "clRed", "clGreen", "clBlue", "clYellow", "clNone",

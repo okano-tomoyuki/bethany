@@ -2615,6 +2615,21 @@ int main()
                     int(Form1->TreeView1->ScrollBars));
     }
 
+    // 範囲のコントロール・グループの列(docs/adr/0049)。CheckGroup1 を 2 列にし、項目のクリックとスクロールバーの操作を表示する。
+    // TrackBar1 の目盛りは両側に付ける。
+    {
+        Form1->CheckGroup1->Columns = 2;
+        Form1->CheckGroup1->OnItemClick = [](TObject* Sender, int Index) {
+            TCheckGroup* group = static_cast<TCheckGroup*>(Sender);
+            std::printf("CheckGroup1 OnItemClick: Index=%d Checked=%s\n", Index, group->Checked[Index] ? "true" : "false");
+        };
+        Form1->ScrollBar1->LargeChange = 10;
+        Form1->ScrollBar1->OnScroll = [](TObject*, TScrollCode ScrollCode, int& ScrollPos) {
+            std::printf("ScrollBar1 OnScroll: ScrollCode=%d ScrollPos=%d\n", int(ScrollCode), ScrollPos);
+        };
+        Form1->TrackBar1->TickMarks = tmBoth;
+    }
+
     // ステータスバーのパネル(docs/adr/0044)。StatusBar1 の上に、パネルを持つ 2 つ目のステータスバーを置く。
     {
         TStatusBar* panelBar = new TStatusBar(Form1);

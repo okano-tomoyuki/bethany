@@ -65,7 +65,7 @@ C++Builder の入門的なアプリ(ダイアログ・入力のフォーム・�
 
 ### Tier B — よく使う(中〜高コスト)
 
-実用的なアプリでよく使うが、新しい型やコレクション・グローバルなオブジェクトの設計が要るもの。✅ は実装済み(B1 は [ADR 0044](adr/0044-statusbar-panels-and-designer-collections.md)、B5・B6 は [ADR 0045](adr/0045-custom-control-canvas-and-drawing.md)、B4 は [ADR 0046](adr/0046-actions.md)、B2・B3・B15・B16 は [ADR 0047](adr/0047-screen-clipboard-icon-drop-files.md)、B7・B9・B17 は [ADR 0048](adr/0048-panel-bevel-scroll-border.md))。
+実用的なアプリでよく使うが、新しい型やコレクション・グローバルなオブジェクトの設計が要るもの。✅ は実装済み(B1 は [ADR 0044](adr/0044-statusbar-panels-and-designer-collections.md)、B5・B6 は [ADR 0045](adr/0045-custom-control-canvas-and-drawing.md)、B4 は [ADR 0046](adr/0046-actions.md)、B2・B3・B15・B16 は [ADR 0047](adr/0047-screen-clipboard-icon-drop-files.md)、B7・B9・B17 は [ADR 0048](adr/0048-panel-bevel-scroll-border.md)、B10・B11 は [ADR 0049](adr/0049-range-controls-and-group-columns.md))。
 
 | # | 項目 | 対象 | コスト | 備考 |
 |---|---|---|---|---|
@@ -78,8 +78,8 @@ C++Builder の入門的なアプリ(ダイアログ・入力のフォーム・�
 | B7 | ✅ **TPanel の縁** | `BevelOuter`・`BevelInner`・`BevelWidth`・`BevelColor`・`Alignment`・`VerticalAlignment`・`WordWrap` | S〜M | `TPanelBevel` は新しい列挙型。デザイナーに出す |
 | B8 | **オーナードロー** | `TListBox`・`TComboBox` の `Style`(lbOwnerDrawFixed 等)・`ItemHeight`・`OnDrawItem`・`OnMeasureItem`、メニューの `OwnerDraw`・`OnDrawItem` | M | `TOwnerDrawState`(集合)と TRect を受けるイベント |
 | B9 | ✅ **スクロール** | `ScrollBars`(`TScrollStyle`: `ssNone`・`ssHorizontal`・`ssVertical`・`ssBoth`・`ssAutoHorizontal`・`ssAutoVertical`・`ssAutoBoth`)を TStringGrid・TDrawGrid・TTreeView に加え、実装済みの TMemo の `ScrollBars`(今は `int`)も `TScrollStyle` にする。`TScrollingWinControl` の `HorzScrollBar`・`VertScrollBar`(`TControlScrollBar`)、TForm・TScrollBox の `AutoScroll` | M | グリッドの既定は `ssAutoBoth`(必要なときだけ出る)なので、今も既定の動作では使える。TMemo の型を変えるとデザイナーのフォームのファイルの値(`"ScrollBars": 3`)も `"ssBoth"` に変わるため、古い数値も読めるようにする |
-| B10 | **範囲のコントロールの細部** | `TTrackBar`(`Orientation`・`Frequency`・`TickMarks`・`TickStyle`・`LineSize`・`PageSize`・`SelStart`・`SelEnd`・`Reversed`)、`TProgressBar`(`Orientation`・`Smooth`・`Step`・`Style`・`BarShowText`)、`TScrollBar`(`LargeChange`・`SmallChange`・`OnScroll`)、`TUpDown`(`Orientation`・`Wrap`・`ArrowKeys`・`Thousands`・`AlignButton`) | S〜M | 列挙型がいくつか要る。デザイナーに出す |
-| B11 | **グループの列** | `TRadioGroup`・`TCheckGroup` の `Columns`・`ColumnLayout`・`AutoFill`・`OnItemClick`・`OnSelectionChanged` | S〜M | |
+| B10 | ✅ **範囲のコントロールの細部** | `TTrackBar`(`Orientation`・`Frequency`・`TickMarks`・`TickStyle`・`LineSize`・`PageSize`・`SelStart`・`SelEnd`・`Reversed`)、`TProgressBar`(`Orientation`・`Smooth`・`Step`・`Style`・`BarShowText`)、`TScrollBar`(`LargeChange`・`SmallChange`・`OnScroll`)、`TUpDown`(`Orientation`・`Wrap`・`ArrowKeys`・`Thousands`・`AlignButton`) | S〜M | 列挙型がいくつか要る。デザイナーに出す |
+| B11 | ✅ **グループの列** | `TRadioGroup`・`TCheckGroup` の `Columns`・`ColumnLayout`・`AutoFill`・`OnItemClick`・`OnSelectionChanged` | S〜M | |
 | B12 | **TTreeView の細部** | `MultiSelect`・`MultiSelectStyle`・`Selections`、`SortType`・`OnCompare`・`AlphaSort`、ラベルの編集(`OnEditing`・`OnEdited`)、`Indent`・`HotTrack`・`RightClickSelect`・`ToolTips`・`Options`、`OnCustomDrawItem` | M〜L | 複数選択とラベルの編集は [component-coverage.md](component-coverage.md) でも未対応とした |
 | B13 | **TListView の細部** | `ShowColumnHeaders`・`ColumnClick`・`SortType`・`OnCompare`・`AlphaSort`、仮想モード(`OwnerData`・`OnData`)、ラベルの編集、`OnCustomDrawItem`・`OwnerDraw`・`OnDrawItem`、`ToolTips` | M〜L | |
 | B14 | **グリッドの細部** | 編集(`OnGetEditText`・`OnSetEditText`・`OnValidateEntry`・`AutoEdit`)、`OnPrepareCanvas`、`Columns`(`TGridColumns`)、`Objects`・`Cols`・`Rows`、`FocusColor`・`GridLineColor`・`GridLineWidth`・`AlternateColor`・`TitleFont`・`AutoFillColumns`・`OnTopLeftChanged`、セルの編集の部品(`OnSelectEditor`・`OnButtonClick`・`OnPickListSelect`)、並べ替え(`OnCompareCells`・`ColumnClickSorts`)、行・列の挿入・削除・移動の通知(`OnColRowInserted`・`OnColRowDeleted`・`OnColRowMoved`)、チェックボックスの列(`OnGetCheckboxState`・`OnSetCheckboxState`) | M〜L | Columns はコレクション |

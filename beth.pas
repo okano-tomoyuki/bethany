@@ -14843,6 +14843,676 @@ begin
   end;
 end;
 
+{ ---------------- 範囲のコントロール・グループの列(docs/adr/0049) ---------------- }
+
+type
+  { TScrollBar.OnScroll(TScrollEvent)用。操作の種類と、つまみの位置(var)を渡す。 }
+  TBethScrollCallback = procedure(Sender: Pointer; ScrollCode: Integer; ScrollPos: PInteger; Data: Pointer); BETH_CALL;
+  { TCheckGroup.OnItemClick(TCheckGroupClicked)用。 }
+  TBethIntCallback = procedure(Sender: Pointer; Value: Integer; Data: Pointer); BETH_CALL;
+
+  TScrollEventBridge = class(TComponent)
+  private
+    FCallback: TBethScrollCallback;
+    FData: Pointer;
+  public
+    procedure DoScroll(Sender: TObject; ScrollCode: TScrollCode; var ScrollPos: Integer);
+  end;
+
+  TIntEventBridge = class(TComponent)
+  private
+    FCallback: TBethIntCallback;
+    FData: Pointer;
+  public
+    procedure DoInt(Sender: TObject; Index: Integer);
+  end;
+
+procedure TScrollEventBridge.DoScroll(Sender: TObject; ScrollCode: TScrollCode; var ScrollPos: Integer);
+var
+  P: Integer;
+begin
+  if not Assigned(FCallback) or GDetaching then
+    Exit;
+  P := ScrollPos;
+  FCallback(Pointer(Sender), Ord(ScrollCode), @P, FData);
+  ScrollPos := P;
+  CheckCallbackError;
+end;
+
+procedure TIntEventBridge.DoInt(Sender: TObject; Index: Integer);
+begin
+  if not Assigned(FCallback) or GDetaching then
+    Exit;
+  FCallback(Pointer(Sender), Index, FData);
+  CheckCallbackError;
+end;
+
+function ScrollEventBridgeFor(Owner: TComponent; Current: Pointer; Cb: TBethScrollCallback; Data: Pointer): TScrollEventBridge;
+begin
+  if (Current <> nil) and (TObject(Current) is TScrollEventBridge) and (TScrollEventBridge(Current).Owner = Owner) then
+    Result := TScrollEventBridge(Current)
+  else
+    Result := TScrollEventBridge.Create(Owner);
+  Result.FCallback := Cb;
+  Result.FData := Data;
+end;
+
+function IntEventBridgeFor(Owner: TComponent; Current: Pointer; Cb: TBethIntCallback; Data: Pointer): TIntEventBridge;
+begin
+  if (Current <> nil) and (TObject(Current) is TIntEventBridge) and (TIntEventBridge(Current).Owner = Owner) then
+    Result := TIntEventBridge(Current)
+  else
+    Result := TIntEventBridge.Create(Owner);
+  Result.FCallback := Cb;
+  Result.FData := Data;
+end;
+
+function MethodData(const M: TScrollEvent): Pointer; overload;
+begin
+  Result := TMethod(M).Data;
+end;
+
+function MethodData(const M: TCheckGroupClicked): Pointer; overload;
+begin
+  Result := TMethod(M).Data;
+end;
+
+function TCustomTrackBar_GetOrientation(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomTrackBar(Obj).Orientation);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomTrackBar_SetOrientation(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomTrackBar(Obj).Orientation := TTrackBarOrientation(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomTrackBar_GetFrequency(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomTrackBar(Obj).Frequency;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomTrackBar_SetFrequency(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomTrackBar(Obj).Frequency := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomTrackBar_GetTickMarks(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomTrackBar(Obj).TickMarks);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomTrackBar_SetTickMarks(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomTrackBar(Obj).TickMarks := TTickMark(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomTrackBar_GetTickStyle(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomTrackBar(Obj).TickStyle);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomTrackBar_SetTickStyle(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomTrackBar(Obj).TickStyle := TTickStyle(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomTrackBar_GetLineSize(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomTrackBar(Obj).LineSize;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomTrackBar_SetLineSize(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomTrackBar(Obj).LineSize := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomTrackBar_GetPageSize(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomTrackBar(Obj).PageSize;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomTrackBar_SetPageSize(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomTrackBar(Obj).PageSize := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomTrackBar_GetSelStart(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomTrackBar(Obj).SelStart;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomTrackBar_SetSelStart(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomTrackBar(Obj).SelStart := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomTrackBar_GetSelEnd(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomTrackBar(Obj).SelEnd;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomTrackBar_SetSelEnd(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomTrackBar(Obj).SelEnd := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomTrackBar_GetShowSelRange(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomTrackBar(Obj).ShowSelRange;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomTrackBar_SetShowSelRange(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomTrackBar(Obj).ShowSelRange := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomTrackBar_GetReversed(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomTrackBar(Obj).Reversed;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomTrackBar_SetReversed(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomTrackBar(Obj).Reversed := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomProgressBar_GetOrientation(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomProgressBar(Obj).Orientation);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomProgressBar_SetOrientation(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomProgressBar(Obj).Orientation := TProgressBarOrientation(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomProgressBar_GetSmooth(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomProgressBar(Obj).Smooth;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomProgressBar_SetSmooth(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomProgressBar(Obj).Smooth := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomProgressBar_GetStep(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomProgressBar(Obj).Step;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomProgressBar_SetStep(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomProgressBar(Obj).Step := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomProgressBar_GetStyle(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomProgressBar(Obj).Style);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomProgressBar_SetStyle(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomProgressBar(Obj).Style := TProgressBarStyle(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomProgressBar_GetBarShowText(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomProgressBar(Obj).BarShowText;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomProgressBar_SetBarShowText(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomProgressBar(Obj).BarShowText := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomScrollBar_GetLargeChange(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomScrollBar(Obj).LargeChange;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomScrollBar_SetLargeChange(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomScrollBar(Obj).LargeChange := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomScrollBar_GetSmallChange(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomScrollBar(Obj).SmallChange;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomScrollBar_SetSmallChange(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomScrollBar(Obj).SmallChange := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TUpDown_GetOrientation(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TUpDown(Obj).Orientation);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TUpDown_SetOrientation(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TUpDown(Obj).Orientation := TUDOrientation(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TUpDown_GetAlignButton(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TUpDown(Obj).AlignButton);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TUpDown_SetAlignButton(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TUpDown(Obj).AlignButton := TUDAlignButton(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TUpDown_GetWrap(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TUpDown(Obj).Wrap;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TUpDown_SetWrap(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TUpDown(Obj).Wrap := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TUpDown_GetArrowKeys(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TUpDown(Obj).ArrowKeys;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TUpDown_SetArrowKeys(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TUpDown(Obj).ArrowKeys := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TUpDown_GetThousands(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TUpDown(Obj).Thousands;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TUpDown_SetThousands(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TUpDown(Obj).Thousands := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomRadioGroup_GetColumns(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomRadioGroup(Obj).Columns;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomRadioGroup_SetColumns(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomRadioGroup(Obj).Columns := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomRadioGroup_GetColumnLayout(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomRadioGroup(Obj).ColumnLayout);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomRadioGroup_SetColumnLayout(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomRadioGroup(Obj).ColumnLayout := TColumnLayout(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomRadioGroup_GetAutoFill(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomRadioGroup(Obj).AutoFill;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomRadioGroup_SetAutoFill(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomRadioGroup(Obj).AutoFill := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomCheckGroup_GetColumns(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomCheckGroup(Obj).Columns;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomCheckGroup_SetColumns(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomCheckGroup(Obj).Columns := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomCheckGroup_GetColumnLayout(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomCheckGroup(Obj).ColumnLayout);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomCheckGroup_SetColumnLayout(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomCheckGroup(Obj).ColumnLayout := TColumnLayout(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomCheckGroup_GetAutoFill(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomCheckGroup(Obj).AutoFill;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomCheckGroup_SetAutoFill(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomCheckGroup(Obj).AutoFill := Value;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomProgressBar_StepIt(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TCustomProgressBar(Obj).StepIt;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomProgressBar_StepBy(Obj: Pointer; Delta: Integer); BETH_CALL;
+begin
+  try
+    TCustomProgressBar(Obj).StepBy(Delta);
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomScrollBar_SetOnScroll(Obj: Pointer; Cb: TBethScrollCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TCustomScrollBar(Obj).OnScroll := @ScrollEventBridgeFor(TComponent(Obj), MethodData(TCustomScrollBar(Obj).OnScroll), Cb, Data).DoScroll;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomRadioGroup_SetOnSelectionChanged(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TCustomRadioGroup(Obj).OnSelectionChanged := @BridgeFor(TComponent(Obj), MethodData(TCustomRadioGroup(Obj).OnSelectionChanged), Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomCheckGroup_GetCheckEnabled(Obj: Pointer; Index: Integer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomCheckGroup(Obj).CheckEnabled[Index];
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomCheckGroup_SetCheckEnabled(Obj: Pointer; Index: Integer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomCheckGroup(Obj).CheckEnabled[Index] := Value;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomCheckGroup_SetOnItemClick(Obj: Pointer; Cb: TBethIntCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TCustomCheckGroup(Obj).OnItemClick := @IntEventBridgeFor(TComponent(Obj), MethodData(TCustomCheckGroup(Obj).OnItemClick), Cb, Data).DoInt;
+  except
+    ReportException;
+  end;
+end;
+
 exports
   FreeNotify_SetCallback,
   Error_SetCallback,
@@ -16258,7 +16928,70 @@ exports
   TScrollingWinControl_GetHorzScrollBar,
   TScrollingWinControl_SetHorzScrollBar,
   TScrollingWinControl_GetVertScrollBar,
-  TScrollingWinControl_SetVertScrollBar;
+  TScrollingWinControl_SetVertScrollBar,
+  TCustomTrackBar_GetOrientation,
+  TCustomTrackBar_SetOrientation,
+  TCustomTrackBar_GetFrequency,
+  TCustomTrackBar_SetFrequency,
+  TCustomTrackBar_GetTickMarks,
+  TCustomTrackBar_SetTickMarks,
+  TCustomTrackBar_GetTickStyle,
+  TCustomTrackBar_SetTickStyle,
+  TCustomTrackBar_GetLineSize,
+  TCustomTrackBar_SetLineSize,
+  TCustomTrackBar_GetPageSize,
+  TCustomTrackBar_SetPageSize,
+  TCustomTrackBar_GetSelStart,
+  TCustomTrackBar_SetSelStart,
+  TCustomTrackBar_GetSelEnd,
+  TCustomTrackBar_SetSelEnd,
+  TCustomTrackBar_GetShowSelRange,
+  TCustomTrackBar_SetShowSelRange,
+  TCustomTrackBar_GetReversed,
+  TCustomTrackBar_SetReversed,
+  TCustomProgressBar_GetOrientation,
+  TCustomProgressBar_SetOrientation,
+  TCustomProgressBar_GetSmooth,
+  TCustomProgressBar_SetSmooth,
+  TCustomProgressBar_GetStep,
+  TCustomProgressBar_SetStep,
+  TCustomProgressBar_GetStyle,
+  TCustomProgressBar_SetStyle,
+  TCustomProgressBar_GetBarShowText,
+  TCustomProgressBar_SetBarShowText,
+  TCustomScrollBar_GetLargeChange,
+  TCustomScrollBar_SetLargeChange,
+  TCustomScrollBar_GetSmallChange,
+  TCustomScrollBar_SetSmallChange,
+  TUpDown_GetOrientation,
+  TUpDown_SetOrientation,
+  TUpDown_GetAlignButton,
+  TUpDown_SetAlignButton,
+  TUpDown_GetWrap,
+  TUpDown_SetWrap,
+  TUpDown_GetArrowKeys,
+  TUpDown_SetArrowKeys,
+  TUpDown_GetThousands,
+  TUpDown_SetThousands,
+  TCustomRadioGroup_GetColumns,
+  TCustomRadioGroup_SetColumns,
+  TCustomRadioGroup_GetColumnLayout,
+  TCustomRadioGroup_SetColumnLayout,
+  TCustomRadioGroup_GetAutoFill,
+  TCustomRadioGroup_SetAutoFill,
+  TCustomCheckGroup_GetColumns,
+  TCustomCheckGroup_SetColumns,
+  TCustomCheckGroup_GetColumnLayout,
+  TCustomCheckGroup_SetColumnLayout,
+  TCustomCheckGroup_GetAutoFill,
+  TCustomCheckGroup_SetAutoFill,
+  TCustomProgressBar_StepIt,
+  TCustomProgressBar_StepBy,
+  TCustomScrollBar_SetOnScroll,
+  TCustomRadioGroup_SetOnSelectionChanged,
+  TCustomCheckGroup_GetCheckEnabled,
+  TCustomCheckGroup_SetCheckEnabled,
+  TCustomCheckGroup_SetOnItemClick;
 
 begin
   RequireDerivedFormResource := False;

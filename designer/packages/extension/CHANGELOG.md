@@ -27,6 +27,10 @@
   list views, and `AutoScroll`, `HorzScrollBar` and `VertScrollBar` of forms and scroll boxes. The canvas draws the bevels, borders
   and caption alignment, and the layout accounts for bevels, borders and `BorderWidth`
 - `ScrollBars` of memos is now a named value (`ssBoth`). Older form files with a number are read as the name
+- New from the Bethany library 0.3.0: orientation, ticks and selection of track bars, orientation, style and step of progress bars,
+  `LargeChange`, `SmallChange` and `OnScroll` of scroll bars, orientation and options of up-down buttons, and `Columns`,
+  `ColumnLayout` and `AutoFill` of radio groups and check groups with the `OnSelectionChanged` and `OnItemClick` events. The canvas
+  draws the orientation of progress bars, track bars and up-down buttons, and the columns of radio groups and check groups
 - The include guard macro does not repeat a namespace that is also the folder of the header
   (`APP_DIALOGS_ABOUT_HPP` instead of `APP_DIALOGS_DIALOGS_ABOUT_HPP` for `app::dialogs` and `dialogs/About.hpp`)
 

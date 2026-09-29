@@ -20,6 +20,8 @@ public:
     beth::TCheckBox* WrapCheck;
     beth::TSpinEdit* SizeSpin;
     beth::TStatusBar* OptionStatus;
+    beth::TRadioGroup* RadioGroup1;
+    beth::TScrollBar* ScrollBar1;
     beth::TTabSheet* MemoSheet;
     beth::TMemo* Memo1;
     beth::TPanel* BottomPanel;
@@ -44,12 +46,14 @@ public:
     void NameEditChange(beth::TObject* Sender);
     void OkButtonClick(beth::TObject* Sender);
     void WrapCheckClick(beth::TObject* Sender);
+    void RadioGroup1SelectionChanged(beth::TObject* Sender);
+    void ScrollBar1Scroll(beth::TObject* Sender, beth::TScrollCode ScrollCode, int& ScrollPos);
     void FileOpenItemClick(beth::TObject* Sender);
     void FileExitItemClick(beth::TObject* Sender);
     void ClearItemClick(beth::TObject* Sender);
     void Timer1Timer(beth::TObject* Sender);
     void FileSaveActionExecute(beth::TObject* Sender);
-    // <bethany-designer:end id="declarations" hash="84cd6a91">
+    // <bethany-designer:end id="declarations" hash="a5136d77">
 
     explicit TMainForm(beth::TComponent* AOwner);
 
