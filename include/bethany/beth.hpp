@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <exception>
 #include <functional>
+#include <map>
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -3753,7 +3754,7 @@ const TCustomDrawState cdsHot           = 1u << 6;
 const TCustomDrawState cdsMarked        = 1u << 7;
 const TCustomDrawState cdsIndeterminate = 1u << 8;
 
-// 並べ替えで 2 つのノードを比べる(Node1 が前なら負、後ろなら正、同じなら 0 を Compare に入れる)。
+// 並べ替えで 2 つのノードを比べる(Node1 が前なら負、後ろなら正、同じなら 0 を Compare に入れる)。nullptr に戻すと既定の比較に戻る。
 using TTVCompareEvent = std::function<void(TObject* Sender, TTreeNode* Node1, TTreeNode* Node2, int& Compare)>;
 // ラベルの編集を始める前(AllowEdit を false にすると編集させない)。
 using TTVEditingEvent = std::function<void(TObject* Sender, TTreeNode* Node, bool& AllowEdit)>;
@@ -4152,7 +4153,7 @@ using TLVColumnClickEvent = std::function<void(TObject* Sender, TListColumn* Col
 
 // ---- TListView の細部(docs/adr/0052。LCL・VCL と同じ形) ----
 // 並べ替えで 2 つの項目を比べる(Item1 が前なら負、後ろなら正、同じなら 0 を Compare に入れる。Data は常に 0)。
-// OnCompare があると、SortDirection は使われない(降順にするときは Compare の符号を変える)。
+// OnCompare があると、SortDirection は使われない(降順にするときは Compare の符号を変える)。nullptr に戻すと既定の比較に戻る。
 using TLVCompareEvent = std::function<void(TObject* Sender, TListItem* Item1, TListItem* Item2, int Data, int& Compare)>;
 // ラベルの編集を始める前(AllowEdit を false にすると編集させない)。
 using TLVEditingEvent = std::function<void(TObject* Sender, TListItem* Item, bool& AllowEdit)>;
@@ -5163,6 +5164,26 @@ using TOnSelectEvent     = std::function<void(TObject* Sender, int ACol, int ARo
 // 見出し(固定行・固定列)がクリックされたとき(IsColumn は列見出しなら true)。
 using THdrEvent          = std::function<void(TObject* Sender, bool IsColumn, int Index)>;
 
+// ---- グリッドの細部(docs/adr/0053。LCL・VCL と同じ形) ----
+// 並べ替えの向き(ColumnClickSorts・SortColRow)。
+enum TSortOrder { soAscending, soDescending };
+// セルの編集を始めるときに、編集欄に出す文字列を求める(Value を書き換えると、それが編集欄に出る)。
+// TStringGrid では、Value はセルの文字列で始まる。
+using TGetEditEvent = std::function<void(TObject* Sender, int ACol, int ARow, std::string& Value)>;
+// 編集欄の文字列が変わるたび(TStringGrid では、このイベントの後にセルの文字列になる)。
+using TSetEditEvent = std::function<void(TObject* Sender, int ACol, int ARow, const std::string& Value)>;
+// セルの編集を終えるとき(別のセルへ移る・Enter。EditorMode = false では呼ばれない)。OldValue は編集を始める前のセルの文字列。
+// NewValue を書き換えると、それがセルの値になる。受け付けないときは例外を投げる(LCL が例外を表示し、編集欄に留まる)。
+using TValidateEntryEvent =
+    std::function<void(TObject* Sender, int ACol, int ARow, const std::string& OldValue, std::string& NewValue)>;
+// セルを描く前(Canvas の Brush・Font を変えると、既定の描画がその色で描く。OnDrawCell より前)。
+using TOnPrepareCanvasEvent = std::function<void(TObject* Sender, int ACol, int ARow, TGridDrawState AState)>;
+// 並べ替えで 2 つのセルを比べる(A が前なら負、後ろなら正、同じなら 0 を Result に入れる)。
+// OnCompareCells があると SortOrder は使われない(逆順にするときは Result の符号を変える)。nullptr に戻すと既定の比較に戻る。
+using TOnCompareCells = std::function<void(TObject* Sender, int ACol, int ARow, int BCol, int BRow, int& Result)>;
+// 行・列の挿入・削除・移動・入れ替えの後(IsColumn は列なら true。sIndex・tIndex は元と先の位置。挿入・削除では範囲)。
+using TGridOperationEvent = std::function<void(TObject* Sender, bool IsColumn, int sIndex, int tIndex)>;
+
 // グリッドの共通の基底。以下のメンバは LCL の TCustomGrid の public。
 // セルは(列, 行)の位置で指定する(0 始まり。固定行・固定列を含む)。
 class TCustomGrid : public TCustomControl
@@ -5227,6 +5248,45 @@ public:
     void MoveColRow(bool IsColumn, int FromIndex, int ToIndex);
     // IsColumn が true なら、列 Index の値で行を並べ替える(固定行は除く)。false なら行 Index の値で列を並べ替える。
     void SortColRow(bool IsColumn, int Index);
+
+    // ---- docs/adr/0053 ----
+    // AutoEdit・AlternateColor・TitleFont・ColumnClickSorts と OnValidateEntry・OnPrepareCanvas・OnCompareCells・OnTopLeftChanged は、
+    // LCL では TCustomGrid の protected で、TDrawGrid・TStringGrid が published にしている。
+
+    // true(既定)なら、goEditing のとき、文字を打つとすぐにセルの編集を始める(false なら F2・Enter・ダブルクリックで始める)。
+    Property<bool>   AutoEdit;
+    // 1 行おきの背景の色(既定は Color と同じ)。
+    Property<TColor> AlternateColor;
+    // フォーカスのあるセルの枠の色。
+    Property<TColor> FocusColor;
+    Property<TColor> GridLineColor;
+    Property<int>    GridLineWidth;
+    // 固定行(見出し)の文字のフォント。グリッドが所有する TFont のビュー。代入は内容のコピー。
+    Property<TFont*> TitleFont;
+    // true なら、列の幅を広げて(縮めて)グリッドの幅に合わせる。
+    Property<bool>   AutoFillColumns;
+    // true なら、列見出しのクリックでその列の値で行を並べ替える(同じ列をもう一度クリックすると逆順)。
+    Property<bool>   ColumnClickSorts;
+    // 並べ替えの向き(SortColRow もこの向きで並べる)。
+    Property<TSortOrder>  SortOrder;
+    // 最後に ColumnClickSorts で並べ替えた列(無ければ -1)。
+    ReadOnlyProperty<int> SortColumn;
+    // 行(IsColumn なら列)Index と WithIndex を入れ替える。
+    void ExchangeColRow(bool IsColumn, int Index, int WithIndex);
+
+    Property<TGetEditEvent>         OnGetEditText;
+    Property<TSetEditEvent>         OnSetEditText;
+    Property<TValidateEntryEvent>   OnValidateEntry;
+    Property<TOnPrepareCanvasEvent> OnPrepareCanvas;
+    Property<TOnCompareCells>       OnCompareCells;
+    // スクロールで、表示されている最初の列・行(LeftCol・TopRow)が変わったとき。
+    Property<TNotifyEvent>          OnTopLeftChanged;
+    // 見出しのドラッグで列の幅・行の高さを変えたとき(IsColumn は列なら true)。
+    Property<THdrEvent>             OnHeaderSized;
+    Property<TGridOperationEvent>   OnColRowInserted;
+    Property<TGridOperationEvent>   OnColRowDeleted;
+    Property<TGridOperationEvent>   OnColRowMoved;
+    Property<TGridOperationEvent>   OnColRowExchanged;
 
 protected:
     explicit TCustomDrawGrid(ObjectHandle handle);
@@ -5296,6 +5356,79 @@ private:
     // ---- docs/adr/0048 ----
     static TScrollStyle GetScrollBarsImpl(TObject* owner);
     static void         SetScrollBarsImpl(TObject* owner, const TScrollStyle& value);
+
+    // ---- docs/adr/0053 ----
+    static bool GetAutoEditImpl(TObject* owner);
+    static void SetAutoEditImpl(TObject* owner, const bool& value);
+    static TColor GetAlternateColorImpl(TObject* owner);
+    static void SetAlternateColorImpl(TObject* owner, const TColor& value);
+    static TColor GetFocusColorImpl(TObject* owner);
+    static void SetFocusColorImpl(TObject* owner, const TColor& value);
+    static TColor GetGridLineColorImpl(TObject* owner);
+    static void SetGridLineColorImpl(TObject* owner, const TColor& value);
+    static int GetGridLineWidthImpl(TObject* owner);
+    static void SetGridLineWidthImpl(TObject* owner, const int& value);
+    static TFont* GetTitleFontImpl(TObject* owner);
+    static void SetTitleFontImpl(TObject* owner, TFont* const& value);
+    static bool GetAutoFillColumnsImpl(TObject* owner);
+    static void SetAutoFillColumnsImpl(TObject* owner, const bool& value);
+    static bool GetColumnClickSortsImpl(TObject* owner);
+    static void SetColumnClickSortsImpl(TObject* owner, const bool& value);
+    static TSortOrder GetSortOrderImpl(TObject* owner);
+    static void SetSortOrderImpl(TObject* owner, const TSortOrder& value);
+    static int GetSortColumnImpl(TObject* owner);
+    TGetEditEvent onGetEditText_;
+    bool onGetEditTextHooked_ = false;
+    static TGetEditEvent GetOnGetEditTextImpl(TObject* owner);
+    static void SetOnGetEditTextImpl(TObject* owner, const TGetEditEvent& value);
+    static void BETH_CALL GetEditTextTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, internal::str_t value, internal::str_t* result, void* data);
+    TSetEditEvent onSetEditText_;
+    bool onSetEditTextHooked_ = false;
+    static TSetEditEvent GetOnSetEditTextImpl(TObject* owner);
+    static void SetOnSetEditTextImpl(TObject* owner, const TSetEditEvent& value);
+    static void BETH_CALL SetEditTextTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, internal::str_t value, void* data);
+    TValidateEntryEvent onValidateEntry_;
+    bool onValidateEntryHooked_ = false;
+    static TValidateEntryEvent GetOnValidateEntryImpl(TObject* owner);
+    static void SetOnValidateEntryImpl(TObject* owner, const TValidateEntryEvent& value);
+    static void BETH_CALL ValidateEntryTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, internal::str_t oldValue, internal::str_t newValue, internal::str_t* result, void* data);
+    TOnPrepareCanvasEvent onPrepareCanvas_;
+    bool onPrepareCanvasHooked_ = false;
+    static TOnPrepareCanvasEvent GetOnPrepareCanvasImpl(TObject* owner);
+    static void SetOnPrepareCanvasImpl(TObject* owner, const TOnPrepareCanvasEvent& value);
+    static void BETH_CALL PrepareCanvasTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, internal::uint_t state, void* data);
+    TOnCompareCells onCompareCells_;
+    bool onCompareCellsHooked_ = false;
+    static TOnCompareCells GetOnCompareCellsImpl(TObject* owner);
+    static void SetOnCompareCellsImpl(TObject* owner, const TOnCompareCells& value);
+    static void BETH_CALL CompareCellsTrampoline(ObjectHandle sender, internal::int_t acol, internal::int_t arow, internal::int_t bcol, internal::int_t brow, internal::int_t* result, void* data);
+    TNotifyEvent onTopLeftChanged_;
+    bool onTopLeftChangedHooked_ = false;
+    static TNotifyEvent GetOnTopLeftChangedImpl(TObject* owner);
+    static void SetOnTopLeftChangedImpl(TObject* owner, const TNotifyEvent& value);
+    static void BETH_CALL TopLeftChangedTrampoline(ObjectHandle sender, void* data);
+    THdrEvent onHeaderSized_;
+    bool onHeaderSizedHooked_ = false;
+    static THdrEvent GetOnHeaderSizedImpl(TObject* owner);
+    static void SetOnHeaderSizedImpl(TObject* owner, const THdrEvent& value);
+    static void BETH_CALL HeaderSizedTrampoline(ObjectHandle sender, internal::int_t isColumn, internal::int_t index, void* data);
+    TGridOperationEvent onColRowInserted_, onColRowDeleted_, onColRowMoved_, onColRowExchanged_;
+    bool onColRowInsertedHooked_ = false, onColRowDeletedHooked_ = false, onColRowMovedHooked_ = false, onColRowExchangedHooked_ = false;
+    static TGridOperationEvent GetOnColRowInsertedImpl(TObject* owner);
+    static void SetOnColRowInsertedImpl(TObject* owner, const TGridOperationEvent& value);
+    static TGridOperationEvent GetOnColRowDeletedImpl(TObject* owner);
+    static void SetOnColRowDeletedImpl(TObject* owner, const TGridOperationEvent& value);
+    static TGridOperationEvent GetOnColRowMovedImpl(TObject* owner);
+    static void SetOnColRowMovedImpl(TObject* owner, const TGridOperationEvent& value);
+    static TGridOperationEvent GetOnColRowExchangedImpl(TObject* owner);
+    static void SetOnColRowExchangedImpl(TObject* owner, const TGridOperationEvent& value);
+    static void BETH_CALL ColRowInsertedTrampoline(ObjectHandle sender, internal::int_t isColumn, internal::int_t sIndex, internal::int_t tIndex, void* data);
+    static void BETH_CALL ColRowDeletedTrampoline(ObjectHandle sender, internal::int_t isColumn, internal::int_t sIndex, internal::int_t tIndex, void* data);
+    static void BETH_CALL ColRowMovedTrampoline(ObjectHandle sender, internal::int_t isColumn, internal::int_t sIndex, internal::int_t tIndex, void* data);
+    static void BETH_CALL ColRowExchangedTrampoline(ObjectHandle sender, internal::int_t isColumn, internal::int_t sIndex, internal::int_t tIndex, void* data);
+    static void DispatchColRow(ObjectHandle sender, TGridOperationEvent TCustomDrawGrid::*member, internal::int_t isColumn, internal::int_t sIndex, internal::int_t tIndex);
+
+    TFont titleFont_;
 };
 
 // セルの内容を OnDrawCell で利用者が描画するグリッド(セルの文字列は持たない)。
@@ -5321,6 +5454,14 @@ public:
     void        AutoSizeColumns();
     void        AutoSizeColumn(int ACol);
 
+    // ---- docs/adr/0053 ----
+    // セルごとの利用者データ(ポインタ。StringGrid1->Objects[ACol][ARow])。LCL は解釈も解放もしない。
+    IndexedProperty2<void*> Objects;
+    // 列 i・行 i のセルの文字列の一覧(StringGrid1->Rows[1]->CommaText = "a,b,c"; のように使う)。
+    // Cols[i]->Strings[j] は Cells[i][j]、Rows[i]->Strings[j] は Cells[j][i]。グリッドが所有し、グリッドの破棄まで使える。
+    ReadOnlyIndexedProperty<TStrings*> Cols;
+    ReadOnlyIndexedProperty<TStrings*> Rows;
+
 protected:
     explicit TCustomStringGrid(ObjectHandle handle);
     ~TCustomStringGrid() override = default;
@@ -5328,6 +5469,19 @@ protected:
 private:
     static std::string GetCellsImpl(TObject* owner, int ACol, int ARow);
     static void        SetCellsImpl(TObject* owner, int ACol, int ARow, const std::string& value);
+
+    // ---- docs/adr/0053 ----
+    // Cols・Rows のビュー。LCL の TStrings はグリッドが位置ごとに作って持ち、グリッドの破棄まで同じものを返すため、ハンドルを覚えてよい。
+    class LineStrings : public TStrings
+    {
+    public:
+        explicit LineStrings(ObjectHandle handle) : TStrings(handle) {}
+    };
+    std::map<int, std::unique_ptr<LineStrings>> cols_, rows_;
+    static void*     GetObjectsImpl(TObject* owner, int ACol, int ARow);
+    static void      SetObjectsImpl(TObject* owner, int ACol, int ARow, void* const& value);
+    static TStrings* GetColsImpl(TObject* owner, int Index);
+    static TStrings* GetRowsImpl(TObject* owner, int Index);
 };
 
 // セルごとに文字列を持つグリッド。

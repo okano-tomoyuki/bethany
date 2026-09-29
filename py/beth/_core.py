@@ -166,6 +166,9 @@ class _ViewConv(_Conv):
         self.name = name
 
     def read(self, obj, fn, *index):
+        if index:
+            # 添字つき(グリッドの Cols[i]・Rows[i]。docs/adr/0053)は、添字を付けて取得する
+            return _types[self.name]._wrap_view(obj, lambda h: fn(h, *index))
         return _types[self.name]._wrap_view(obj, fn)
 
 
@@ -348,6 +351,8 @@ class _Arg:
 
 _a_int = _Arg(lambda raws: raws[0])
 _a_bool = _Arg(lambda raws: raws[0] != 0)
+# 読み取り専用の文字列(グリッドの OnSetEditText の Value。docs/adr/0053)
+_a_str = _Arg(lambda raws: _dec(raws[0]))
 _a_rect = _Arg(lambda raws: TRect(*raws), n=4)
 # 例外(Application.OnException の E)。DLL はクラス名とメッセージを渡す。C++ の beth::Exception と同じく E.Message・E.ClassName() で読む
 _a_exception = _Arg(lambda raws: BethError(_dec(raws[0]), _dec(raws[1])), n=2)
@@ -403,6 +408,11 @@ def _a_ref_enum(name):
 _event_types = {}
 
 
+# 有無で LCL の動きが変わるイベント(並べ替えの比較)。None を代入したら DLL のイベントも外し、LCL の既定の比較に戻す
+# (C++ の SetRemovableEvent と同じ。docs/adr/0053)。
+_REMOVABLE_EVENTS = {"TTreeView_SetOnCompare", "TListView_SetOnCompare", "TCustomDrawGrid_SetOnCompareCells"}
+
+
 class _Event:
     """Property<T...Event>。最初に None 以外のハンドラが代入されたときだけ DLL にブリッジを登録する(docs/adr/0009)。"""
 
@@ -427,6 +437,9 @@ class _Event:
         if handler is not None and not obj.__dict__.get(self.hooked):
             getattr(lib, self.setter)(obj._current(), self._trampoline, None)
             obj.__dict__[self.hooked] = True
+        elif handler is None and obj.__dict__.get(self.hooked) and self.setter in _REMOVABLE_EVENTS:
+            getattr(lib, self.setter)(obj._current(), None, None)
+            obj.__dict__[self.hooked] = False
 
     def _trampoline(self, sender, *raws):
         # 例外は _internal が SetCallbackError で DLL へ知らせる(docs/adr/0031)。

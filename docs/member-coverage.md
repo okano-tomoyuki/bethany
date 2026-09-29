@@ -65,7 +65,7 @@ C++Builder の入門的なアプリ(ダイアログ・入力のフォーム・�
 
 ### Tier B — よく使う(中〜高コスト)
 
-実用的なアプリでよく使うが、新しい型やコレクション・グローバルなオブジェクトの設計が要るもの。✅ は実装済み(B1 は [ADR 0044](adr/0044-statusbar-panels-and-designer-collections.md)、B5・B6 は [ADR 0045](adr/0045-custom-control-canvas-and-drawing.md)、B4 は [ADR 0046](adr/0046-actions.md)、B2・B3・B15・B16 は [ADR 0047](adr/0047-screen-clipboard-icon-drop-files.md)、B7・B9・B17 は [ADR 0048](adr/0048-panel-bevel-scroll-border.md)、B10・B11 は [ADR 0049](adr/0049-range-controls-and-group-columns.md)、B8 は [ADR 0050](adr/0050-owner-draw.md)、B12 は [ADR 0051](adr/0051-treeview-details.md)、B13 は [ADR 0052](adr/0052-listview-details.md))。
+実用的なアプリでよく使うが、新しい型やコレクション・グローバルなオブジェクトの設計が要るもの。✅ は実装済み(B1 は [ADR 0044](adr/0044-statusbar-panels-and-designer-collections.md)、B5・B6 は [ADR 0045](adr/0045-custom-control-canvas-and-drawing.md)、B4 は [ADR 0046](adr/0046-actions.md)、B2・B3・B15・B16 は [ADR 0047](adr/0047-screen-clipboard-icon-drop-files.md)、B7・B9・B17 は [ADR 0048](adr/0048-panel-bevel-scroll-border.md)、B10・B11 は [ADR 0049](adr/0049-range-controls-and-group-columns.md)、B8 は [ADR 0050](adr/0050-owner-draw.md)、B12 は [ADR 0051](adr/0051-treeview-details.md)、B13 は [ADR 0052](adr/0052-listview-details.md)。B14 は前半を [ADR 0053](adr/0053-grid-details.md) で実装)。
 
 | # | 項目 | 対象 | コスト | 備考 |
 |---|---|---|---|---|

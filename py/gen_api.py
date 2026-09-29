@@ -399,6 +399,9 @@ class Gen:
             return "_a_int"
         if s == "bool":
             return "_a_bool"
+        if s == "str":
+            # 読み取り専用の文字列(グリッドの OnSetEditText の Value 等)
+            return "_a_str"
         if isinstance(s, tuple):
             return f'_a_enum("{s[1]}")'
         if base in ("TRect", "TGridRect"):
@@ -796,7 +799,7 @@ from ._core import (BethError, Ref, TRect, TPoint, TObject, TPersistent, TCompon
 from ._core import (lib, _mixins, _register, _event_types, _ItemMixin, _Prop, _Indexed, _Event,
                    _int, _float, _bool, _str, _char, _ptr, _rect_conv, _point_conv, _enum, _set, _comp, _existing, _item, _obj, _view,
                    _str_key, _enc, _dec, _h, _b, _rect, _point, _to_enum, _to_comp, _to_existing, _to_item, _to_obj,
-                   _a_int, _a_bool, _a_rect, _a_exception, _a_strings, _a_enum, _a_comp, _a_item, _a_obj, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_str, _a_ref_enum)
+                   _a_int, _a_bool, _a_str, _a_rect, _a_exception, _a_strings, _a_enum, _a_comp, _a_item, _a_obj, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_str, _a_ref_enum)
 '''
 
 FOOTER = '''\

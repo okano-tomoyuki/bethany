@@ -39,7 +39,7 @@ from ._core import (BethError, Ref, TRect, TPoint, TObject, TPersistent, TCompon
 from ._core import (lib, _mixins, _register, _event_types, _ItemMixin, _Prop, _Indexed, _Event,
                    _int, _float, _bool, _str, _char, _ptr, _rect_conv, _point_conv, _enum, _set, _comp, _existing, _item, _obj, _view,
                    _str_key, _enc, _dec, _h, _b, _rect, _point, _to_enum, _to_comp, _to_existing, _to_item, _to_obj,
-                   _a_int, _a_bool, _a_rect, _a_exception, _a_strings, _a_enum, _a_comp, _a_item, _a_obj, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_str, _a_ref_enum)
+                   _a_int, _a_bool, _a_str, _a_rect, _a_exception, _a_strings, _a_enum, _a_comp, _a_item, _a_obj, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_str, _a_ref_enum)
 
 
 # ---------------- 列挙型 ----------------
@@ -649,6 +649,15 @@ class TShapeType(enum.IntEnum):
     stPolygon = 14
 
 stRectangle, stSquare, stRoundRect, stRoundSquare, stEllipse, stCircle, stSquaredDiamond, stDiamond, stTriangle, stTriangleLeft, stTriangleRight, stTriangleDown, stStar, stStarDown, stPolygon = TShapeType.stRectangle, TShapeType.stSquare, TShapeType.stRoundRect, TShapeType.stRoundSquare, TShapeType.stEllipse, TShapeType.stCircle, TShapeType.stSquaredDiamond, TShapeType.stDiamond, TShapeType.stTriangle, TShapeType.stTriangleLeft, TShapeType.stTriangleRight, TShapeType.stTriangleDown, TShapeType.stStar, TShapeType.stStarDown, TShapeType.stPolygon
+
+
+# ---- グリッドの細部(docs/adr/0053。LCL・VCL と同じ形) ----
+# 並べ替えの向き(ColumnClickSorts・SortColRow)。
+class TSortOrder(enum.IntEnum):
+    soAscending = 0
+    soDescending = 1
+
+soAscending, soDescending = TSortOrder.soAscending, TSortOrder.soDescending
 
 
 # ドラッグで幅を変えている間の段階(LCL の TSectionTrackState と同じ値)。
@@ -3198,6 +3207,43 @@ class TCustomDrawGrid(TCustomGrid):
     # IsColumn が true なら、列 Index の値で行を並べ替える(固定行は除く)。false なら行 Index の値で列を並べ替える。
     def SortColRow(self, IsColumn, Index):
         lib.TCustomDrawGrid_SortColRow(self._current(), _b(IsColumn), int(Index))
+    # ---- docs/adr/0053 ----
+    # AutoEdit・AlternateColor・TitleFont・ColumnClickSorts と OnValidateEntry・OnPrepareCanvas・OnCompareCells・OnTopLeftChanged は、
+    # LCL では TCustomGrid の protected で、TDrawGrid・TStringGrid が published にしている。
+    # true(既定)なら、goEditing のとき、文字を打つとすぐにセルの編集を始める(false なら F2・Enter・ダブルクリックで始める)。
+    AutoEdit = _Prop("TCustomDrawGrid_GetAutoEdit", "TCustomDrawGrid_SetAutoEdit", _bool)
+    # 1 行おきの背景の色(既定は Color と同じ)。
+    AlternateColor = _Prop("TCustomDrawGrid_GetAlternateColor", "TCustomDrawGrid_SetAlternateColor", _int)
+    # フォーカスのあるセルの枠の色。
+    FocusColor = _Prop("TCustomDrawGrid_GetFocusColor", "TCustomDrawGrid_SetFocusColor", _int)
+    GridLineColor = _Prop("TCustomDrawGrid_GetGridLineColor", "TCustomDrawGrid_SetGridLineColor", _int)
+    GridLineWidth = _Prop("TCustomDrawGrid_GetGridLineWidth", "TCustomDrawGrid_SetGridLineWidth", _int)
+    # 固定行(見出し)の文字のフォント。グリッドが所有する TFont のビュー。代入は内容のコピー。
+    TitleFont = _Prop("TCustomDrawGrid_GetTitleFont", "TCustomDrawGrid_SetTitleFont", _obj("TFont"))
+    # true なら、列の幅を広げて(縮めて)グリッドの幅に合わせる。
+    AutoFillColumns = _Prop("TCustomDrawGrid_GetAutoFillColumns", "TCustomDrawGrid_SetAutoFillColumns", _bool)
+    # true なら、列見出しのクリックでその列の値で行を並べ替える(同じ列をもう一度クリックすると逆順)。
+    ColumnClickSorts = _Prop("TCustomDrawGrid_GetColumnClickSorts", "TCustomDrawGrid_SetColumnClickSorts", _bool)
+    # 並べ替えの向き(SortColRow もこの向きで並べる)。
+    SortOrder = _Prop("TCustomDrawGrid_GetSortOrder", "TCustomDrawGrid_SetSortOrder", _enum("TSortOrder"))
+    # 最後に ColumnClickSorts で並べ替えた列(無ければ -1)。
+    SortColumn = _Prop("TCustomDrawGrid_GetSortColumn", None, _int)
+    # 行(IsColumn なら列)Index と WithIndex を入れ替える。
+    def ExchangeColRow(self, IsColumn, Index, WithIndex):
+        lib.TCustomDrawGrid_ExchangeColRow(self._current(), _b(IsColumn), int(Index), int(WithIndex))
+    OnGetEditText = _Event("TCustomDrawGrid_SetOnGetEditText", "TGetEditEvent")
+    OnSetEditText = _Event("TCustomDrawGrid_SetOnSetEditText", "TSetEditEvent")
+    OnValidateEntry = _Event("TCustomDrawGrid_SetOnValidateEntry", "TValidateEntryEvent")
+    OnPrepareCanvas = _Event("TCustomDrawGrid_SetOnPrepareCanvas", "TOnPrepareCanvasEvent")
+    OnCompareCells = _Event("TCustomDrawGrid_SetOnCompareCells", "TOnCompareCells")
+    # スクロールで、表示されている最初の列・行(LeftCol・TopRow)が変わったとき。
+    OnTopLeftChanged = _Event("TCustomDrawGrid_SetOnTopLeftChanged", "TNotifyEvent")
+    # 見出しのドラッグで列の幅・行の高さを変えたとき(IsColumn は列なら true)。
+    OnHeaderSized = _Event("TCustomDrawGrid_SetOnHeaderSized", "THdrEvent")
+    OnColRowInserted = _Event("TCustomDrawGrid_SetOnColRowInserted", "TGridOperationEvent")
+    OnColRowDeleted = _Event("TCustomDrawGrid_SetOnColRowDeleted", "TGridOperationEvent")
+    OnColRowMoved = _Event("TCustomDrawGrid_SetOnColRowMoved", "TGridOperationEvent")
+    OnColRowExchanged = _Event("TCustomDrawGrid_SetOnColRowExchanged", "TGridOperationEvent")
 
 
 class TDrawGrid(TCustomDrawGrid):
@@ -3218,6 +3264,13 @@ class TCustomStringGrid(TCustomDrawGrid):
         lib.TCustomStringGrid_AutoSizeColumns(self._current())
     def AutoSizeColumn(self, ACol):
         lib.TCustomStringGrid_AutoSizeColumn(self._current(), int(ACol))
+    # ---- docs/adr/0053 ----
+    # セルごとの利用者データ(ポインタ。StringGrid1->Objects[ACol][ARow])。LCL は解釈も解放もしない。
+    Objects = _Indexed("TCustomStringGrid_GetObjects", "TCustomStringGrid_SetObjects", _ptr, dims=2)
+    # 列 i・行 i のセルの文字列の一覧(StringGrid1->Rows[1]->CommaText = "a,b,c"; のように使う)。
+    # Cols[i]->Strings[j] は Cells[i][j]、Rows[i]->Strings[j] は Cells[j][i]。グリッドが所有し、グリッドの破棄まで使える。
+    Cols = _Indexed("TCustomStringGrid_GetCols", None, _view("TStrings"))
+    Rows = _Indexed("TCustomStringGrid_GetRows", None, _view("TStrings"))
 
 
 class TStringGrid(TCustomStringGrid):
@@ -3713,6 +3766,12 @@ _event_types.update({
     "TOnSelectCellEvent": (_a_int, _a_int, _a_ref_bool, ),  # (Sender, ACol, ARow, CanSelect)
     "TOnSelectEvent": (_a_int, _a_int, ),  # (Sender, ACol, ARow)
     "THdrEvent": (_a_bool, _a_int, ),  # (Sender, IsColumn, Index)
+    "TGetEditEvent": (_a_int, _a_int, _a_ref_str, ),  # (Sender, ACol, ARow, Value)
+    "TSetEditEvent": (_a_int, _a_int, _a_str, ),  # (Sender, ACol, ARow, Value)
+    "TValidateEntryEvent": (_a_int, _a_int, _a_str, _a_ref_str, ),  # (Sender, ACol, ARow, OldValue, NewValue)
+    "TOnPrepareCanvasEvent": (_a_int, _a_int, _a_enum("TGridDrawState"), ),  # (Sender, ACol, ARow, AState)
+    "TOnCompareCells": (_a_int, _a_int, _a_int, _a_int, _a_ref_int, ),  # (Sender, ACol, ARow, BCol, BRow, Result)
+    "TGridOperationEvent": (_a_bool, _a_int, _a_int, ),  # (Sender, IsColumn, sIndex, tIndex)
     "TCustomSectionNotifyEvent": (_a_item("THeaderSection"), ),  # (Sender, Section)
     "TCustomSectionTrackEvent": (_a_item("THeaderSection"), _a_int, _a_enum("TSectionTrackState"), ),  # (Sender, Section, Width, State)
     "TSectionDragEvent": (_a_item("THeaderSection"), _a_item("THeaderSection"), _a_ref_bool, ),  # (Sender, FromSection, ToSection, AllowDrag)
@@ -3776,24 +3835,24 @@ __all__ = [
     "sbsSingle", "sbsSunken", "TStatusPanelStyle", "psText", "psOwnerDraw", "TStatusPanelBevel", "pbNone",
     "pbLowered", "pbRaised", "TShapeType", "stRectangle", "stSquare", "stRoundRect", "stRoundSquare", "stEllipse",
     "stCircle", "stSquaredDiamond", "stDiamond", "stTriangle", "stTriangleLeft", "stTriangleRight",
-    "stTriangleDown", "stStar", "stStarDown", "stPolygon", "TSectionTrackState", "tsTrackBegin", "tsTrackMove",
-    "tsTrackEnd", "TEdgeStyle", "esNone", "esRaised", "esLowered", "TToolButtonStyle", "tbsButton", "tbsCheck",
-    "tbsDropDown", "tbsSeparator", "tbsDivider", "tbsButtonDrop", "TGrabStyle", "gsSimple", "gsDouble",
-    "gsHorLines", "gsVerLines", "gsGripper", "gsButton", "TActionListState", "asNormal", "asSuspended",
-    "asSuspendedEnabled", "TBorderStyle", "TShiftState", "ssShift", "ssAlt", "ssCtrl", "ssLeft", "ssRight",
-    "ssMiddle", "ssDouble", "ssMeta", "ssSuper", "ssHyper", "ssAltGr", "ssCaps", "ssNum", "ssScroll", "ssTriple",
-    "ssQuad", "ssExtra1", "ssExtra2", "TFontStyles", "fsBold", "fsItalic", "fsUnderline", "fsStrikeOut",
-    "TOwnerDrawState", "odSelected", "odGrayed", "odDisabled", "odChecked", "odFocused", "odDefault", "odHotLight",
-    "odInactive", "odNoAccel", "odNoFocusRect", "odReserved1", "odReserved2", "odComboBoxEdit",
-    "odBackgroundPainted", "TMultiSelectStyle", "msControlSelect", "msShiftSelect", "msVisibleOnly",
-    "msSiblingOnly", "TTreeViewOptions", "tvoAllowMultiselect", "tvoAutoExpand", "tvoAutoInsertMark",
-    "tvoAutoItemHeight", "tvoHideSelection", "tvoHotTrack", "tvoKeepCollapsedNodes", "tvoReadOnly",
-    "tvoRightClickSelect", "tvoRowSelect", "tvoShowButtons", "tvoShowLines", "tvoShowRoot", "tvoShowSeparators",
-    "tvoToolTips", "tvoNoDoubleClickExpand", "tvoThemedDraw", "tvoEmptySpaceUnselect", "TCustomDrawState",
-    "cdsSelected", "cdsGrayed", "cdsDisabled", "cdsChecked", "cdsFocused", "cdsDefault", "cdsHot", "cdsMarked",
-    "cdsIndeterminate", "TGridOptions", "goFixedVertLine", "goFixedHorzLine", "goVertLine", "goHorzLine",
-    "goRangeSelect", "goDrawFocusSelected", "goRowSizing", "goColSizing", "goRowMoving", "goColMoving",
-    "goEditing", "goAutoAddRows", "goTabs", "goRowSelect", "goAlwaysShowEditor", "goThumbTracking",
+    "stTriangleDown", "stStar", "stStarDown", "stPolygon", "TSortOrder", "soAscending", "soDescending",
+    "TSectionTrackState", "tsTrackBegin", "tsTrackMove", "tsTrackEnd", "TEdgeStyle", "esNone", "esRaised",
+    "esLowered", "TToolButtonStyle", "tbsButton", "tbsCheck", "tbsDropDown", "tbsSeparator", "tbsDivider",
+    "tbsButtonDrop", "TGrabStyle", "gsSimple", "gsDouble", "gsHorLines", "gsVerLines", "gsGripper", "gsButton",
+    "TActionListState", "asNormal", "asSuspended", "asSuspendedEnabled", "TBorderStyle", "TShiftState", "ssShift",
+    "ssAlt", "ssCtrl", "ssLeft", "ssRight", "ssMiddle", "ssDouble", "ssMeta", "ssSuper", "ssHyper", "ssAltGr",
+    "ssCaps", "ssNum", "ssScroll", "ssTriple", "ssQuad", "ssExtra1", "ssExtra2", "TFontStyles", "fsBold",
+    "fsItalic", "fsUnderline", "fsStrikeOut", "TOwnerDrawState", "odSelected", "odGrayed", "odDisabled",
+    "odChecked", "odFocused", "odDefault", "odHotLight", "odInactive", "odNoAccel", "odNoFocusRect", "odReserved1",
+    "odReserved2", "odComboBoxEdit", "odBackgroundPainted", "TMultiSelectStyle", "msControlSelect",
+    "msShiftSelect", "msVisibleOnly", "msSiblingOnly", "TTreeViewOptions", "tvoAllowMultiselect", "tvoAutoExpand",
+    "tvoAutoInsertMark", "tvoAutoItemHeight", "tvoHideSelection", "tvoHotTrack", "tvoKeepCollapsedNodes",
+    "tvoReadOnly", "tvoRightClickSelect", "tvoRowSelect", "tvoShowButtons", "tvoShowLines", "tvoShowRoot",
+    "tvoShowSeparators", "tvoToolTips", "tvoNoDoubleClickExpand", "tvoThemedDraw", "tvoEmptySpaceUnselect",
+    "TCustomDrawState", "cdsSelected", "cdsGrayed", "cdsDisabled", "cdsChecked", "cdsFocused", "cdsDefault",
+    "cdsHot", "cdsMarked", "cdsIndeterminate", "TGridOptions", "goFixedVertLine", "goFixedHorzLine", "goVertLine",
+    "goHorzLine", "goRangeSelect", "goDrawFocusSelected", "goRowSizing", "goColSizing", "goRowMoving",
+    "goColMoving", "goEditing", "goAutoAddRows", "goTabs", "goRowSelect", "goAlwaysShowEditor", "goThumbTracking",
     "goColSpanning", "goRelaxedRowSelect", "goDblClickAutoSize", "goSmoothScroll", "goFixedRowNumbering",
     "goScrollKeepVisible", "goHeaderHotTracking", "goHeaderPushedLook", "goSelectionActive", "goFixedColSizing",
     "goDontScrollPartCell", "goCellHints", "goTruncCellHints", "goCellEllipsis", "goAutoAddRowsSkipContentCheck",

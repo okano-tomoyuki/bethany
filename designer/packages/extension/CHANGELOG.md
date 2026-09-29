@@ -41,6 +41,10 @@
 - New from the Bethany library 0.3.0: `ShowColumnHeaders`, `ColumnClick`, `ToolTips`, `OwnerDraw`, `AutoSort`, `OwnerData` and
   `HotTrack` of list views, and the `OnCompare`, `OnData`, `OnEditing`, `OnEdited`, `OnCustomDrawItem`, `OnCustomDrawSubItem` and
   `OnDrawItem` events
+- New from the Bethany library 0.3.0: `AutoEdit`, `AlternateColor`, `FocusColor`, `GridLineColor`, `GridLineWidth`, `TitleFont`,
+  `AutoFillColumns`, `ColumnClickSorts` and `SortOrder` of grids, and the `OnGetEditText`, `OnSetEditText`, `OnValidateEntry`,
+  `OnPrepareCanvas`, `OnCompareCells`, `OnTopLeftChanged`, `OnHeaderSized` and `OnColRow…` events. The canvas draws the grid with
+  `Color`, `FixedColor`, `AlternateColor`, `GridLineColor` and `GridLineWidth`, and stretches the columns with `AutoFillColumns`
 - The include guard macro does not repeat a namespace that is also the folder of the header
   (`APP_DIALOGS_ABOUT_HPP` instead of `APP_DIALOGS_DIALOGS_ABOUT_HPP` for `app::dialogs` and `dialogs/About.hpp`)
 

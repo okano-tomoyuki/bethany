@@ -20,6 +20,8 @@ class TMainForm(TForm):
         self.Memo1: TMemo
         self.ListSheet: TTabSheet
         self.List1: TListView
+        self.GridSheet: TTabSheet
+        self.Grid1: TStringGrid
         self.BottomPanel: TPanel
         self.StatusLabel: TLabel
         self.HintPanel: TPanel
@@ -37,7 +39,7 @@ class TMainForm(TForm):
         self.Timer1: TTimer
         self.ActionList1: TActionList
         self.FileSaveAction: TAction
-        # <bethany-designer:end id="declarations" hash="5466cbda">
+        # <bethany-designer:end id="declarations" hash="9cf275d5">
         self.beth_CreateComponents()
 
     # <bethany-designer:begin id="beth_CreateComponents">
@@ -56,6 +58,8 @@ class TMainForm(TForm):
         self.Memo1 = TMemo(self)
         self.ListSheet = TTabSheet(self)
         self.List1 = TListView(self)
+        self.GridSheet = TTabSheet(self)
+        self.Grid1 = TStringGrid(self)
         self.BottomPanel = TPanel(self)
         self.StatusLabel = TLabel(self)
         self.HintPanel = TPanel(self)
@@ -202,6 +206,26 @@ class TMainForm(TForm):
         self.List1.OnData = self.List1Data
         self.List1.OnEdited = self.List1Edited
 
+        self.GridSheet.PageControl = self.PageControl1
+        self.GridSheet.Caption = "Grid"
+
+        self.Grid1.Parent = self.GridSheet
+        self.Grid1.Left = 0
+        self.Grid1.Top = 0
+        self.Grid1.Width = 355
+        self.Grid1.Height = 92
+        self.Grid1.Align = alClient
+        self.Grid1.ColCount = 3
+        self.Grid1.RowCount = 4
+        self.Grid1.AlternateColor = clInfoBk
+        self.Grid1.GridLineColor = clGray
+        self.Grid1.TitleFont.Style = fsBold
+        self.Grid1.AutoFillColumns = True
+        self.Grid1.ColumnClickSorts = True
+        self.Grid1.OnValidateEntry = self.Grid1ValidateEntry
+        self.Grid1.OnPrepareCanvas = self.Grid1PrepareCanvas
+        self.Grid1.OnCompareCells = self.Grid1CompareCells
+
         self.BottomPanel.Parent = self
         self.BottomPanel.Left = 0
         self.BottomPanel.Top = 259
@@ -296,7 +320,7 @@ class TMainForm(TForm):
         self.FileSaveAction.OnExecute = self.FileSaveActionExecute
 
         self.FileSaveItem.Action = self.FileSaveAction
-    # <bethany-designer:end id="beth_CreateComponents" hash="29d3f326">
+    # <bethany-designer:end id="beth_CreateComponents" hash="418defcc">
 
     # <bethany-designer:handler-stubs>
 
@@ -331,6 +355,15 @@ class TMainForm(TForm):
         pass
 
     def List1Edited(self, Sender, Item, AValue):
+        pass
+
+    def Grid1ValidateEntry(self, Sender, ACol, ARow, OldValue, NewValue):
+        pass
+
+    def Grid1PrepareCanvas(self, Sender, ACol, ARow, AState):
+        pass
+
+    def Grid1CompareCells(self, Sender, ACol, ARow, BCol, BRow, Result):
         pass
 
     def ColorListDrawItem(self, Sender, Index, ARect, State):

@@ -31,6 +31,8 @@ void TMainForm::beth_CreateComponents()
     Memo1 = new TMemo(this);
     ListSheet = new TTabSheet(this);
     List1 = new TListView(this);
+    GridSheet = new TTabSheet(this);
+    Grid1 = new TStringGrid(this);
     BottomPanel = new TPanel(this);
     StatusLabel = new TLabel(this);
     HintPanel = new TPanel(this);
@@ -183,6 +185,26 @@ void TMainForm::beth_CreateComponents()
     List1->OnData = [this](TObject* Sender, TListItem* Item) { List1Data(Sender, Item); };
     List1->OnEdited = [this](TObject* Sender, TListItem* Item, std::string& AValue) { List1Edited(Sender, Item, AValue); };
 
+    GridSheet->PageControl = PageControl1;
+    GridSheet->Caption = "Grid";
+
+    Grid1->Parent = GridSheet;
+    Grid1->Left = 0;
+    Grid1->Top = 0;
+    Grid1->Width = 355;
+    Grid1->Height = 92;
+    Grid1->Align = alClient;
+    Grid1->ColCount = 3;
+    Grid1->RowCount = 4;
+    Grid1->AlternateColor = clInfoBk;
+    Grid1->GridLineColor = clGray;
+    Grid1->TitleFont->Style = fsBold;
+    Grid1->AutoFillColumns = true;
+    Grid1->ColumnClickSorts = true;
+    Grid1->OnValidateEntry = [this](TObject* Sender, int ACol, int ARow, const std::string& OldValue, std::string& NewValue) { Grid1ValidateEntry(Sender, ACol, ARow, OldValue, NewValue); };
+    Grid1->OnPrepareCanvas = [this](TObject* Sender, int ACol, int ARow, TGridDrawState AState) { Grid1PrepareCanvas(Sender, ACol, ARow, AState); };
+    Grid1->OnCompareCells = [this](TObject* Sender, int ACol, int ARow, int BCol, int BRow, int& Result) { Grid1CompareCells(Sender, ACol, ARow, BCol, BRow, Result); };
+
     BottomPanel->Parent = this;
     BottomPanel->Left = 0;
     BottomPanel->Top = 259;
@@ -278,7 +300,7 @@ void TMainForm::beth_CreateComponents()
 
     FileSaveItem->Action = FileSaveAction;
 }
-// <bethany-designer:end id="beth_CreateComponents" hash="fa11fcfe">
+// <bethany-designer:end id="beth_CreateComponents" hash="a20885ce">
 
 // <bethany-designer:handler-stubs>
 
@@ -333,6 +355,21 @@ void TMainForm::List1Data(TObject* Sender, TListItem* Item)
 }
 
 void TMainForm::List1Edited(TObject* Sender, TListItem* Item, std::string& AValue)
+{
+    // TODO: implement
+}
+
+void TMainForm::Grid1ValidateEntry(TObject* Sender, int ACol, int ARow, const std::string& OldValue, std::string& NewValue)
+{
+    // TODO: implement
+}
+
+void TMainForm::Grid1PrepareCanvas(TObject* Sender, int ACol, int ARow, TGridDrawState AState)
+{
+    // TODO: implement
+}
+
+void TMainForm::Grid1CompareCells(TObject* Sender, int ACol, int ARow, int BCol, int BRow, int& Result)
 {
     // TODO: implement
 }

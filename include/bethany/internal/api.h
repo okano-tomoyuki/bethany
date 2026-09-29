@@ -70,6 +70,14 @@ using tv_custom_draw_callback_t = void (BETH_CALL *)(obj_t sender, obj_t node, u
 using lv_compare_callback_t = void (BETH_CALL *)(obj_t sender, obj_t item1, obj_t item2, int_t data, int_t* compare, void* cbData);
 using lv_custom_draw_sub_item_callback_t = void (BETH_CALL *)(obj_t sender, obj_t item, int_t subItem, uint_t state, bool_t* defaultDraw, void* data);
 using lv_draw_item_callback_t = void (BETH_CALL *)(obj_t sender, obj_t item, int_t left, int_t top, int_t right, int_t bottom, uint_t state, void* data);
+// グリッドの OnGetEditText・OnSetEditText・OnValidateEntry・OnPrepareCanvas・OnCompareCells・OnColRow…(docs/adr/0053)。
+// *result に文字列を返すとそれを使う(nil ならそのまま。返した文字列は DLL が写すまで有効であること)。state は TGridDrawState のビット。
+using grid_get_edit_callback_t = void (BETH_CALL *)(obj_t sender, int_t col, int_t row, str_t value, str_t* result, void* data);
+using grid_set_edit_callback_t = void (BETH_CALL *)(obj_t sender, int_t col, int_t row, str_t value, void* data);
+using grid_validate_callback_t = void (BETH_CALL *)(obj_t sender, int_t col, int_t row, str_t oldValue, str_t newValue, str_t* result, void* data);
+using grid_prepare_canvas_callback_t = void (BETH_CALL *)(obj_t sender, int_t col, int_t row, uint_t state, void* data);
+using grid_compare_cells_callback_t = void (BETH_CALL *)(obj_t sender, int_t acol, int_t arow, int_t bcol, int_t brow, int_t* result, void* data);
+using grid_operation_callback_t = void (BETH_CALL *)(obj_t sender, int_t isColumn, int_t sIndex, int_t tIndex, void* data);
 
 #define BETH_DECLARE_FUNC(ret, name, params, args) ret name params;
 BETH_FUNCS(BETH_DECLARE_FUNC)

@@ -1502,6 +1502,41 @@
     X(void,          TListView_SetOnDrawItem,               (obj_t o, lv_draw_item_callback_t cb, void* d),                (o, cb, d)) \
     X(void,          TListItems_SetCount,                   (obj_t o, int_t v),                                            (o, v)) \
     X(void,          TListItem_DisplayRect,                 (obj_t o, int_t code, int_t* l, int_t* t, int_t* r, int_t* b), (o, code, l, t, r, b)) \
-    X(bool_t,        TListItem_EditCaption,                 (obj_t o),                                                     (o))
+    X(bool_t,        TListItem_EditCaption,                 (obj_t o),                                                     (o)) \
+    X(bool_t,        TCustomDrawGrid_GetAutoEdit,           (obj_t o),                                                     (o)) \
+    X(void,          TCustomDrawGrid_SetAutoEdit,           (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomDrawGrid_GetAutoFillColumns,    (obj_t o),                                                     (o)) \
+    X(void,          TCustomDrawGrid_SetAutoFillColumns,    (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TCustomDrawGrid_GetColumnClickSorts,   (obj_t o),                                                     (o)) \
+    X(void,          TCustomDrawGrid_SetColumnClickSorts,   (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TCustomDrawGrid_GetAlternateColor,     (obj_t o),                                                     (o)) \
+    X(void,          TCustomDrawGrid_SetAlternateColor,     (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomDrawGrid_GetFocusColor,         (obj_t o),                                                     (o)) \
+    X(void,          TCustomDrawGrid_SetFocusColor,         (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomDrawGrid_GetGridLineColor,      (obj_t o),                                                     (o)) \
+    X(void,          TCustomDrawGrid_SetGridLineColor,      (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomDrawGrid_GetGridLineWidth,      (obj_t o),                                                     (o)) \
+    X(void,          TCustomDrawGrid_SetGridLineWidth,      (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TCustomDrawGrid_GetSortOrder,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomDrawGrid_SetSortOrder,          (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TCustomDrawGrid_GetTitleFont,          (obj_t o),                                                     (o)) \
+    X(void,          TCustomDrawGrid_SetTitleFont,          (obj_t o, obj_t v),                                            (o, v)) \
+    X(int_t,         TCustomDrawGrid_GetSortColumn,         (obj_t o),                                                     (o)) \
+    X(void,          TCustomDrawGrid_ExchangeColRow,        (obj_t o, bool_t isColumn, int_t index, int_t withIndex),      (o, isColumn, index, withIndex)) \
+    X(void,          TCustomDrawGrid_SetOnGetEditText,      (obj_t o, grid_get_edit_callback_t cb, void* d),               (o, cb, d)) \
+    X(void,          TCustomDrawGrid_SetOnSetEditText,      (obj_t o, grid_set_edit_callback_t cb, void* d),               (o, cb, d)) \
+    X(void,          TCustomDrawGrid_SetOnValidateEntry,    (obj_t o, grid_validate_callback_t cb, void* d),               (o, cb, d)) \
+    X(void,          TCustomDrawGrid_SetOnPrepareCanvas,    (obj_t o, grid_prepare_canvas_callback_t cb, void* d),         (o, cb, d)) \
+    X(void,          TCustomDrawGrid_SetOnCompareCells,     (obj_t o, grid_compare_cells_callback_t cb, void* d),          (o, cb, d)) \
+    X(void,          TCustomDrawGrid_SetOnTopLeftChanged,   (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(void,          TCustomDrawGrid_SetOnHeaderSized,      (obj_t o, header_callback_t cb, void* d),                      (o, cb, d)) \
+    X(void,          TCustomDrawGrid_SetOnColRowInserted,   (obj_t o, grid_operation_callback_t cb, void* d),              (o, cb, d)) \
+    X(void,          TCustomDrawGrid_SetOnColRowDeleted,    (obj_t o, grid_operation_callback_t cb, void* d),              (o, cb, d)) \
+    X(void,          TCustomDrawGrid_SetOnColRowMoved,      (obj_t o, grid_operation_callback_t cb, void* d),              (o, cb, d)) \
+    X(void,          TCustomDrawGrid_SetOnColRowExchanged,  (obj_t o, grid_operation_callback_t cb, void* d),              (o, cb, d)) \
+    X(void*,         TCustomStringGrid_GetObjects,          (obj_t o, int_t c, int_t r),                                   (o, c, r)) \
+    X(void,          TCustomStringGrid_SetObjects,          (obj_t o, int_t c, int_t r, void* v),                          (o, c, r, v)) \
+    X(obj_t,         TCustomStringGrid_GetCols,             (obj_t o, int_t i),                                            (o, i)) \
+    X(obj_t,         TCustomStringGrid_GetRows,             (obj_t o, int_t i),                                            (o, i))
 
 #endif

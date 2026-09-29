@@ -100,7 +100,7 @@ describe('意味の検証', () => {
   it('TPageControl の子は TTabSheet だけ', () => {
     expect(
       diagnose((doc) => doc.form.controls[2].controls.push({ name: 'X', class: 'TButton' })),
-    ).toEqual([['invalid-child-class', 'form.controls.2.controls.3.class']]);
+    ).toEqual([['invalid-child-class', 'form.controls.2.controls.4.class']]);
   });
 
   it('プロパティの値の型', () => {

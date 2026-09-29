@@ -186,6 +186,38 @@
                 }
               }
             ]
+          },
+          {
+            "name": "GridSheet",
+            "class": "TTabSheet",
+            "properties": {
+              "Caption": "Grid"
+            },
+            "controls": [
+              {
+                "name": "Grid1",
+                "class": "TStringGrid",
+                "properties": {
+                  "Left": 0,
+                  "Top": 0,
+                  "Width": 355,
+                  "Height": 92,
+                  "Align": "alClient",
+                  "ColCount": 3,
+                  "RowCount": 4,
+                  "AlternateColor": "clInfoBk",
+                  "GridLineColor": "clGray",
+                  "TitleFont": { "Style": ["fsBold"] },
+                  "AutoFillColumns": true,
+                  "ColumnClickSorts": true
+                },
+                "events": {
+                  "OnValidateEntry": "Grid1ValidateEntry",
+                  "OnPrepareCanvas": "Grid1PrepareCanvas",
+                  "OnCompareCells": "Grid1CompareCells"
+                }
+              }
+            ]
           }
         ]
       },

@@ -57,6 +57,11 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
   `EditCaption()`)、並べ替え(`OnCompare`・`AlphaSort()`・`Sort()`・`AutoSort`)、独自の描画(`Canvas`・`OnCustomDrawItem`・`OnCustomDrawSubItem`、
   `OwnerDraw`・`OnDrawItem`)、`ShowColumnHeaders`・`ColumnClick`・`ToolTips`・`HotTrack`、項目の `DisplayRect()`
   ([ADR 0052](docs/adr/0052-listview-details.md))
+- グリッドの編集のイベント(`OnGetEditText`・`OnSetEditText`・`OnValidateEntry`)と `AutoEdit`、`OnPrepareCanvas`、色・線・見出し
+  (`AlternateColor`・`FocusColor`・`GridLineColor`・`GridLineWidth`・`TitleFont`)、`AutoFillColumns`、並べ替え(`OnCompareCells`・
+  `ColumnClickSorts`・`SortOrder`・`SortColumn`)、`OnTopLeftChanged`・`OnHeaderSized`、行・列の操作の通知(`OnColRowInserted`・
+  `OnColRowDeleted`・`OnColRowMoved`・`OnColRowExchanged`)と `ExchangeColRow()`、TStringGrid の `Objects`・`Cols`・`Rows`
+  ([ADR 0053](docs/adr/0053-grid-details.md))
 
 ### 変更
 
@@ -66,6 +71,8 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
 
 ### 修正
 
+- TListView・TTreeView の `OnCompare` を nullptr(Python では None)に戻しても、並べ替えが既定の比較に戻らず、効かなくなっていた
+  ([ADR 0053](docs/adr/0053-grid-details.md))
 - TListView の `Items->Exchange()`・`Move()` の後に並べ替えると、表示される文字列と行の項目(選択・編集の対象)がずれていた
   (LCL の Win32 実装の不具合。DLL で行の項目を付け直す。[ADR 0052](docs/adr/0052-listview-details.md))
 - メインフォームを最小化すると、フォームが隠れたままタスクバーのボタンも消え、元に戻せなかった(`Application->Minimize()` も同じ)。

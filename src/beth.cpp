@@ -21,6 +21,25 @@ void SetSimpleEvent(ObjectHandle handle, Event& slot, bool& hooked, const Event&
     }
 }
 
+// 有無で LCL の動きが変わるイベント(並べ替えの OnCompare・OnCompareCells)用: 空のハンドラを設定したら、DLL のイベントも外す
+// (DLL は nullptr のコールバックを受けるとイベントを nil にする。docs/adr/0053)。
+template<typename Event, typename Callback>
+void SetRemovableEvent(ObjectHandle handle, Event& slot, bool& hooked, const Event& value,
+                       void (*setOn)(ObjectHandle, Callback, void*), Callback trampoline)
+{
+    slot = value;
+    if (value && !hooked)
+    {
+        setOn(handle, trampoline, nullptr);
+        hooked = true;
+    }
+    else if (!value && hooked)
+    {
+        setOn(handle, nullptr, nullptr);
+        hooked = false;
+    }
+}
+
 // DLL から呼ばれるコールバック(トランポリン)の本体を包む。ハンドラから送出された例外は DLL の関数をまたいで伝えられないため、
 // ここで捕まえて SetCallbackError で知らせ、DLL 側で送出し直させる(docs/adr/0031)。
 // デストラクタの中で LCL のオブジェクトを破棄する。例外がデストラクタから出ると std::terminate になるため、握りつぶす。
@@ -4778,6 +4797,28 @@ TCustomDrawGrid::TCustomDrawGrid(ObjectHandle handle)
     , OnHeaderClick(this, &TCustomDrawGrid::GetOnHeaderClickImpl, &TCustomDrawGrid::SetOnHeaderClickImpl)
     , ColWidths(this, &TCustomDrawGrid::GetColWidthsImpl, &TCustomDrawGrid::SetColWidthsImpl)
     , RowHeights(this, &TCustomDrawGrid::GetRowHeightsImpl, &TCustomDrawGrid::SetRowHeightsImpl)
+    , AutoEdit(this, &TCustomDrawGrid::GetAutoEditImpl, &TCustomDrawGrid::SetAutoEditImpl)
+    , AlternateColor(this, &TCustomDrawGrid::GetAlternateColorImpl, &TCustomDrawGrid::SetAlternateColorImpl)
+    , FocusColor(this, &TCustomDrawGrid::GetFocusColorImpl, &TCustomDrawGrid::SetFocusColorImpl)
+    , GridLineColor(this, &TCustomDrawGrid::GetGridLineColorImpl, &TCustomDrawGrid::SetGridLineColorImpl)
+    , GridLineWidth(this, &TCustomDrawGrid::GetGridLineWidthImpl, &TCustomDrawGrid::SetGridLineWidthImpl)
+    , TitleFont(this, &TCustomDrawGrid::GetTitleFontImpl, &TCustomDrawGrid::SetTitleFontImpl)
+    , AutoFillColumns(this, &TCustomDrawGrid::GetAutoFillColumnsImpl, &TCustomDrawGrid::SetAutoFillColumnsImpl)
+    , ColumnClickSorts(this, &TCustomDrawGrid::GetColumnClickSortsImpl, &TCustomDrawGrid::SetColumnClickSortsImpl)
+    , SortOrder(this, &TCustomDrawGrid::GetSortOrderImpl, &TCustomDrawGrid::SetSortOrderImpl)
+    , SortColumn(this, &TCustomDrawGrid::GetSortColumnImpl)
+    , OnGetEditText(this, &TCustomDrawGrid::GetOnGetEditTextImpl, &TCustomDrawGrid::SetOnGetEditTextImpl)
+    , OnSetEditText(this, &TCustomDrawGrid::GetOnSetEditTextImpl, &TCustomDrawGrid::SetOnSetEditTextImpl)
+    , OnValidateEntry(this, &TCustomDrawGrid::GetOnValidateEntryImpl, &TCustomDrawGrid::SetOnValidateEntryImpl)
+    , OnPrepareCanvas(this, &TCustomDrawGrid::GetOnPrepareCanvasImpl, &TCustomDrawGrid::SetOnPrepareCanvasImpl)
+    , OnCompareCells(this, &TCustomDrawGrid::GetOnCompareCellsImpl, &TCustomDrawGrid::SetOnCompareCellsImpl)
+    , OnTopLeftChanged(this, &TCustomDrawGrid::GetOnTopLeftChangedImpl, &TCustomDrawGrid::SetOnTopLeftChangedImpl)
+    , OnHeaderSized(this, &TCustomDrawGrid::GetOnHeaderSizedImpl, &TCustomDrawGrid::SetOnHeaderSizedImpl)
+    , OnColRowInserted(this, &TCustomDrawGrid::GetOnColRowInsertedImpl, &TCustomDrawGrid::SetOnColRowInsertedImpl)
+    , OnColRowDeleted(this, &TCustomDrawGrid::GetOnColRowDeletedImpl, &TCustomDrawGrid::SetOnColRowDeletedImpl)
+    , OnColRowMoved(this, &TCustomDrawGrid::GetOnColRowMovedImpl, &TCustomDrawGrid::SetOnColRowMovedImpl)
+    , OnColRowExchanged(this, &TCustomDrawGrid::GetOnColRowExchangedImpl, &TCustomDrawGrid::SetOnColRowExchangedImpl)
+    , titleFont_(internal::TCustomDrawGrid_GetTitleFont(handle))
 {}
 
 int  TCustomDrawGrid::GetColWidthsImpl(TObject* owner, int ACol)                     { return internal::TCustomDrawGrid_GetColWidths(owner->Handle(), ACol); }
@@ -4923,6 +4964,9 @@ TDrawGrid::TDrawGrid(TComponent* AOwner)
 TCustomStringGrid::TCustomStringGrid(ObjectHandle handle)
     : TCustomDrawGrid(handle)
     , Cells(this, &TCustomStringGrid::GetCellsImpl, &TCustomStringGrid::SetCellsImpl)
+    , Objects(this, &TCustomStringGrid::GetObjectsImpl, &TCustomStringGrid::SetObjectsImpl)
+    , Cols(this, &TCustomStringGrid::GetColsImpl)
+    , Rows(this, &TCustomStringGrid::GetRowsImpl)
 {}
 
 std::string TCustomStringGrid::GetCellsImpl(TObject* owner, int ACol, int ARow)
@@ -6176,7 +6220,7 @@ TTVCompareEvent TTreeView::GetOnCompareImpl(TObject* owner) { return static_cast
 void TTreeView::SetOnCompareImpl(TObject* owner, const TTVCompareEvent& value)
 {
     TTreeView* self = static_cast<TTreeView*>(owner);
-    SetSimpleEvent(self->handle_, self->onCompare_, self->onCompareHooked_, value, &internal::TTreeView_SetOnCompare, &TTreeView::CompareTrampoline);
+    SetRemovableEvent(self->handle_, self->onCompare_, self->onCompareHooked_, value, &internal::TTreeView_SetOnCompare, &TTreeView::CompareTrampoline);
 }
 
 TTVEditingEvent TTreeView::GetOnEditingImpl(TObject* owner) { return static_cast<TTreeView*>(owner)->onEditing_; }
@@ -6290,7 +6334,7 @@ TLVCompareEvent TListView::GetOnCompareImpl(TObject* owner) { return static_cast
 void TListView::SetOnCompareImpl(TObject* owner, const TLVCompareEvent& value)
 {
     TListView* self = static_cast<TListView*>(owner);
-    SetSimpleEvent(self->handle_, self->onCompare_, self->onCompareHooked_, value, &internal::TListView_SetOnCompare, &TListView::CompareTrampoline);
+    SetRemovableEvent(self->handle_, self->onCompare_, self->onCompareHooked_, value, &internal::TListView_SetOnCompare, &TListView::CompareTrampoline);
 }
 
 TLVDataEvent TListView::GetOnDataImpl(TObject* owner) { return static_cast<TListView*>(owner)->onData_; }
@@ -6426,6 +6470,245 @@ void BETH_CALL TListView::DrawItemTrampoline(ObjectHandle sender, ObjectHandle i
         TLVDrawItemEvent handler = self->onDrawItem_;
         handler(self, TListItem::Wrap(item), TRect{left, top, right, bottom}, state);
     });
+}
+
+/* ---------------- グリッドの細部(docs/adr/0053) ---------------- */
+
+bool TCustomDrawGrid::GetAutoEditImpl(TObject* owner) { return internal::TCustomDrawGrid_GetAutoEdit(owner->Handle()) != 0; }
+void TCustomDrawGrid::SetAutoEditImpl(TObject* owner, const bool& value) { internal::TCustomDrawGrid_SetAutoEdit(owner->Handle(), value ? 1 : 0); }
+TColor TCustomDrawGrid::GetAlternateColorImpl(TObject* owner) { return internal::TCustomDrawGrid_GetAlternateColor(owner->Handle()); }
+void TCustomDrawGrid::SetAlternateColorImpl(TObject* owner, const TColor& value) { internal::TCustomDrawGrid_SetAlternateColor(owner->Handle(), value); }
+TColor TCustomDrawGrid::GetFocusColorImpl(TObject* owner) { return internal::TCustomDrawGrid_GetFocusColor(owner->Handle()); }
+void TCustomDrawGrid::SetFocusColorImpl(TObject* owner, const TColor& value) { internal::TCustomDrawGrid_SetFocusColor(owner->Handle(), value); }
+TColor TCustomDrawGrid::GetGridLineColorImpl(TObject* owner) { return internal::TCustomDrawGrid_GetGridLineColor(owner->Handle()); }
+void TCustomDrawGrid::SetGridLineColorImpl(TObject* owner, const TColor& value) { internal::TCustomDrawGrid_SetGridLineColor(owner->Handle(), value); }
+int TCustomDrawGrid::GetGridLineWidthImpl(TObject* owner) { return internal::TCustomDrawGrid_GetGridLineWidth(owner->Handle()); }
+void TCustomDrawGrid::SetGridLineWidthImpl(TObject* owner, const int& value) { internal::TCustomDrawGrid_SetGridLineWidth(owner->Handle(), value); }
+TFont* TCustomDrawGrid::GetTitleFontImpl(TObject* owner) { return &static_cast<TCustomDrawGrid*>(owner)->titleFont_; }
+void TCustomDrawGrid::SetTitleFontImpl(TObject* owner, TFont* const& value)
+{
+    internal::TCustomDrawGrid_SetTitleFont(owner->Handle(), value ? value->Handle() : nullptr);
+}
+bool TCustomDrawGrid::GetAutoFillColumnsImpl(TObject* owner) { return internal::TCustomDrawGrid_GetAutoFillColumns(owner->Handle()) != 0; }
+void TCustomDrawGrid::SetAutoFillColumnsImpl(TObject* owner, const bool& value) { internal::TCustomDrawGrid_SetAutoFillColumns(owner->Handle(), value ? 1 : 0); }
+bool TCustomDrawGrid::GetColumnClickSortsImpl(TObject* owner) { return internal::TCustomDrawGrid_GetColumnClickSorts(owner->Handle()) != 0; }
+void TCustomDrawGrid::SetColumnClickSortsImpl(TObject* owner, const bool& value) { internal::TCustomDrawGrid_SetColumnClickSorts(owner->Handle(), value ? 1 : 0); }
+TSortOrder TCustomDrawGrid::GetSortOrderImpl(TObject* owner) { return static_cast<TSortOrder>(internal::TCustomDrawGrid_GetSortOrder(owner->Handle())); }
+void TCustomDrawGrid::SetSortOrderImpl(TObject* owner, const TSortOrder& value) { internal::TCustomDrawGrid_SetSortOrder(owner->Handle(), value); }
+int TCustomDrawGrid::GetSortColumnImpl(TObject* owner) { return internal::TCustomDrawGrid_GetSortColumn(owner->Handle()); }
+void TCustomDrawGrid::ExchangeColRow(bool IsColumn, int Index, int WithIndex)
+{
+    internal::TCustomDrawGrid_ExchangeColRow(handle_, IsColumn ? 1 : 0, Index, WithIndex);
+}
+
+TGetEditEvent TCustomDrawGrid::GetOnGetEditTextImpl(TObject* owner) { return static_cast<TCustomDrawGrid*>(owner)->onGetEditText_; }
+void TCustomDrawGrid::SetOnGetEditTextImpl(TObject* owner, const TGetEditEvent& value)
+{
+    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(owner);
+    SetSimpleEvent(self->handle_, self->onGetEditText_, self->onGetEditTextHooked_, value, &internal::TCustomDrawGrid_SetOnGetEditText, &TCustomDrawGrid::GetEditTextTrampoline);
+}
+TSetEditEvent TCustomDrawGrid::GetOnSetEditTextImpl(TObject* owner) { return static_cast<TCustomDrawGrid*>(owner)->onSetEditText_; }
+void TCustomDrawGrid::SetOnSetEditTextImpl(TObject* owner, const TSetEditEvent& value)
+{
+    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(owner);
+    SetSimpleEvent(self->handle_, self->onSetEditText_, self->onSetEditTextHooked_, value, &internal::TCustomDrawGrid_SetOnSetEditText, &TCustomDrawGrid::SetEditTextTrampoline);
+}
+TValidateEntryEvent TCustomDrawGrid::GetOnValidateEntryImpl(TObject* owner) { return static_cast<TCustomDrawGrid*>(owner)->onValidateEntry_; }
+void TCustomDrawGrid::SetOnValidateEntryImpl(TObject* owner, const TValidateEntryEvent& value)
+{
+    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(owner);
+    SetSimpleEvent(self->handle_, self->onValidateEntry_, self->onValidateEntryHooked_, value, &internal::TCustomDrawGrid_SetOnValidateEntry, &TCustomDrawGrid::ValidateEntryTrampoline);
+}
+TOnPrepareCanvasEvent TCustomDrawGrid::GetOnPrepareCanvasImpl(TObject* owner) { return static_cast<TCustomDrawGrid*>(owner)->onPrepareCanvas_; }
+void TCustomDrawGrid::SetOnPrepareCanvasImpl(TObject* owner, const TOnPrepareCanvasEvent& value)
+{
+    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(owner);
+    SetSimpleEvent(self->handle_, self->onPrepareCanvas_, self->onPrepareCanvasHooked_, value, &internal::TCustomDrawGrid_SetOnPrepareCanvas, &TCustomDrawGrid::PrepareCanvasTrampoline);
+}
+TOnCompareCells TCustomDrawGrid::GetOnCompareCellsImpl(TObject* owner) { return static_cast<TCustomDrawGrid*>(owner)->onCompareCells_; }
+void TCustomDrawGrid::SetOnCompareCellsImpl(TObject* owner, const TOnCompareCells& value)
+{
+    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(owner);
+    SetRemovableEvent(self->handle_, self->onCompareCells_, self->onCompareCellsHooked_, value, &internal::TCustomDrawGrid_SetOnCompareCells, &TCustomDrawGrid::CompareCellsTrampoline);
+}
+TNotifyEvent TCustomDrawGrid::GetOnTopLeftChangedImpl(TObject* owner) { return static_cast<TCustomDrawGrid*>(owner)->onTopLeftChanged_; }
+void TCustomDrawGrid::SetOnTopLeftChangedImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(owner);
+    SetSimpleEvent(self->handle_, self->onTopLeftChanged_, self->onTopLeftChangedHooked_, value, &internal::TCustomDrawGrid_SetOnTopLeftChanged, &TCustomDrawGrid::TopLeftChangedTrampoline);
+}
+THdrEvent TCustomDrawGrid::GetOnHeaderSizedImpl(TObject* owner) { return static_cast<TCustomDrawGrid*>(owner)->onHeaderSized_; }
+void TCustomDrawGrid::SetOnHeaderSizedImpl(TObject* owner, const THdrEvent& value)
+{
+    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(owner);
+    SetSimpleEvent(self->handle_, self->onHeaderSized_, self->onHeaderSizedHooked_, value, &internal::TCustomDrawGrid_SetOnHeaderSized, &TCustomDrawGrid::HeaderSizedTrampoline);
+}
+TGridOperationEvent TCustomDrawGrid::GetOnColRowInsertedImpl(TObject* owner) { return static_cast<TCustomDrawGrid*>(owner)->onColRowInserted_; }
+void TCustomDrawGrid::SetOnColRowInsertedImpl(TObject* owner, const TGridOperationEvent& value)
+{
+    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(owner);
+    SetSimpleEvent(self->handle_, self->onColRowInserted_, self->onColRowInsertedHooked_, value, &internal::TCustomDrawGrid_SetOnColRowInserted, &TCustomDrawGrid::ColRowInsertedTrampoline);
+}
+TGridOperationEvent TCustomDrawGrid::GetOnColRowDeletedImpl(TObject* owner) { return static_cast<TCustomDrawGrid*>(owner)->onColRowDeleted_; }
+void TCustomDrawGrid::SetOnColRowDeletedImpl(TObject* owner, const TGridOperationEvent& value)
+{
+    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(owner);
+    SetSimpleEvent(self->handle_, self->onColRowDeleted_, self->onColRowDeletedHooked_, value, &internal::TCustomDrawGrid_SetOnColRowDeleted, &TCustomDrawGrid::ColRowDeletedTrampoline);
+}
+TGridOperationEvent TCustomDrawGrid::GetOnColRowMovedImpl(TObject* owner) { return static_cast<TCustomDrawGrid*>(owner)->onColRowMoved_; }
+void TCustomDrawGrid::SetOnColRowMovedImpl(TObject* owner, const TGridOperationEvent& value)
+{
+    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(owner);
+    SetSimpleEvent(self->handle_, self->onColRowMoved_, self->onColRowMovedHooked_, value, &internal::TCustomDrawGrid_SetOnColRowMoved, &TCustomDrawGrid::ColRowMovedTrampoline);
+}
+TGridOperationEvent TCustomDrawGrid::GetOnColRowExchangedImpl(TObject* owner) { return static_cast<TCustomDrawGrid*>(owner)->onColRowExchanged_; }
+void TCustomDrawGrid::SetOnColRowExchangedImpl(TObject* owner, const TGridOperationEvent& value)
+{
+    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(owner);
+    SetSimpleEvent(self->handle_, self->onColRowExchanged_, self->onColRowExchangedHooked_, value, &internal::TCustomDrawGrid_SetOnColRowExchanged, &TCustomDrawGrid::ColRowExchangedTrampoline);
+}
+
+// 書き換えた文字列は、DLL が写すまで有効であるよう、スレッドごとの領域に置いて返す(TTreeView の OnEdited と同じ)。
+void BETH_CALL TCustomDrawGrid::GetEditTextTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, internal::str_t value,
+                                                      internal::str_t* result, void*)
+{
+    GuardCallback([&] {
+        TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
+        if (!self || !self->onGetEditText_)
+            return;
+        TGetEditEvent handler = self->onGetEditText_;
+        static thread_local std::string text;
+        text = value ? value : "";
+        handler(self, col, row, text);
+        *result = text.c_str();
+    });
+}
+
+void BETH_CALL TCustomDrawGrid::SetEditTextTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, internal::str_t value, void*)
+{
+    GuardCallback([&] {
+        TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
+        if (!self || !self->onSetEditText_)
+            return;
+        TSetEditEvent handler = self->onSetEditText_;
+        handler(self, col, row, std::string(value ? value : ""));
+    });
+}
+
+void BETH_CALL TCustomDrawGrid::ValidateEntryTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, internal::str_t oldValue,
+                                                        internal::str_t newValue, internal::str_t* result, void*)
+{
+    GuardCallback([&] {
+        TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
+        if (!self || !self->onValidateEntry_)
+            return;
+        TValidateEntryEvent handler = self->onValidateEntry_;
+        static thread_local std::string text;
+        text = newValue ? newValue : "";
+        handler(self, col, row, std::string(oldValue ? oldValue : ""), text);
+        *result = text.c_str();
+    });
+}
+
+void BETH_CALL TCustomDrawGrid::PrepareCanvasTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, internal::uint_t state, void*)
+{
+    GuardCallback([&] {
+        TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
+        if (!self || !self->onPrepareCanvas_)
+            return;
+        TOnPrepareCanvasEvent handler = self->onPrepareCanvas_;
+        handler(self, col, row, state);
+    });
+}
+
+void BETH_CALL TCustomDrawGrid::CompareCellsTrampoline(ObjectHandle sender, internal::int_t acol, internal::int_t arow, internal::int_t bcol,
+                                                       internal::int_t brow, internal::int_t* result, void*)
+{
+    GuardCallback([&] {
+        TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
+        if (!self || !self->onCompareCells_)
+            return;
+        TOnCompareCells handler = self->onCompareCells_;
+        int value = *result;
+        handler(self, acol, arow, bcol, brow, value);
+        *result = value;
+    });
+}
+
+void BETH_CALL TCustomDrawGrid::TopLeftChangedTrampoline(ObjectHandle sender, void*)
+{
+    GuardCallback([&] {
+        TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
+        if (!self || !self->onTopLeftChanged_)
+            return;
+        TNotifyEvent handler = self->onTopLeftChanged_;
+        handler(self);
+    });
+}
+
+void BETH_CALL TCustomDrawGrid::HeaderSizedTrampoline(ObjectHandle sender, internal::int_t isColumn, internal::int_t index, void*)
+{
+    GuardCallback([&] {
+        TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
+        if (!self || !self->onHeaderSized_)
+            return;
+        THdrEvent handler = self->onHeaderSized_;
+        handler(self, isColumn != 0, index);
+    });
+}
+
+void TCustomDrawGrid::DispatchColRow(ObjectHandle sender, TGridOperationEvent TCustomDrawGrid::*member, internal::int_t isColumn,
+                                     internal::int_t sIndex, internal::int_t tIndex)
+{
+    GuardCallback([&] {
+        TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
+        if (!self || !(self->*member))
+            return;
+        TGridOperationEvent handler = self->*member;
+        handler(self, isColumn != 0, sIndex, tIndex);
+    });
+}
+
+void BETH_CALL TCustomDrawGrid::ColRowInsertedTrampoline(ObjectHandle s, internal::int_t c, internal::int_t a, internal::int_t b, void*)
+{
+    DispatchColRow(s, &TCustomDrawGrid::onColRowInserted_, c, a, b);
+}
+void BETH_CALL TCustomDrawGrid::ColRowDeletedTrampoline(ObjectHandle s, internal::int_t c, internal::int_t a, internal::int_t b, void*)
+{
+    DispatchColRow(s, &TCustomDrawGrid::onColRowDeleted_, c, a, b);
+}
+void BETH_CALL TCustomDrawGrid::ColRowMovedTrampoline(ObjectHandle s, internal::int_t c, internal::int_t a, internal::int_t b, void*)
+{
+    DispatchColRow(s, &TCustomDrawGrid::onColRowMoved_, c, a, b);
+}
+void BETH_CALL TCustomDrawGrid::ColRowExchangedTrampoline(ObjectHandle s, internal::int_t c, internal::int_t a, internal::int_t b, void*)
+{
+    DispatchColRow(s, &TCustomDrawGrid::onColRowExchanged_, c, a, b);
+}
+
+void* TCustomStringGrid::GetObjectsImpl(TObject* owner, int ACol, int ARow)
+{
+    return internal::TCustomStringGrid_GetObjects(owner->Handle(), ACol, ARow);
+}
+void TCustomStringGrid::SetObjectsImpl(TObject* owner, int ACol, int ARow, void* const& value)
+{
+    internal::TCustomStringGrid_SetObjects(owner->Handle(), ACol, ARow, value);
+}
+TStrings* TCustomStringGrid::GetColsImpl(TObject* owner, int Index)
+{
+    TCustomStringGrid* self = static_cast<TCustomStringGrid*>(owner);
+    std::unique_ptr<LineStrings>& view = self->cols_[Index];
+    if (!view)
+        view.reset(new LineStrings(internal::TCustomStringGrid_GetCols(self->handle_, Index)));
+    return view.get();
+}
+TStrings* TCustomStringGrid::GetRowsImpl(TObject* owner, int Index)
+{
+    TCustomStringGrid* self = static_cast<TCustomStringGrid*>(owner);
+    std::unique_ptr<LineStrings>& view = self->rows_[Index];
+    if (!view)
+        view.reset(new LineStrings(internal::TCustomStringGrid_GetRows(self->handle_, Index)));
+    return view.get();
 }
 
 } // namespace beth

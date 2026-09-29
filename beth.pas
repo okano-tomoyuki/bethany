@@ -16169,6 +16169,11 @@ var
   B: TTreeViewBridge051;
 begin
   try
+    if not Assigned(Cb) then
+    begin
+      TTreeView(Obj).OnCompare := nil;  // 比較のイベントは有無で LCL の並べ替えが変わるため、外したら既定の比較に戻す
+      Exit;
+    end;
     B := TreeViewBridge051For(TTreeView(Obj), TMethod(TTreeView(Obj).OnCompare).Data, Data);
     B.FCompare := Cb;
     TTreeView(Obj).OnCompare := @B.DoCompare;
@@ -16551,6 +16556,11 @@ var
   B: TListViewBridge052;
 begin
   try
+    if not Assigned(Cb) then
+    begin
+      TListView(Obj).OnCompare := nil;  // 比較のイベントは有無で LCL の並べ替えが変わるため、外したら既定の比較に戻す
+      Exit;
+    end;
     B := ListViewBridge052For(TListView(Obj), TMethod(TListView(Obj).OnCompare).Data, Data);
     B.FCompare := Cb;
     TListView(Obj).OnCompare := @B.DoCompare;
@@ -16660,6 +16670,512 @@ begin
     Result := (LV <> nil) and LV.IsEditing;
   except
     Result := False;
+    ReportException;
+  end;
+end;
+
+
+{ ---------------- グリッドの細部(docs/adr/0053) ----------------
+  AutoEdit・AlternateColor・TitleFont・ColumnClickSorts・OnValidateEntry・OnPrepareCanvas・OnTopLeftChanged・OnCompareCells は
+  LCL の TCustomGrid の protected(TDrawGrid・TStringGrid が published にしている)のため、クラッカーで触る。 }
+
+type
+  TCustomGridAccess053 = class(TCustomGrid);
+
+  { OnGetEditText(TGetEditEvent)用。Result に文字列を返すと、それを使う(nil なら Value のまま)。 }
+  TBethGridGetEditCallback = procedure(Sender: Pointer; ACol, ARow: Integer; Value: PChar; Result: PPChar; Data: Pointer); BETH_CALL;
+  { OnSetEditText(TSetEditEvent)用。 }
+  TBethGridSetEditCallback = procedure(Sender: Pointer; ACol, ARow: Integer; Value: PChar; Data: Pointer); BETH_CALL;
+  { OnValidateEntry(TValidateEntryEvent)用。Result に文字列を返すと、それを NewValue にする。 }
+  TBethGridValidateCallback = procedure(Sender: Pointer; ACol, ARow: Integer; OldValue, NewValue: PChar; Result: PPChar;
+    Data: Pointer); BETH_CALL;
+  { OnPrepareCanvas(TOnPrepareCanvasEvent)用。State は TGridDrawState のビット(OnDrawCell と同じ)。 }
+  TBethGridPrepareCanvasCallback = procedure(Sender: Pointer; ACol, ARow: Integer; State: LongWord; Data: Pointer); BETH_CALL;
+  { OnCompareCells(TOnCompareCells)用。 }
+  TBethGridCompareCallback = procedure(Sender: Pointer; ACol, ARow, BCol, BRow: Integer; Result: PInteger; Data: Pointer); BETH_CALL;
+  { OnColRowInserted・OnColRowDeleted・OnColRowMoved・OnColRowExchanged(TGridOperationEvent)用。IsColumn は 0 以外なら列。 }
+  TBethGridOperationCallback = procedure(Sender: Pointer; IsColumn, SIndex, TIndex: Integer; Data: Pointer); BETH_CALL;
+
+  TGridBridge053 = class(TComponent)
+  private
+    FGetEdit: TBethGridGetEditCallback;
+    FSetEdit: TBethGridSetEditCallback;
+    FValidate: TBethGridValidateCallback;
+    FPrepare: TBethGridPrepareCanvasCallback;
+    FCompare: TBethGridCompareCallback;
+    FOperation: TBethGridOperationCallback;
+    FData: Pointer;
+  public
+    procedure DoGetEdit(Sender: TObject; ACol, ARow: Integer; var Value: AnsiString);
+    procedure DoSetEdit(Sender: TObject; ACol, ARow: Integer; const Value: AnsiString);
+    procedure DoValidate(Sender: TObject; ACol, ARow: Integer; const OldValue: AnsiString; var NewValue: AnsiString);
+    procedure DoPrepare(Sender: TObject; ACol, ARow: Integer; AState: TGridDrawState);
+    procedure DoCompare(Sender: TObject; ACol, ARow, BCol, BRow: Integer; var Result: Integer);
+    procedure DoOperation(Sender: TObject; IsColumn: Boolean; SIndex, TIndex: Integer);
+  end;
+
+function GridDrawStateBits053(AState: TGridDrawState): LongWord;
+begin
+  Result := 0;
+  if gdSelected in AState then Result := Result or $01;
+  if gdFocused in AState then Result := Result or $02;
+  if gdFixed in AState then Result := Result or $04;
+  if gdHot in AState then Result := Result or $08;
+  if gdPushed in AState then Result := Result or $10;
+  if gdRowHighlight in AState then Result := Result or $20;
+end;
+
+procedure TGridBridge053.DoGetEdit(Sender: TObject; ACol, ARow: Integer; var Value: AnsiString);
+var
+  R: PChar;
+begin
+  if not Assigned(FGetEdit) or GDetaching then
+    Exit;
+  R := nil;
+  FGetEdit(Pointer(Sender), ACol, ARow, PChar(Value), @R, FData);
+  if R <> nil then
+    Value := AnsiString(R);
+  CheckCallbackError;
+end;
+
+procedure TGridBridge053.DoSetEdit(Sender: TObject; ACol, ARow: Integer; const Value: AnsiString);
+begin
+  if not Assigned(FSetEdit) or GDetaching then
+    Exit;
+  FSetEdit(Pointer(Sender), ACol, ARow, PChar(Value), FData);
+  CheckCallbackError;
+end;
+
+procedure TGridBridge053.DoValidate(Sender: TObject; ACol, ARow: Integer; const OldValue: AnsiString; var NewValue: AnsiString);
+var
+  R: PChar;
+begin
+  if not Assigned(FValidate) or GDetaching then
+    Exit;
+  R := nil;
+  FValidate(Pointer(Sender), ACol, ARow, PChar(OldValue), PChar(NewValue), @R, FData);
+  if R <> nil then
+    NewValue := AnsiString(R);
+  CheckCallbackError;
+end;
+
+procedure TGridBridge053.DoPrepare(Sender: TObject; ACol, ARow: Integer; AState: TGridDrawState);
+begin
+  if not Assigned(FPrepare) or GDetaching then
+    Exit;
+  FPrepare(Pointer(Sender), ACol, ARow, GridDrawStateBits053(AState), FData);
+  CheckCallbackError;
+end;
+
+procedure TGridBridge053.DoCompare(Sender: TObject; ACol, ARow, BCol, BRow: Integer; var Result: Integer);
+var
+  C: Integer;
+begin
+  if not Assigned(FCompare) or GDetaching then
+    Exit;
+  C := Result;
+  FCompare(Pointer(Sender), ACol, ARow, BCol, BRow, @C, FData);
+  Result := C;
+  CheckCallbackError;
+end;
+
+procedure TGridBridge053.DoOperation(Sender: TObject; IsColumn: Boolean; SIndex, TIndex: Integer);
+var
+  C: Integer;
+begin
+  if not Assigned(FOperation) or GDetaching then
+    Exit;
+  if IsColumn then C := -1 else C := 0;
+  FOperation(Pointer(Sender), C, SIndex, TIndex, FData);
+  CheckCallbackError;
+end;
+
+function GridBridge053For(Owner: TComponent; Current: Pointer; Data: Pointer): TGridBridge053;
+begin
+  if (Current <> nil) and (TObject(Current) is TGridBridge053) and (TGridBridge053(Current).Owner = Owner) then
+    Result := TGridBridge053(Current)
+  else
+    Result := TGridBridge053.Create(Owner);
+  Result.FData := Data;
+end;
+
+function TCustomDrawGrid_GetAutoEdit(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomGridAccess053(Obj).AutoEdit;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetAutoEdit(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomGridAccess053(Obj).AutoEdit := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomDrawGrid_GetAlternateColor(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Integer(TCustomGridAccess053(Obj).AlternateColor);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetAlternateColor(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomGridAccess053(Obj).AlternateColor := TColor(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomDrawGrid_GetFocusColor(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Integer(TCustomDrawGrid(Obj).FocusColor);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetFocusColor(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomDrawGrid(Obj).FocusColor := TColor(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomDrawGrid_GetGridLineColor(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Integer(TCustomDrawGrid(Obj).GridLineColor);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetGridLineColor(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomDrawGrid(Obj).GridLineColor := TColor(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomDrawGrid_GetGridLineWidth(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomDrawGrid(Obj).GridLineWidth;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetGridLineWidth(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomDrawGrid(Obj).GridLineWidth := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomDrawGrid_GetTitleFont(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TCustomGridAccess053(Obj).TitleFont);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetTitleFont(Obj: Pointer; Value: Pointer); BETH_CALL;
+begin
+  try
+    if Value <> nil then
+      TCustomGridAccess053(Obj).TitleFont := TFont(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomDrawGrid_GetAutoFillColumns(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomDrawGrid(Obj).AutoFillColumns;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetAutoFillColumns(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomDrawGrid(Obj).AutoFillColumns := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomDrawGrid_GetColumnClickSorts(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TCustomGridAccess053(Obj).ColumnClickSorts;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetColumnClickSorts(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TCustomGridAccess053(Obj).ColumnClickSorts := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomDrawGrid_GetSortOrder(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TCustomGrid(Obj).SortOrder);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetSortOrder(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TCustomGrid(Obj).SortOrder := TSortOrder(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomDrawGrid_GetSortColumn(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TCustomGrid(Obj).SortColumn;
+  except
+    Result := -1;
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_ExchangeColRow(Obj: Pointer; IsColumn: LongBool; Index, WithIndex: Integer); BETH_CALL;
+begin
+  try
+    TCustomDrawGrid(Obj).ExchangeColRow(IsColumn, Index, WithIndex);
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetOnGetEditText(Obj: Pointer; Cb: TBethGridGetEditCallback; Data: Pointer); BETH_CALL;
+var
+  B: TGridBridge053;
+begin
+  try
+    B := GridBridge053For(TCustomDrawGrid(Obj), TMethod(TCustomDrawGrid(Obj).OnGetEditText).Data, Data);
+    B.FGetEdit := Cb;
+    TCustomDrawGrid(Obj).OnGetEditText := @B.DoGetEdit;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetOnSetEditText(Obj: Pointer; Cb: TBethGridSetEditCallback; Data: Pointer); BETH_CALL;
+var
+  B: TGridBridge053;
+begin
+  try
+    B := GridBridge053For(TCustomDrawGrid(Obj), TMethod(TCustomDrawGrid(Obj).OnSetEditText).Data, Data);
+    B.FSetEdit := Cb;
+    TCustomDrawGrid(Obj).OnSetEditText := @B.DoSetEdit;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetOnValidateEntry(Obj: Pointer; Cb: TBethGridValidateCallback; Data: Pointer); BETH_CALL;
+var
+  B: TGridBridge053;
+begin
+  try
+    B := GridBridge053For(TCustomDrawGrid(Obj), TMethod(TCustomGridAccess053(Obj).OnValidateEntry).Data, Data);
+    B.FValidate := Cb;
+    TCustomGridAccess053(Obj).OnValidateEntry := @B.DoValidate;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetOnPrepareCanvas(Obj: Pointer; Cb: TBethGridPrepareCanvasCallback; Data: Pointer); BETH_CALL;
+var
+  B: TGridBridge053;
+begin
+  try
+    B := GridBridge053For(TCustomDrawGrid(Obj), TMethod(TCustomGridAccess053(Obj).OnPrepareCanvas).Data, Data);
+    B.FPrepare := Cb;
+    TCustomGridAccess053(Obj).OnPrepareCanvas := @B.DoPrepare;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetOnCompareCells(Obj: Pointer; Cb: TBethGridCompareCallback; Data: Pointer); BETH_CALL;
+var
+  B: TGridBridge053;
+begin
+  try
+    if not Assigned(Cb) then
+    begin
+      TCustomGridAccess053(Obj).OnCompareCells := nil;  // 外したら既定の比較(SortOrder を使う)に戻す
+      Exit;
+    end;
+    B := GridBridge053For(TCustomDrawGrid(Obj), TMethod(TCustomGridAccess053(Obj).OnCompareCells).Data, Data);
+    B.FCompare := Cb;
+    TCustomGridAccess053(Obj).OnCompareCells := @B.DoCompare;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetOnTopLeftChanged(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TCustomGridAccess053(Obj).OnTopLeftChanged :=
+      @BridgeFor(TCustomDrawGrid(Obj), TMethod(TCustomGridAccess053(Obj).OnTopLeftChanged).Data, Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetOnHeaderSized(Obj: Pointer; Cb: TBethCellCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TCustomDrawGrid(Obj).OnHeaderSized :=
+      @CellBridgeFor(TCustomDrawGrid(Obj), TMethod(TCustomDrawGrid(Obj).OnHeaderSized).Data, Cb, Data).DoHeaderClick;
+  except
+    ReportException;
+  end;
+end;
+
+{ OnColRowInserted・OnColRowDeleted・OnColRowMoved・OnColRowExchanged。Which は 0 から順にその 4 つ。 }
+procedure SetGridOperation053(G: TCustomDrawGrid; Which: Integer; Cb: TBethGridOperationCallback; Data: Pointer);
+var
+  B: TGridBridge053;
+  Current: Pointer;
+begin
+  case Which of
+    0: Current := TMethod(G.OnColRowInserted).Data;
+    1: Current := TMethod(G.OnColRowDeleted).Data;
+    2: Current := TMethod(G.OnColRowMoved).Data;
+  else
+    Current := TMethod(G.OnColRowExchanged).Data;
+  end;
+  B := GridBridge053For(G, Current, Data);
+  B.FOperation := Cb;
+  case Which of
+    0: G.OnColRowInserted := @B.DoOperation;
+    1: G.OnColRowDeleted := @B.DoOperation;
+    2: G.OnColRowMoved := @B.DoOperation;
+  else
+    G.OnColRowExchanged := @B.DoOperation;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetOnColRowInserted(Obj: Pointer; Cb: TBethGridOperationCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    SetGridOperation053(TCustomDrawGrid(Obj), 0, Cb, Data);
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetOnColRowDeleted(Obj: Pointer; Cb: TBethGridOperationCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    SetGridOperation053(TCustomDrawGrid(Obj), 1, Cb, Data);
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetOnColRowMoved(Obj: Pointer; Cb: TBethGridOperationCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    SetGridOperation053(TCustomDrawGrid(Obj), 2, Cb, Data);
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetOnColRowExchanged(Obj: Pointer; Cb: TBethGridOperationCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    SetGridOperation053(TCustomDrawGrid(Obj), 3, Cb, Data);
+  except
+    ReportException;
+  end;
+end;
+
+function TCustomStringGrid_GetObjects(Obj: Pointer; ACol, ARow: Integer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TCustomStringGrid(Obj).Objects[ACol, ARow]);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TCustomStringGrid_SetObjects(Obj: Pointer; ACol, ARow: Integer; Value: Pointer); BETH_CALL;
+begin
+  try
+    TCustomStringGrid(Obj).Objects[ACol, ARow] := TObject(Value);
+  except
+    ReportException;
+  end;
+end;
+
+{ Cols[i]・Rows[i] の TStrings は、LCL がグリッドの中に位置ごとに作って持ち、グリッドの破棄まで同じものを返す。 }
+function TCustomStringGrid_GetCols(Obj: Pointer; Index: Integer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TCustomStringGrid(Obj).Cols[Index]);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+function TCustomStringGrid_GetRows(Obj: Pointer; Index: Integer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TCustomStringGrid(Obj).Rows[Index]);
+  except
+    Result := nil;
     ReportException;
   end;
 end;
@@ -18212,7 +18728,42 @@ exports
   TListView_SetOnDrawItem,
   TListItems_SetCount,
   TListItem_DisplayRect,
-  TListItem_EditCaption;
+  TListItem_EditCaption,
+  TCustomDrawGrid_GetAutoEdit,
+  TCustomDrawGrid_SetAutoEdit,
+  TCustomDrawGrid_GetAlternateColor,
+  TCustomDrawGrid_SetAlternateColor,
+  TCustomDrawGrid_GetFocusColor,
+  TCustomDrawGrid_SetFocusColor,
+  TCustomDrawGrid_GetGridLineColor,
+  TCustomDrawGrid_SetGridLineColor,
+  TCustomDrawGrid_GetGridLineWidth,
+  TCustomDrawGrid_SetGridLineWidth,
+  TCustomDrawGrid_GetTitleFont,
+  TCustomDrawGrid_SetTitleFont,
+  TCustomDrawGrid_GetAutoFillColumns,
+  TCustomDrawGrid_SetAutoFillColumns,
+  TCustomDrawGrid_GetColumnClickSorts,
+  TCustomDrawGrid_SetColumnClickSorts,
+  TCustomDrawGrid_GetSortOrder,
+  TCustomDrawGrid_SetSortOrder,
+  TCustomDrawGrid_GetSortColumn,
+  TCustomDrawGrid_ExchangeColRow,
+  TCustomDrawGrid_SetOnGetEditText,
+  TCustomDrawGrid_SetOnSetEditText,
+  TCustomDrawGrid_SetOnValidateEntry,
+  TCustomDrawGrid_SetOnPrepareCanvas,
+  TCustomDrawGrid_SetOnCompareCells,
+  TCustomDrawGrid_SetOnTopLeftChanged,
+  TCustomDrawGrid_SetOnHeaderSized,
+  TCustomDrawGrid_SetOnColRowInserted,
+  TCustomDrawGrid_SetOnColRowDeleted,
+  TCustomDrawGrid_SetOnColRowMoved,
+  TCustomDrawGrid_SetOnColRowExchanged,
+  TCustomStringGrid_GetObjects,
+  TCustomStringGrid_SetObjects,
+  TCustomStringGrid_GetCols,
+  TCustomStringGrid_GetRows;
 
 begin
   RequireDerivedFormResource := False;

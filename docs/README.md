@@ -73,6 +73,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0050](adr/0050-owner-draw.md) | オーナードロー(Tier B の B8) | 承認 |
 | [0051](adr/0051-treeview-details.md) | TTreeView の細部(Tier B の B12) | 承認 |
 | [0052](adr/0052-listview-details.md) | TListView の細部(Tier B の B13) | 承認 |
+| [0053](adr/0053-grid-details.md) | グリッドの細部(Tier B の B14 の前半) | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。

@@ -415,7 +415,7 @@ function Body({
       return <div className={bordered(location, 'look-box')} style={background} />;
     case 'TStringGrid':
     case 'TDrawGrid':
-      return <Grid location={location} />;
+      return <Grid location={location} background={look.color} />;
     case 'TShape':
       return (
         <div
@@ -516,24 +516,54 @@ function StatusBar({
   );
 }
 
-function Grid({ location }: { readonly location: NodeLocation & { readonly kind: 'control' } }) {
+/**
+ * TStringGrid・TDrawGrid。固定行・固定列を FixedColor、それ以外を Color で塗り、1 行おきに AlternateColor で塗る
+ * (LCL の既定の AltColorStartNormal と同じく、固定行の次の行は Color)。線は GridLineColor・GridLineWidth で描き、
+ * AutoFillColumns なら固定列以外の列を広げて(縮めて)幅に合わせる(docs/adr/0053)。
+ */
+function Grid({
+  location,
+  background,
+}: {
+  readonly location: NodeLocation & { readonly kind: 'control' };
+  readonly background: string;
+}) {
   const cols = Math.min(number(location, 'ColCount'), 50);
   const rows = Math.min(number(location, 'RowCount'), 50);
   const width = number(location, 'DefaultColWidth');
   const height = number(location, 'DefaultRowHeight');
   const fixedCols = number(location, 'FixedCols');
   const fixedRows = number(location, 'FixedRows');
+  const fixedColor = colorToCss(propertyValue(location, ['FixedColor']));
+  const alternateColor = colorToCss(propertyValue(location, ['AlternateColor'])) ?? background;
+  const line = `${String(number(location, 'GridLineWidth'))}px solid ${colorToCss(propertyValue(location, ['GridLineColor'])) ?? '#c0c0c0'}`;
+  const autoFill = flag(location, 'AutoFillColumns');
   return (
-    <div className={bordered(location, 'look-box grid')}>
+    <div className={bordered(location, 'look-box grid')} style={{ background }}>
       {Array.from({ length: rows }, (_, r) => (
         <div key={r} className="look-grid-row" style={{ height }}>
-          {Array.from({ length: cols }, (_, c) => (
-            <div
-              key={c}
-              className={r < fixedRows || c < fixedCols ? 'look-grid-cell fixed' : 'look-grid-cell'}
-              style={{ width }}
-            />
-          ))}
+          {Array.from({ length: cols }, (_, c) => {
+            const fixed = r < fixedRows || c < fixedCols;
+            const color = fixed
+              ? fixedColor
+              : (r - fixedRows) % 2 === 1
+                ? alternateColor
+                : background;
+            return (
+              <div
+                key={c}
+                className={fixed ? 'look-grid-cell fixed' : 'look-grid-cell'}
+                style={{
+                  ...(autoFill && c >= fixedCols
+                    ? { flex: `1 1 ${String(width)}px`, minWidth: 0 }
+                    : { width }),
+                  ...(color ? { background: color } : {}),
+                  borderRight: line,
+                  borderBottom: line,
+                }}
+              />
+            );
+          })}
         </div>
       ))}
     </div>

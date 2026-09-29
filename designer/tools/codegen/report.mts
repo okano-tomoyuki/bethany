@@ -70,6 +70,9 @@ export const EXPECTED_CALLS = [
   'List1Data',
   'List1Compare',
   'List1Edited',
+  'Grid1CompareCells',
+  'Grid1ValidateEntry',
+  'Grid1PrepareCanvas',
 ];
 
 /** 参照・入れ子のオブジェクト・TStrings・メニュー等(検証のプログラムが読んだ値) */
@@ -102,6 +105,10 @@ export const EXPECTED_CHECKS: Readonly<Record<string, string>> = {
   listView: '3/0/0/1',
   listCount: '3',
   listEdited: 'y!',
+  // グリッド(docs/adr/0053): AlternateColor(clInfoBk)/GridLineColor(clGray)/TitleFont の fsBold/AutoFillColumns/
+  // ColumnClickSorts と、OnValidateEntry で書き換えた文字列
+  grid: '-2147483624/8421504/1/1/1',
+  gridValidated: 'z!',
   dialogOptions: String((1 << 20) | (1 << 23) | (1 << 9)),
   timer: '0/500',
   caption: 'Sample',

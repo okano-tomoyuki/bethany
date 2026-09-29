@@ -150,7 +150,8 @@ ${controls
     check(first, "ownerDraw", std::to_string((int)(TListBoxStyle)f->ColorList->Style) + "/" + std::to_string(f->ColorList->ItemHeight));
     check(first, "treeView", std::to_string((int)(TSortType)f->Tree1->SortType) + "/" + std::to_string(f->Tree1->Indent) + "/" + std::to_string((int)f->Tree1->MultiSelect));
     check(first, "listView", std::to_string((int)(TViewStyle)f->List1->ViewStyle) + "/" + std::to_string((int)f->List1->ShowColumnHeaders) + "/" + std::to_string((int)f->List1->AutoSort) + "/" + std::to_string((int)f->List1->OwnerData));
-    check(first, "memoBorder",std::to_string((int)(TBorderStyle)f->Memo1->BorderStyle) + "/" + std::to_string((int)(TScrollStyle)f->Memo1->ScrollBars));
+    check(first, "grid", std::to_string(f->Grid1->AlternateColor) + "/" + std::to_string(f->Grid1->GridLineColor) + "/" + std::to_string((int)((f->Grid1->TitleFont->Style & fsBold) != 0)) + "/" + std::to_string((int)f->Grid1->AutoFillColumns) + "/" + std::to_string((int)f->Grid1->ColumnClickSorts));
+    check(first, "memoBorder", std::to_string((int)(TBorderStyle)f->Memo1->BorderStyle) + "/" + std::to_string((int)(TScrollStyle)f->Memo1->ScrollBars));
     check(first, "timer", std::to_string((int)f->Timer1->Enabled) + "/" + std::to_string(f->Timer1->Interval));
     check(first, "caption", f->Caption);
     check(first, "spinValue", std::to_string(f->SizeSpin->Value));
@@ -194,6 +195,14 @@ ${controls
     std::string listEdited = "y";
     if (onListEdited) { onListEdited(f->List1, nullptr, listEdited); listEdited += "!"; }
     check(first, "listEdited", listEdited);
+    // グリッドの並べ替えは LCL が OnCompareCells を呼ぶ
+    f->Grid1->SortColRow(true, 0);
+    TValidateEntryEvent onValidate = f->Grid1->OnValidateEntry;
+    std::string gridValue = "z";
+    if (onValidate) { onValidate(f->Grid1, 1, 1, "old", gridValue); gridValue += "!"; }
+    check(first, "gridValidated", gridValue);
+    TOnPrepareCanvasEvent onPrepare = f->Grid1->OnPrepareCanvas;
+    if (onPrepare) onPrepare(f->Grid1, 1, 1, gdSelected);
     TDropFilesEvent onDropFiles = f->OnDropFiles;
     if (onDropFiles) onDropFiles(f, {"C:/temp/a.txt"});
     f->Close();

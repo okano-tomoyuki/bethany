@@ -2257,6 +2257,41 @@ def main():
     vlist.OnDrawItem = vlist_draw
     pr(f"Virtual list OwnerData={int(vlist.OwnerData)} Items->Count={vlist.Items.Count} (expected 1 10000), "
        f"Item[1234]={vlist.Items.Item[1234].Caption}")
+
+    # グリッドの細部(docs/adr/0053)。StringGrid1("Grids" ページ)は、1 行おきに色を付け、見出しを太字にし、Qty が 3 以上のセルを
+    # 赤い文字で描く。列見出しのクリックで並べ替え(ColumnClickSorts。Qty の列は OnCompareCells で数の順)、同じ列をもう一度クリックすると逆順。
+    # 編集(F2 かダブルクリック)を終えるとき、Qty に数でない文字列を入れると例外で断り、Name を空にすると元に戻す。
+    sg = Form1.StringGrid1
+    sg.AlternateColor = clInfoBk
+    sg.GridLineColor = clGray
+    sg.FocusColor = clBlue
+    sg.TitleFont.Style = fsBold
+    sg.AutoEdit = False  # 文字を打っただけでは編集を始めない
+    sg.ColumnClickSorts = True
+    sg.OnHeaderClick = lambda Sender, IsColumn, Index: pr(f"StringGrid1HeaderClick: IsColumn={int(IsColumn)} Index={Index}")
+
+    def sg_compare(Sender, ACol, ARow, BCol, BRow, Result):
+        a, b = sg.Cells[ACol][ARow], sg.Cells[BCol][BRow]
+        r = int(a) - int(b) if ACol == 1 else (a > b) - (a < b)
+        # OnCompareCells があると SortOrder は使われないので、自分で逆にする
+        Result.value = -r if sg.SortOrder == soDescending else r
+
+    def sg_prepare(Sender, ACol, ARow, AState):
+        if ACol == 1 and ARow > 0 and sg.Cells[ACol][ARow].isdigit() and int(sg.Cells[ACol][ARow]) >= 3:
+            sg.Canvas.Font.Color = clRed
+
+    def sg_validate(Sender, ACol, ARow, OldValue, NewValue):
+        pr(f"StringGrid1 OnValidateEntry: ({ACol},{ARow}) {OldValue} -> {NewValue.value}")
+        if ACol == 1 and not NewValue.value.isdigit():
+            raise BethError("Exception", "Qty must be a number")
+        if ACol == 0 and not NewValue.value:
+            NewValue.value = OldValue  # 空にはさせない
+
+    sg.OnCompareCells = sg_compare
+    sg.OnPrepareCanvas = sg_prepare
+    sg.OnGetEditText = lambda Sender, ACol, ARow, Value: pr(f"StringGrid1 OnGetEditText: ({ACol},{ARow}) {Value.value}")
+    sg.OnValidateEntry = sg_validate
+    pr(f"StringGrid1 Rows[1]->CommaText={sg.Rows[1].CommaText} Cols[0]->Count={sg.Cols[0].Count} (expected 4)")
     pr(f"AlignClientPanel BevelOuter/BevelInner={int(Form1.AlignClientPanel.BevelOuter)}/{int(Form1.AlignClientPanel.BevelInner)} "
        f"(expected 1/2), TreeView ScrollBars={int(Form1.TreeView1.ScrollBars)} (expected 3 = ssBoth)")
 

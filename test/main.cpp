@@ -2757,6 +2757,47 @@ int main()
                     (int)vlist->Items->Count, std::string(vlist->Items->Item[1234]->Caption).c_str());
     }
 
+    // グリッドの細部(docs/adr/0053)。StringGrid1("Grids" ページ)は、1 行おきに色を付け、見出しを太字にし、Qty が 3 以上のセルを
+    // 赤い文字で描く。列見出しのクリックで並べ替え(ColumnClickSorts。Qty の列は OnCompareCells で数の順)、同じ列をもう一度クリックすると逆順。
+    // 編集(F2 かダブルクリック)を終えるとき、Qty に数でない文字列を入れると例外で断り、Name を空にすると元に戻す。
+    {
+        TStringGrid* sg = Form1->StringGrid1;
+        sg->AlternateColor = clInfoBk;
+        sg->GridLineColor = clGray;
+        sg->FocusColor = clBlue;
+        sg->TitleFont->Style = fsBold;
+        sg->AutoEdit = false;  // 文字を打っただけでは編集を始めない
+        sg->ColumnClickSorts = true;
+        sg->OnHeaderClick = [](TObject*, bool IsColumn, int Index) {
+            std::printf("StringGrid1HeaderClick: IsColumn=%d Index=%d\n", IsColumn, Index);
+            std::fflush(stdout);
+        };
+        sg->OnCompareCells = [sg](TObject*, int ACol, int ARow, int BCol, int BRow, int& Result) {
+            std::string a = sg->Cells[ACol][ARow], b = sg->Cells[BCol][BRow];
+            Result = ACol == 1 ? std::stoi(a) - std::stoi(b) : a.compare(b);
+            if (sg->SortOrder == soDescending)
+                Result = -Result;  // OnCompareCells があると SortOrder は使われないので、自分で逆にする
+        };
+        sg->OnPrepareCanvas = [sg](TObject*, int ACol, int ARow, TGridDrawState) {
+            if (ACol == 1 && ARow > 0 && std::atoi(std::string(sg->Cells[ACol][ARow]).c_str()) >= 3)
+                sg->Canvas.Font.Color = clRed;
+        };
+        sg->OnGetEditText = [](TObject*, int ACol, int ARow, std::string& Value) {
+            std::printf("StringGrid1 OnGetEditText: (%d,%d) %s\n", ACol, ARow, Value.c_str());
+            std::fflush(stdout);
+        };
+        sg->OnValidateEntry = [](TObject*, int ACol, int ARow, const std::string& OldValue, std::string& NewValue) {
+            std::printf("StringGrid1 OnValidateEntry: (%d,%d) %s -> %s\n", ACol, ARow, OldValue.c_str(), NewValue.c_str());
+            std::fflush(stdout);
+            if (ACol == 1 && (NewValue.empty() || NewValue.find_first_not_of("0123456789") != std::string::npos))
+                throw Exception("Qty must be a number");
+            if (ACol == 0 && NewValue.empty())
+                NewValue = OldValue;  // 空にはさせない
+        };
+        std::printf("StringGrid1 Rows[1]->CommaText=%s Cols[0]->Count=%d (expected 4)\n",
+                    std::string(sg->Rows[1]->CommaText).c_str(), (int)sg->Cols[0]->Count);
+    }
+
     // ステータスバーのパネル(docs/adr/0044)。StatusBar1 の上に、パネルを持つ 2 つ目のステータスバーを置く。
     {
         TStatusBar* panelBar = new TStatusBar(Form1);

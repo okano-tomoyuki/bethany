@@ -14350,6 +14350,89 @@
           },
           "declaredIn": "TCustomDrawGrid",
           "default": "clBtnFace"
+        },
+        "AutoEdit": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomDrawGrid",
+          "default": true,
+          "doc": "true(既定)なら、goEditing のとき、文字を打つとすぐにセルの編集を始める(false なら F2・Enter・ダブルクリックで始める)。"
+        },
+        "AlternateColor": {
+          "type": {
+            "kind": "alias",
+            "alias": "TColor"
+          },
+          "declaredIn": "TCustomDrawGrid",
+          "default": "clWindow",
+          "doc": "1 行おきの背景の色(既定は Color と同じ)。"
+        },
+        "FocusColor": {
+          "type": {
+            "kind": "alias",
+            "alias": "TColor"
+          },
+          "declaredIn": "TCustomDrawGrid",
+          "default": "clRed",
+          "doc": "フォーカスのあるセルの枠の色。"
+        },
+        "GridLineColor": {
+          "type": {
+            "kind": "alias",
+            "alias": "TColor"
+          },
+          "declaredIn": "TCustomDrawGrid",
+          "default": "clSilver"
+        },
+        "GridLineWidth": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TCustomDrawGrid",
+          "default": 1
+        },
+        "TitleFont": {
+          "type": {
+            "kind": "object",
+            "class": "TFont"
+          },
+          "declaredIn": "TCustomDrawGrid",
+          "default": {
+            "Name": "default",
+            "Size": 0,
+            "Color": "clDefault",
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
+          },
+          "doc": "固定行(見出し)の文字のフォント。グリッドが所有する TFont のビュー。代入は内容のコピー。"
+        },
+        "AutoFillColumns": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomDrawGrid",
+          "default": false,
+          "doc": "true なら、列の幅を広げて(縮めて)グリッドの幅に合わせる。"
+        },
+        "ColumnClickSorts": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomDrawGrid",
+          "default": false,
+          "doc": "true なら、列見出しのクリックでその列の値で行を並べ替える(同じ列をもう一度クリックすると逆順)。"
+        },
+        "SortOrder": {
+          "type": {
+            "kind": "enum",
+            "enum": "TSortOrder"
+          },
+          "declaredIn": "TCustomDrawGrid",
+          "default": "soAscending",
+          "doc": "並べ替えの向き(SortColRow もこの向きで並べる)。"
         }
       },
       "events": {
@@ -14425,6 +14508,52 @@
         },
         "OnHeaderClick": {
           "type": "THdrEvent",
+          "declaredIn": "TCustomDrawGrid"
+        },
+        "OnGetEditText": {
+          "type": "TGetEditEvent",
+          "declaredIn": "TCustomDrawGrid"
+        },
+        "OnSetEditText": {
+          "type": "TSetEditEvent",
+          "declaredIn": "TCustomDrawGrid"
+        },
+        "OnValidateEntry": {
+          "type": "TValidateEntryEvent",
+          "declaredIn": "TCustomDrawGrid"
+        },
+        "OnPrepareCanvas": {
+          "type": "TOnPrepareCanvasEvent",
+          "declaredIn": "TCustomDrawGrid"
+        },
+        "OnCompareCells": {
+          "type": "TOnCompareCells",
+          "declaredIn": "TCustomDrawGrid"
+        },
+        "OnTopLeftChanged": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TCustomDrawGrid",
+          "doc": "スクロールで、表示されている最初の列・行(LeftCol・TopRow)が変わったとき。"
+        },
+        "OnHeaderSized": {
+          "type": "THdrEvent",
+          "declaredIn": "TCustomDrawGrid",
+          "doc": "見出しのドラッグで列の幅・行の高さを変えたとき(IsColumn は列なら true)。"
+        },
+        "OnColRowInserted": {
+          "type": "TGridOperationEvent",
+          "declaredIn": "TCustomDrawGrid"
+        },
+        "OnColRowDeleted": {
+          "type": "TGridOperationEvent",
+          "declaredIn": "TCustomDrawGrid"
+        },
+        "OnColRowMoved": {
+          "type": "TGridOperationEvent",
+          "declaredIn": "TCustomDrawGrid"
+        },
+        "OnColRowExchanged": {
+          "type": "TGridOperationEvent",
           "declaredIn": "TCustomDrawGrid"
         }
       }
@@ -14756,6 +14885,89 @@
           },
           "declaredIn": "TCustomDrawGrid",
           "default": "clBtnFace"
+        },
+        "AutoEdit": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomDrawGrid",
+          "default": true,
+          "doc": "true(既定)なら、goEditing のとき、文字を打つとすぐにセルの編集を始める(false なら F2・Enter・ダブルクリックで始める)。"
+        },
+        "AlternateColor": {
+          "type": {
+            "kind": "alias",
+            "alias": "TColor"
+          },
+          "declaredIn": "TCustomDrawGrid",
+          "default": "clWindow",
+          "doc": "1 行おきの背景の色(既定は Color と同じ)。"
+        },
+        "FocusColor": {
+          "type": {
+            "kind": "alias",
+            "alias": "TColor"
+          },
+          "declaredIn": "TCustomDrawGrid",
+          "default": "clRed",
+          "doc": "フォーカスのあるセルの枠の色。"
+        },
+        "GridLineColor": {
+          "type": {
+            "kind": "alias",
+            "alias": "TColor"
+          },
+          "declaredIn": "TCustomDrawGrid",
+          "default": "clSilver"
+        },
+        "GridLineWidth": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TCustomDrawGrid",
+          "default": 1
+        },
+        "TitleFont": {
+          "type": {
+            "kind": "object",
+            "class": "TFont"
+          },
+          "declaredIn": "TCustomDrawGrid",
+          "default": {
+            "Name": "default",
+            "Size": 0,
+            "Color": "clDefault",
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
+          },
+          "doc": "固定行(見出し)の文字のフォント。グリッドが所有する TFont のビュー。代入は内容のコピー。"
+        },
+        "AutoFillColumns": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomDrawGrid",
+          "default": false,
+          "doc": "true なら、列の幅を広げて(縮めて)グリッドの幅に合わせる。"
+        },
+        "ColumnClickSorts": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TCustomDrawGrid",
+          "default": false,
+          "doc": "true なら、列見出しのクリックでその列の値で行を並べ替える(同じ列をもう一度クリックすると逆順)。"
+        },
+        "SortOrder": {
+          "type": {
+            "kind": "enum",
+            "enum": "TSortOrder"
+          },
+          "declaredIn": "TCustomDrawGrid",
+          "default": "soAscending",
+          "doc": "並べ替えの向き(SortColRow もこの向きで並べる)。"
         }
       },
       "events": {
@@ -14831,6 +15043,52 @@
         },
         "OnHeaderClick": {
           "type": "THdrEvent",
+          "declaredIn": "TCustomDrawGrid"
+        },
+        "OnGetEditText": {
+          "type": "TGetEditEvent",
+          "declaredIn": "TCustomDrawGrid"
+        },
+        "OnSetEditText": {
+          "type": "TSetEditEvent",
+          "declaredIn": "TCustomDrawGrid"
+        },
+        "OnValidateEntry": {
+          "type": "TValidateEntryEvent",
+          "declaredIn": "TCustomDrawGrid"
+        },
+        "OnPrepareCanvas": {
+          "type": "TOnPrepareCanvasEvent",
+          "declaredIn": "TCustomDrawGrid"
+        },
+        "OnCompareCells": {
+          "type": "TOnCompareCells",
+          "declaredIn": "TCustomDrawGrid"
+        },
+        "OnTopLeftChanged": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TCustomDrawGrid",
+          "doc": "スクロールで、表示されている最初の列・行(LeftCol・TopRow)が変わったとき。"
+        },
+        "OnHeaderSized": {
+          "type": "THdrEvent",
+          "declaredIn": "TCustomDrawGrid",
+          "doc": "見出しのドラッグで列の幅・行の高さを変えたとき(IsColumn は列なら true)。"
+        },
+        "OnColRowInserted": {
+          "type": "TGridOperationEvent",
+          "declaredIn": "TCustomDrawGrid"
+        },
+        "OnColRowDeleted": {
+          "type": "TGridOperationEvent",
+          "declaredIn": "TCustomDrawGrid"
+        },
+        "OnColRowMoved": {
+          "type": "TGridOperationEvent",
+          "declaredIn": "TCustomDrawGrid"
+        },
+        "OnColRowExchanged": {
+          "type": "TGridOperationEvent",
           "declaredIn": "TCustomDrawGrid"
         }
       }
@@ -17819,6 +18077,10 @@
       "stStarDown",
       "stPolygon"
     ],
+    "TSortOrder": [
+      "soAscending",
+      "soDescending"
+    ],
     "TSectionTrackState": [
       "tsTrackBegin",
       "tsTrackMove",
@@ -18777,6 +19039,126 @@
       },
       {
         "name": "Index",
+        "type": "int"
+      }
+    ],
+    "TGetEditEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "ACol",
+        "type": "int"
+      },
+      {
+        "name": "ARow",
+        "type": "int"
+      },
+      {
+        "name": "Value",
+        "type": "std::string&"
+      }
+    ],
+    "TSetEditEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "ACol",
+        "type": "int"
+      },
+      {
+        "name": "ARow",
+        "type": "int"
+      },
+      {
+        "name": "Value",
+        "type": "const std::string&"
+      }
+    ],
+    "TValidateEntryEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "ACol",
+        "type": "int"
+      },
+      {
+        "name": "ARow",
+        "type": "int"
+      },
+      {
+        "name": "OldValue",
+        "type": "const std::string&"
+      },
+      {
+        "name": "NewValue",
+        "type": "std::string&"
+      }
+    ],
+    "TOnPrepareCanvasEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "ACol",
+        "type": "int"
+      },
+      {
+        "name": "ARow",
+        "type": "int"
+      },
+      {
+        "name": "AState",
+        "type": "TGridDrawState"
+      }
+    ],
+    "TOnCompareCells": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "ACol",
+        "type": "int"
+      },
+      {
+        "name": "ARow",
+        "type": "int"
+      },
+      {
+        "name": "BCol",
+        "type": "int"
+      },
+      {
+        "name": "BRow",
+        "type": "int"
+      },
+      {
+        "name": "Result",
+        "type": "int&"
+      }
+    ],
+    "TGridOperationEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "IsColumn",
+        "type": "bool"
+      },
+      {
+        "name": "sIndex",
+        "type": "int"
+      },
+      {
+        "name": "tIndex",
         "type": "int"
       }
     ],

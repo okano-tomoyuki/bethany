@@ -107,7 +107,8 @@ checks["scrollChange"] = f"{f.ScrollBar1.LargeChange}/{f.ScrollBar1.SmallChange}
 checks["ownerDraw"] = f"{int(f.ColorList.Style)}/{f.ColorList.ItemHeight}"
 checks["treeView"] = f"{int(f.Tree1.SortType)}/{f.Tree1.Indent}/{int(f.Tree1.MultiSelect)}"
 checks["listView"] = f"{int(f.List1.ViewStyle)}/{int(f.List1.ShowColumnHeaders)}/{int(f.List1.AutoSort)}/{int(f.List1.OwnerData)}"
-checks["memoBorder"] =f"{int(f.Memo1.BorderStyle)}/{int(f.Memo1.ScrollBars)}"
+checks["grid"] = f"{int(f.Grid1.AlternateColor)}/{int(f.Grid1.GridLineColor)}/{int(bool(f.Grid1.TitleFont.Style & fsBold))}/{int(f.Grid1.AutoFillColumns)}/{int(f.Grid1.ColumnClickSorts)}"
+checks["memoBorder"] = f"{int(f.Memo1.BorderStyle)}/{int(f.Memo1.ScrollBars)}"
 checks["timer"] = f"{int(f.Timer1.Enabled)}/{f.Timer1.Interval}"
 checks["caption"] = f.Caption
 checks["spinValue"] = str(f.SizeSpin.Value)
@@ -143,6 +144,12 @@ f.List1.OnCompare(f.List1, None, None, 0, Ref(0))
 _list_edited = Ref("y")
 f.List1.OnEdited(f.List1, None, _list_edited)
 checks["listEdited"] = _list_edited.value + "!"
+# グリッドの並べ替えは LCL が OnCompareCells を呼ぶ
+f.Grid1.SortColRow(True, 0)
+_grid_value = Ref("z")
+f.Grid1.OnValidateEntry(f.Grid1, 1, 1, "old", _grid_value)
+checks["gridValidated"] = _grid_value.value + "!"
+f.Grid1.OnPrepareCanvas(f.Grid1, 1, 1, gdSelected)
 f.OnDropFiles(f, ["C:/temp/a.txt"])
 f.Close()
 for _ in range(5):
