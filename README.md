@@ -76,6 +76,18 @@ python -m venv .venv
 .venv/bin/python -m pip install bethany-lcl
 ```
 
+## 扱う範囲
+
+Bethany が扱うのは GUI の開発に必要なもの(画面の部品と描画、Application・Screen・Clipboard・TTimer・TActionList 等)に限る
+([ADR 0060](docs/adr/0060-scope-gui-development.md))。C++Builder の次のライブラリは扱わないので、C++・Python のライブラリを使う。
+
+| C++Builder | C++ の例 | Python の例 |
+|---|---|---|
+| データベース(TDataSet・TDBGrid 等) | SQLite・ODBC のクライアント | `sqlite3`・DB-API のドライバ・SQLAlchemy |
+| 設定ファイル・レジストリ(TIniFile・TRegistry) | inih 等の INI のライブラリ・Win32 のレジストリ API | `configparser`・`winreg` |
+| 印刷(TPrinter) | Win32 の印刷 API | `win32print`(pywin32) |
+| ネットワーク・JSON・正規表現・ファイル操作 | 標準ライブラリ(`<regex>`・`<filesystem>`)・nlohmann/json 等 | 標準ライブラリ(`socket`・`json`・`re`・`pathlib`) |
+
 ## 名前
 
 Bethany(ベタニア)は、聖書でラザロ(Lazarus)が暮らした村の名前。Delphi・Lazarus と同じく神話や聖書の固有名詞にちなみ、

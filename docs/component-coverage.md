@@ -94,7 +94,7 @@ Application と同様、C++ 側は値型ではなく生成・破棄が必要な 
 | ✅ TFontDialog | dialogs.pp | Font(既存の TFont を流用。代入は内容のコピー)/MinFontSize/MaxFontSize/Options(ADR 0033)。あわせて TControl の Color・Font と、TFont の Style・Assign を追加した |
 | ✅ TSelectDirectoryDialog | dialogs.pp(TOpenDialog 派生) | FileName(選択したディレクトリ)/Execute(ADR 0033) |
 | ✅ TFindDialog / TReplaceDialog | dialogs.pp | FindText/ReplaceText/Options/Left/Top/OnFind/OnReplace/CloseDialog(ADR 0033)。モードレス(Execute はすぐ戻る) |
-| TPrintDialog / TPrinterSetupDialog | printersdlgs.pp(`components/printers`。基底の TCustomPrintDialog 等は dialogs.pp) | 見送り(ADR 0033)。具象クラスが別パッケージにあり、ビルドの `-Fu` に無い。印刷基盤(TPrinter)とあわせて扱う |
+| TPrintDialog / TPrinterSetupDialog | printersdlgs.pp(`components/printers`。基底の TCustomPrintDialog 等は dialogs.pp) | 対象外([ADR 0060](adr/0060-scope-gui-development.md)。印刷は扱わない)。以前の見送りの理由(ADR 0033):具象クラスが別パッケージにあり、ビルドの `-Fu` に無い。印刷基盤(TPrinter)とあわせて扱う |
 
 ### Tier 5 — メニュー
 

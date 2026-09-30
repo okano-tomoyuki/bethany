@@ -80,6 +80,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0057](adr/0057-canvas-pen-brush-as-pointers.md) | Canvas・Pen・Brush・Font を C++Builder と同じくポインタのプロパティにする | 承認 |
 | [0058](adr/0058-designer-shape-pen-brush.md) | デザイナーで TShape の Pen・Brush を設定し、キャンバスに形を描く | 承認 |
 | [0059](adr/0059-designer-release-tags.md) | デザイナーのリリースにもタグを付け、GitHub の Release に vsix を添える | 承認 |
+| [0060](adr/0060-scope-gui-development.md) | 対象を GUI の開発に必要なものに限り、DB・印刷・設定ファイル等の非ビジュアルのライブラリは扱わない | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。
