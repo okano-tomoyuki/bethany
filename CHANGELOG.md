@@ -12,6 +12,11 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
   (`Button1->Left += 10;`・`Tag++;`・`Label1->Caption += "!";`)。文字列のプロパティの比較・連結(`Edit1->Text == "abc"`・
   `Label1->Caption = Edit1->Text + "!"`)と `std::ostream` への出力。集合のプロパティの演算子(`Grid1->Options = Grid1->Options << goEditing;`)と
   `Set::Clear()`([ADR 0061](docs/adr/0061-property-ergonomics-and-sets.md))
+- ウィンドウのハンドル `TWinControl::Handle`(HWND)と描画先のハンドル `TCanvas::Handle`(HDC)。windows.h を含めたコードでは
+  `SendMessage(Edit1->Handle, ...)` のようにそのまま渡せる(beth.hpp は windows.h を含めない)。Python では整数。Canvas の `PenPos`・`ClipRect`・
+  `Rectangle(const TRect&)`・`Ellipse(const TRect&)`、TTreeNode の `Item[i]`、VCL の名前の別名(`TDrawCellEvent`・`TSelectCellEvent`・
+  `TSectionNotifyEvent`・`gdHotTrack`・`gdPressed`・`gdRowSelected`)([ADR 0063](docs/adr/0063-vcl-event-signatures-and-handle.md))
+- OnKeyPress で日本語等の 1 バイトでない文字も受けられる(Key は 1 文字の UTF-8 の文字列)
 
 ### 変更
 
@@ -20,6 +25,12 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
   `TOpenOptions`・`TColorDialogOptions`・`TFontDialogOptions`・`TFindOptions`。`Shift & ssShift` は `Shift.Contains(ssShift)`、
   `fsBold | fsItalic` は `TFontStyles() << fsBold << fsItalic`、`ShortCut('N', ssCtrl)` は `ShortCut('N', TShiftState() << ssCtrl)` に書き換える。
   Python の書き方(`fsBold | fsItalic`・`Shift & ssShift`)は変わらない([ADR 0061](docs/adr/0061-property-ergonomics-and-sets.md))
+- **互換が無い変更(C++)**: イベントの引数を C++Builder にそろえた。OnKeyDown・OnKeyUp の Key は `Word&`、OnKeyPress の Key は
+  `std::string&`(1 文字の UTF-8。空にすると入力を捨てる)、OnMouseWheel は `int X, int Y` の代わりに `const TPoint& MousePos`、
+  Application の OnException の E は `Exception*`(`E->Message`)、ActionList の OnExecute・OnUpdate は Sender の無い
+  `(TBasicAction* Action, bool& Handled)`、描画のイベントの矩形は `const TRect& Rect`。内部の LCL のオブジェクトを返す `Handle()` は
+  `ObjHandle()` に改めた(`Handle` はウィンドウのハンドルになった)。Python では OnKeyPress の Key が 1 文字の文字列、OnMouseWheel が
+  MousePos(TPoint)になり、`Handle` は `ObjHandle` に改めた([ADR 0063](docs/adr/0063-vcl-event-signatures-and-handle.md))
 - ヘッダの定数(色・カーソル・`mrOk`・ショートカットの修飾)を `const` から `constexpr` にした(値・型・使い方は変わらない)。
   C++ の版の下限は C++11 のまま保つ([ADR 0062](docs/adr/0062-cpp11-baseline-and-constexpr.md))
 

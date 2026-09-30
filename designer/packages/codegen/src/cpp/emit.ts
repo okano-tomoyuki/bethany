@@ -310,7 +310,9 @@ function value(v: Value): string {
 function paramList(params: readonly EventParam[], qualify: boolean): string {
   return params
     .map(
-      (p) => `${qualify ? p.type.replace(/^(const )?(T[A-Z])/, '$1beth::$2') : p.type} ${p.name}`,
+      // Bethany の型(T で始まる型と、OnKeyDown の Key の Word。docs/adr/0063)を修飾する
+      (p) =>
+        `${qualify ? p.type.replace(/^(const )?(T[A-Z]|Word\b)/, '$1beth::$2') : p.type} ${p.name}`,
     )
     .join(', ');
 }

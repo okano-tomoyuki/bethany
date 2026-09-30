@@ -36,7 +36,8 @@ using close_query_callback_t = void (BETH_CALL *)(obj_t sender, bool_t* canClose
 using bool_callback_t = void (BETH_CALL *)(obj_t sender, bool_t value, void* data);
 using exception_callback_t = void (BETH_CALL *)(obj_t sender, str_t className, str_t message, void* data);
 using key_callback_t = void (BETH_CALL *)(obj_t sender, int_t* key, int_t shift, void* data);
-using key_press_callback_t = void (BETH_CALL *)(obj_t sender, int_t* key, void* data);
+// OnKeyPress(docs/adr/0063)。key は入力された 1 文字(UTF-8)。*result に文字列を返すと、その先頭の 1 文字を入力にする(空なら入力を捨てる)。
+using key_press_callback_t = void (BETH_CALL *)(obj_t sender, str_t key, str_t* result, void* data);
 using mouse_callback_t = void (BETH_CALL *)(obj_t sender, int_t button, int_t shift, int_t x, int_t y, void* data);
 using mouse_move_callback_t = void (BETH_CALL *)(obj_t sender, int_t shift, int_t x, int_t y, void* data);
 using mouse_wheel_callback_t = void (BETH_CALL *)(obj_t sender, int_t shift, int_t wheelDelta, int_t x, int_t y, bool_t* handled, void* data);

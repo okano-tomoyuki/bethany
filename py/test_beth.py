@@ -23,7 +23,7 @@ def color(v):
 
 def is_freed(obj):
     try:
-        obj.Handle
+        obj.ObjHandle
         return False
     except ReferenceError:
         return True
@@ -198,7 +198,7 @@ class TMainForm(TForm):
         self.ListBox1.Items.Add("List 2")
         self.ListBox1.Items.Add("List 3")
         # ウィンドウを作る前の ListBox1.Items の中身のハンドル(表示後に LCL が差し替えることの確認用)。
-        self.listBoxItemsBeforeShow_ = self.ListBox1.Items.Handle
+        self.listBoxItemsBeforeShow_ = self.ListBox1.Items.ObjHandle
         self.ListBox1.Left = 220
         self.ListBox1.Top = 190
         self.ListBox1.Width = 150
@@ -1070,7 +1070,7 @@ class TMainForm(TForm):
         # ウィンドウを作ると、LCL は ListBox の Items の中身を OS のリストの TStrings に差し替える(内容は引き継がれる)。
         # TStrings のビューは操作のたびに所有者から中身を取り直すので、そのまま使える。
         items = self.ListBox1.Items
-        pr(f"ListBox1 Items replaced after the window was created: {yn(items.Handle != self.listBoxItemsBeforeShow_)}, "
+        pr(f"ListBox1 Items replaced after the window was created: {yn(items.ObjHandle != self.listBoxItemsBeforeShow_)}, "
            f"Count={items.Count} (expected 3), Strings[2]={items.Strings[2]} (expected List 3)")
 
         # Align による配置は、LCL ではフォームが表示されるまで行われない(VCL と異なる)。OnShow の時点では済んでいる。
@@ -1149,8 +1149,13 @@ class TMainForm(TForm):
     def Edit1KeyDown(self, Sender, Key, Shift):
         pr(f"Edit1KeyDown: key={Key.value} shift=0x{int(Shift):x}")
 
+    # Key.value は入力された 1 文字(日本語も 1 文字)。"!" を "?" に変え、"#" は捨てる(docs/adr/0063)。
     def Edit1KeyPress(self, Sender, Key):
-        pr(f"Edit1KeyPress: key={ord(Key.value)} ('{Key.value if ord(Key.value) >= 32 else '?'}')")
+        pr(f"Edit1KeyPress: key={Key.value if Key.value >= ' ' else '?'!r} ({len(Key.value.encode())} bytes)")
+        if Key.value == "!":
+            Key.value = "?"
+        elif Key.value == "#":
+            Key.value = ""
 
     def FormResize(self, Sender):
         pr(f"FormResize: {self.Width}x{self.Height}")
@@ -1831,7 +1836,7 @@ def main():
     canvas2 = bmp.Canvas
     pr(f"TBitmap {bmp.Width}x{bmp.Height} (expected 32x16), Empty={int(bmp.Empty)} (expected 0), "
        f"Pixels[0][0]={color(bmp.Canvas.Pixels[0][0])} (expected 0000FF), Pixels[1][2]={color(bmp.Canvas.Pixels[1][2])} (expected FF0000), "
-       f"same Canvas wrapper: {yn(canvas1.Handle == canvas2.Handle)}")
+       f"same Canvas wrapper: {yn(canvas1.ObjHandle == canvas2.ObjHandle)}")
 
     # 別の形式への変換(Assign)と保存。TPicture.LoadFromFile は拡張子から形式を選ぶ。
     pngPath = "beth_graphic_test_py.png"

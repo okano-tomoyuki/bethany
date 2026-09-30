@@ -396,7 +396,7 @@ class TMainForm(TForm):
     def Grid1CheckboxToggled(self, Sender, ACol, ARow, AState):
         pass
 
-    def ColorListDrawItem(self, Sender, Index, ARect, State):
+    def ColorListDrawItem(self, Sender, Index, Rect, State):
         pass
 
     def Tree1Edited(self, Sender, Node, S):

@@ -354,6 +354,8 @@ _a_bool = _Arg(lambda raws: raws[0] != 0)
 # 読み取り専用の文字列(グリッドの OnSetEditText の Value。docs/adr/0053)
 _a_str = _Arg(lambda raws: _dec(raws[0]))
 _a_rect = _Arg(lambda raws: TRect(*raws), n=4)
+# 点(OnMouseWheel の MousePos。docs/adr/0063)。DLL は X・Y を渡す
+_a_point = _Arg(lambda raws: TPoint(*raws), n=2)
 # 例外(Application.OnException の E)。DLL はクラス名とメッセージを渡す。C++ の beth::Exception と同じく E.Message・E.ClassName() で読む
 _a_exception = _Arg(lambda raws: BethError(_dec(raws[0]), _dec(raws[1])), n=2)
 # 文字列の配列(OnDropFiles の FileNames)。DLL は数と UTF-8 の文字列の配列を渡す(docs/adr/0047)
@@ -488,7 +490,7 @@ class _Event:
 # ---------------- オブジェクト ----------------
 
 class TObject:
-    """LCL のオブジェクトのラッパー。Handle は DLL の関数に渡すハンドル。
+    """LCL のオブジェクトのラッパー。ObjHandle は DLL の関数に渡すハンドル(TWinControl の Handle はウィンドウのハンドル。docs/adr/0063)。
 
     ラッパーには 3 つの持ち方がある:
     - 自分のハンドルを持つもの(コンポーネント・項目・利用者が生成したもの・TCanvas 等の非所有のラッパー)
@@ -513,7 +515,7 @@ class TObject:
         return self._handle
 
     @property
-    def Handle(self):
+    def ObjHandle(self):
         return self._current()
 
     @classmethod
@@ -739,6 +741,14 @@ class TClipboard:
 
 
 class TCanvas:
+    def Rectangle(self, *args):
+        """矩形を描く(Pen で縁を、Brush で中を)。Rectangle(x1, y1, x2, y2) か Rectangle(TRect)(docs/adr/0063)。"""
+        lib.TCanvas_Rectangle(self._current(), *_rect_args(args))
+
+    def Ellipse(self, *args):
+        """矩形に内接する楕円を描く。Ellipse(x1, y1, x2, y2) か Ellipse(TRect)(docs/adr/0063)。"""
+        lib.TCanvas_Ellipse(self._current(), *_rect_args(args))
+
     def Draw(self, X, Y, Graphic):
         """グラフィックを描く。Graphic が None なら何もしない。"""
         if Graphic is not None:
@@ -765,6 +775,14 @@ class TCanvas:
         """Canvas の Source の範囲を、この Canvas の Dest に写す(大きさが違えば伸縮する)。Canvas が None なら何もしない。"""
         if Canvas is not None:
             lib.TCanvas_CopyRect(self._current(), *_rect(Dest), Canvas._current(), *_rect(Source))
+
+
+def _rect_args(args):
+    """(x1, y1, x2, y2) か (TRect,) を 4 つの整数にする。"""
+    if len(args) == 1:
+        return _rect(args[0])
+    x1, y1, x2, y2 = args
+    return int(x1), int(y1), int(x2), int(y2)
 
 
 def _points(points):

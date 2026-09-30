@@ -281,7 +281,7 @@ void TMainForm::beth_CreateComponents()
     ColorList->Items->Add("Blue");
     ColorList->Style = lbOwnerDrawFixed;
     ColorList->ItemHeight = 20;
-    ColorList->OnDrawItem = [this](TObject* Sender, int Index, TRect ARect, TOwnerDrawState State) { ColorListDrawItem(Sender, Index, ARect, State); };
+    ColorList->OnDrawItem = [this](TObject* Sender, int Index, const TRect& Rect, TOwnerDrawState State) { ColorListDrawItem(Sender, Index, Rect, State); };
 
     Tree1->Parent = this;
     Tree1->Left = 200;
@@ -332,7 +332,7 @@ void TMainForm::beth_CreateComponents()
 
     FileSaveItem->Action = FileSaveAction;
 }
-// <bethany-designer:end id="beth_CreateComponents" hash="81776f19">
+// <bethany-designer:end id="beth_CreateComponents" hash="182e8636">
 
 // <bethany-designer:handler-stubs>
 
@@ -411,7 +411,7 @@ void TMainForm::Grid1CheckboxToggled(TObject* Sender, int ACol, int ARow, TCheck
     // TODO: implement
 }
 
-void TMainForm::ColorListDrawItem(TObject* Sender, int Index, TRect ARect, TOwnerDrawState State)
+void TMainForm::ColorListDrawItem(TObject* Sender, int Index, const TRect& Rect, TOwnerDrawState State)
 {
     // TODO: implement
 }

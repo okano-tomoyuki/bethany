@@ -62,7 +62,7 @@ public:
     void Grid1PrepareCanvas(beth::TObject* Sender, int ACol, int ARow, beth::TGridDrawState AState);
     void Grid1CompareCells(beth::TObject* Sender, int ACol, int ARow, int BCol, int BRow, int& Result);
     void Grid1CheckboxToggled(beth::TObject* Sender, int ACol, int ARow, beth::TCheckBoxState AState);
-    void ColorListDrawItem(beth::TObject* Sender, int Index, beth::TRect ARect, beth::TOwnerDrawState State);
+    void ColorListDrawItem(beth::TObject* Sender, int Index, const beth::TRect& Rect, beth::TOwnerDrawState State);
     void Tree1Edited(beth::TObject* Sender, beth::TTreeNode* Node, std::string& S);
     void Tree1CustomDrawItem(beth::TObject* Sender, beth::TTreeNode* Node, beth::TCustomDrawState State, bool& DefaultDraw);
     void FileOpenItemClick(beth::TObject* Sender);
@@ -70,7 +70,7 @@ public:
     void ClearItemClick(beth::TObject* Sender);
     void Timer1Timer(beth::TObject* Sender);
     void FileSaveActionExecute(beth::TObject* Sender);
-    // <bethany-designer:end id="declarations" hash="d7df6e7e">
+    // <bethany-designer:end id="declarations" hash="4fc4e522">
 
     explicit TMainForm(beth::TComponent* AOwner);
 

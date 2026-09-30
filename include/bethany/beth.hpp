@@ -14,6 +14,25 @@
 
 #include "internal/api.h"
 
+// windows.h の HWND・HDC と同じ型(docs/adr/0063)。windows.h を含めずに、TWinControl::Handle・TCanvas::Handle をその型で返すための前方宣言。
+// windows.h(STRICT。MinGW・Windows SDK の既定)は struct HWND__ {...}; typedef HWND__* HWND; と定義する。
+#ifdef _WIN32
+struct HWND__;
+struct HDC__;
+#endif
+
+// windows.h は TextOut・MessageBox・FindText・ReplaceText を、TextOutA・TextOutW 等に置き換えるマクロとして定義する。
+// Bethany の同じ名前のメンバの宣言が、windows.h を含める順によって別の名前にならないよう、このヘッダの間はマクロを外し、末尾で元に戻す
+// (docs/adr/0063)。利用者のコードでマクロが置き換えた名前(Canvas->TextOutW 等)は、同じメンバの別名として持つ。
+#pragma push_macro("TextOut")
+#pragma push_macro("MessageBox")
+#pragma push_macro("FindText")
+#pragma push_macro("ReplaceText")
+#undef TextOut
+#undef MessageBox
+#undef FindText
+#undef ReplaceText
+
 // クラス階層は LCL の継承関係の「部分列」になっている(途中の階層を省くことはあっても、
 // LCL に無い継承関係は作らない)。これにより、C++ 上で基底クラスとして扱えるオブジェクトは
 // Pascal 側でもその基底クラスとして扱えることが保証される。
@@ -23,8 +42,19 @@
 namespace beth
 {
 
-// LCL のオブジェクトを指すハンドル(TObject::Handle())。DLL の関数に渡す値で、利用者が中身を解釈することはない。
+// LCL のオブジェクトを指すハンドル(TObject::ObjHandle())。DLL の関数に渡す値で、利用者が中身を解釈することはない。
 using ObjectHandle = internal::obj_t;
+
+// ウィンドウのハンドル(TWinControl::Handle)と、描画先のハンドル(TCanvas::Handle)。Windows では windows.h の HWND・HDC と同じ型で、
+// windows.h を含めたコードでは SendMessage(Edit1->Handle, ...) のようにそのまま渡せる(docs/adr/0063)。
+// beth の名前空間に HWND という名前を作ると、using namespace beth; と windows.h を併用したときに名前が曖昧になるため、別の名前にする。
+#ifdef _WIN32
+using TWindowHandle = ::HWND__*;
+using TDCHandle     = ::HDC__*;
+#else
+using TWindowHandle = void*;
+using TDCHandle     = void*;
+#endif
 
 // DelphiのTColorに合わせ $00BBGGRR 順のパック整数として表す。
 using TColor = std::int32_t;
@@ -118,7 +148,7 @@ public:
     TObject(TObject&&) = delete;
     TObject& operator=(TObject&&) = delete;
 
-    ObjectHandle Handle() const { return handle_; }
+    ObjectHandle ObjHandle() const { return handle_; }
 
 protected:
     // 各クラスは、生成した(または取得した)ハンドルを基底クラスの初期化の時点で渡す。
@@ -631,14 +661,36 @@ enum TMouseButton
     mbExtra2
 };
 
-// キー入力・マウス操作のイベント。Key・Handled は書き換え可能で、書き換えると LCL に渡る値・以降の既定の処理が変わる
-// (OnKeyDown/OnKeyUp で Key を 0 にする、OnKeyPress で Key を 0 にする、いずれもその入力を LCL に渡さない)。
-using TKeyEvent = std::function<void(TObject* Sender, int& Key, TShiftState Shift)>;
-using TKeyPressEvent = std::function<void(TObject* Sender, char& Key)>;
+/* ---------------- Geometry ---------------- */
+
+// 矩形(VCL の TRect と同じく Left/Top/Right/Bottom)。Canvas の描画や、グリッドの選択範囲(TGridRect)にも使う。
+struct TRect
+{
+    int Left;
+    int Top;
+    int Right;
+    int Bottom;
+};
+
+// 点(VCL の TPoint と同じく X/Y)。
+struct TPoint
+{
+    int X;
+    int Y;
+};
+
+// キー入力・マウス操作のイベント。Key・Handled は書き換え可能で、書き換えると LCL に渡る値・以降の既定の処理が変わる。
+// OnKeyDown・OnKeyUp の Key は仮想キーコード(VCL と同じく Word)で、0 にするとその入力を LCL に渡さない。
+using Word = unsigned short;
+using TKeyEvent = std::function<void(TObject* Sender, Word& Key, TShiftState Shift)>;
+// OnKeyPress の Key は入力された 1 文字(UTF-8。日本語等の 1 バイトでない文字も 1 文字で来る。docs/adr/0063)。
+// 空にするとその入力を LCL に渡さず、別の 1 文字にするとその文字が入力される(2 文字以上なら先頭の 1 文字)。
+using TKeyPressEvent = std::function<void(TObject* Sender, std::string& Key)>;
 using TMouseEvent = std::function<void(TObject* Sender, TMouseButton Button, TShiftState Shift, int X, int Y)>;
 using TMouseMoveEvent = std::function<void(TObject* Sender, TShiftState Shift, int X, int Y)>;
 // Handled に true を書き込むと、ホイール操作をこのハンドラで処理済みとして扱う(既定のスクロール等が起きなくなる)。
-using TMouseWheelEvent = std::function<void(TObject* Sender, TShiftState Shift, int WheelDelta, int X, int Y, bool& Handled)>;
+// MousePos はマウスの位置(コントロールのクライアント座標。VCL と同じく TPoint)。
+using TMouseWheelEvent = std::function<void(TObject* Sender, TShiftState Shift, int WheelDelta, const TPoint& MousePos, bool& Handled)>;
 
 class TPersistent : public TObject
 {
@@ -683,7 +735,7 @@ private:
 // 文字列の一覧(LCL の TStrings)。コントロールの Items・Lines・Tabs 等として、所有者の値メンバで持つ非所有のビュー
 // (ListBox1->Items->Add("x"); ListBox1->Items->Strings[0]; Memo1->Lines->Text = "..."; のように VCL と同じく使う)。
 // LCL はウィンドウの生成・破棄のときに中身の TStrings を差し替えることがある(TListBox・TComboBox・TMemo)ため、
-// このビューは中身のハンドルを覚えず、操作のたびに所有者から取得する。そのため Handle() は nullptr を返す
+// このビューは中身のハンドルを覚えず、操作のたびに所有者から取得する。そのため ObjHandle() は nullptr を返す
 // (DLL の関数に渡すハンドルは Current() で得る。保存しないこと)。
 // 利用者が生成する文字列の一覧は、派生の TStringList を使う(docs/adr/0028)。
 class TStrings : public TPersistent
@@ -738,7 +790,7 @@ public:
     void SaveToFile(const std::string& FileName) const;
 
     // 現在の中身のハンドル。
-    ObjectHandle Current() const { return accessor_(owner_->Handle()); }
+    ObjectHandle Current() const { return accessor_(owner_->ObjHandle()); }
 
 protected:
     // 自分のハンドルそのものを中身とする(TStringList 用)。
@@ -803,24 +855,6 @@ private:
     static void        SetDuplicatesImpl(TObject* owner, const TDuplicates& value);
     static bool        GetCaseSensitiveImpl(TObject* owner);
     static void        SetCaseSensitiveImpl(TObject* owner, const bool& value);
-};
-
-/* ---------------- Geometry ---------------- */
-
-// 矩形(VCL の TRect と同じく Left/Top/Right/Bottom)。Canvas の描画や、グリッドの選択範囲(TGridRect)にも使う。
-struct TRect
-{
-    int Left;
-    int Top;
-    int Right;
-    int Bottom;
-};
-
-// 点(VCL の TPoint と同じく X/Y)。
-struct TPoint
-{
-    int X;
-    int Y;
 };
 
 /* ---------------- Canvas ---------------- */
@@ -951,6 +985,12 @@ public:
     Property<TFont*>  Font;
     // 1 画素の色(Canvas->Pixels[X][Y]。VCL の Pixels[X, Y])。
     IndexedProperty2<TColor> Pixels;
+    // 線を引く始点(MoveTo・LineTo で動く。docs/adr/0063)。
+    Property<TPoint>             PenPos;
+    // 描ける範囲(描画先の座標)。
+    ReadOnlyProperty<TRect>      ClipRect;
+    // 描画先のハンドル(Windows では HDC。docs/adr/0063)。Win32 の描画の API に渡すためのもの。描画の間だけ有効(保存しないこと)。
+    ReadOnlyProperty<TDCHandle>  Handle;
 
     explicit TCanvas(ObjectHandle handle);
     ~TCanvas() override = default;
@@ -958,8 +998,15 @@ public:
     void MoveTo(int x, int y);
     void LineTo(int x, int y);
     void Rectangle(int x1, int y1, int x2, int y2);
+    void Rectangle(const TRect& Rect);
     void Ellipse(int x1, int y1, int x2, int y2);
+    void Ellipse(const TRect& Rect);
     void TextOut(int x, int y, const std::string& text);
+#ifdef _WIN32
+    // windows.h の TextOut マクロが置き換えた名前(docs/adr/0063)。TextOut と同じ。
+    void TextOutA(int x, int y, const std::string& text) { TextOut(x, y, text); }
+    void TextOutW(int x, int y, const std::string& text) { TextOut(x, y, text); }
+#endif
     // Brush で塗りつぶす(枠は描かない)。
     void FillRect(const TRect& Rect);
     // グラフィックを描く(docs/adr/0029)。Graphic が nullptr なら何もしない。StretchDraw は Rect に合わせて伸縮する。
@@ -999,6 +1046,10 @@ private:
     static TFont*  GetFontImpl(TObject* owner);
     static void    SetFontImpl(TObject* owner, TFont* const& value);
     static TColor GetPixelsImpl(TObject* owner, int X, int Y);
+    static TPoint    GetPenPosImpl(TObject* owner);
+    static void      SetPenPosImpl(TObject* owner, const TPoint& value);
+    static TRect     GetClipRectImpl(TObject* owner);
+    static TDCHandle GetHandleImpl(TObject* owner);
     static void   SetPixelsImpl(TObject* owner, int X, int Y, const TColor& value);
 };
 
@@ -1025,7 +1076,7 @@ private:
 //   - 利用者が生成するもの(new TBitmap 等): VCL と同じく delete で破棄する(LCL のオブジェクトも破棄される)。
 //     スタックや値メンバに置いてもよい。
 //   - 所有者の中身のビュー(Image1->Picture->Bitmap・BitBtn1->Glyph 等): TStrings と同じく中身のハンドルを覚えず、
-//     操作のたびに所有者から取得する(TPicture は LoadFromFile 等のたびに中身を作り直すため)。Handle() は nullptr を返す
+//     操作のたびに所有者から取得する(TPicture は LoadFromFile 等のたびに中身を作り直すため)。ObjHandle() は nullptr を返す
 //     (DLL の関数に渡すハンドルは Current() で得る。保存しないこと)。
 // Picture->Graphic・Glyph 等への代入は、LCL と同じく内容のコピーになる(代入したものは代入した側の持ち物のまま)。
 // 読み込めないファイル・形式の違うファイルでは Exception(EFOpenError 等)が送出される。
@@ -1054,7 +1105,7 @@ public:
     void Clear();
 
     // 現在の中身のハンドル。
-    ObjectHandle Current() const { return accessor_(owner_->Handle()); }
+    ObjectHandle Current() const { return accessor_(owner_->ObjHandle()); }
 
 protected:
     // 利用者が生成したもの(自分のハンドルを持つ)。
@@ -1267,7 +1318,7 @@ protected:
     explicit TComponent(ObjectHandle handle);
     ~TComponent() override;
 
-    static ObjectHandle HandleOf(const TObject* obj) { return obj ? obj->Handle() : nullptr; }
+    static ObjectHandle HandleOf(const TObject* obj) { return obj ? obj->ObjHandle() : nullptr; }
     static TComponent*  FromHandle(ObjectHandle handle);
 
     // LCL が内部で生成したコンポーネント(TMenu::Items のルート項目等、*_Create を経由しないもの)のハンドルから
@@ -1416,11 +1467,11 @@ enum TOwnerDrawStateType
 using TOwnerDrawState = Set<TOwnerDrawStateType>;
 
 // リストボックス・コンボボックスの項目を描くとき。Control の Canvas の ARect に描く。
-using TDrawItemEvent = std::function<void(TWinControl* Control, int Index, TRect ARect, TOwnerDrawState State)>;
+using TDrawItemEvent = std::function<void(TWinControl* Control, int Index, const TRect& Rect, TOwnerDrawState State)>;
 // 項目の高さを決めるとき(lbOwnerDrawVariable・csOwnerDrawVariable)。AHeight を項目の高さにする。
 using TMeasureItemEvent = std::function<void(TWinControl* Control, int Index, int& AHeight)>;
 // メニュー項目を描くとき(メニューの OwnerDraw が true)。ACanvas の ARect に描く(ACanvas はこの呼び出しの間だけ有効)。
-using TMenuDrawItemEvent = std::function<void(TObject* Sender, TCanvas* ACanvas, TRect ARect, TOwnerDrawState AState)>;
+using TMenuDrawItemEvent = std::function<void(TObject* Sender, TCanvas* ACanvas, const TRect& ARect, TOwnerDrawState AState)>;
 // メニュー項目の大きさを決めるとき。AWidth・AHeight を項目の幅・高さにする。
 using TMenuMeasureItemEvent = std::function<void(TObject* Sender, TCanvas* ACanvas, int& AWidth, int& AHeight)>;
 
@@ -1797,8 +1848,9 @@ enum TCheckBoxState { cbUnchecked, cbChecked, cbGrayed };
 using TSelectionChangeEvent = std::function<void(TObject* Sender, bool User)>;
 // Application->OnIdle。Done を false にすると、すぐにもう一度呼ばれる。
 using TIdleEvent = std::function<void(TObject* Sender, bool& Done)>;
-// Application->OnException。ハンドラから送出された例外(E.ClassName()・E.Message)。
-using TExceptionEvent = std::function<void(TObject* Sender, const Exception& E)>;
+// Application->OnException。ハンドラから送出された例外(VCL と同じくポインタ。E->ClassName()・E->Message)。
+// E はハンドラの中だけ有効(保存しないこと)。
+using TExceptionEvent = std::function<void(TObject* Sender, Exception* E)>;
 // フォームにファイルをドロップしたとき(docs/adr/0047)。FileNames はフルパス(UTF-8)。
 using TDropFilesEvent = std::function<void(TObject* Sender, const std::vector<std::string>& FileNames)>;
 
@@ -2024,6 +2076,9 @@ public:
     // Tab キーでのフォーカスの移動の順(同じ Parent の中での位置。-1 は末尾)と、移動の対象にするか(docs/adr/0034)。
     Property<int>            TabOrder;
     Property<bool>           TabStop;
+    // ウィンドウのハンドル(Windows では HWND。docs/adr/0063)。VCL と同じく、まだウィンドウが無ければ作ってから返す。
+    // Win32 の API に渡すためのもの(SendMessage(Edit1->Handle, ...))。コントロールの破棄やウィンドウの作り直しで変わるので保存しないこと。
+    ReadOnlyProperty<TWindowHandle> Handle;
 
 protected:
     explicit TWinControl(ObjectHandle handle);
@@ -2047,7 +2102,8 @@ private:
 
     static void BETH_CALL KeyDownTrampoline(ObjectHandle sender, internal::int_t* key, internal::int_t shift, void* data);
     static void BETH_CALL KeyUpTrampoline(ObjectHandle sender, internal::int_t* key, internal::int_t shift, void* data);
-    static void BETH_CALL KeyPressTrampoline(ObjectHandle sender, internal::int_t* key, void* data);
+    static void BETH_CALL KeyPressTrampoline(ObjectHandle sender, internal::str_t key, internal::str_t* result, void* data);
+    static TWindowHandle GetHandleImpl(TObject* owner);
 
     static TKeyEvent GetOnKeyDownImpl(TObject* owner);
     static void      SetOnKeyDownImpl(TObject* owner, const TKeyEvent& value);
@@ -2660,12 +2716,16 @@ public:
     void Terminate();
 
     // Windows のメッセージボックス(LCL の TApplication.MessageBox)。Flags と戻り値は Windows の MB_…・ID… の値
-    // (C++ では <windows.h> の定数を使う。docs/adr/0041)。<windows.h> の MessageBox マクロ(MessageBoxA 等への置き換え)と
-    // 翻訳単位ごとに名前がずれないよう、ヘッダの中で定義する。
+    // (C++ では <windows.h> の定数を使う。docs/adr/0041)。
     int MessageBox(const std::string& Text, const std::string& Caption, int Flags = 0)
     {
         return MessageBoxImpl(Text, Caption, Flags);
     }
+#ifdef _WIN32
+    // windows.h の MessageBox マクロが置き換えた名前(docs/adr/0063)。MessageBox と同じ。
+    int MessageBoxA(const std::string& Text, const std::string& Caption, int Flags = 0) { return MessageBoxImpl(Text, Caption, Flags); }
+    int MessageBoxW(const std::string& Text, const std::string& Caption, int Flags = 0) { return MessageBoxImpl(Text, Caption, Flags); }
+#endif
 
 protected:
     ~TApplication() override = default;
@@ -3772,6 +3832,8 @@ public:
     ReadOnlyProperty<TCustomTreeView*> TreeView;
     // 直下の子(Node->Items[i])。
     ReadOnlyIndexedProperty<TTreeNode*> Items;
+    // VCL の書き方(Node->Item[i])。Items と同じ(docs/adr/0063)。
+    ReadOnlyIndexedProperty<TTreeNode*> Item;
     // 画像の、ツリービューの Images での位置(-1 なら無し。docs/adr/0030)。SelectedIndex は選択中の画像(-1 なら ImageIndex と同じ)。
     Property<int> ImageIndex;
     Property<int> SelectedIndex;
@@ -4353,7 +4415,7 @@ using TLVCustomDrawItemEvent =
 using TLVCustomDrawSubItemEvent =
     std::function<void(TCustomListView* Sender, TListItem* Item, int SubItem, TCustomDrawState State, bool& DefaultDraw)>;
 // OwnerDraw で ViewStyle が vsReport のとき、項目(行)を描く(ARect の範囲に Sender->Canvas で描く)。
-using TLVDrawItemEvent = std::function<void(TCustomListView* Sender, TListItem* Item, TRect ARect, TOwnerDrawState State)>;
+using TLVDrawItemEvent = std::function<void(TCustomListView* Sender, TListItem* Item, const TRect& Rect, TOwnerDrawState State)>;
 
 // 以下のメンバは LCL の TCustomListView の public。
 class TCustomListView : public TWinControl
@@ -5367,11 +5429,18 @@ enum TGridDrawStateItem
     gdRowHighlight
 };
 using TGridDrawState = Set<TGridDrawStateItem>;
+// VCL の名前(docs/adr/0063)。LCL の gdHot・gdPushed・gdRowHighlight と同じ。
+constexpr TGridDrawStateItem gdHotTrack    = gdHot;
+constexpr TGridDrawStateItem gdPressed     = gdPushed;
+constexpr TGridDrawStateItem gdRowSelected = gdRowHighlight;
 
 // セルを描画するとき(ARect はセルのクライアント座標での矩形。描画は TCustomDrawGrid::Canvas に行う)。
-using TOnDrawCell        = std::function<void(TObject* Sender, int ACol, int ARow, TRect ARect, TGridDrawState AState)>;
+using TOnDrawCell        = std::function<void(TObject* Sender, int ACol, int ARow, const TRect& Rect, TGridDrawState State)>;
 // セルが選択される前(CanSelect を false にすると選択させない)。
 using TOnSelectCellEvent = std::function<void(TObject* Sender, int ACol, int ARow, bool& CanSelect)>;
+// VCL の名前(docs/adr/0063)。
+using TDrawCellEvent   = TOnDrawCell;
+using TSelectCellEvent = TOnSelectCellEvent;
 // セルが選択された後。
 using TOnSelectEvent     = std::function<void(TObject* Sender, int ACol, int ARow)>;
 // 見出し(固定行・固定列)がクリックされたとき(IsColumn は列見出しなら true)。
@@ -6009,6 +6078,8 @@ enum TSectionTrackState
 
 // セクションを対象とするイベント。1 つ目の引数は LCL と同じくヘッダーコントロール(OnSectionDrag だけは Sender)。
 using TCustomSectionNotifyEvent = std::function<void(TCustomHeaderControl* HeaderControl, THeaderSection* Section)>;
+// VCL の名前(docs/adr/0063)。
+using TSectionNotifyEvent = TCustomSectionNotifyEvent;
 using TCustomSectionTrackEvent  = std::function<void(TCustomHeaderControl* HeaderControl, THeaderSection* Section,
                                                      int Width, TSectionTrackState State)>;
 // DragReorder のとき、セクションをドラッグで移動する前に呼ばれる。AllowDrag を false にすると移動させない。
@@ -6653,8 +6724,8 @@ protected:
 enum TActionListState { asNormal, asSuspended, asSuspendedEnabled };
 
 // ActionList の OnExecute・OnUpdate。Handled を true にすると、Action の OnExecute・OnUpdate を呼ばない。
-// Sender は ActionList(VCL の TActionEvent には Sender が無いが、ほかのイベントと同じく先頭に置く)。
-using TActionEvent = std::function<void(TObject* Sender, TBasicAction* Action, bool& Handled)>;
+// VCL・LCL と同じく Sender は無い(docs/adr/0063)。
+using TActionEvent = std::function<void(TBasicAction* Action, bool& Handled)>;
 
 // Action の一覧(LCL の TCustomActionList)。
 class TCustomActionList : public TComponent
@@ -6981,6 +7052,11 @@ public:
     Property<int>          Left;
     Property<int>          Top;
     Property<TNotifyEvent> OnFind;
+#ifdef _WIN32
+    // windows.h の FindText マクロが置き換えた名前(docs/adr/0063)。FindText そのもの。
+    Property<std::string>& FindTextA;
+    Property<std::string>& FindTextW;
+#endif
 
     explicit TFindDialog(TComponent* AOwner);
 
@@ -6994,6 +7070,11 @@ protected:
     // LCL では TFindDialog の protected。TReplaceDialog が公開する。
     Property<std::string>  ReplaceText;
     Property<TNotifyEvent> OnReplace;
+#ifdef _WIN32
+    // windows.h の ReplaceText マクロが置き換えた名前(docs/adr/0063)。ReplaceText そのもの。
+    Property<std::string>& ReplaceTextA;
+    Property<std::string>& ReplaceTextW;
+#endif
 
 private:
     TNotifyEvent onFind_;
@@ -7026,6 +7107,10 @@ class TReplaceDialog : public TFindDialog
 public:
     using TFindDialog::ReplaceText;
     using TFindDialog::OnReplace;
+#ifdef _WIN32
+    using TFindDialog::ReplaceTextA;
+    using TFindDialog::ReplaceTextW;
+#endif
 
     explicit TReplaceDialog(TComponent* AOwner);
 
@@ -7034,5 +7119,10 @@ protected:
 };
 
 } // namespace beth
+
+#pragma pop_macro("TextOut")
+#pragma pop_macro("MessageBox")
+#pragma pop_macro("FindText")
+#pragma pop_macro("ReplaceText")
 
 #endif // BETH_HPP

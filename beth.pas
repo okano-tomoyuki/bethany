@@ -87,15 +87,16 @@ type
     procedure DoKey(Sender: TObject; var Key: Word; Shift: TShiftState);
   end;
 
-  { OnKeyPress(TKeyPressEvent)用。Key は文字コード、書き換え可能。0 にすると LCL に渡さない。 }
-  TBethKeyPressCallback = procedure(Sender: Pointer; Key: PInteger; Data: Pointer); BETH_CALL;
+  { OnKeyPress 用(docs/adr/0063)。LCL の OnUTF8KeyPress につなぐ。Key は入力された 1 文字(UTF-8)。
+    Result に文字列を返すと、その先頭の 1 文字を入力にする(空なら LCL に渡さない)。 }
+  TBethKeyPressCallback = procedure(Sender: Pointer; Key: PChar; Result: PPChar; Data: Pointer); BETH_CALL;
 
   TKeyPressCallbackBridge = class(TComponent)
   private
     FCallback: TBethKeyPressCallback;
     FData: Pointer;
   public
-    procedure DoKeyPress(Sender: TObject; var Key: char);
+    procedure DoUTF8KeyPress(Sender: TObject; var UTF8Key: TUTF8Char);
   end;
 
   { OnMouseDown/OnMouseUp(TMouseEvent)用。Button は TMouseButton の序数(beth_mb*)、Shift は上記と同じ。 }
@@ -308,15 +309,36 @@ begin
   CheckCallbackError;
 end;
 
-procedure TKeyPressCallbackBridge.DoKeyPress(Sender: TObject; var Key: char);
+procedure TKeyPressCallbackBridge.DoUTF8KeyPress(Sender: TObject; var UTF8Key: TUTF8Char);
 var
-  K: Integer;
+  K, S: AnsiString;
+  R: PChar;
+  N: Integer;
 begin
   if not Assigned(FCallback) or GDetaching then
     Exit;
-  K := Ord(Key);
-  FCallback(Pointer(Sender), @K, FData);
-  Key := Chr(K and $FF);
+  K := AnsiString(UTF8Key);
+  R := nil;
+  FCallback(Pointer(Sender), PChar(K), @R, FData);
+  if R <> nil then
+  begin
+    { 先頭の 1 文字(UTF-8 の 1 文字は、先頭のバイトで長さが決まる) }
+    S := AnsiString(R);
+    if S = '' then
+      UTF8Key := ''
+    else
+    begin
+      case Ord(S[1]) of
+        $00..$7F: N := 1;
+        $C0..$DF: N := 2;
+        $E0..$EF: N := 3;
+        $F0..$F7: N := 4;
+      else
+        N := 1;
+      end;
+      UTF8Key := Copy(S, 1, N);
+    end;
+  end;
   CheckCallbackError;
 end;
 
@@ -379,7 +401,7 @@ begin
   Result := TMethod(M).Data;
 end;
 
-function MethodData(const M: TKeyPressEvent): Pointer; overload;
+function MethodData(const M: TUTF8KeyPressEvent): Pointer; overload;
 begin
   Result := TMethod(M).Data;
 end;
@@ -958,7 +980,7 @@ end;
 procedure TWinControl_SetOnKeyPress(Obj: Pointer; Cb: TBethKeyPressCallback; Data: Pointer); BETH_CALL;
 begin
   try
-    TWinControl(Obj).OnKeyPress := @KeyPressBridgeFor(TWinControl(Obj), MethodData(TWinControl(Obj).OnKeyPress), Cb, Data).DoKeyPress;
+    TWinControlAccess(Obj).OnUTF8KeyPress := @KeyPressBridgeFor(TWinControl(Obj), MethodData(TWinControlAccess(Obj).OnUTF8KeyPress), Cb, Data).DoUTF8KeyPress;
   except
     ReportException;
   end;
@@ -1684,6 +1706,59 @@ begin
     if Value <> nil then
       TCanvas(Obj).Font := TFont(Value);
   except
+    ReportException;
+  end;
+end;
+
+{ 線を引く始点・描ける範囲・描画先のハンドル(docs/adr/0063) }
+procedure TCanvas_GetPenPos(Obj: Pointer; X, Y: PInteger); BETH_CALL;
+var
+  P: TPoint;
+begin
+  try
+    P := TCanvas(Obj).PenPos;
+    X^ := P.X;
+    Y^ := P.Y;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCanvas_SetPenPos(Obj: Pointer; X, Y: Integer); BETH_CALL;
+var
+  P: TPoint;
+begin
+  try
+    P.X := X;
+    P.Y := Y;
+    TCanvas(Obj).PenPos := P;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCanvas_GetClipRect(Obj: Pointer; L, T, R, B: PInteger); BETH_CALL;
+var
+  Rc: TRect;
+begin
+  try
+    Rc := TCanvas(Obj).ClipRect;
+    L^ := Rc.Left;
+    T^ := Rc.Top;
+    R^ := Rc.Right;
+    B^ := Rc.Bottom;
+  except
+    ReportException;
+  end;
+end;
+
+{ Windows では HDC。まだ無ければ作ってから返す(LCL の TCanvas.Handle の読み出しと同じ)。 }
+function TCanvas_GetHandle(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TCanvas(Obj).Handle);
+  except
+    Result := nil;
     ReportException;
   end;
 end;
@@ -11261,6 +11336,17 @@ begin
   end;
 end;
 
+{ ウィンドウのハンドル(Windows では HWND。docs/adr/0063)。まだウィンドウが無ければ作ってから返す(LCL の Handle の読み出しと同じ)。 }
+function TWinControl_GetHandle(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TWinControl(Obj).Handle);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
 { TSizeConstraints(0 は制限なし) }
 
 function TSizeConstraints_GetMinWidth(Obj: Pointer): Integer; BETH_CALL;
@@ -18070,6 +18156,10 @@ exports
   TCanvas_SetPen,
   TCanvas_SetBrush,
   TCanvas_SetFont,
+  TCanvas_GetPenPos,
+  TCanvas_SetPenPos,
+  TCanvas_GetClipRect,
+  TCanvas_GetHandle,
 
   TPen_GetColor,
   TPen_SetColor,
@@ -19007,6 +19097,7 @@ exports
   TWinControl_SetTabOrder,
   TWinControl_GetTabStop,
   TWinControl_SetTabStop,
+  TWinControl_GetHandle,
   TSizeConstraints_GetMinWidth,
   TSizeConstraints_SetMinWidth,
   TSizeConstraints_GetMinHeight,

@@ -4,6 +4,9 @@
 
 - **Changed**: the generated C++ code writes sets such as `Font.Style` and the `Options` of grids and dialogs with `Set`, as in C++Builder
   (`TFontStyles() << fsBold`). This code requires the Bethany C++ library 0.5.0 or later. The generated Python code does not change
+- **Changed**: generated event handlers use the parameters of the Bethany library 0.5.0, as in C++Builder: `Word& Key` (`OnKeyDown`),
+  `std::string& Key` (`OnKeyPress`, one UTF-8 character), `const TPoint& MousePos` (`OnMouseWheel`) and `const TRect& Rect` (owner draw).
+  Python handlers of `OnMouseWheel` receive `MousePos` instead of `X` and `Y`
 
 ## [0.6.0] - 2026-09-30
 

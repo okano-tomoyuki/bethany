@@ -32,6 +32,10 @@ MESSAGE_BOX_CONSTANTS = [
 PY_INTFLAG_SETS = {"TShiftState", "TFontStyles", "TOwnerDrawState", "TMultiSelectStyle", "TTreeViewOptions", "TCustomDrawState",
                    "TGridOptions", "TGridDrawState", "TEdgeBorders", "TOpenOptions", "TColorDialogOptions", "TFontDialogOptions",
                    "TFindOptions"}
+# windows.h の A/W のマクロが置き換えた名前の別名(TextOutW 等。docs/adr/0063)。C++ のためのもので、Python には出さない。
+WIN32_AW_ALIASES = {"TextOutA", "TextOutW", "MessageBoxA", "MessageBoxW", "FindTextA", "FindTextW", "ReplaceTextA", "ReplaceTextW"}
+# 先頭に Sender の無いイベントの型(docs/adr/0063)。
+NO_SENDER_EVENTS = {"TActionEvent"}
 CORE_CLASSES = {"TObject", "TPersistent", "TComponent"}
 HELPER_CLASSES = {"Property", "ReadOnlyProperty", "IndexedProperty", "ReadOnlyIndexedProperty", "IndexedProperty2",
                   "ItemRegistry", "CanvasHolder", "Exception"}
@@ -189,8 +193,12 @@ def parse_hpp():
     src = HPP.read_text(encoding="utf-8")
     ns = re.search(r"namespace beth\s*\{", src)
     body = src[ns.end():match_brace(src, ns.end() - 1)]
+    # プリプロセッサの行(TWindowHandle の #ifdef _WIN32 等。docs/adr/0063)は読まない(両方の分岐の宣言が残るが、
+    # どちらも Python に出さない型なので問題ない)
+    body = re.sub(r"^[ \t]*#.*$", "", body, flags=re.M)
     model = Model()
     type_of_const = {}
+    flag_of_element = {}  # IntFlag にした集合の要素の列挙型 → 集合の名前(PY_INTFLAG_SETS)
     for st in split_statements(body):
         t = st.text
         m = re.fullmatch(r"enum (\w+)", t)
@@ -216,7 +224,11 @@ def parse_hpp():
             continue
         m = re.fullmatch(r"using (\w+) = std::function<void\((.*)\)>", t)
         if m:
-            model.events[m.group(1)] = split_params(m.group(2))[1:]
+            params = split_params(m.group(2))
+            # 先頭は Sender(DLL は常に先頭で渡し、Python のハンドラにも先頭で渡す)。ただし VCL・LCL と同じく Sender の無い
+            # イベント(ActionList の TActionEvent。docs/adr/0063)は、C++ では先頭が Action になる。Python では従来どおり
+            # Sender(ActionList)を先頭に渡すので、引数は全部使う
+            model.events[m.group(1)] = params if m.group(1) in NO_SENDER_EVENTS else params[1:]
             continue
         m = re.fullmatch(r"using (\w+) = (\w+)", t)
         if m and (m.group(2) in model.events):
@@ -231,6 +243,7 @@ def parse_hpp():
             items = model.enums.pop(m.group(2))
             model.enum_comments.pop(m.group(2), None)
             model.flags[m.group(1)] = [(name, f"1 << {value}", comments) for name, value, comments in items]
+            flag_of_element[m.group(2)] = m.group(1)
             continue
         if m:
             model.sets[m.group(1)] = m.group(2)
@@ -244,6 +257,10 @@ def parse_hpp():
             model.int_aliases[m.group(1)] = []
             continue
         m = re.fullmatch(r"(?:constexpr|const) (\w+) (\w+) = (.+)", t)
+        if m and m.group(1) in flag_of_element:
+            # IntFlag にした集合の要素の別名(gdHotTrack = gdHot。docs/adr/0063)。IntFlag の中で同じ値の別名にする
+            model.flags[flag_of_element[m.group(1)]].append((m.group(2), m.group(3).strip(), st.comments))
+            continue
         if m:
             target = model.flags.get(m.group(1), model.int_aliases.get(m.group(1)))
             target.append((m.group(2), cxx_value(m.group(3)), st.comments))
@@ -325,7 +342,8 @@ class Gen:
             return "char"
         if t == "std::string":
             return "str"
-        if t == "void*":
+        if t in ("void*", "TWindowHandle", "TDCHandle"):
+            # ウィンドウ・描画先のハンドル(HWND・HDC。docs/adr/0063)も、ポインタの値の整数にする(ctypes・pywin32 に渡せる)
             return "ptr"
         if t in self.m.enums or t in self.m.flags:
             return ("enum", t)
@@ -381,7 +399,7 @@ class Gen:
         return None
 
     def event_arg(self, t):
-        if t == "const Exception&":
+        if t in ("const Exception&", "Exception*"):
             # 例外(Application->OnException)。DLL はクラス名とメッセージの 2 つの文字列で渡す
             return "_a_exception"
         if t == "const std::vector<std::string>&":
@@ -421,6 +439,9 @@ class Gen:
             return f'_a_enum("{s[1]}")'
         if base in ("TRect", "TGridRect"):
             return "_a_rect"
+        if base == "TPoint":
+            # 点(OnMouseWheel の MousePos。docs/adr/0063)。DLL は X・Y の 2 つの整数で渡す
+            return "_a_point"
         m = re.fullmatch(r"(\w+)\*", base)
         if m:
             kind = self.class_kind(m.group(1))
@@ -559,11 +580,13 @@ class Gen:
 
     def gen_member(self, cls, section, st, mixin):
         t = st.text
+        if any(re.search(rf"\b{n}\b", t) for n in WIN32_AW_ALIASES):
+            return None
         if st.body is not None:
             # 本体を持つ(C++ の中だけの実装・テンプレート)。Python では手書き(_mixins)にする。
             m = re.search(r"(\w+)\s*\(", t)
             name = m.group(1) if m else t
-            if section == "public" and not self.owns_member(mixin, name) and name not in ("Current", "Handle"):
+            if section == "public" and not self.owns_member(mixin, name) and name not in ("Current", "ObjHandle"):
                 self.err(f"{cls}: 本体を持つメンバ {t!r} は _mixins に書く")
             return None
         if t.startswith(("friend ", "static ", "virtual ", "template")) or "~" in t or "= default" in t or "= delete" in t:
@@ -655,7 +678,7 @@ class Gen:
             if a is None:
                 self.err(f"{cls}.{name}: イベントの引数 {t} を変換できない")
                 return
-            n += 4 if a == "_a_rect" else 2 if a in ("_a_exception", "_a_strings", "_a_ref_str") else 1
+            n += 4 if a == "_a_rect" else 2 if a in ("_a_exception", "_a_strings", "_a_ref_str", "_a_point") else 1
         if n != raw:
             self.err(f"{cls}.{name}: {ev} の引数({n})と {cb} の引数({raw})が合わない")
 
@@ -814,7 +837,7 @@ from ._core import (BethError, Ref, TRect, TPoint, TObject, TPersistent, TCompon
 from ._core import (lib, _mixins, _register, _event_types, _ItemMixin, _Prop, _Indexed, _Event,
                    _int, _float, _bool, _str, _char, _ptr, _rect_conv, _point_conv, _enum, _set, _comp, _existing, _item, _obj, _view,
                    _str_key, _enc, _dec, _h, _b, _rect, _point, _to_enum, _to_comp, _to_existing, _to_item, _to_obj,
-                   _a_int, _a_bool, _a_str, _a_rect, _a_exception, _a_strings, _a_enum, _a_comp, _a_item, _a_obj, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_str, _a_ref_enum, _a_ref_comp)
+                   _a_int, _a_bool, _a_str, _a_rect, _a_point, _a_exception, _a_strings, _a_enum, _a_comp, _a_item, _a_obj, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_str, _a_ref_enum, _a_ref_comp)
 '''
 
 FOOTER = '''\

@@ -5,6 +5,10 @@
 
 #include <bethany/beth.hpp>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 using namespace beth;
 
 namespace
@@ -237,8 +241,8 @@ public:
         Edit1->Top = 90;
         Edit1->Width = 150;
         Edit1->OnChange = [this](TObject* Sender) { TextChange(Sender); };
-        Edit1->OnKeyDown = [this](TObject* Sender, int& Key, TShiftState Shift) { Edit1KeyDown(Sender, Key, Shift); };
-        Edit1->OnKeyPress = [this](TObject* Sender, char& Key) { Edit1KeyPress(Sender, Key); };
+        Edit1->OnKeyDown = [this](TObject* Sender, Word& Key, TShiftState Shift) { Edit1KeyDown(Sender, Key, Shift); };
+        Edit1->OnKeyPress = [this](TObject* Sender, std::string& Key) { Edit1KeyPress(Sender, Key); };
 
         CheckBox1 = new TCheckBox(this);
         CheckBox1->Parent = this;
@@ -1430,16 +1434,21 @@ private:
         std::fflush(stdout);
     }
 
-    void Edit1KeyDown(TObject*, int& Key, TShiftState Shift)
+    void Edit1KeyDown(TObject*, Word& Key, TShiftState Shift)
     {
-        std::printf("Edit1KeyDown: key=%d shift=0x%x\n", Key, Shift.ToInt());
+        std::printf("Edit1KeyDown: key=%d shift=0x%x\n", (int)Key, Shift.ToInt());
         std::fflush(stdout);
     }
 
-    void Edit1KeyPress(TObject*, char& Key)
+    // Key は入力された 1 文字(UTF-8。日本語も 1 文字で来る)。"!" を "?" に変え、"#" は捨てる(docs/adr/0063)。
+    void Edit1KeyPress(TObject*, std::string& Key)
     {
-        std::printf("Edit1KeyPress: key=%d ('%c')\n", (int)(unsigned char)Key, Key >= 32 ? Key : '?');
+        std::printf("Edit1KeyPress: key=\"%s\" (%d bytes)\n", Key[0] >= 32 || (unsigned char)Key[0] >= 0x80 ? Key.c_str() : "?", (int)Key.size());
         std::fflush(stdout);
+        if (Key == "!")
+            Key = "?";
+        else if (Key == "#")
+            Key = "";
     }
 
     void FormResize(TObject*)
@@ -1677,6 +1686,11 @@ void TMainForm::OpenSubButtonClick(TObject*)
 
 int main()
 {
+#ifdef _WIN32
+    // Bethany の文字列は UTF-8。日本語の Windows のコンソールは既定で CP932 として表示するので、printf で出す
+    // 日本語(OnKeyPress の Key 等)が化けないよう、出力を UTF-8 にする(デモのため。ライブラリはコンソールの設定を変えない)。
+    SetConsoleOutputCP(CP_UTF8);
+#endif
     Application->Initialize();
     Application->Title = "Bethany test";
     Application->CreateForm(&Form1);

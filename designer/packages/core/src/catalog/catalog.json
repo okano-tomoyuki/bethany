@@ -39,6 +39,7 @@
     "Left",
     "Menu",
     "ModalResult",
+    "ObjHandle",
     "OnActivate",
     "OnClick",
     "OnClose",
@@ -18588,7 +18589,10 @@
       "gdFixed",
       "gdHot",
       "gdPushed",
-      "gdRowHighlight"
+      "gdRowHighlight",
+      "gdHotTrack",
+      "gdPressed",
+      "gdRowSelected"
     ],
     "TEdgeBorders": [
       "ebLeft",
@@ -18730,6 +18734,7 @@
       "clNone": 536870911,
       "clDefault": 536870912
     },
+    "Word": {},
     "TShortCut": {
       "scShift": 8192,
       "scCtrl": 16384,
@@ -18818,7 +18823,7 @@
       },
       {
         "name": "Key",
-        "type": "int&"
+        "type": "Word&"
       },
       {
         "name": "Shift",
@@ -18832,7 +18837,7 @@
       },
       {
         "name": "Key",
-        "type": "char&"
+        "type": "std::string&"
       }
     ],
     "TMouseEvent": [
@@ -18889,12 +18894,8 @@
         "type": "int"
       },
       {
-        "name": "X",
-        "type": "int"
-      },
-      {
-        "name": "Y",
-        "type": "int"
+        "name": "MousePos",
+        "type": "const TPoint&"
       },
       {
         "name": "Handled",
@@ -18911,8 +18912,8 @@
         "type": "int"
       },
       {
-        "name": "ARect",
-        "type": "TRect"
+        "name": "Rect",
+        "type": "const TRect&"
       },
       {
         "name": "State",
@@ -18944,7 +18945,7 @@
       },
       {
         "name": "ARect",
-        "type": "TRect"
+        "type": "const TRect&"
       },
       {
         "name": "AState",
@@ -18996,7 +18997,7 @@
       },
       {
         "name": "E",
-        "type": "const Exception&"
+        "type": "Exception*"
       }
     ],
     "TDropFilesEvent": [
@@ -19307,8 +19308,8 @@
         "type": "TListItem*"
       },
       {
-        "name": "ARect",
-        "type": "TRect"
+        "name": "Rect",
+        "type": "const TRect&"
       },
       {
         "name": "State",
@@ -19343,11 +19344,11 @@
         "type": "int"
       },
       {
-        "name": "ARect",
-        "type": "TRect"
+        "name": "Rect",
+        "type": "const TRect&"
       },
       {
-        "name": "AState",
+        "name": "State",
         "type": "TGridDrawState"
       }
     ],

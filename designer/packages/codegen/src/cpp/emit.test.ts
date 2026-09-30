@@ -105,13 +105,13 @@ describe('generateCpp', () => {
     });
     const { header, source } = generate(doc);
     expect(header.text).toContain(
-      '    void FormKeyDown(beth::TObject* Sender, int& Key, beth::TShiftState Shift);',
+      '    void FormKeyDown(beth::TObject* Sender, beth::Word& Key, beth::TShiftState Shift);',
     );
     expect(header.text).toContain(
       '    void FormClose(beth::TObject* Sender, beth::TCloseAction& Action);',
     );
     expect(source.text).toContain(
-      'OnKeyDown = [this](TObject* Sender, int& Key, TShiftState Shift) { FormKeyDown(Sender, Key, Shift); };',
+      'OnKeyDown = [this](TObject* Sender, Word& Key, TShiftState Shift) { FormKeyDown(Sender, Key, Shift); };',
     );
     // 同じハンドラを複数のイベントに書いても、宣言と雛形は 1 つ
     const shared = form({

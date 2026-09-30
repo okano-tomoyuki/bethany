@@ -119,6 +119,10 @@
     X(void,          TCanvas_SetPen,                        (obj_t o, obj_t v),                                            (o, v)) \
     X(void,          TCanvas_SetBrush,                      (obj_t o, obj_t v),                                            (o, v)) \
     X(void,          TCanvas_SetFont,                       (obj_t o, obj_t v),                                            (o, v)) \
+    X(void,          TCanvas_GetPenPos,                     (obj_t o, int_t* x, int_t* y),                                 (o, x, y)) \
+    X(void,          TCanvas_SetPenPos,                     (obj_t o, int_t x, int_t y),                                   (o, x, y)) \
+    X(void,          TCanvas_GetClipRect,                   (obj_t o, int_t* l, int_t* t, int_t* r, int_t* b),             (o, l, t, r, b)) \
+    X(void*,         TCanvas_GetHandle,                     (obj_t o),                                                     (o)) \
     X(void,          TCanvas_Draw,                          (obj_t o, int_t x, int_t y, obj_t graphic),                    (o, x, y, graphic)) \
     X(void,          TCanvas_StretchDraw,                   (obj_t o, int_t x1, int_t y1, int_t x2, int_t y2, obj_t graphic), (o, x1, y1, x2, y2, graphic)) \
     X(void,          TCanvas_FillRect,                      (obj_t o, int_t x1, int_t y1, int_t x2, int_t y2),             (o, x1, y1, x2, y2)) \
@@ -1016,6 +1020,7 @@
     X(void,          TWinControl_SetTabOrder,               (obj_t o, int_t v),                                            (o, v)) \
     X(bool_t,        TWinControl_GetTabStop,                (obj_t o),                                                     (o)) \
     X(void,          TWinControl_SetTabStop,                (obj_t o, bool_t v),                                           (o, v)) \
+    X(void*,         TWinControl_GetHandle,                 (obj_t o),                                                     (o)) \
     X(int_t,         TSizeConstraints_GetMinWidth,          (obj_t o),                                                     (o)) \
     X(void,          TSizeConstraints_SetMinWidth,          (obj_t o, int_t v),                                            (o, v)) \
     X(int_t,         TSizeConstraints_GetMinHeight,         (obj_t o),                                                     (o)) \
