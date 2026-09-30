@@ -52,7 +52,7 @@ GitHub Actions で、ビルド・検証・配布物の作成と、C++ のライ�
 2. コミットして master に push する(ci.yml で検証される)。
 3. タグ `v<バージョン>` を付けて push する。release.yml が走り、環境 `pypi` の承認を待つ。
 4. 承認すると、PyPI への公開と GitHub の Release の作成が行われる。
-5. デザイナーの vsix は手で作って出す。
+5. デザイナーの vsix は、タグ `designer-v<バージョン>` で別に作る([ADR 0059](0059-designer-release-tags.md))。Marketplace へは手で出す。
 
 ## 実装で決めたこと
 

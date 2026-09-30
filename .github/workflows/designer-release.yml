@@ -1,0 +1,103 @@
+# デザイナー(VS Code 拡張)のリリース(docs/adr/0059)。
+#
+# タグ designer-v<バージョン> の push で、デザイナーを検査して vsix を作り、GitHub の Release を作って vsix を添える。
+# Marketplace への公開は手で行う(ここでは行わない)。ライブラリのリリース(release.yml。タグ v*)とは別に動く。
+name: designer-release
+
+on:
+  push:
+    tags: ["designer-v*"]
+
+permissions:
+  contents: read
+
+env:
+  # ランナーの Windows は英語(cp1252)のため、Python のスクリプト(カタログの検査)を UTF-8 モードにする(docs/adr/0056)。
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: utf-8
+
+jobs:
+  package:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: バージョンを確かめる
+        id: version
+        run: |
+          VERSION="$(node -p "require('./designer/packages/extension/package.json').version")"
+          if [ "$GITHUB_REF_NAME" != "designer-v$VERSION" ]; then
+            echo "::error::タグ $GITHUB_REF_NAME が拡張の package.json のバージョン $VERSION と違います"; exit 1
+          fi
+          if ! grep -q "^## \[$VERSION\] - [0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}" designer/packages/extension/CHANGELOG.md; then
+            echo "::error::拡張の CHANGELOG.md に $VERSION の節(日付つき)がありません"; exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Release の本文を拡張の CHANGELOG.md から作る
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          awk -v v="## [$VERSION]" 'index($0, v) == 1 { on = 1; next } on && /^## \[/ { exit } on' \
+            designer/packages/extension/CHANGELOG.md > release-notes.md
+          cat release-notes.md
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: designer/package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: designer/pnpm-lock.yaml
+
+      - name: デザイナーの依存を入れる
+        working-directory: designer
+        run: pnpm install --frozen-lockfile
+
+      - name: デザイナーの検査(型・lint・書式・カタログ・スキーマ・翻訳・テスト)
+        working-directory: designer
+        run: ../.github/run-and-annotate.sh check pnpm check
+
+      - name: vsix を作る
+        working-directory: designer/packages/extension
+        run: ../../../.github/run-and-annotate.sh package pnpm run package
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: designer
+          path: |
+            designer/packages/extension/bethany-designer-${{ steps.version.outputs.version }}.vsix
+            release-notes.md
+          if-no-files-found: error
+
+  github-release:
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: designer
+          path: artifacts
+
+      - name: GitHub の Release を作る
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.package.outputs.version }}
+        run: |
+          # Releases の「Latest」は、ライブラリのリリース(README から案内する zip)のままにする。
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag --latest=false \
+            --title "Bethany Designer v$VERSION" --notes-file artifacts/release-notes.md \
+            "artifacts/designer/packages/extension/bethany-designer-$VERSION.vsix"
