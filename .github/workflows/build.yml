@@ -1,5 +1,6 @@
 # ビルドと検証と配布物の作成(docs/adr/0056)。ci.yml(push・PR)と release.yml(タグ)から呼ぶ。
 # 手元の手順(build-windows.sh・package-windows.sh・package-python.sh と、デザイナーの検証)を Windows のランナーで行い、
+# (配置の記録の照合 layout:check は、日本語の Windows のフォントで記録しているため、手元で行う。ADR 0056)
 # C++ の zip と Python の wheel・sdist を成果物(artifact の dist)として残す。デザイナーの vsix は作らない(手で出す)。
 name: build
 
@@ -92,10 +93,6 @@ jobs:
       - name: 生成したコードを Python で実行して照合する
         working-directory: designer
         run: ../.github/run-and-annotate.sh verify-python pnpm codegen:verify-python
-
-      - name: 配置の記録と LCL の結果を照合する
-        working-directory: designer
-        run: ../.github/run-and-annotate.sh layout pnpm layout:check
 
       - name: C++ の zip を作る
         run: .github/run-and-annotate.sh package-cpp ./package-windows.sh

@@ -20,7 +20,7 @@ GitHub Actions で、ビルド・検証・配布物の作成と、C++ のライ�
 - **`build.yml`**(再利用のワークフロー)は、Windows のランナーで手元と同じ手順を実行する。
   - Lazarus(4.8。FPC 3.2.2)を公式のインストーラで入れ、キャッシュする。gcc・cmake・ninja は MSYS2(MINGW64)のものを使う。
   - `build-windows.sh` を実行する。
-  - デザイナーの `pnpm check`・`codegen:verify-cpp`・`codegen:verify-python`・`layout:check` を実行する。
+  - デザイナーの `pnpm check`・`codegen:verify-cpp`・`codegen:verify-python` を実行する。
   - `package-windows.sh`・`package-python.sh` を実行する。
   - `check-python-install.sh` で、python.org の Python に wheel を、MSYS2(UCRT64)の Python に sdist を入れて動かす。
   - zip・wheel・sdist を成果物として残す。
@@ -54,7 +54,17 @@ GitHub Actions で、ビルド・検証・配布物の作成と、C++ のライ�
 4. 承認すると、PyPI への公開と GitHub の Release の作成が行われる。
 5. デザイナーの vsix は手で作って出す。
 
+## 実装で決めたこと
+
+- **ランナーは英語の Windows**である。手元(日本語の Windows)と次の点が違うため、合わせた。
+  - Python の既定の文字コードが cp1252 で、日本語を出力するスクリプトが失敗する。ワークフローで UTF-8 モード(`PYTHONUTF8=1`)にする。
+  - システムのフォントが Segoe UI(日本語の Windows では Yu Gothic UI)で、Windows が決める大きさが変わる。
+    - TStatusBar の高さ(23 と 24)。生成したコードの照合では、TStatusBar は Left・Width だけを比べる。
+    - グループボックス等の内側の余白(`metrics.json`)。配置の記録([ADR 0036](0036-designer-canvas.md))は日本語の Windows で取ったものなので、
+      その照合(`layout:check`)は CI では行わず、手元で行う。
+- 手順が失敗したら、出力の末尾を GitHub の注釈にする(`.github/run-and-annotate.sh`)。ログを開かずに失敗の理由が分かる。
+
 ## 影響
 
 - 配布物はランナーでビルドした `beth.dll` を含む。手元の状態に左右されない。
-- リリースの前に、手元で行っていた検証がすべて自動で行われる。GUI を表示する検証(生成したコードの照合・配置の記録)も、Windows のランナーで実行する。
+- リリースの前に、手元で行っていた検証が(配置の記録の照合を除いて)自動で行われる。GUI を表示する検証(生成したコードの照合)も、Windows のランナーで実行する。
