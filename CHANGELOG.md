@@ -6,6 +6,8 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-30
+
 ### 追加
 
 - プロパティの `Get()`(値を取り出す。`Edit1->Text.Get().c_str()`・`auto w = Grid1->ColWidths[0].Get();`)と、複合代入
@@ -183,7 +185,8 @@ C++ の部分に変更は無い。
   `beth.dll` を exe の隣へ写す `beth_deploy()` を提供する
 - MinGW のランタイム(libgcc・libstdc++・winpthread)を exe に静的にリンクする(`BETH_STATIC_RUNTIME`、既定で ON)
 
-[Unreleased]: https://github.com/okano-tomoyuki/bethany/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/okano-tomoyuki/bethany/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/okano-tomoyuki/bethany/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/okano-tomoyuki/bethany/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/okano-tomoyuki/bethany/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/okano-tomoyuki/bethany/compare/v0.2.0...v0.3.0

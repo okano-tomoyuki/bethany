@@ -158,16 +158,16 @@ void TMainForm::beth_CreateComponents()
     HelpMenu->Add(HelpAboutItem);
 
     OpenDialog1->Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
-    OpenDialog1->Options = ofEnableSizing | ofViewDetail | ofFileMustExist;
+    OpenDialog1->Options = TOpenOptions() << ofEnableSizing << ofViewDetail << ofFileMustExist;
 
     SaveDialog1->Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*";
     SaveDialog1->DefaultExt = "txt";
-    SaveDialog1->Options = ofEnableSizing | ofViewDetail | ofOverwritePrompt;
+    SaveDialog1->Options = TOpenOptions() << ofEnableSizing << ofViewDetail << ofOverwritePrompt;
 
-    FindDialog1->Options = frDown | frHideWholeWord | frHideUpDown;
+    FindDialog1->Options = TFindOptions() << frDown << frHideWholeWord << frHideUpDown;
     FindDialog1->OnFind = [this](TObject* Sender) { FindDialog1Find(Sender); };
 }
-// <bethany-designer:end id="beth_CreateComponents" hash="c96b13ce">
+// <bethany-designer:end id="beth_CreateComponents" hash="1f21f52c">
 
 // <bethany-designer:handler-stubs>
 
@@ -208,7 +208,7 @@ void TMainForm::EditFindItemClick(TObject* Sender)
 void TMainForm::FindDialog1Find(TObject* Sender)
 {
     // 選択の後ろ(選択が無ければキャレットの位置)から探し、見つけたら選択する
-    const bool matchCase = (FindDialog1->Options & frMatchCase) != 0;
+    const bool matchCase = FindDialog1->Options->Contains(frMatchCase);
     const std::string text = Memo1->Text;
     const std::string what = FindDialog1->FindText;
     const std::size_t from = Utf8Offset(text, Memo1->SelStart + Memo1->SelLength);

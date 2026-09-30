@@ -40,7 +40,7 @@ void TAboutForm::beth_CreateComponents()
     TitleLabel->Height = 21;
     TitleLabel->Caption = "Bethany Notepad";
     TitleLabel->Font->Size = 12;
-    TitleLabel->Font->Style = fsBold;
+    TitleLabel->Font->Style = TFontStyles() << fsBold;
 
     InfoLabel->Parent = this;
     InfoLabel->Left = 16;
@@ -60,7 +60,7 @@ void TAboutForm::beth_CreateComponents()
     OkButton->Cancel = true;
     OkButton->Anchors = TAnchors() << akRight << akBottom;
 }
-// <bethany-designer:end id="beth_CreateComponents" hash="0db24b29">
+// <bethany-designer:end id="beth_CreateComponents" hash="f6e26b0b">
 
 // <bethany-designer:handler-stubs>
 

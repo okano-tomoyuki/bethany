@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-30
+
+This version requires the Bethany C++ library and Python package 0.5.0 or later. Generate the code of existing forms again after
+updating the library (the generated C++ code of sets and the parameters of event handlers changed).
+
 - **Changed**: the generated C++ code writes sets such as `Font.Style` and the `Options` of grids and dialogs with `Set`, as in C++Builder
   (`TFontStyles() << fsBold`). This code requires the Bethany C++ library 0.5.0 or later. The generated Python code does not change
 - **Changed**: generated event handlers use the parameters of the Bethany library 0.5.0, as in C++Builder: `Word& Key` (`OnKeyDown`),
