@@ -194,16 +194,35 @@ void TMainForm::beth_CreateComponents()
     Grid1->Width = 355;
     Grid1->Height = 92;
     Grid1->Align = alClient;
-    Grid1->ColCount = 3;
     Grid1->RowCount = 4;
     Grid1->AlternateColor = clInfoBk;
     Grid1->GridLineColor = clGray;
     Grid1->TitleFont->Style = fsBold;
     Grid1->AutoFillColumns = true;
     Grid1->ColumnClickSorts = true;
+    {
+        TGridColumn* item = Grid1->Columns->Add();
+        item->Title->Caption = "Name";
+        item->Width = 120;
+    }
+    {
+        TGridColumn* item = Grid1->Columns->Add();
+        item->Title->Caption = "Color";
+        item->ButtonStyle = cbsPickList;
+        item->PickList->Add("Red");
+        item->PickList->Add("Green");
+    }
+    {
+        TGridColumn* item = Grid1->Columns->Add();
+        item->Title->Caption = "Done";
+        item->ButtonStyle = cbsCheckboxColumn;
+        item->ValueChecked = "Y";
+        item->ValueUnchecked = "N";
+    }
     Grid1->OnValidateEntry = [this](TObject* Sender, int ACol, int ARow, const std::string& OldValue, std::string& NewValue) { Grid1ValidateEntry(Sender, ACol, ARow, OldValue, NewValue); };
     Grid1->OnPrepareCanvas = [this](TObject* Sender, int ACol, int ARow, TGridDrawState AState) { Grid1PrepareCanvas(Sender, ACol, ARow, AState); };
     Grid1->OnCompareCells = [this](TObject* Sender, int ACol, int ARow, int BCol, int BRow, int& Result) { Grid1CompareCells(Sender, ACol, ARow, BCol, BRow, Result); };
+    Grid1->OnCheckboxToggled = [this](TObject* Sender, int ACol, int ARow, TCheckBoxState AState) { Grid1CheckboxToggled(Sender, ACol, ARow, AState); };
 
     BottomPanel->Parent = this;
     BottomPanel->Left = 0;
@@ -300,7 +319,7 @@ void TMainForm::beth_CreateComponents()
 
     FileSaveItem->Action = FileSaveAction;
 }
-// <bethany-designer:end id="beth_CreateComponents" hash="a20885ce">
+// <bethany-designer:end id="beth_CreateComponents" hash="0d69c0ef">
 
 // <bethany-designer:handler-stubs>
 
@@ -370,6 +389,11 @@ void TMainForm::Grid1PrepareCanvas(TObject* Sender, int ACol, int ARow, TGridDra
 }
 
 void TMainForm::Grid1CompareCells(TObject* Sender, int ACol, int ARow, int BCol, int BRow, int& Result)
+{
+    // TODO: implement
+}
+
+void TMainForm::Grid1CheckboxToggled(TObject* Sender, int ACol, int ARow, TCheckBoxState AState)
 {
     // TODO: implement
 }

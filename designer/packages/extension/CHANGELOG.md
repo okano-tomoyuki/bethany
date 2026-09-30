@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+- Grid columns from the Bethany library 0.3.1: the `Columns` property of grids lists its columns in the Object Inspector, where you can
+  add, delete and reorder columns and set their `Title` (caption, font, ...), `Width`, `ButtonStyle`, `PickList`, `ValueChecked` and
+  more. Items of collections can now have nested objects and string lists. The canvas draws the column widths and titles, and the bold
+  and italic styles of `TitleFont`. Also new: the `OnSelectEditor`, `OnButtonClick`, `OnPickListSelect`, `OnGetCheckboxState`,
+  `OnSetCheckboxState` and `OnCheckboxToggled` events
+
 ## [0.5.0] - 2026-09-30
 
 This version requires the Bethany C++ library and Python package 0.3.0 or later (the generated code uses the new properties,

@@ -2798,6 +2798,63 @@ int main()
                     std::string(sg->Rows[1]->CommaText).c_str(), (int)sg->Cols[0]->Count);
     }
 
+    // グリッドの Columns(docs/adr/0054)。PageControl1 の "Columns" ページに、列を持つグリッドを置く。Color の列は一覧から選び、
+    // Size の列は「…」のボタンで S → M → L と切り替え、Done の列はチェックボックス(クリックかスペース)。
+    {
+        TTabSheet* columnSheet = new TTabSheet(Form1);
+        columnSheet->PageControl = Form1->PageControl1;
+        columnSheet->Caption = "Columns";
+        TStringGrid* cg = new TStringGrid(Form1);
+        cg->Parent = columnSheet;
+        cg->Align = alClient;
+        cg->RowCount = 4;
+        cg->DefaultRowHeight = 20;
+        cg->Options = cg->Options | goEditing;  // 編集とチェックボックスの切り替えに要る
+        cg->AutoFillColumns = true;
+        TGridColumn* nameColumn = cg->Columns->Add();
+        nameColumn->Title->Caption = "Name";
+        TGridColumn* colorColumn = cg->Columns->Add();
+        colorColumn->Title->Caption = "Color";
+        colorColumn->ButtonStyle = cbsPickList;
+        colorColumn->PickList->Add("Red");
+        colorColumn->PickList->Add("Green");
+        colorColumn->PickList->Add("Blue");
+        TGridColumn* sizeColumn = cg->Columns->Add();
+        sizeColumn->Title->Caption = "Size";
+        sizeColumn->ButtonStyle = cbsEllipsis;
+        TGridColumn* doneColumn = cg->Columns->Add();
+        doneColumn->Title->Caption = "Done";
+        doneColumn->Title->Font->Style = fsBold;
+        doneColumn->ButtonStyle = cbsCheckboxColumn;
+        doneColumn->ValueChecked = "Y";
+        doneColumn->ValueUnchecked = "N";
+        doneColumn->Width = 40;
+        const char* names[] = { "Apple", "Banana", "Cherry" };
+        for (int r = 1; r <= 3; ++r)
+        {
+            cg->Cells[1][r] = names[r - 1];
+            cg->Cells[2][r] = "Red";
+            cg->Cells[3][r] = "M";
+            cg->Cells[4][r] = "N";
+        }
+        cg->OnButtonClick = [cg](TObject*, int ACol, int ARow) {
+            std::string v = cg->Cells[ACol][ARow];
+            cg->Cells[ACol][ARow] = v == "S" ? "M" : v == "M" ? "L" : "S";
+            std::printf("Columns grid OnButtonClick: (%d,%d) %s -> %s\n", ACol, ARow, v.c_str(), std::string(cg->Cells[ACol][ARow]).c_str());
+            std::fflush(stdout);
+        };
+        cg->OnPickListSelect = [cg](TObject*) {
+            std::printf("Columns grid OnPickListSelect: row %d\n", (int)cg->Row);
+            std::fflush(stdout);
+        };
+        cg->OnCheckboxToggled = [](TObject*, int ACol, int ARow, TCheckBoxState AState) {
+            std::printf("Columns grid OnCheckboxToggled: (%d,%d) state=%d\n", ACol, ARow, (int)AState);
+            std::fflush(stdout);
+        };
+        std::printf("Columns grid Columns->Count=%d ColCount=%d (expected 4 5), Items[1] PickList Count=%d (expected 3)\n",
+                    (int)cg->Columns->Count, (int)cg->ColCount, (int)cg->Columns->Items[1]->PickList->Count);
+    }
+
     // ステータスバーのパネル(docs/adr/0044)。StatusBar1 の上に、パネルを持つ 2 つ目のステータスバーを置く。
     {
         TStatusBar* panelBar = new TStatusBar(Form1);

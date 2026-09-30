@@ -5184,6 +5184,163 @@ using TOnCompareCells = std::function<void(TObject* Sender, int ACol, int ARow, 
 // 行・列の挿入・削除・移動・入れ替えの後(IsColumn は列なら true。sIndex・tIndex は元と先の位置。挿入・削除では範囲)。
 using TGridOperationEvent = std::function<void(TObject* Sender, bool IsColumn, int sIndex, int tIndex)>;
 
+// ---- グリッドの Columns(docs/adr/0054) ----
+
+// 列のセルの編集欄の種類(cbsAuto は文字列の入力。cbsPickList は PickList から選ぶ一覧、cbsEllipsis は「…」のボタン付き、
+// cbsCheckboxColumn はチェックボックス(クリック・スペースで切り替えるには、グリッドの Options に goEditing が要る)、
+// cbsButton・cbsButtonColumn はボタン)。
+enum TColumnButtonStyle { cbsAuto, cbsEllipsis, cbsNone, cbsPickList, cbsCheckboxColumn, cbsButton, cbsButtonColumn };
+
+// 列の見出し(LCL の TGridColumnTitle)。列が所有し、列と同じ寿命のビュー(Column->Title->Caption = "Name";)。
+class TGridColumnTitle : public TPersistent
+{
+public:
+    explicit TGridColumnTitle(ObjectHandle handle);
+    ~TGridColumnTitle() override = default;
+
+    Property<std::string> Caption;
+    Property<TAlignment>  Alignment;
+    Property<TTextLayout> Layout;
+    Property<TColor>      Color;
+    // true なら、Caption の改行で複数の行に分けて描く。
+    Property<bool>        MultiLine;
+    // 見出しの文字のフォント(既定はグリッドの TitleFont)。代入は内容のコピー。
+    Property<TFont*>      Font;
+
+private:
+    TFont font_;
+    static std::string GetCaptionImpl(TObject* owner);
+    static void SetCaptionImpl(TObject* owner, const std::string& value);
+    static TAlignment GetAlignmentImpl(TObject* owner);
+    static void SetAlignmentImpl(TObject* owner, const TAlignment& value);
+    static TTextLayout GetLayoutImpl(TObject* owner);
+    static void SetLayoutImpl(TObject* owner, const TTextLayout& value);
+    static TColor GetColorImpl(TObject* owner);
+    static void SetColorImpl(TObject* owner, const TColor& value);
+    static bool GetMultiLineImpl(TObject* owner);
+    static void SetMultiLineImpl(TObject* owner, const bool& value);
+    static TFont* GetFontImpl(TObject* owner);
+    static void SetFontImpl(TObject* owner, TFont* const& value);
+};
+
+// グリッドの列(LCL の TGridColumn。TCollectionItem)。同じ列には常に同じポインタが返り、列が破棄されたとき
+// (TGridColumns::Delete・Clear、グリッドの破棄)にラッパーも delete される(TStatusPanel と同じ)。
+// Columns に列があると、グリッドの列(固定列を除く)は Columns の列になる(ColCount は FixedCols + Columns->Count。
+// Visible が false の列も、幅 0 の列として数える)。
+class TGridColumn : public TPersistent
+{
+public:
+    ReadOnlyProperty<TGridColumnTitle*> Title;
+    Property<int>                Width;
+    Property<TAlignment>         Alignment;
+    // セルの編集欄の種類。
+    Property<TColumnButtonStyle> ButtonStyle;
+    // ButtonStyle が cbsPickList(か cbsAuto)のときに選べる文字列(Column->PickList->Add("Red");)。
+    ReadOnlyProperty<TStrings*>  PickList;
+    Property<bool>               ReadOnly;
+    Property<bool>               Visible;
+    Property<TColor>             Color;
+    // セルの文字のフォント(既定はグリッドの Font)。代入は内容のコピー。
+    Property<TFont*>             Font;
+    Property<TTextLayout>        Layout;
+    // AutoFillColumns のときの、幅の下限・上限と、広げる割合。
+    Property<int>                MinSize;
+    Property<int>                MaxSize;
+    Property<int>                SizePriority;
+    // PickList の一覧に一度に出す行の数。
+    Property<int>                DropDownRows;
+    // ButtonStyle が cbsCheckboxColumn のとき、TStringGrid のセルの文字列が ValueChecked ならチェックあり、ValueUnchecked ならなし。
+    Property<std::string>        ValueChecked;
+    Property<std::string>        ValueUnchecked;
+    // 並び順。書き換えると列が移動する。
+    Property<int>                Index;
+
+private:
+    friend class ItemRegistry;
+    friend class TGridColumns;
+    friend class TCustomDrawGrid;
+
+    explicit TGridColumn(ObjectHandle handle);
+    ~TGridColumn() override = default;
+    static TGridColumn* Wrap(ObjectHandle handle) { return ItemRegistry::Wrap<TGridColumn>(handle); }
+
+    TGridColumnTitle title_;
+    TStrings         pickList_;
+    TFont            font_;
+
+    static TGridColumnTitle* GetTitleImpl(TObject* owner);
+    static TStrings* GetPickListImpl(TObject* owner);
+    static TFont* GetFontImpl(TObject* owner);
+    static void SetFontImpl(TObject* owner, TFont* const& value);
+    static int GetWidthImpl(TObject* owner);
+    static void SetWidthImpl(TObject* owner, const int& value);
+    static TAlignment GetAlignmentImpl(TObject* owner);
+    static void SetAlignmentImpl(TObject* owner, const TAlignment& value);
+    static TColumnButtonStyle GetButtonStyleImpl(TObject* owner);
+    static void SetButtonStyleImpl(TObject* owner, const TColumnButtonStyle& value);
+    static bool GetReadOnlyImpl(TObject* owner);
+    static void SetReadOnlyImpl(TObject* owner, const bool& value);
+    static bool GetVisibleImpl(TObject* owner);
+    static void SetVisibleImpl(TObject* owner, const bool& value);
+    static TColor GetColorImpl(TObject* owner);
+    static void SetColorImpl(TObject* owner, const TColor& value);
+    static TTextLayout GetLayoutImpl(TObject* owner);
+    static void SetLayoutImpl(TObject* owner, const TTextLayout& value);
+    static int GetMinSizeImpl(TObject* owner);
+    static void SetMinSizeImpl(TObject* owner, const int& value);
+    static int GetMaxSizeImpl(TObject* owner);
+    static void SetMaxSizeImpl(TObject* owner, const int& value);
+    static int GetSizePriorityImpl(TObject* owner);
+    static void SetSizePriorityImpl(TObject* owner, const int& value);
+    static int GetDropDownRowsImpl(TObject* owner);
+    static void SetDropDownRowsImpl(TObject* owner, const int& value);
+    static std::string GetValueCheckedImpl(TObject* owner);
+    static void SetValueCheckedImpl(TObject* owner, const std::string& value);
+    static std::string GetValueUncheckedImpl(TObject* owner);
+    static void SetValueUncheckedImpl(TObject* owner, const std::string& value);
+    static int GetIndexImpl(TObject* owner);
+    static void SetIndexImpl(TObject* owner, const int& value);
+};
+
+// グリッドの列の一覧(LCL の TGridColumns。TCollection)。グリッドの値メンバとして持つ非所有のビュー。
+class TGridColumns : public TPersistent
+{
+public:
+    explicit TGridColumns(ObjectHandle handle);
+    ~TGridColumns() override = default;
+
+    ReadOnlyProperty<int> Count;
+    // LCL では Count と同じ(Visible が false の列も数える)。
+    ReadOnlyProperty<int> VisibleCount;
+    // StringGrid1->Columns->Items[i]。
+    ReadOnlyIndexedProperty<TGridColumn*> Items;
+
+    // 末尾に列を追加して返す(Title・Width はその後で設定する)。
+    TGridColumn* Add();
+    // 列を削除する(列のラッパーも delete される)。
+    void         Delete(int Index);
+    void         Clear();
+    void         BeginUpdate();
+    void         EndUpdate();
+    // Title->Caption が aTitle の列(無ければ nullptr)。
+    TGridColumn* ColumnByTitle(const std::string& aTitle) const;
+
+private:
+    static TGridColumn* GetItemsImpl(TObject* owner, int Index);
+    static int GetCountImpl(TObject* owner);
+    static int GetVisibleCountImpl(TObject* owner);
+};
+
+// セルの編集を始めるときに、編集欄のコントロールを選ぶ。Editor は既定の編集欄(ラッパーが無いものは nullptr)で、
+// 自分のコントロール(TComboBox 等)を入れると、それを編集欄にする。書き換えなければ既定の編集欄のまま。
+using TSelectEditorEvent = std::function<void(TObject* Sender, int ACol, int ARow, TWinControl*& Editor)>;
+// ButtonStyle が cbsCheckboxColumn の列のセルの状態を求める(Value に入れる)。
+using TGetCheckboxStateEvent = std::function<void(TObject* Sender, int ACol, int ARow, TCheckBoxState& Value)>;
+// cbsCheckboxColumn の列のセルがクリックで切り替わったとき(Value を覚える)。
+using TSetCheckboxStateEvent = std::function<void(TObject* Sender, int ACol, int ARow, TCheckBoxState Value)>;
+// cbsCheckboxColumn の列のセルが切り替わった後。
+using TToggledCheckboxEvent = std::function<void(TObject* Sender, int ACol, int ARow, TCheckBoxState AState)>;
+
 // グリッドの共通の基底。以下のメンバは LCL の TCustomGrid の public。
 // セルは(列, 行)の位置で指定する(0 始まり。固定行・固定列を含む)。
 class TCustomGrid : public TCustomControl
@@ -5287,6 +5444,24 @@ public:
     Property<TGridOperationEvent>   OnColRowDeleted;
     Property<TGridOperationEvent>   OnColRowMoved;
     Property<TGridOperationEvent>   OnColRowExchanged;
+
+    // ---- docs/adr/0054 ----
+    // 列の一覧(TGridColumns)。列を加えると、列の見出し・幅・編集欄の種類を列ごとに決められる。
+    ReadOnlyProperty<TGridColumns*> Columns;
+    // 現在のセルの列(Columns が空なら nullptr)。
+    ReadOnlyProperty<TGridColumn*>  SelectedColumn;
+    // OnSelectEditor・OnButtonClick・OnPickListSelect・OnCheckboxToggled は、LCL では TCustomGrid の protected、
+    // OnGetCheckboxState・OnSetCheckboxState は TCustomDrawGrid の protected で、TDrawGrid・TStringGrid が published にしている。
+    Property<TSelectEditorEvent>     OnSelectEditor;
+    // ButtonStyle が cbsEllipsis・cbsButton・cbsButtonColumn の列のボタンがクリックされたとき。
+    Property<TOnSelectEvent>         OnButtonClick;
+    // ButtonStyle が cbsPickList の列の一覧で選んだとき。
+    Property<TNotifyEvent>           OnPickListSelect;
+    // TStringGrid では、OnGetCheckboxState・OnSetCheckboxState が無ければ、セルの文字列と ValueChecked・ValueUnchecked で決める。
+    // nullptr に戻すとその動きに戻る。
+    Property<TGetCheckboxStateEvent> OnGetCheckboxState;
+    Property<TSetCheckboxStateEvent> OnSetCheckboxState;
+    Property<TToggledCheckboxEvent>  OnCheckboxToggled;
 
 protected:
     explicit TCustomDrawGrid(ObjectHandle handle);
@@ -5429,6 +5604,41 @@ private:
     static void DispatchColRow(ObjectHandle sender, TGridOperationEvent TCustomDrawGrid::*member, internal::int_t isColumn, internal::int_t sIndex, internal::int_t tIndex);
 
     TFont titleFont_;
+
+    // ---- docs/adr/0054 ----
+    TGridColumns columns_;
+    static TGridColumns* GetColumnsImpl(TObject* owner);
+    static TGridColumn* GetSelectedColumnImpl(TObject* owner);
+    TSelectEditorEvent onSelectEditor_;
+    bool onSelectEditorHooked_ = false;
+    static TSelectEditorEvent GetOnSelectEditorImpl(TObject* owner);
+    static void SetOnSelectEditorImpl(TObject* owner, const TSelectEditorEvent& value);
+    static void BETH_CALL SelectEditorTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, ObjectHandle* editor, void* data);
+    TOnSelectEvent onButtonClick_;
+    bool onButtonClickHooked_ = false;
+    static TOnSelectEvent GetOnButtonClickImpl(TObject* owner);
+    static void SetOnButtonClickImpl(TObject* owner, const TOnSelectEvent& value);
+    static void BETH_CALL ButtonClickTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, void* data);
+    TNotifyEvent onPickListSelect_;
+    bool onPickListSelectHooked_ = false;
+    static TNotifyEvent GetOnPickListSelectImpl(TObject* owner);
+    static void SetOnPickListSelectImpl(TObject* owner, const TNotifyEvent& value);
+    static void BETH_CALL PickListSelectTrampoline(ObjectHandle sender, void* data);
+    TGetCheckboxStateEvent onGetCheckboxState_;
+    bool onGetCheckboxStateHooked_ = false;
+    static TGetCheckboxStateEvent GetOnGetCheckboxStateImpl(TObject* owner);
+    static void SetOnGetCheckboxStateImpl(TObject* owner, const TGetCheckboxStateEvent& value);
+    static void BETH_CALL GetCheckboxStateTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, internal::int_t* state, void* data);
+    TSetCheckboxStateEvent onSetCheckboxState_;
+    bool onSetCheckboxStateHooked_ = false;
+    static TSetCheckboxStateEvent GetOnSetCheckboxStateImpl(TObject* owner);
+    static void SetOnSetCheckboxStateImpl(TObject* owner, const TSetCheckboxStateEvent& value);
+    static void BETH_CALL SetCheckboxStateTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, internal::int_t state, void* data);
+    TToggledCheckboxEvent onCheckboxToggled_;
+    bool onCheckboxToggledHooked_ = false;
+    static TToggledCheckboxEvent GetOnCheckboxToggledImpl(TObject* owner);
+    static void SetOnCheckboxToggledImpl(TObject* owner, const TToggledCheckboxEvent& value);
+    static void BETH_CALL CheckboxToggledTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, internal::int_t state, void* data);
 };
 
 // セルの内容を OnDrawCell で利用者が描画するグリッド(セルの文字列は持たない)。

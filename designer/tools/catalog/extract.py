@@ -26,10 +26,10 @@ sys.path.insert(0, str(PY_DIR))
 import gen_api  # noqa: E402
 
 # 所有者が持つオブジェクトのビューで、中のプロパティを入れ子で書けるもの(DSL の「入れ子のオブジェクト」)。
-OBJECT_CLASSES = ["TFont", "TSizeConstraints", "TControlBorderSpacing", "TControlScrollBar"]
+OBJECT_CLASSES = ["TFont", "TSizeConstraints", "TControlBorderSpacing", "TControlScrollBar", "TGridColumnTitle"]
 # 項目の一覧(TCollection)のビューで、項目を DSL の配列で書けるもの(DSL の「コレクション」。docs/adr/0044)。
 # 一覧のクラス → 項目のクラス。項目のプロパティは objects に載せる(Index は配列の並びで決まるので載せない)。
-COLLECTION_CLASSES = {"TStatusPanels": "TStatusPanel"}
+COLLECTION_CLASSES = {"TStatusPanels": "TStatusPanel", "TGridColumns": "TGridColumn"}
 COLLECTION_ITEM_SKIP = {"Index"}
 # 列挙型の別名で、選べる要素が一部だけのもの(LCL の部分範囲の型。docs/adr/0048)。
 ENUM_ALIAS_VALUES = {"TBorderStyle": ["bsNone", "bsSingle"]}
@@ -242,6 +242,8 @@ def designable(info):
     k = info["type"]["kind"]
     if k in ("strings", "collection"):
         return True  # TStrings・コレクションは読み取り専用のプロパティだが、中身(Add)を設定する
+    if k == "object" and info["readOnly"]:
+        return True  # 入れ子のオブジェクト(グリッドの列の Title。docs/adr/0054)は、読み取り専用でも中のプロパティを設定する
     if info["readOnly"]:
         return False
     return k in ("int", "float", "bool", "string", "char", "alias", "enum", "flags", "set", "ref", "object")

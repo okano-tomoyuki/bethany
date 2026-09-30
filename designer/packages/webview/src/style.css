@@ -1078,6 +1078,14 @@ input[aria-invalid='true'] {
   background: #f0f0f0;
 }
 
+.look-grid-title {
+  display: block;
+  padding: 0 2px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: clip;
+}
+
 .look-shape {
   border: 1px solid #000;
   background: #fff;

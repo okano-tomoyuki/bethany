@@ -340,7 +340,7 @@ function CollectionEditor({
   return (
     <div className="prop-children prop-collection">
       {items.map((item, i) => {
-        const caption = typeof item.Text === 'string' && item.Text !== '' ? item.Text : itemClass;
+        const caption = itemCaption(item) ?? itemClass;
         return (
           <div key={i}>
             <div className="prop-row collection-item" role="row">
@@ -399,7 +399,7 @@ function CollectionEditor({
                     document={document}
                     name={name}
                     info={info}
-                    item={item}
+                    value={item[name]}
                     commit={(next) =>
                       update(
                         items.map((it, j) => (j === i ? withProperty(it, name, info, next) : it)),
@@ -427,48 +427,113 @@ function CollectionEditor({
   );
 }
 
-/** 項目のプロパティの 1 行(既定値と同じ値は書かない) */
+/** 一覧に出す項目の名前(ステータスバーのパネルは Text、グリッドの列は Title.Caption) */
+function itemCaption(item: Item): string | undefined {
+  if (typeof item.Text === 'string' && item.Text !== '') return item.Text;
+  const title = item.Title;
+  if (typeof title === 'object' && title !== null && !Array.isArray(title)) {
+    const caption = (title as Item).Caption;
+    if (typeof caption === 'string' && caption !== '') return caption;
+  }
+  return undefined;
+}
+
+/**
+ * 項目のプロパティの 1 行(既定値と同じ値は書かない)。入れ子のオブジェクト(グリッドの列の Title・Font)と TStrings(PickList)は
+ * 開いて中を編集する(docs/adr/0054)。入れ子の中の既定値は、項目のプロパティの既定値(オブジェクト)から取る。
+ */
 function ItemPropertyRow({
   document,
   name,
   info,
-  item,
+  value,
   commit,
 }: {
   readonly document: BfmDocument;
   readonly name: string;
   readonly info: PropertyInfo;
-  readonly item: Item;
+  readonly value: PropertyValue | undefined;
   readonly commit: (value: PropertyValue | undefined) => string | undefined;
 }) {
-  const isSet = item[name] !== undefined;
+  const [expanded, setExpanded] = useState(false);
+  const isSet = value !== undefined;
+  const type = info.type;
+  const expandable = type.kind === 'object' || type.kind === 'strings';
   return (
-    <div className={isSet ? 'prop-row nested set' : 'prop-row nested'} role="row">
-      <span className="prop-name" role="cell" title={info.doc}>
-        {name}
-      </span>
-      <span className="prop-value" role="cell">
-        <Editor
-          document={document}
-          type={info.type}
-          value={item[name] ?? info.default}
-          mixed={false}
-          fallback={info.default}
-          commit={commit}
-        />
-        {isSet && (
-          <button
-            type="button"
-            className="prop-reset"
-            title={l10n.t('Reset to the default')}
-            onClick={() => commit(undefined)}
-          >
-            ×
-          </button>
-        )}
-      </span>
-    </div>
+    <>
+      <div className={isSet ? 'prop-row nested set' : 'prop-row nested'} role="row">
+        <span className="prop-name" role="cell" title={info.doc}>
+          {expandable ? (
+            <button
+              type="button"
+              className="prop-toggle"
+              aria-expanded={expanded}
+              onClick={() => {
+                setExpanded(!expanded);
+              }}
+            >
+              {expanded ? '▾' : '▸'} {name}
+            </button>
+          ) : (
+            name
+          )}
+        </span>
+        <span className="prop-value" role="cell">
+          <Editor
+            document={document}
+            type={type}
+            value={value ?? info.default}
+            mixed={false}
+            fallback={info.default}
+            commit={commit}
+          />
+          {isSet && (
+            <button
+              type="button"
+              className="prop-reset"
+              title={l10n.t('Reset to the default')}
+              onClick={() => commit(undefined)}
+            >
+              ×
+            </button>
+          )}
+        </span>
+      </div>
+      {expanded && type.kind === 'strings' && (
+        <StringsEditor value={value ?? info.default} commit={commit} />
+      )}
+      {expanded && type.kind === 'object' && (
+        <div className="prop-children">
+          {Object.entries(getCatalog().objects[type.class]?.properties ?? {}).map(
+            ([sub, subInfo]) => {
+              const current = asItem(value);
+              const defaults = asItem(info.default);
+              const withDefault = { ...subInfo, default: defaults[sub] ?? subInfo.default };
+              return (
+                <ItemPropertyRow
+                  key={sub}
+                  document={document}
+                  name={sub}
+                  info={withDefault}
+                  value={current[sub]}
+                  commit={(next) => {
+                    const updated = withProperty(current, sub, withDefault, next);
+                    return commit(Object.keys(updated).length === 0 ? undefined : updated);
+                  }}
+                />
+              );
+            },
+          )}
+        </div>
+      )}
+    </>
   );
+}
+
+function asItem(value: unknown): Item {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Item)
+    : {};
 }
 
 /** 項目の name を value にした項目(undefined・既定値と同じ値なら、その項目から除く) */

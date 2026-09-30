@@ -520,6 +520,8 @@ function StatusBar({
  * TStringGrid・TDrawGrid。固定行・固定列を FixedColor、それ以外を Color で塗り、1 行おきに AlternateColor で塗る
  * (LCL の既定の AltColorStartNormal と同じく、固定行の次の行は Color)。線は GridLineColor・GridLineWidth で描き、
  * AutoFillColumns なら固定列以外の列を広げて(縮めて)幅に合わせる(docs/adr/0053)。
+ * Columns があれば、固定列の後の列は Columns の列になり(ColCount は使わない)、列の Width(無ければ DefaultColWidth)の幅で、
+ * 1 行目の見出しに Title.Caption を TitleFont の太字・斜体で書く。Visible が false の列は幅 0(docs/adr/0054)。
  */
 function Grid({
   location,
@@ -528,16 +530,45 @@ function Grid({
   readonly location: NodeLocation & { readonly kind: 'control' };
   readonly background: string;
 }) {
-  const cols = Math.min(number(location, 'ColCount'), 50);
+  const columns = collectionItems(location, 'Columns');
+  const rawColumns = propertyValue(location, ['Columns']);
+  const fixedCols = number(location, 'FixedCols');
+  const fixedRows = number(location, 'FixedRows');
+  const cols = Math.min(
+    columns.length > 0 ? fixedCols + columns.length : number(location, 'ColCount'),
+    50,
+  );
   const rows = Math.min(number(location, 'RowCount'), 50);
   const width = number(location, 'DefaultColWidth');
   const height = number(location, 'DefaultRowHeight');
-  const fixedCols = number(location, 'FixedCols');
-  const fixedRows = number(location, 'FixedRows');
   const fixedColor = colorToCss(propertyValue(location, ['FixedColor']));
   const alternateColor = colorToCss(propertyValue(location, ['AlternateColor'])) ?? background;
   const line = `${String(number(location, 'GridLineWidth'))}px solid ${colorToCss(propertyValue(location, ['GridLineColor'])) ?? '#c0c0c0'}`;
   const autoFill = flag(location, 'AutoFillColumns');
+  const titleFontStyle = propertyValue(location, ['TitleFont', 'Style']);
+  const titleStyles: readonly unknown[] = Array.isArray(titleFontStyle) ? titleFontStyle : [];
+  const titleStyle = {
+    fontWeight: titleStyles.includes('fsBold') ? 700 : 400,
+    fontStyle: titleStyles.includes('fsItalic') ? 'italic' : 'normal',
+  };
+  const column = (c: number) => (c >= fixedCols ? columns[c - fixedCols] : undefined);
+  const columnWidth = (c: number): number => {
+    const col = column(c);
+    if (col === undefined) return width;
+    if (col.Visible === false) return 0;
+    const raw = Array.isArray(rawColumns)
+      ? (rawColumns[c - fixedCols] as Record<string, unknown> | undefined)
+      : undefined;
+    return typeof raw?.Width === 'number' ? raw.Width : width;
+  };
+  const caption = (c: number): string => {
+    const title = column(c)?.Title;
+    const text =
+      typeof title === 'object' && title !== null
+        ? (title as Record<string, unknown>).Caption
+        : undefined;
+    return typeof text === 'string' ? text : 'Title';
+  };
   return (
     <div className={bordered(location, 'look-box grid')} style={{ background }}>
       {Array.from({ length: rows }, (_, r) => (
@@ -549,19 +580,24 @@ function Grid({
               : (r - fixedRows) % 2 === 1
                 ? alternateColor
                 : background;
+            const w = columnWidth(c);
+            const title = r === 0 && fixedRows > 0 && column(c) !== undefined;
             return (
               <div
                 key={c}
                 className={fixed ? 'look-grid-cell fixed' : 'look-grid-cell'}
                 style={{
-                  ...(autoFill && c >= fixedCols
-                    ? { flex: `1 1 ${String(width)}px`, minWidth: 0 }
-                    : { width }),
+                  ...(autoFill && c >= fixedCols && w > 0
+                    ? { flex: `1 1 ${String(w)}px`, minWidth: 0 }
+                    : { width: w }),
                   ...(color ? { background: color } : {}),
-                  borderRight: line,
+                  ...(w > 0 ? { borderRight: line } : {}),
                   borderBottom: line,
+                  ...(title ? titleStyle : {}),
                 }}
-              />
+              >
+                {title && w > 0 && <span className="look-grid-title">{caption(c)}</span>}
+              </div>
             );
           })}
         </div>

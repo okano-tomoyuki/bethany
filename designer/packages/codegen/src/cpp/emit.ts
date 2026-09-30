@@ -251,7 +251,13 @@ function statement(s: Exclude<Statement, { kind: 'blank' }>): string {
           : [
               '{',
               `${INDENT}${s.itemClass}* item = ${target}->Add();`,
-              ...assigns.map((a) => `${INDENT}${access('item', a.path)} = ${value(a.value)};`),
+              ...assigns.flatMap((a) =>
+                a.kind === 'assign'
+                  ? [`${INDENT}${access('item', a.path)} = ${value(a.value)};`]
+                  : a.lines.map(
+                      (line) => `${INDENT}${access('item', a.path)}->Add(${stringLiteral(line)});`,
+                    ),
+              ),
               '}',
             ].join(`
 ${INDENT}`),

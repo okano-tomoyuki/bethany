@@ -73,6 +73,7 @@ export const EXPECTED_CALLS = [
   'Grid1CompareCells',
   'Grid1ValidateEntry',
   'Grid1PrepareCanvas',
+  'Grid1CheckboxToggled',
 ];
 
 /** 参照・入れ子のオブジェクト・TStrings・メニュー等(検証のプログラムが読んだ値) */
@@ -109,6 +110,8 @@ export const EXPECTED_CHECKS: Readonly<Record<string, string>> = {
   // ColumnClickSorts と、OnValidateEntry で書き換えた文字列
   grid: '-2147483624/8421504/1/1/1',
   gridValidated: 'z!',
+  // グリッドの列(docs/adr/0054): 列の数/ColCount(固定列 + 列)/1 列目の見出し/2 列目の PickList の数/3 列目の ButtonStyle(cbsCheckboxColumn)/ValueChecked
+  gridColumns: '3/4/Name/2/4/Y',
   dialogOptions: String((1 << 20) | (1 << 23) | (1 << 9)),
   timer: '0/500',
   caption: 'Sample',

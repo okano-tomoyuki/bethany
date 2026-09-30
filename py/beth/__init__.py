@@ -39,7 +39,7 @@ from ._core import (BethError, Ref, TRect, TPoint, TObject, TPersistent, TCompon
 from ._core import (lib, _mixins, _register, _event_types, _ItemMixin, _Prop, _Indexed, _Event,
                    _int, _float, _bool, _str, _char, _ptr, _rect_conv, _point_conv, _enum, _set, _comp, _existing, _item, _obj, _view,
                    _str_key, _enc, _dec, _h, _b, _rect, _point, _to_enum, _to_comp, _to_existing, _to_item, _to_obj,
-                   _a_int, _a_bool, _a_str, _a_rect, _a_exception, _a_strings, _a_enum, _a_comp, _a_item, _a_obj, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_str, _a_ref_enum)
+                   _a_int, _a_bool, _a_str, _a_rect, _a_exception, _a_strings, _a_enum, _a_comp, _a_item, _a_obj, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_str, _a_ref_enum, _a_ref_comp)
 
 
 # ---------------- 列挙型 ----------------
@@ -658,6 +658,21 @@ class TSortOrder(enum.IntEnum):
     soDescending = 1
 
 soAscending, soDescending = TSortOrder.soAscending, TSortOrder.soDescending
+
+
+# 列のセルの編集欄の種類(cbsAuto は文字列の入力。cbsPickList は PickList から選ぶ一覧、cbsEllipsis は「…」のボタン付き、
+# cbsCheckboxColumn はチェックボックス(クリック・スペースで切り替えるには、グリッドの Options に goEditing が要る)、
+# cbsButton・cbsButtonColumn はボタン)。
+class TColumnButtonStyle(enum.IntEnum):
+    cbsAuto = 0
+    cbsEllipsis = 1
+    cbsNone = 2
+    cbsPickList = 3
+    cbsCheckboxColumn = 4
+    cbsButton = 5
+    cbsButtonColumn = 6
+
+cbsAuto, cbsEllipsis, cbsNone, cbsPickList, cbsCheckboxColumn, cbsButton, cbsButtonColumn = TColumnButtonStyle.cbsAuto, TColumnButtonStyle.cbsEllipsis, TColumnButtonStyle.cbsNone, TColumnButtonStyle.cbsPickList, TColumnButtonStyle.cbsCheckboxColumn, TColumnButtonStyle.cbsButton, TColumnButtonStyle.cbsButtonColumn
 
 
 # ドラッグで幅を変えている間の段階(LCL の TSectionTrackState と同じ値)。
@@ -3142,6 +3157,75 @@ class TImage(TCustomImage):
         self._attach(lib.TImage_Create(_h(AOwner)))
 
 
+class TGridColumnTitle(TPersistent):
+    """列の見出し(LCL の TGridColumnTitle)。列が所有し、列と同じ寿命のビュー(Column->Title->Caption = "Name";)。"""
+    Caption = _Prop("TGridColumnTitle_GetCaption", "TGridColumnTitle_SetCaption", _str)
+    Alignment = _Prop("TGridColumnTitle_GetAlignment", "TGridColumnTitle_SetAlignment", _enum("TAlignment"))
+    Layout = _Prop("TGridColumnTitle_GetLayout", "TGridColumnTitle_SetLayout", _enum("TTextLayout"))
+    Color = _Prop("TGridColumnTitle_GetColor", "TGridColumnTitle_SetColor", _int)
+    # true なら、Caption の改行で複数の行に分けて描く。
+    MultiLine = _Prop("TGridColumnTitle_GetMultiLine", "TGridColumnTitle_SetMultiLine", _bool)
+    # 見出しの文字のフォント(既定はグリッドの TitleFont)。代入は内容のコピー。
+    Font = _Prop("TGridColumnTitle_GetFont", "TGridColumnTitle_SetFont", _obj("TFont"))
+
+
+class TGridColumn(TPersistent, _ItemMixin):
+    """グリッドの列(LCL の TGridColumn。TCollectionItem)。同じ列には常に同じポインタが返り、列が破棄されたとき
+    (TGridColumns::Delete・Clear、グリッドの破棄)にラッパーも delete される(TStatusPanel と同じ)。
+    Columns に列があると、グリッドの列(固定列を除く)は Columns の列になる(ColCount は FixedCols + Columns->Count。
+    Visible が false の列も、幅 0 の列として数える)。"""
+    Title = _Prop("TGridColumn_GetTitle", None, _obj("TGridColumnTitle"))
+    Width = _Prop("TGridColumn_GetWidth", "TGridColumn_SetWidth", _int)
+    Alignment = _Prop("TGridColumn_GetAlignment", "TGridColumn_SetAlignment", _enum("TAlignment"))
+    # セルの編集欄の種類。
+    ButtonStyle = _Prop("TGridColumn_GetButtonStyle", "TGridColumn_SetButtonStyle", _enum("TColumnButtonStyle"))
+    # ButtonStyle が cbsPickList(か cbsAuto)のときに選べる文字列(Column->PickList->Add("Red");)。
+    PickList = _Prop("TGridColumn_GetPickList", None, _view("TStrings"))
+    ReadOnly = _Prop("TGridColumn_GetReadOnly", "TGridColumn_SetReadOnly", _bool)
+    Visible = _Prop("TGridColumn_GetVisible", "TGridColumn_SetVisible", _bool)
+    Color = _Prop("TGridColumn_GetColor", "TGridColumn_SetColor", _int)
+    # セルの文字のフォント(既定はグリッドの Font)。代入は内容のコピー。
+    Font = _Prop("TGridColumn_GetFont", "TGridColumn_SetFont", _obj("TFont"))
+    Layout = _Prop("TGridColumn_GetLayout", "TGridColumn_SetLayout", _enum("TTextLayout"))
+    # AutoFillColumns のときの、幅の下限・上限と、広げる割合。
+    MinSize = _Prop("TGridColumn_GetMinSize", "TGridColumn_SetMinSize", _int)
+    MaxSize = _Prop("TGridColumn_GetMaxSize", "TGridColumn_SetMaxSize", _int)
+    SizePriority = _Prop("TGridColumn_GetSizePriority", "TGridColumn_SetSizePriority", _int)
+    # PickList の一覧に一度に出す行の数。
+    DropDownRows = _Prop("TGridColumn_GetDropDownRows", "TGridColumn_SetDropDownRows", _int)
+    # ButtonStyle が cbsCheckboxColumn のとき、TStringGrid のセルの文字列が ValueChecked ならチェックあり、ValueUnchecked ならなし。
+    ValueChecked = _Prop("TGridColumn_GetValueChecked", "TGridColumn_SetValueChecked", _str)
+    ValueUnchecked = _Prop("TGridColumn_GetValueUnchecked", "TGridColumn_SetValueUnchecked", _str)
+    # 並び順。書き換えると列が移動する。
+    Index = _Prop("TGridColumn_GetIndex", "TGridColumn_SetIndex", _int)
+
+
+class TGridColumns(TPersistent):
+    """グリッドの列の一覧(LCL の TGridColumns。TCollection)。グリッドの値メンバとして持つ非所有のビュー。"""
+    Count = _Prop("TGridColumns_GetCount", None, _int)
+    # LCL では Count と同じ(Visible が false の列も数える)。
+    VisibleCount = _Prop("TGridColumns_GetVisibleCount", None, _int)
+    # StringGrid1->Columns->Items[i]。
+    Items = _Indexed("TGridColumns_GetItem", None, _item("TGridColumn"))
+    # 末尾に列を追加して返す(Title・Width はその後で設定する)。
+    def Add(self):
+        _r = lib.TGridColumns_Add(self._current())
+        return _to_item("TGridColumn", _r)
+    # 列を削除する(列のラッパーも delete される)。
+    def Delete(self, Index):
+        lib.TGridColumns_Delete(self._current(), int(Index))
+    def Clear(self):
+        lib.TGridColumns_Clear(self._current())
+    def BeginUpdate(self):
+        lib.TGridColumns_BeginUpdate(self._current())
+    def EndUpdate(self):
+        lib.TGridColumns_EndUpdate(self._current())
+    # Title->Caption が aTitle の列(無ければ nullptr)。
+    def ColumnByTitle(self, aTitle):
+        _r = lib.TGridColumns_ColumnByTitle(self._current(), _enc(aTitle))
+        return _to_item("TGridColumn", _r)
+
+
 class TCustomGrid(TCustomControl):
     """グリッドの共通の基底。以下のメンバは LCL の TCustomGrid の public。
     セルは(列, 行)の位置で指定する(0 始まり。固定行・固定列を含む)。"""
@@ -3207,9 +3291,6 @@ class TCustomDrawGrid(TCustomGrid):
     # IsColumn が true なら、列 Index の値で行を並べ替える(固定行は除く)。false なら行 Index の値で列を並べ替える。
     def SortColRow(self, IsColumn, Index):
         lib.TCustomDrawGrid_SortColRow(self._current(), _b(IsColumn), int(Index))
-    # ---- docs/adr/0053 ----
-    # AutoEdit・AlternateColor・TitleFont・ColumnClickSorts と OnValidateEntry・OnPrepareCanvas・OnCompareCells・OnTopLeftChanged は、
-    # LCL では TCustomGrid の protected で、TDrawGrid・TStringGrid が published にしている。
     # true(既定)なら、goEditing のとき、文字を打つとすぐにセルの編集を始める(false なら F2・Enter・ダブルクリックで始める)。
     AutoEdit = _Prop("TCustomDrawGrid_GetAutoEdit", "TCustomDrawGrid_SetAutoEdit", _bool)
     # 1 行おきの背景の色(既定は Color と同じ)。
@@ -3244,6 +3325,23 @@ class TCustomDrawGrid(TCustomGrid):
     OnColRowDeleted = _Event("TCustomDrawGrid_SetOnColRowDeleted", "TGridOperationEvent")
     OnColRowMoved = _Event("TCustomDrawGrid_SetOnColRowMoved", "TGridOperationEvent")
     OnColRowExchanged = _Event("TCustomDrawGrid_SetOnColRowExchanged", "TGridOperationEvent")
+    # ---- docs/adr/0054 ----
+    # 列の一覧(TGridColumns)。列を加えると、列の見出し・幅・編集欄の種類を列ごとに決められる。
+    Columns = _Prop("TCustomDrawGrid_GetColumns", None, _obj("TGridColumns"))
+    # 現在のセルの列(Columns が空なら nullptr)。
+    SelectedColumn = _Prop("TCustomDrawGrid_GetSelectedColumn", None, _item("TGridColumn"))
+    # OnSelectEditor・OnButtonClick・OnPickListSelect・OnCheckboxToggled は、LCL では TCustomGrid の protected、
+    # OnGetCheckboxState・OnSetCheckboxState は TCustomDrawGrid の protected で、TDrawGrid・TStringGrid が published にしている。
+    OnSelectEditor = _Event("TCustomDrawGrid_SetOnSelectEditor", "TSelectEditorEvent")
+    # ButtonStyle が cbsEllipsis・cbsButton・cbsButtonColumn の列のボタンがクリックされたとき。
+    OnButtonClick = _Event("TCustomDrawGrid_SetOnButtonClick", "TOnSelectEvent")
+    # ButtonStyle が cbsPickList の列の一覧で選んだとき。
+    OnPickListSelect = _Event("TCustomDrawGrid_SetOnPickListSelect", "TNotifyEvent")
+    # TStringGrid では、OnGetCheckboxState・OnSetCheckboxState が無ければ、セルの文字列と ValueChecked・ValueUnchecked で決める。
+    # nullptr に戻すとその動きに戻る。
+    OnGetCheckboxState = _Event("TCustomDrawGrid_SetOnGetCheckboxState", "TGetCheckboxStateEvent")
+    OnSetCheckboxState = _Event("TCustomDrawGrid_SetOnSetCheckboxState", "TSetCheckboxStateEvent")
+    OnCheckboxToggled = _Event("TCustomDrawGrid_SetOnCheckboxToggled", "TToggledCheckboxEvent")
 
 
 class TDrawGrid(TCustomDrawGrid):
@@ -3772,6 +3870,10 @@ _event_types.update({
     "TOnPrepareCanvasEvent": (_a_int, _a_int, _a_enum("TGridDrawState"), ),  # (Sender, ACol, ARow, AState)
     "TOnCompareCells": (_a_int, _a_int, _a_int, _a_int, _a_ref_int, ),  # (Sender, ACol, ARow, BCol, BRow, Result)
     "TGridOperationEvent": (_a_bool, _a_int, _a_int, ),  # (Sender, IsColumn, sIndex, tIndex)
+    "TSelectEditorEvent": (_a_int, _a_int, _a_ref_comp("TWinControl"), ),  # (Sender, ACol, ARow, Editor)
+    "TGetCheckboxStateEvent": (_a_int, _a_int, _a_ref_enum("TCheckBoxState"), ),  # (Sender, ACol, ARow, Value)
+    "TSetCheckboxStateEvent": (_a_int, _a_int, _a_enum("TCheckBoxState"), ),  # (Sender, ACol, ARow, Value)
+    "TToggledCheckboxEvent": (_a_int, _a_int, _a_enum("TCheckBoxState"), ),  # (Sender, ACol, ARow, AState)
     "TCustomSectionNotifyEvent": (_a_item("THeaderSection"), ),  # (Sender, Section)
     "TCustomSectionTrackEvent": (_a_item("THeaderSection"), _a_int, _a_enum("TSectionTrackState"), ),  # (Sender, Section, Width, State)
     "TSectionDragEvent": (_a_item("THeaderSection"), _a_item("THeaderSection"), _a_ref_bool, ),  # (Sender, FromSection, ToSection, AllowDrag)
@@ -3836,13 +3938,14 @@ __all__ = [
     "pbLowered", "pbRaised", "TShapeType", "stRectangle", "stSquare", "stRoundRect", "stRoundSquare", "stEllipse",
     "stCircle", "stSquaredDiamond", "stDiamond", "stTriangle", "stTriangleLeft", "stTriangleRight",
     "stTriangleDown", "stStar", "stStarDown", "stPolygon", "TSortOrder", "soAscending", "soDescending",
-    "TSectionTrackState", "tsTrackBegin", "tsTrackMove", "tsTrackEnd", "TEdgeStyle", "esNone", "esRaised",
-    "esLowered", "TToolButtonStyle", "tbsButton", "tbsCheck", "tbsDropDown", "tbsSeparator", "tbsDivider",
-    "tbsButtonDrop", "TGrabStyle", "gsSimple", "gsDouble", "gsHorLines", "gsVerLines", "gsGripper", "gsButton",
-    "TActionListState", "asNormal", "asSuspended", "asSuspendedEnabled", "TBorderStyle", "TShiftState", "ssShift",
-    "ssAlt", "ssCtrl", "ssLeft", "ssRight", "ssMiddle", "ssDouble", "ssMeta", "ssSuper", "ssHyper", "ssAltGr",
-    "ssCaps", "ssNum", "ssScroll", "ssTriple", "ssQuad", "ssExtra1", "ssExtra2", "TFontStyles", "fsBold",
-    "fsItalic", "fsUnderline", "fsStrikeOut", "TOwnerDrawState", "odSelected", "odGrayed", "odDisabled",
+    "TColumnButtonStyle", "cbsAuto", "cbsEllipsis", "cbsNone", "cbsPickList", "cbsCheckboxColumn", "cbsButton",
+    "cbsButtonColumn", "TSectionTrackState", "tsTrackBegin", "tsTrackMove", "tsTrackEnd", "TEdgeStyle", "esNone",
+    "esRaised", "esLowered", "TToolButtonStyle", "tbsButton", "tbsCheck", "tbsDropDown", "tbsSeparator",
+    "tbsDivider", "tbsButtonDrop", "TGrabStyle", "gsSimple", "gsDouble", "gsHorLines", "gsVerLines", "gsGripper",
+    "gsButton", "TActionListState", "asNormal", "asSuspended", "asSuspendedEnabled", "TBorderStyle", "TShiftState",
+    "ssShift", "ssAlt", "ssCtrl", "ssLeft", "ssRight", "ssMiddle", "ssDouble", "ssMeta", "ssSuper", "ssHyper",
+    "ssAltGr", "ssCaps", "ssNum", "ssScroll", "ssTriple", "ssQuad", "ssExtra1", "ssExtra2", "TFontStyles",
+    "fsBold", "fsItalic", "fsUnderline", "fsStrikeOut", "TOwnerDrawState", "odSelected", "odGrayed", "odDisabled",
     "odChecked", "odFocused", "odDefault", "odHotLight", "odInactive", "odNoAccel", "odNoFocusRect", "odReserved1",
     "odReserved2", "odComboBoxEdit", "odBackgroundPainted", "TMultiSelectStyle", "msControlSelect",
     "msShiftSelect", "msVisibleOnly", "msSiblingOnly", "TTreeViewOptions", "tvoAllowMultiselect", "tvoAutoExpand",
@@ -3898,10 +4001,11 @@ __all__ = [
     "TListColumn", "TListColumns", "TCustomListView", "TListView", "TCustomSplitter", "TSplitter", "TCustomMemo",
     "TMemo", "TCustomComboBox", "TComboBox", "TCustomListBox", "TListBox", "TCustomCheckListBox", "TCheckListBox",
     "TCustomStaticText", "TStaticText", "TStatusPanel", "TStatusPanels", "TStatusBar", "TCustomShape", "TShape",
-    "TCustomSpeedButton", "TSpeedButton", "TPaintBox", "TCustomImage", "TImage", "TCustomGrid", "TCustomDrawGrid",
-    "TDrawGrid", "TCustomStringGrid", "TStringGrid", "THeaderSection", "THeaderSections", "TCustomHeaderControl",
-    "THeaderControl", "TToolWindow", "TToolBar", "TToolButton", "TCoolBand", "TCoolBands", "TCustomCoolBar",
-    "TCoolBar", "TCustomTimer", "TTimer", "TBasicAction", "TContainedAction", "TCustomAction", "TAction",
-    "TCustomActionList", "TActionList", "TCommonDialog", "TFileDialog", "TOpenDialog", "TSaveDialog",
-    "TSelectDirectoryDialog", "TColorDialog", "TFontDialog", "TFindDialog", "TReplaceDialog",
+    "TCustomSpeedButton", "TSpeedButton", "TPaintBox", "TCustomImage", "TImage", "TGridColumnTitle", "TGridColumn",
+    "TGridColumns", "TCustomGrid", "TCustomDrawGrid", "TDrawGrid", "TCustomStringGrid", "TStringGrid",
+    "THeaderSection", "THeaderSections", "TCustomHeaderControl", "THeaderControl", "TToolWindow", "TToolBar",
+    "TToolButton", "TCoolBand", "TCoolBands", "TCustomCoolBar", "TCoolBar", "TCustomTimer", "TTimer",
+    "TBasicAction", "TContainedAction", "TCustomAction", "TAction", "TCustomActionList", "TActionList",
+    "TCommonDialog", "TFileDialog", "TOpenDialog", "TSaveDialog", "TSelectDirectoryDialog", "TColorDialog",
+    "TFontDialog", "TFindDialog", "TReplaceDialog",
 ]

@@ -4818,7 +4818,16 @@ TCustomDrawGrid::TCustomDrawGrid(ObjectHandle handle)
     , OnColRowDeleted(this, &TCustomDrawGrid::GetOnColRowDeletedImpl, &TCustomDrawGrid::SetOnColRowDeletedImpl)
     , OnColRowMoved(this, &TCustomDrawGrid::GetOnColRowMovedImpl, &TCustomDrawGrid::SetOnColRowMovedImpl)
     , OnColRowExchanged(this, &TCustomDrawGrid::GetOnColRowExchangedImpl, &TCustomDrawGrid::SetOnColRowExchangedImpl)
+    , Columns(this, &TCustomDrawGrid::GetColumnsImpl)
+    , SelectedColumn(this, &TCustomDrawGrid::GetSelectedColumnImpl)
+    , OnSelectEditor(this, &TCustomDrawGrid::GetOnSelectEditorImpl, &TCustomDrawGrid::SetOnSelectEditorImpl)
+    , OnButtonClick(this, &TCustomDrawGrid::GetOnButtonClickImpl, &TCustomDrawGrid::SetOnButtonClickImpl)
+    , OnPickListSelect(this, &TCustomDrawGrid::GetOnPickListSelectImpl, &TCustomDrawGrid::SetOnPickListSelectImpl)
+    , OnGetCheckboxState(this, &TCustomDrawGrid::GetOnGetCheckboxStateImpl, &TCustomDrawGrid::SetOnGetCheckboxStateImpl)
+    , OnSetCheckboxState(this, &TCustomDrawGrid::GetOnSetCheckboxStateImpl, &TCustomDrawGrid::SetOnSetCheckboxStateImpl)
+    , OnCheckboxToggled(this, &TCustomDrawGrid::GetOnCheckboxToggledImpl, &TCustomDrawGrid::SetOnCheckboxToggledImpl)
     , titleFont_(internal::TCustomDrawGrid_GetTitleFont(handle))
+    , columns_(internal::TCustomDrawGrid_GetColumns(handle))
 {}
 
 int  TCustomDrawGrid::GetColWidthsImpl(TObject* owner, int ACol)                     { return internal::TCustomDrawGrid_GetColWidths(owner->Handle(), ACol); }
@@ -6709,6 +6718,231 @@ TStrings* TCustomStringGrid::GetRowsImpl(TObject* owner, int Index)
     if (!view)
         view.reset(new LineStrings(internal::TCustomStringGrid_GetRows(self->handle_, Index)));
     return view.get();
+}
+
+/* ---------------- グリッドの Columns(docs/adr/0054) ---------------- */
+
+TGridColumnTitle::TGridColumnTitle(ObjectHandle handle)
+    : TPersistent(handle)
+    , Caption(this, &TGridColumnTitle::GetCaptionImpl, &TGridColumnTitle::SetCaptionImpl)
+    , Alignment(this, &TGridColumnTitle::GetAlignmentImpl, &TGridColumnTitle::SetAlignmentImpl)
+    , Layout(this, &TGridColumnTitle::GetLayoutImpl, &TGridColumnTitle::SetLayoutImpl)
+    , Color(this, &TGridColumnTitle::GetColorImpl, &TGridColumnTitle::SetColorImpl)
+    , MultiLine(this, &TGridColumnTitle::GetMultiLineImpl, &TGridColumnTitle::SetMultiLineImpl)
+    , Font(this, &TGridColumnTitle::GetFontImpl, &TGridColumnTitle::SetFontImpl)
+    , font_(internal::TGridColumnTitle_GetFont(handle))
+{}
+
+std::string TGridColumnTitle::GetCaptionImpl(TObject* owner) { const char* s = internal::TGridColumnTitle_GetCaption(owner->Handle()); return s ? s : ""; }
+void TGridColumnTitle::SetCaptionImpl(TObject* owner, const std::string& value) { internal::TGridColumnTitle_SetCaption(owner->Handle(), value.c_str()); }
+TAlignment TGridColumnTitle::GetAlignmentImpl(TObject* owner) { return static_cast<TAlignment>(internal::TGridColumnTitle_GetAlignment(owner->Handle())); }
+void TGridColumnTitle::SetAlignmentImpl(TObject* owner, const TAlignment& value) { internal::TGridColumnTitle_SetAlignment(owner->Handle(), value); }
+TTextLayout TGridColumnTitle::GetLayoutImpl(TObject* owner) { return static_cast<TTextLayout>(internal::TGridColumnTitle_GetLayout(owner->Handle())); }
+void TGridColumnTitle::SetLayoutImpl(TObject* owner, const TTextLayout& value) { internal::TGridColumnTitle_SetLayout(owner->Handle(), value); }
+TColor TGridColumnTitle::GetColorImpl(TObject* owner) { return internal::TGridColumnTitle_GetColor(owner->Handle()); }
+void TGridColumnTitle::SetColorImpl(TObject* owner, const TColor& value) { internal::TGridColumnTitle_SetColor(owner->Handle(), value); }
+bool TGridColumnTitle::GetMultiLineImpl(TObject* owner) { return internal::TGridColumnTitle_GetMultiLine(owner->Handle()) != 0; }
+void TGridColumnTitle::SetMultiLineImpl(TObject* owner, const bool& value) { internal::TGridColumnTitle_SetMultiLine(owner->Handle(), value ? 1 : 0); }
+TFont* TGridColumnTitle::GetFontImpl(TObject* owner) { return &static_cast<TGridColumnTitle*>(owner)->font_; }
+void TGridColumnTitle::SetFontImpl(TObject* owner, TFont* const& value)
+{
+    internal::TGridColumnTitle_SetFont(owner->Handle(), value ? value->Handle() : nullptr);
+}
+
+TGridColumn::TGridColumn(ObjectHandle handle)
+    : TPersistent(handle)
+    , Title(this, &TGridColumn::GetTitleImpl)
+    , Width(this, &TGridColumn::GetWidthImpl, &TGridColumn::SetWidthImpl)
+    , Alignment(this, &TGridColumn::GetAlignmentImpl, &TGridColumn::SetAlignmentImpl)
+    , ButtonStyle(this, &TGridColumn::GetButtonStyleImpl, &TGridColumn::SetButtonStyleImpl)
+    , PickList(this, &TGridColumn::GetPickListImpl)
+    , ReadOnly(this, &TGridColumn::GetReadOnlyImpl, &TGridColumn::SetReadOnlyImpl)
+    , Visible(this, &TGridColumn::GetVisibleImpl, &TGridColumn::SetVisibleImpl)
+    , Color(this, &TGridColumn::GetColorImpl, &TGridColumn::SetColorImpl)
+    , Font(this, &TGridColumn::GetFontImpl, &TGridColumn::SetFontImpl)
+    , Layout(this, &TGridColumn::GetLayoutImpl, &TGridColumn::SetLayoutImpl)
+    , MinSize(this, &TGridColumn::GetMinSizeImpl, &TGridColumn::SetMinSizeImpl)
+    , MaxSize(this, &TGridColumn::GetMaxSizeImpl, &TGridColumn::SetMaxSizeImpl)
+    , SizePriority(this, &TGridColumn::GetSizePriorityImpl, &TGridColumn::SetSizePriorityImpl)
+    , DropDownRows(this, &TGridColumn::GetDropDownRowsImpl, &TGridColumn::SetDropDownRowsImpl)
+    , ValueChecked(this, &TGridColumn::GetValueCheckedImpl, &TGridColumn::SetValueCheckedImpl)
+    , ValueUnchecked(this, &TGridColumn::GetValueUncheckedImpl, &TGridColumn::SetValueUncheckedImpl)
+    , Index(this, &TGridColumn::GetIndexImpl, &TGridColumn::SetIndexImpl)
+    , title_(internal::TGridColumn_GetTitle(handle))
+    , pickList_(this, &internal::TGridColumn_GetPickList)
+    , font_(internal::TGridColumn_GetFont(handle))
+{}
+
+TGridColumnTitle* TGridColumn::GetTitleImpl(TObject* owner) { return &static_cast<TGridColumn*>(owner)->title_; }
+TStrings* TGridColumn::GetPickListImpl(TObject* owner) { return &static_cast<TGridColumn*>(owner)->pickList_; }
+TFont* TGridColumn::GetFontImpl(TObject* owner) { return &static_cast<TGridColumn*>(owner)->font_; }
+void TGridColumn::SetFontImpl(TObject* owner, TFont* const& value)
+{
+    internal::TGridColumn_SetFont(owner->Handle(), value ? value->Handle() : nullptr);
+}
+int TGridColumn::GetWidthImpl(TObject* owner) { return internal::TGridColumn_GetWidth(owner->Handle()); }
+void TGridColumn::SetWidthImpl(TObject* owner, const int& value) { internal::TGridColumn_SetWidth(owner->Handle(), value); }
+TAlignment TGridColumn::GetAlignmentImpl(TObject* owner) { return static_cast<TAlignment>(internal::TGridColumn_GetAlignment(owner->Handle())); }
+void TGridColumn::SetAlignmentImpl(TObject* owner, const TAlignment& value) { internal::TGridColumn_SetAlignment(owner->Handle(), value); }
+TColumnButtonStyle TGridColumn::GetButtonStyleImpl(TObject* owner) { return static_cast<TColumnButtonStyle>(internal::TGridColumn_GetButtonStyle(owner->Handle())); }
+void TGridColumn::SetButtonStyleImpl(TObject* owner, const TColumnButtonStyle& value) { internal::TGridColumn_SetButtonStyle(owner->Handle(), value); }
+bool TGridColumn::GetReadOnlyImpl(TObject* owner) { return internal::TGridColumn_GetReadOnly(owner->Handle()) != 0; }
+void TGridColumn::SetReadOnlyImpl(TObject* owner, const bool& value) { internal::TGridColumn_SetReadOnly(owner->Handle(), value ? 1 : 0); }
+bool TGridColumn::GetVisibleImpl(TObject* owner) { return internal::TGridColumn_GetVisible(owner->Handle()) != 0; }
+void TGridColumn::SetVisibleImpl(TObject* owner, const bool& value) { internal::TGridColumn_SetVisible(owner->Handle(), value ? 1 : 0); }
+TColor TGridColumn::GetColorImpl(TObject* owner) { return internal::TGridColumn_GetColor(owner->Handle()); }
+void TGridColumn::SetColorImpl(TObject* owner, const TColor& value) { internal::TGridColumn_SetColor(owner->Handle(), value); }
+TTextLayout TGridColumn::GetLayoutImpl(TObject* owner) { return static_cast<TTextLayout>(internal::TGridColumn_GetLayout(owner->Handle())); }
+void TGridColumn::SetLayoutImpl(TObject* owner, const TTextLayout& value) { internal::TGridColumn_SetLayout(owner->Handle(), value); }
+int TGridColumn::GetMinSizeImpl(TObject* owner) { return internal::TGridColumn_GetMinSize(owner->Handle()); }
+void TGridColumn::SetMinSizeImpl(TObject* owner, const int& value) { internal::TGridColumn_SetMinSize(owner->Handle(), value); }
+int TGridColumn::GetMaxSizeImpl(TObject* owner) { return internal::TGridColumn_GetMaxSize(owner->Handle()); }
+void TGridColumn::SetMaxSizeImpl(TObject* owner, const int& value) { internal::TGridColumn_SetMaxSize(owner->Handle(), value); }
+int TGridColumn::GetSizePriorityImpl(TObject* owner) { return internal::TGridColumn_GetSizePriority(owner->Handle()); }
+void TGridColumn::SetSizePriorityImpl(TObject* owner, const int& value) { internal::TGridColumn_SetSizePriority(owner->Handle(), value); }
+int TGridColumn::GetDropDownRowsImpl(TObject* owner) { return internal::TGridColumn_GetDropDownRows(owner->Handle()); }
+void TGridColumn::SetDropDownRowsImpl(TObject* owner, const int& value) { internal::TGridColumn_SetDropDownRows(owner->Handle(), value); }
+std::string TGridColumn::GetValueCheckedImpl(TObject* owner) { const char* s = internal::TGridColumn_GetValueChecked(owner->Handle()); return s ? s : ""; }
+void TGridColumn::SetValueCheckedImpl(TObject* owner, const std::string& value) { internal::TGridColumn_SetValueChecked(owner->Handle(), value.c_str()); }
+std::string TGridColumn::GetValueUncheckedImpl(TObject* owner) { const char* s = internal::TGridColumn_GetValueUnchecked(owner->Handle()); return s ? s : ""; }
+void TGridColumn::SetValueUncheckedImpl(TObject* owner, const std::string& value) { internal::TGridColumn_SetValueUnchecked(owner->Handle(), value.c_str()); }
+int TGridColumn::GetIndexImpl(TObject* owner) { return internal::TGridColumn_GetIndex(owner->Handle()); }
+void TGridColumn::SetIndexImpl(TObject* owner, const int& value) { internal::TGridColumn_SetIndex(owner->Handle(), value); }
+
+TGridColumns::TGridColumns(ObjectHandle handle)
+    : TPersistent(handle)
+    , Count(this, &TGridColumns::GetCountImpl)
+    , VisibleCount(this, &TGridColumns::GetVisibleCountImpl)
+    , Items(this, &TGridColumns::GetItemsImpl)
+{}
+
+TGridColumn* TGridColumns::Add() { return TGridColumn::Wrap(internal::TGridColumns_Add(handle_)); }
+void TGridColumns::Delete(int Index) { internal::TGridColumns_Delete(handle_, Index); }
+void TGridColumns::Clear() { internal::TGridColumns_Clear(handle_); }
+void TGridColumns::BeginUpdate() { internal::TGridColumns_BeginUpdate(handle_); }
+void TGridColumns::EndUpdate() { internal::TGridColumns_EndUpdate(handle_); }
+TGridColumn* TGridColumns::ColumnByTitle(const std::string& aTitle) const
+{
+    return TGridColumn::Wrap(internal::TGridColumns_ColumnByTitle(handle_, aTitle.c_str()));
+}
+TGridColumn* TGridColumns::GetItemsImpl(TObject* owner, int Index) { return TGridColumn::Wrap(internal::TGridColumns_GetItem(owner->Handle(), Index)); }
+int TGridColumns::GetCountImpl(TObject* owner) { return internal::TGridColumns_GetCount(owner->Handle()); }
+int TGridColumns::GetVisibleCountImpl(TObject* owner) { return internal::TGridColumns_GetVisibleCount(owner->Handle()); }
+
+TGridColumns* TCustomDrawGrid::GetColumnsImpl(TObject* owner) { return &static_cast<TCustomDrawGrid*>(owner)->columns_; }
+TGridColumn* TCustomDrawGrid::GetSelectedColumnImpl(TObject* owner)
+{
+    return TGridColumn::Wrap(internal::TCustomDrawGrid_GetSelectedColumn(owner->Handle()));
+}
+TSelectEditorEvent TCustomDrawGrid::GetOnSelectEditorImpl(TObject* owner) { return static_cast<TCustomDrawGrid*>(owner)->onSelectEditor_; }
+void TCustomDrawGrid::SetOnSelectEditorImpl(TObject* owner, const TSelectEditorEvent& value)
+{
+    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(owner);
+    SetSimpleEvent(self->handle_, self->onSelectEditor_, self->onSelectEditorHooked_, value, &internal::TCustomDrawGrid_SetOnSelectEditor, &TCustomDrawGrid::SelectEditorTrampoline);
+}
+TOnSelectEvent TCustomDrawGrid::GetOnButtonClickImpl(TObject* owner) { return static_cast<TCustomDrawGrid*>(owner)->onButtonClick_; }
+void TCustomDrawGrid::SetOnButtonClickImpl(TObject* owner, const TOnSelectEvent& value)
+{
+    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(owner);
+    SetSimpleEvent(self->handle_, self->onButtonClick_, self->onButtonClickHooked_, value, &internal::TCustomDrawGrid_SetOnButtonClick, &TCustomDrawGrid::ButtonClickTrampoline);
+}
+TNotifyEvent TCustomDrawGrid::GetOnPickListSelectImpl(TObject* owner) { return static_cast<TCustomDrawGrid*>(owner)->onPickListSelect_; }
+void TCustomDrawGrid::SetOnPickListSelectImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(owner);
+    SetSimpleEvent(self->handle_, self->onPickListSelect_, self->onPickListSelectHooked_, value, &internal::TCustomDrawGrid_SetOnPickListSelect, &TCustomDrawGrid::PickListSelectTrampoline);
+}
+TGetCheckboxStateEvent TCustomDrawGrid::GetOnGetCheckboxStateImpl(TObject* owner) { return static_cast<TCustomDrawGrid*>(owner)->onGetCheckboxState_; }
+void TCustomDrawGrid::SetOnGetCheckboxStateImpl(TObject* owner, const TGetCheckboxStateEvent& value)
+{
+    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(owner);
+    SetRemovableEvent(self->handle_, self->onGetCheckboxState_, self->onGetCheckboxStateHooked_, value, &internal::TCustomDrawGrid_SetOnGetCheckboxState, &TCustomDrawGrid::GetCheckboxStateTrampoline);
+}
+TSetCheckboxStateEvent TCustomDrawGrid::GetOnSetCheckboxStateImpl(TObject* owner) { return static_cast<TCustomDrawGrid*>(owner)->onSetCheckboxState_; }
+void TCustomDrawGrid::SetOnSetCheckboxStateImpl(TObject* owner, const TSetCheckboxStateEvent& value)
+{
+    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(owner);
+    SetRemovableEvent(self->handle_, self->onSetCheckboxState_, self->onSetCheckboxStateHooked_, value, &internal::TCustomDrawGrid_SetOnSetCheckboxState, &TCustomDrawGrid::SetCheckboxStateTrampoline);
+}
+TToggledCheckboxEvent TCustomDrawGrid::GetOnCheckboxToggledImpl(TObject* owner) { return static_cast<TCustomDrawGrid*>(owner)->onCheckboxToggled_; }
+void TCustomDrawGrid::SetOnCheckboxToggledImpl(TObject* owner, const TToggledCheckboxEvent& value)
+{
+    TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(owner);
+    SetSimpleEvent(self->handle_, self->onCheckboxToggled_, self->onCheckboxToggledHooked_, value, &internal::TCustomDrawGrid_SetOnCheckboxToggled, &TCustomDrawGrid::CheckboxToggledTrampoline);
+}
+
+// Editor は、ラッパーのあるコントロール(利用者が生成したもの)ならそれを渡す。LCL の既定の編集欄はラッパーが無いため nullptr で渡し、
+// ハンドラが書き換えたときだけ DLL に返す。
+void BETH_CALL TCustomDrawGrid::SelectEditorTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, ObjectHandle* editor, void*)
+{
+    GuardCallback([&] {
+        TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
+        if (!self || !self->onSelectEditor_)
+            return;
+        TSelectEditorEvent handler = self->onSelectEditor_;
+        TWinControl* original = dynamic_cast<TWinControl*>(FromHandle(*editor));
+        TWinControl* value = original;
+        handler(self, col, row, value);
+        if (value != original)
+            *editor = value ? value->Handle() : nullptr;
+    });
+}
+
+void BETH_CALL TCustomDrawGrid::ButtonClickTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, void*)
+{
+    GuardCallback([&] {
+        TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
+        if (!self || !self->onButtonClick_)
+            return;
+        TOnSelectEvent handler = self->onButtonClick_;
+        handler(self, col, row);
+    });
+}
+
+void BETH_CALL TCustomDrawGrid::PickListSelectTrampoline(ObjectHandle sender, void*)
+{
+    GuardCallback([&] {
+        TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
+        if (!self || !self->onPickListSelect_)
+            return;
+        TNotifyEvent handler = self->onPickListSelect_;
+        handler(self);
+    });
+}
+
+void BETH_CALL TCustomDrawGrid::GetCheckboxStateTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, internal::int_t* state, void*)
+{
+    GuardCallback([&] {
+        TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
+        if (!self || !self->onGetCheckboxState_)
+            return;
+        TGetCheckboxStateEvent handler = self->onGetCheckboxState_;
+        TCheckBoxState value = static_cast<TCheckBoxState>(*state);
+        handler(self, col, row, value);
+        *state = value;
+    });
+}
+
+void BETH_CALL TCustomDrawGrid::SetCheckboxStateTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, internal::int_t state, void*)
+{
+    GuardCallback([&] {
+        TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
+        if (!self || !self->onSetCheckboxState_)
+            return;
+        TSetCheckboxStateEvent handler = self->onSetCheckboxState_;
+        handler(self, col, row, static_cast<TCheckBoxState>(state));
+    });
+}
+
+void BETH_CALL TCustomDrawGrid::CheckboxToggledTrampoline(ObjectHandle sender, internal::int_t col, internal::int_t row, internal::int_t state, void*)
+{
+    GuardCallback([&] {
+        TCustomDrawGrid* self = static_cast<TCustomDrawGrid*>(FromHandle(sender));
+        if (!self || !self->onCheckboxToggled_)
+            return;
+        TToggledCheckboxEvent handler = self->onCheckboxToggled_;
+        handler(self, col, row, static_cast<TCheckBoxState>(state));
+    });
 }
 
 } // namespace beth

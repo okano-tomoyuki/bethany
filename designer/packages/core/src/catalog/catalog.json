@@ -14433,6 +14433,15 @@
           "declaredIn": "TCustomDrawGrid",
           "default": "soAscending",
           "doc": "並べ替えの向き(SortColRow もこの向きで並べる)。"
+        },
+        "Columns": {
+          "type": {
+            "kind": "collection",
+            "item": "TGridColumn"
+          },
+          "declaredIn": "TCustomDrawGrid",
+          "default": [],
+          "doc": "列の一覧(TGridColumns)。列を加えると、列の見出し・幅・編集欄の種類を列ごとに決められる。"
         }
       },
       "events": {
@@ -14554,6 +14563,34 @@
         },
         "OnColRowExchanged": {
           "type": "TGridOperationEvent",
+          "declaredIn": "TCustomDrawGrid"
+        },
+        "OnSelectEditor": {
+          "type": "TSelectEditorEvent",
+          "declaredIn": "TCustomDrawGrid",
+          "doc": "OnSelectEditor・OnButtonClick・OnPickListSelect・OnCheckboxToggled は、LCL では TCustomGrid の protected、 OnGetCheckboxState・OnSetCheckboxState は TCustomDrawGrid の protected で、TDrawGrid・TStringGrid が published にしている。"
+        },
+        "OnButtonClick": {
+          "type": "TOnSelectEvent",
+          "declaredIn": "TCustomDrawGrid",
+          "doc": "ButtonStyle が cbsEllipsis・cbsButton・cbsButtonColumn の列のボタンがクリックされたとき。"
+        },
+        "OnPickListSelect": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TCustomDrawGrid",
+          "doc": "ButtonStyle が cbsPickList の列の一覧で選んだとき。"
+        },
+        "OnGetCheckboxState": {
+          "type": "TGetCheckboxStateEvent",
+          "declaredIn": "TCustomDrawGrid",
+          "doc": "TStringGrid では、OnGetCheckboxState・OnSetCheckboxState が無ければ、セルの文字列と ValueChecked・ValueUnchecked で決める。 nullptr に戻すとその動きに戻る。"
+        },
+        "OnSetCheckboxState": {
+          "type": "TSetCheckboxStateEvent",
+          "declaredIn": "TCustomDrawGrid"
+        },
+        "OnCheckboxToggled": {
+          "type": "TToggledCheckboxEvent",
           "declaredIn": "TCustomDrawGrid"
         }
       }
@@ -14968,6 +15005,15 @@
           "declaredIn": "TCustomDrawGrid",
           "default": "soAscending",
           "doc": "並べ替えの向き(SortColRow もこの向きで並べる)。"
+        },
+        "Columns": {
+          "type": {
+            "kind": "collection",
+            "item": "TGridColumn"
+          },
+          "declaredIn": "TCustomDrawGrid",
+          "default": [],
+          "doc": "列の一覧(TGridColumns)。列を加えると、列の見出し・幅・編集欄の種類を列ごとに決められる。"
         }
       },
       "events": {
@@ -15089,6 +15135,34 @@
         },
         "OnColRowExchanged": {
           "type": "TGridOperationEvent",
+          "declaredIn": "TCustomDrawGrid"
+        },
+        "OnSelectEditor": {
+          "type": "TSelectEditorEvent",
+          "declaredIn": "TCustomDrawGrid",
+          "doc": "OnSelectEditor・OnButtonClick・OnPickListSelect・OnCheckboxToggled は、LCL では TCustomGrid の protected、 OnGetCheckboxState・OnSetCheckboxState は TCustomDrawGrid の protected で、TDrawGrid・TStringGrid が published にしている。"
+        },
+        "OnButtonClick": {
+          "type": "TOnSelectEvent",
+          "declaredIn": "TCustomDrawGrid",
+          "doc": "ButtonStyle が cbsEllipsis・cbsButton・cbsButtonColumn の列のボタンがクリックされたとき。"
+        },
+        "OnPickListSelect": {
+          "type": "TNotifyEvent",
+          "declaredIn": "TCustomDrawGrid",
+          "doc": "ButtonStyle が cbsPickList の列の一覧で選んだとき。"
+        },
+        "OnGetCheckboxState": {
+          "type": "TGetCheckboxStateEvent",
+          "declaredIn": "TCustomDrawGrid",
+          "doc": "TStringGrid では、OnGetCheckboxState・OnSetCheckboxState が無ければ、セルの文字列と ValueChecked・ValueUnchecked で決める。 nullptr に戻すとその動きに戻る。"
+        },
+        "OnSetCheckboxState": {
+          "type": "TSetCheckboxStateEvent",
+          "declaredIn": "TCustomDrawGrid"
+        },
+        "OnCheckboxToggled": {
+          "type": "TToggledCheckboxEvent",
           "declaredIn": "TCustomDrawGrid"
         }
       }
@@ -17638,6 +17712,52 @@
         }
       }
     },
+    "TGridColumnTitle": {
+      "properties": {
+        "Caption": {
+          "type": {
+            "kind": "string"
+          },
+          "declaredIn": "TGridColumnTitle"
+        },
+        "Alignment": {
+          "type": {
+            "kind": "enum",
+            "enum": "TAlignment"
+          },
+          "declaredIn": "TGridColumnTitle"
+        },
+        "Layout": {
+          "type": {
+            "kind": "enum",
+            "enum": "TTextLayout"
+          },
+          "declaredIn": "TGridColumnTitle"
+        },
+        "Color": {
+          "type": {
+            "kind": "alias",
+            "alias": "TColor"
+          },
+          "declaredIn": "TGridColumnTitle"
+        },
+        "MultiLine": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TGridColumnTitle",
+          "doc": "true なら、Caption の改行で複数の行に分けて描く。"
+        },
+        "Font": {
+          "type": {
+            "kind": "object",
+            "class": "TFont"
+          },
+          "declaredIn": "TGridColumnTitle",
+          "doc": "見出しの文字のフォント(既定はグリッドの TitleFont)。代入は内容のコピー。"
+        }
+      }
+    },
     "TStatusPanel": {
       "properties": {
         "Text": {
@@ -17678,6 +17798,157 @@
           },
           "declaredIn": "TStatusPanel",
           "default": "psText"
+        }
+      }
+    },
+    "TGridColumn": {
+      "properties": {
+        "Title": {
+          "type": {
+            "kind": "object",
+            "class": "TGridColumnTitle"
+          },
+          "declaredIn": "TGridColumn",
+          "default": {
+            "Caption": "Title",
+            "Alignment": "taLeftJustify",
+            "Layout": "tlCenter",
+            "Color": "clBtnFace",
+            "MultiLine": false,
+            "Font": {
+              "Name": "default",
+              "Size": 0,
+              "Color": "clDefault",
+              "Style": [],
+              "Height": 0,
+              "Orientation": 0,
+              "Quality": "fqDefault"
+            }
+          }
+        },
+        "Width": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TGridColumn",
+          "default": 64
+        },
+        "Alignment": {
+          "type": {
+            "kind": "enum",
+            "enum": "TAlignment"
+          },
+          "declaredIn": "TGridColumn",
+          "default": "taLeftJustify"
+        },
+        "ButtonStyle": {
+          "type": {
+            "kind": "enum",
+            "enum": "TColumnButtonStyle"
+          },
+          "declaredIn": "TGridColumn",
+          "default": "cbsAuto",
+          "doc": "セルの編集欄の種類。"
+        },
+        "PickList": {
+          "type": {
+            "kind": "strings"
+          },
+          "declaredIn": "TGridColumn",
+          "default": [],
+          "doc": "ButtonStyle が cbsPickList(か cbsAuto)のときに選べる文字列(Column->PickList->Add(\"Red\");)。"
+        },
+        "ReadOnly": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TGridColumn",
+          "default": false
+        },
+        "Visible": {
+          "type": {
+            "kind": "bool"
+          },
+          "declaredIn": "TGridColumn",
+          "default": true
+        },
+        "Color": {
+          "type": {
+            "kind": "alias",
+            "alias": "TColor"
+          },
+          "declaredIn": "TGridColumn",
+          "default": "clWindow"
+        },
+        "Font": {
+          "type": {
+            "kind": "object",
+            "class": "TFont"
+          },
+          "declaredIn": "TGridColumn",
+          "default": {
+            "Name": "default",
+            "Size": 0,
+            "Color": "clDefault",
+            "Style": [],
+            "Height": 0,
+            "Orientation": 0,
+            "Quality": "fqDefault"
+          },
+          "doc": "セルの文字のフォント(既定はグリッドの Font)。代入は内容のコピー。"
+        },
+        "Layout": {
+          "type": {
+            "kind": "enum",
+            "enum": "TTextLayout"
+          },
+          "declaredIn": "TGridColumn",
+          "default": "tlCenter"
+        },
+        "MinSize": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TGridColumn",
+          "default": 0,
+          "doc": "AutoFillColumns のときの、幅の下限・上限と、広げる割合。"
+        },
+        "MaxSize": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TGridColumn",
+          "default": 0
+        },
+        "SizePriority": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TGridColumn",
+          "default": 1
+        },
+        "DropDownRows": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TGridColumn",
+          "default": 7,
+          "doc": "PickList の一覧に一度に出す行の数。"
+        },
+        "ValueChecked": {
+          "type": {
+            "kind": "string"
+          },
+          "declaredIn": "TGridColumn",
+          "default": "1",
+          "doc": "ButtonStyle が cbsCheckboxColumn のとき、TStringGrid のセルの文字列が ValueChecked ならチェックあり、ValueUnchecked ならなし。"
+        },
+        "ValueUnchecked": {
+          "type": {
+            "kind": "string"
+          },
+          "declaredIn": "TGridColumn",
+          "default": "0"
         }
       }
     }
@@ -18080,6 +18351,15 @@
     "TSortOrder": [
       "soAscending",
       "soDescending"
+    ],
+    "TColumnButtonStyle": [
+      "cbsAuto",
+      "cbsEllipsis",
+      "cbsNone",
+      "cbsPickList",
+      "cbsCheckboxColumn",
+      "cbsButton",
+      "cbsButtonColumn"
     ],
     "TSectionTrackState": [
       "tsTrackBegin",
@@ -19160,6 +19440,78 @@
       {
         "name": "tIndex",
         "type": "int"
+      }
+    ],
+    "TSelectEditorEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "ACol",
+        "type": "int"
+      },
+      {
+        "name": "ARow",
+        "type": "int"
+      },
+      {
+        "name": "Editor",
+        "type": "TWinControl*&"
+      }
+    ],
+    "TGetCheckboxStateEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "ACol",
+        "type": "int"
+      },
+      {
+        "name": "ARow",
+        "type": "int"
+      },
+      {
+        "name": "Value",
+        "type": "TCheckBoxState&"
+      }
+    ],
+    "TSetCheckboxStateEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "ACol",
+        "type": "int"
+      },
+      {
+        "name": "ARow",
+        "type": "int"
+      },
+      {
+        "name": "Value",
+        "type": "TCheckBoxState"
+      }
+    ],
+    "TToggledCheckboxEvent": [
+      {
+        "name": "Sender",
+        "type": "TObject*"
+      },
+      {
+        "name": "ACol",
+        "type": "int"
+      },
+      {
+        "name": "ARow",
+        "type": "int"
+      },
+      {
+        "name": "AState",
+        "type": "TCheckBoxState"
       }
     ],
     "TCustomSectionNotifyEvent": [

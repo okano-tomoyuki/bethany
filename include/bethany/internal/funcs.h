@@ -1537,6 +1537,67 @@
     X(void*,         TCustomStringGrid_GetObjects,          (obj_t o, int_t c, int_t r),                                   (o, c, r)) \
     X(void,          TCustomStringGrid_SetObjects,          (obj_t o, int_t c, int_t r, void* v),                          (o, c, r, v)) \
     X(obj_t,         TCustomStringGrid_GetCols,             (obj_t o, int_t i),                                            (o, i)) \
-    X(obj_t,         TCustomStringGrid_GetRows,             (obj_t o, int_t i),                                            (o, i))
+    X(obj_t,         TCustomStringGrid_GetRows,             (obj_t o, int_t i),                                            (o, i)) \
+    X(obj_t,         TCustomDrawGrid_GetColumns,            (obj_t o),                                                     (o)) \
+    X(obj_t,         TCustomDrawGrid_GetSelectedColumn,     (obj_t o),                                                     (o)) \
+    X(int_t,         TGridColumns_GetCount,                 (obj_t o),                                                     (o)) \
+    X(int_t,         TGridColumns_GetVisibleCount,          (obj_t o),                                                     (o)) \
+    X(obj_t,         TGridColumns_GetItem,                  (obj_t o, int_t i),                                            (o, i)) \
+    X(obj_t,         TGridColumns_Add,                      (obj_t o),                                                     (o)) \
+    X(void,          TGridColumns_Delete,                   (obj_t o, int_t i),                                            (o, i)) \
+    X(void,          TGridColumns_Clear,                    (obj_t o),                                                     (o)) \
+    X(void,          TGridColumns_BeginUpdate,              (obj_t o),                                                     (o)) \
+    X(void,          TGridColumns_EndUpdate,                (obj_t o),                                                     (o)) \
+    X(obj_t,         TGridColumns_ColumnByTitle,            (obj_t o, str_t title),                                        (o, title)) \
+    X(int_t,         TGridColumn_GetWidth,                  (obj_t o),                                                     (o)) \
+    X(void,          TGridColumn_SetWidth,                  (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TGridColumn_GetAlignment,              (obj_t o),                                                     (o)) \
+    X(void,          TGridColumn_SetAlignment,              (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TGridColumn_GetButtonStyle,            (obj_t o),                                                     (o)) \
+    X(void,          TGridColumn_SetButtonStyle,            (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TGridColumn_GetReadOnly,               (obj_t o),                                                     (o)) \
+    X(void,          TGridColumn_SetReadOnly,               (obj_t o, bool_t v),                                           (o, v)) \
+    X(bool_t,        TGridColumn_GetVisible,                (obj_t o),                                                     (o)) \
+    X(void,          TGridColumn_SetVisible,                (obj_t o, bool_t v),                                           (o, v)) \
+    X(int_t,         TGridColumn_GetColor,                  (obj_t o),                                                     (o)) \
+    X(void,          TGridColumn_SetColor,                  (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TGridColumn_GetLayout,                 (obj_t o),                                                     (o)) \
+    X(void,          TGridColumn_SetLayout,                 (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TGridColumn_GetMinSize,                (obj_t o),                                                     (o)) \
+    X(void,          TGridColumn_SetMinSize,                (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TGridColumn_GetMaxSize,                (obj_t o),                                                     (o)) \
+    X(void,          TGridColumn_SetMaxSize,                (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TGridColumn_GetSizePriority,           (obj_t o),                                                     (o)) \
+    X(void,          TGridColumn_SetSizePriority,           (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TGridColumn_GetDropDownRows,           (obj_t o),                                                     (o)) \
+    X(void,          TGridColumn_SetDropDownRows,           (obj_t o, int_t v),                                            (o, v)) \
+    X(str_t,         TGridColumn_GetValueChecked,           (obj_t o),                                                     (o)) \
+    X(void,          TGridColumn_SetValueChecked,           (obj_t o, str_t v),                                            (o, v)) \
+    X(str_t,         TGridColumn_GetValueUnchecked,         (obj_t o),                                                     (o)) \
+    X(void,          TGridColumn_SetValueUnchecked,         (obj_t o, str_t v),                                            (o, v)) \
+    X(int_t,         TGridColumn_GetIndex,                  (obj_t o),                                                     (o)) \
+    X(void,          TGridColumn_SetIndex,                  (obj_t o, int_t v),                                            (o, v)) \
+    X(obj_t,         TGridColumn_GetTitle,                  (obj_t o),                                                     (o)) \
+    X(obj_t,         TGridColumn_GetFont,                   (obj_t o),                                                     (o)) \
+    X(void,          TGridColumn_SetFont,                   (obj_t o, obj_t v),                                            (o, v)) \
+    X(obj_t,         TGridColumn_GetPickList,               (obj_t o),                                                     (o)) \
+    X(str_t,         TGridColumnTitle_GetCaption,           (obj_t o),                                                     (o)) \
+    X(void,          TGridColumnTitle_SetCaption,           (obj_t o, str_t v),                                            (o, v)) \
+    X(int_t,         TGridColumnTitle_GetAlignment,         (obj_t o),                                                     (o)) \
+    X(void,          TGridColumnTitle_SetAlignment,         (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TGridColumnTitle_GetLayout,            (obj_t o),                                                     (o)) \
+    X(void,          TGridColumnTitle_SetLayout,            (obj_t o, int_t v),                                            (o, v)) \
+    X(int_t,         TGridColumnTitle_GetColor,             (obj_t o),                                                     (o)) \
+    X(void,          TGridColumnTitle_SetColor,             (obj_t o, int_t v),                                            (o, v)) \
+    X(bool_t,        TGridColumnTitle_GetMultiLine,         (obj_t o),                                                     (o)) \
+    X(void,          TGridColumnTitle_SetMultiLine,         (obj_t o, bool_t v),                                           (o, v)) \
+    X(obj_t,         TGridColumnTitle_GetFont,              (obj_t o),                                                     (o)) \
+    X(void,          TGridColumnTitle_SetFont,              (obj_t o, obj_t v),                                            (o, v)) \
+    X(void,          TCustomDrawGrid_SetOnSelectEditor,     (obj_t o, grid_select_editor_callback_t cb, void* d),          (o, cb, d)) \
+    X(void,          TCustomDrawGrid_SetOnButtonClick,      (obj_t o, cell_callback_t cb, void* d),                        (o, cb, d)) \
+    X(void,          TCustomDrawGrid_SetOnPickListSelect,   (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
+    X(void,          TCustomDrawGrid_SetOnGetCheckboxState, (obj_t o, grid_get_checkbox_callback_t cb, void* d),           (o, cb, d)) \
+    X(void,          TCustomDrawGrid_SetOnSetCheckboxState, (obj_t o, grid_set_checkbox_callback_t cb, void* d),           (o, cb, d)) \
+    X(void,          TCustomDrawGrid_SetOnCheckboxToggled,  (obj_t o, grid_set_checkbox_callback_t cb, void* d),           (o, cb, d))
 
 #endif

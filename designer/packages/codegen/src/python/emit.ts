@@ -123,7 +123,11 @@ function statement(s: Exclude<Statement, { kind: 'blank' }>): string[] {
           ? [`${target}.Add()`]
           : [
               `item = ${target}.Add()`,
-              ...assigns.map((a) => `item.${a.path.join('.')} = ${value(a.value)}`),
+              ...assigns.flatMap((a) =>
+                a.kind === 'assign'
+                  ? [`item.${a.path.join('.')} = ${value(a.value)}`]
+                  : a.lines.map((line) => `item.${a.path.join('.')}.Add(${stringLiteral(line)})`),
+              ),
             ],
       );
     }

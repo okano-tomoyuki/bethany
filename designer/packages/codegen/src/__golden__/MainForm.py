@@ -215,16 +215,29 @@ class TMainForm(TForm):
         self.Grid1.Width = 355
         self.Grid1.Height = 92
         self.Grid1.Align = alClient
-        self.Grid1.ColCount = 3
         self.Grid1.RowCount = 4
         self.Grid1.AlternateColor = clInfoBk
         self.Grid1.GridLineColor = clGray
         self.Grid1.TitleFont.Style = fsBold
         self.Grid1.AutoFillColumns = True
         self.Grid1.ColumnClickSorts = True
+        item = self.Grid1.Columns.Add()
+        item.Title.Caption = "Name"
+        item.Width = 120
+        item = self.Grid1.Columns.Add()
+        item.Title.Caption = "Color"
+        item.ButtonStyle = cbsPickList
+        item.PickList.Add("Red")
+        item.PickList.Add("Green")
+        item = self.Grid1.Columns.Add()
+        item.Title.Caption = "Done"
+        item.ButtonStyle = cbsCheckboxColumn
+        item.ValueChecked = "Y"
+        item.ValueUnchecked = "N"
         self.Grid1.OnValidateEntry = self.Grid1ValidateEntry
         self.Grid1.OnPrepareCanvas = self.Grid1PrepareCanvas
         self.Grid1.OnCompareCells = self.Grid1CompareCells
+        self.Grid1.OnCheckboxToggled = self.Grid1CheckboxToggled
 
         self.BottomPanel.Parent = self
         self.BottomPanel.Left = 0
@@ -320,7 +333,7 @@ class TMainForm(TForm):
         self.FileSaveAction.OnExecute = self.FileSaveActionExecute
 
         self.FileSaveItem.Action = self.FileSaveAction
-    # <bethany-designer:end id="beth_CreateComponents" hash="418defcc">
+    # <bethany-designer:end id="beth_CreateComponents" hash="57043a05">
 
     # <bethany-designer:handler-stubs>
 
@@ -364,6 +377,9 @@ class TMainForm(TForm):
         pass
 
     def Grid1CompareCells(self, Sender, ACol, ARow, BCol, BRow, Result):
+        pass
+
+    def Grid1CheckboxToggled(self, Sender, ACol, ARow, AState):
         pass
 
     def ColorListDrawItem(self, Sender, Index, ARect, State):

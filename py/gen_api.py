@@ -394,6 +394,10 @@ class Gen:
                 return "_a_ref_str"
             if isinstance(s, tuple):
                 return f'_a_ref_enum("{s[1]}")'
+            m = re.fullmatch(r"(\w+)\*", base)
+            if m and self.class_kind(m.group(1)) == "comp":
+                # 書き換え可能なコンポーネント(グリッドの OnSelectEditor の Editor)
+                return f'_a_ref_comp("{m.group(1)}")'
             return None
         if s == "int":
             return "_a_int"
@@ -799,7 +803,7 @@ from ._core import (BethError, Ref, TRect, TPoint, TObject, TPersistent, TCompon
 from ._core import (lib, _mixins, _register, _event_types, _ItemMixin, _Prop, _Indexed, _Event,
                    _int, _float, _bool, _str, _char, _ptr, _rect_conv, _point_conv, _enum, _set, _comp, _existing, _item, _obj, _view,
                    _str_key, _enc, _dec, _h, _b, _rect, _point, _to_enum, _to_comp, _to_existing, _to_item, _to_obj,
-                   _a_int, _a_bool, _a_str, _a_rect, _a_exception, _a_strings, _a_enum, _a_comp, _a_item, _a_obj, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_str, _a_ref_enum)
+                   _a_int, _a_bool, _a_str, _a_rect, _a_exception, _a_strings, _a_enum, _a_comp, _a_item, _a_obj, _a_ref_int, _a_ref_bool, _a_ref_char, _a_ref_str, _a_ref_enum, _a_ref_comp)
 '''
 
 FOOTER = '''\

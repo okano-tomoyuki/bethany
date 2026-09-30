@@ -78,6 +78,10 @@ using grid_validate_callback_t = void (BETH_CALL *)(obj_t sender, int_t col, int
 using grid_prepare_canvas_callback_t = void (BETH_CALL *)(obj_t sender, int_t col, int_t row, uint_t state, void* data);
 using grid_compare_cells_callback_t = void (BETH_CALL *)(obj_t sender, int_t acol, int_t arow, int_t bcol, int_t brow, int_t* result, void* data);
 using grid_operation_callback_t = void (BETH_CALL *)(obj_t sender, int_t isColumn, int_t sIndex, int_t tIndex, void* data);
+// グリッドの OnSelectEditor・OnGetCheckboxState・OnSetCheckboxState・OnCheckboxToggled(docs/adr/0054)。state は TCheckBoxState の序数。
+using grid_select_editor_callback_t = void (BETH_CALL *)(obj_t sender, int_t col, int_t row, obj_t* editor, void* data);
+using grid_get_checkbox_callback_t = void (BETH_CALL *)(obj_t sender, int_t col, int_t row, int_t* state, void* data);
+using grid_set_checkbox_callback_t = void (BETH_CALL *)(obj_t sender, int_t col, int_t row, int_t state, void* data);
 
 #define BETH_DECLARE_FUNC(ret, name, params, args) ret name params;
 BETH_FUNCS(BETH_DECLARE_FUNC)

@@ -203,18 +203,35 @@
                   "Width": 355,
                   "Height": 92,
                   "Align": "alClient",
-                  "ColCount": 3,
                   "RowCount": 4,
                   "AlternateColor": "clInfoBk",
                   "GridLineColor": "clGray",
                   "TitleFont": { "Style": ["fsBold"] },
                   "AutoFillColumns": true,
-                  "ColumnClickSorts": true
+                  "ColumnClickSorts": true,
+                  "Columns": [
+                    {
+                      "Title": { "Caption": "Name" },
+                      "Width": 120
+                    },
+                    {
+                      "Title": { "Caption": "Color" },
+                      "ButtonStyle": "cbsPickList",
+                      "PickList": ["Red", "Green"]
+                    },
+                    {
+                      "Title": { "Caption": "Done" },
+                      "ButtonStyle": "cbsCheckboxColumn",
+                      "ValueChecked": "Y",
+                      "ValueUnchecked": "N"
+                    }
+                  ]
                 },
                 "events": {
                   "OnValidateEntry": "Grid1ValidateEntry",
                   "OnPrepareCanvas": "Grid1PrepareCanvas",
-                  "OnCompareCells": "Grid1CompareCells"
+                  "OnCompareCells": "Grid1CompareCells",
+                  "OnCheckboxToggled": "Grid1CheckboxToggled"
                 }
               }
             ]

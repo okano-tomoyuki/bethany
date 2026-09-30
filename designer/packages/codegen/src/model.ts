@@ -34,6 +34,15 @@ export type Value =
   /** 同じフォームのコンポーネント */
   | { readonly kind: 'ref'; readonly name: string };
 
+/** コレクションの項目への文(項目の値の代入か、項目の TStrings への追加) */
+export type ItemStatement =
+  | { readonly kind: 'assign'; readonly path: readonly string[]; readonly value: Value }
+  | {
+      readonly kind: 'strings';
+      readonly path: readonly string[];
+      readonly lines: readonly string[];
+    };
+
 /** 文の対象。undefined はフォーム自身 */
 export type Target = string | undefined;
 
@@ -67,11 +76,8 @@ export type Statement =
       readonly target: Target;
       readonly property: string;
       readonly itemClass: string;
-      /** 項目ごとの、項目のプロパティへの代入(path は項目からのパス) */
-      readonly items: readonly (readonly {
-        readonly path: readonly string[];
-        readonly value: Value;
-      }[])[];
+      /** 項目ごとの、項目のプロパティへの代入と TStrings の中身(path は項目からのパス。グリッドの列の PickList。docs/adr/0054) */
+      readonly items: readonly (readonly ItemStatement[])[];
     }
   | {
       readonly kind: 'event';
@@ -249,9 +255,11 @@ function propertyStatements(
       Object.entries(known)
         .filter(([name]) => Object.hasOwn(item, name))
         .flatMap(([name, sub]) => propertyStatements(undefined, [name], sub, item[name]))
-        .map((s) => {
-          if (s.kind !== 'assign') throw new Error(`not a scalar in ${type.item}: ${s.kind}`);
-          return { path: s.path, value: s.value };
+        .map((s): ItemStatement => {
+          if (s.kind === 'assign') return { kind: 'assign', path: s.path, value: s.value };
+          // 項目の TStrings は、新しい項目では空なので Clear しない
+          if (s.kind === 'strings') return { kind: 'strings', path: [s.property], lines: s.lines };
+          throw new Error(`not supported in ${type.item}: ${s.kind}`);
         }),
     );
     return [{ kind: 'collection', target, property: path.join('.'), itemClass: type.item, items }];

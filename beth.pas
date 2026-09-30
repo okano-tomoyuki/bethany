@@ -17180,6 +17180,695 @@ begin
   end;
 end;
 
+
+{ ---------------- グリッドの Columns(docs/adr/0054) ----------------
+  TGridColumn は TCollectionItem のため、ハンドルを渡すときに観察者を付ける(WatchItem。TStatusPanel と同じ)。
+  列の Title・Font・PickList は、LCL が列の生成時に作り、列と同じ寿命。 }
+
+type
+  TCustomGridAccess054 = class(TCustomGrid);
+  TCustomDrawGridAccess054 = class(TCustomDrawGrid);
+
+  { OnSelectEditor(TSelectEditorEvent)用。Editor は書き換え可能(nil なら編集欄を出さない)。 }
+  TBethGridSelectEditorCallback = procedure(Sender: Pointer; ACol, ARow: Integer; Editor: PPointer; Data: Pointer); BETH_CALL;
+  { OnGetCheckboxState(var)用。State は TCheckBoxState の序数で、書き換え可能。 }
+  TBethGridGetCheckboxCallback = procedure(Sender: Pointer; ACol, ARow: Integer; State: PInteger; Data: Pointer); BETH_CALL;
+  { OnSetCheckboxState・OnCheckboxToggled 用。 }
+  TBethGridSetCheckboxCallback = procedure(Sender: Pointer; ACol, ARow, State: Integer; Data: Pointer); BETH_CALL;
+
+  TGridBridge054 = class(TComponent)
+  private
+    FSelectEditor: TBethGridSelectEditorCallback;
+    FGetCheckbox: TBethGridGetCheckboxCallback;
+    FSetCheckbox: TBethGridSetCheckboxCallback;
+    FData: Pointer;
+  public
+    procedure DoSelectEditor(Sender: TObject; ACol, ARow: Integer; var Editor: TWinControl);
+    procedure DoGetCheckbox(Sender: TObject; ACol, ARow: Integer; var Value: TCheckBoxState);
+    procedure DoSetCheckbox(Sender: TObject; ACol, ARow: Integer; const Value: TCheckBoxState);
+    procedure DoToggled(Sender: TObject; ACol, ARow: Integer; AState: TCheckBoxState);
+  end;
+
+procedure TGridBridge054.DoSelectEditor(Sender: TObject; ACol, ARow: Integer; var Editor: TWinControl);
+var
+  E: Pointer;
+begin
+  if not Assigned(FSelectEditor) or GDetaching then
+    Exit;
+  E := Pointer(Editor);
+  FSelectEditor(Pointer(Sender), ACol, ARow, @E, FData);
+  Editor := TWinControl(E);
+  CheckCallbackError;
+end;
+
+procedure TGridBridge054.DoGetCheckbox(Sender: TObject; ACol, ARow: Integer; var Value: TCheckBoxState);
+var
+  S: Integer;
+begin
+  if not Assigned(FGetCheckbox) or GDetaching then
+    Exit;
+  S := Ord(Value);
+  FGetCheckbox(Pointer(Sender), ACol, ARow, @S, FData);
+  Value := TCheckBoxState(S);
+  CheckCallbackError;
+end;
+
+procedure TGridBridge054.DoSetCheckbox(Sender: TObject; ACol, ARow: Integer; const Value: TCheckBoxState);
+begin
+  if not Assigned(FSetCheckbox) or GDetaching then
+    Exit;
+  FSetCheckbox(Pointer(Sender), ACol, ARow, Ord(Value), FData);
+  CheckCallbackError;
+end;
+
+procedure TGridBridge054.DoToggled(Sender: TObject; ACol, ARow: Integer; AState: TCheckBoxState);
+begin
+  if not Assigned(FSetCheckbox) or GDetaching then
+    Exit;
+  FSetCheckbox(Pointer(Sender), ACol, ARow, Ord(AState), FData);
+  CheckCallbackError;
+end;
+
+function GridBridge054For(Owner: TComponent; Current: Pointer; Data: Pointer): TGridBridge054;
+begin
+  if (Current <> nil) and (TObject(Current) is TGridBridge054) and (TGridBridge054(Current).Owner = Owner) then
+    Result := TGridBridge054(Current)
+  else
+    Result := TGridBridge054.Create(Owner);
+  Result.FData := Data;
+end;
+
+function TCustomDrawGrid_GetColumns(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TCustomDrawGrid(Obj).Columns);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+function TCustomDrawGrid_GetSelectedColumn(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := WatchItem(TCustomDrawGrid(Obj).SelectedColumn);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+function TGridColumns_GetCount(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TGridColumns(Obj).Count;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function TGridColumns_GetVisibleCount(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TGridColumns(Obj).VisibleCount;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+function TGridColumns_GetItem(Obj: Pointer; Index: Integer): Pointer; BETH_CALL;
+begin
+  try
+    Result := WatchItem(TGridColumns(Obj).Items[Index]);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+function TGridColumns_Add(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := WatchItem(TGridColumns(Obj).Add);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TGridColumns_Delete(Obj: Pointer; Index: Integer); BETH_CALL;
+begin
+  try
+    TGridColumns(Obj).Delete(Index);
+  except
+    ReportException;
+  end;
+end;
+
+procedure TGridColumns_Clear(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TGridColumns(Obj).Clear;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TGridColumns_BeginUpdate(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TGridColumns(Obj).BeginUpdate;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TGridColumns_EndUpdate(Obj: Pointer); BETH_CALL;
+begin
+  try
+    TGridColumns(Obj).EndUpdate;
+  except
+    ReportException;
+  end;
+end;
+
+function TGridColumns_ColumnByTitle(Obj: Pointer; Title: PChar): Pointer; BETH_CALL;
+begin
+  try
+    Result := WatchItem(TGridColumns(Obj).ColumnByTitle(AnsiString(Title)));
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+function TGridColumn_GetWidth(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TGridColumn(Obj).Width;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TGridColumn_SetWidth(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TGridColumn(Obj).Width := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TGridColumn_GetAlignment(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TGridColumn(Obj).Alignment);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TGridColumn_SetAlignment(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TGridColumn(Obj).Alignment := TAlignment(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TGridColumn_GetButtonStyle(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TGridColumn(Obj).ButtonStyle);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TGridColumn_SetButtonStyle(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TGridColumn(Obj).ButtonStyle := TColumnButtonStyle(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TGridColumn_GetReadOnly(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TGridColumn(Obj).ReadOnly;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TGridColumn_SetReadOnly(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TGridColumn(Obj).ReadOnly := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TGridColumn_GetVisible(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TGridColumn(Obj).Visible;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TGridColumn_SetVisible(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TGridColumn(Obj).Visible := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TGridColumn_GetColor(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Integer(TGridColumn(Obj).Color);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TGridColumn_SetColor(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TGridColumn(Obj).Color := TColor(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TGridColumn_GetLayout(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TGridColumn(Obj).Layout);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TGridColumn_SetLayout(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TGridColumn(Obj).Layout := TTextLayout(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TGridColumn_GetMinSize(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TGridColumn(Obj).MinSize;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TGridColumn_SetMinSize(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TGridColumn(Obj).MinSize := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TGridColumn_GetMaxSize(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TGridColumn(Obj).MaxSize;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TGridColumn_SetMaxSize(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TGridColumn(Obj).MaxSize := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TGridColumn_GetSizePriority(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TGridColumn(Obj).SizePriority;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TGridColumn_SetSizePriority(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TGridColumn(Obj).SizePriority := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TGridColumn_GetDropDownRows(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TGridColumn(Obj).DropDownRows;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TGridColumn_SetDropDownRows(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TGridColumn(Obj).DropDownRows := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TGridColumn_GetValueChecked(Obj: Pointer): PChar; BETH_CALL;
+begin
+  try
+    Result := ReturnStr(TGridColumn(Obj).ValueChecked);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TGridColumn_SetValueChecked(Obj: Pointer; Value: PChar); BETH_CALL;
+begin
+  try
+    TGridColumn(Obj).ValueChecked := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TGridColumn_GetValueUnchecked(Obj: Pointer): PChar; BETH_CALL;
+begin
+  try
+    Result := ReturnStr(TGridColumn(Obj).ValueUnchecked);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TGridColumn_SetValueUnchecked(Obj: Pointer; Value: PChar); BETH_CALL;
+begin
+  try
+    TGridColumn(Obj).ValueUnchecked := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TGridColumn_GetIndex(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := TGridColumn(Obj).Index;
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TGridColumn_SetIndex(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TGridColumn(Obj).Index := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TGridColumn_GetTitle(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TGridColumn(Obj).Title);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+function TGridColumn_GetFont(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TGridColumn(Obj).Font);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TGridColumn_SetFont(Obj: Pointer; Value: Pointer); BETH_CALL;
+begin
+  try
+    if Value <> nil then
+      TGridColumn(Obj).Font := TFont(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TGridColumn_GetPickList(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TGridColumn(Obj).PickList);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+function TGridColumnTitle_GetCaption(Obj: Pointer): PChar; BETH_CALL;
+begin
+  try
+    Result := ReturnStr(TGridColumnTitle(Obj).Caption);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TGridColumnTitle_SetCaption(Obj: Pointer; Value: PChar); BETH_CALL;
+begin
+  try
+    TGridColumnTitle(Obj).Caption := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TGridColumnTitle_GetAlignment(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TGridColumnTitle(Obj).Alignment);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TGridColumnTitle_SetAlignment(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TGridColumnTitle(Obj).Alignment := TAlignment(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TGridColumnTitle_GetLayout(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Ord(TGridColumnTitle(Obj).Layout);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TGridColumnTitle_SetLayout(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TGridColumnTitle(Obj).Layout := TTextLayout(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TGridColumnTitle_GetColor(Obj: Pointer): Integer; BETH_CALL;
+begin
+  try
+    Result := Integer(TGridColumnTitle(Obj).Color);
+  except
+    Result := 0;
+    ReportException;
+  end;
+end;
+
+procedure TGridColumnTitle_SetColor(Obj: Pointer; Value: Integer); BETH_CALL;
+begin
+  try
+    TGridColumnTitle(Obj).Color := TColor(Value);
+  except
+    ReportException;
+  end;
+end;
+
+function TGridColumnTitle_GetMultiLine(Obj: Pointer): LongBool; BETH_CALL;
+begin
+  try
+    Result := TGridColumnTitle(Obj).MultiLine;
+  except
+    Result := False;
+    ReportException;
+  end;
+end;
+
+procedure TGridColumnTitle_SetMultiLine(Obj: Pointer; Value: LongBool); BETH_CALL;
+begin
+  try
+    TGridColumnTitle(Obj).MultiLine := Value;
+  except
+    ReportException;
+  end;
+end;
+
+function TGridColumnTitle_GetFont(Obj: Pointer): Pointer; BETH_CALL;
+begin
+  try
+    Result := Pointer(TGridColumnTitle(Obj).Font);
+  except
+    Result := nil;
+    ReportException;
+  end;
+end;
+
+procedure TGridColumnTitle_SetFont(Obj: Pointer; Value: Pointer); BETH_CALL;
+begin
+  try
+    if Value <> nil then
+      TGridColumnTitle(Obj).Font := TFont(Value);
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetOnSelectEditor(Obj: Pointer; Cb: TBethGridSelectEditorCallback; Data: Pointer); BETH_CALL;
+var
+  B: TGridBridge054;
+begin
+  try
+    B := GridBridge054For(TCustomDrawGrid(Obj), TMethod(TCustomGridAccess054(Obj).OnSelectEditor).Data, Data);
+    B.FSelectEditor := Cb;
+    TCustomGridAccess054(Obj).OnSelectEditor := @B.DoSelectEditor;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetOnButtonClick(Obj: Pointer; Cb: TBethCellCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TCustomGridAccess054(Obj).OnButtonClick :=
+      @CellBridgeFor(TCustomDrawGrid(Obj), TMethod(TCustomGridAccess054(Obj).OnButtonClick).Data, Cb, Data).DoSelection;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetOnPickListSelect(Obj: Pointer; Cb: TBethCallback; Data: Pointer); BETH_CALL;
+begin
+  try
+    TCustomGridAccess054(Obj).OnPickListSelect :=
+      @BridgeFor(TCustomDrawGrid(Obj), TMethod(TCustomGridAccess054(Obj).OnPickListSelect).Data, Cb, Data).DoClick;
+  except
+    ReportException;
+  end;
+end;
+
+{ TStringGrid は OnGetCheckboxState・OnSetCheckboxState が無ければセルの文字列(ValueChecked・ValueUnchecked)で状態を決めるため、
+  コールバックが nil なら外す(OnCompareCells と同じ。docs/adr/0053)。 }
+procedure TCustomDrawGrid_SetOnGetCheckboxState(Obj: Pointer; Cb: TBethGridGetCheckboxCallback; Data: Pointer); BETH_CALL;
+var
+  B: TGridBridge054;
+begin
+  try
+    if not Assigned(Cb) then
+    begin
+      TCustomDrawGridAccess054(Obj).OnGetCheckboxState := nil;
+      Exit;
+    end;
+    B := GridBridge054For(TCustomDrawGrid(Obj), TMethod(TCustomDrawGridAccess054(Obj).OnGetCheckboxState).Data, Data);
+    B.FGetCheckbox := Cb;
+    TCustomDrawGridAccess054(Obj).OnGetCheckboxState := @B.DoGetCheckbox;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetOnSetCheckboxState(Obj: Pointer; Cb: TBethGridSetCheckboxCallback; Data: Pointer); BETH_CALL;
+var
+  B: TGridBridge054;
+begin
+  try
+    if not Assigned(Cb) then
+    begin
+      TCustomDrawGridAccess054(Obj).OnSetCheckboxState := nil;
+      Exit;
+    end;
+    B := GridBridge054For(TCustomDrawGrid(Obj), TMethod(TCustomDrawGridAccess054(Obj).OnSetCheckboxState).Data, Data);
+    B.FSetCheckbox := Cb;
+    TCustomDrawGridAccess054(Obj).OnSetCheckboxState := @B.DoSetCheckbox;
+  except
+    ReportException;
+  end;
+end;
+
+procedure TCustomDrawGrid_SetOnCheckboxToggled(Obj: Pointer; Cb: TBethGridSetCheckboxCallback; Data: Pointer); BETH_CALL;
+var
+  B: TGridBridge054;
+begin
+  try
+    B := GridBridge054For(TCustomDrawGrid(Obj), TMethod(TCustomGridAccess054(Obj).OnCheckboxToggled).Data, Data);
+    B.FSetCheckbox := Cb;
+    TCustomGridAccess054(Obj).OnCheckboxToggled := @B.DoToggled;
+  except
+    ReportException;
+  end;
+end;
+
 exports
   FreeNotify_SetCallback,
   Error_SetCallback,
@@ -18763,7 +19452,68 @@ exports
   TCustomStringGrid_GetObjects,
   TCustomStringGrid_SetObjects,
   TCustomStringGrid_GetCols,
-  TCustomStringGrid_GetRows;
+  TCustomStringGrid_GetRows,
+  TCustomDrawGrid_GetColumns,
+  TCustomDrawGrid_GetSelectedColumn,
+  TGridColumns_GetCount,
+  TGridColumns_GetVisibleCount,
+  TGridColumns_GetItem,
+  TGridColumns_Add,
+  TGridColumns_Delete,
+  TGridColumns_Clear,
+  TGridColumns_BeginUpdate,
+  TGridColumns_EndUpdate,
+  TGridColumns_ColumnByTitle,
+  TGridColumn_GetWidth,
+  TGridColumn_SetWidth,
+  TGridColumn_GetAlignment,
+  TGridColumn_SetAlignment,
+  TGridColumn_GetButtonStyle,
+  TGridColumn_SetButtonStyle,
+  TGridColumn_GetReadOnly,
+  TGridColumn_SetReadOnly,
+  TGridColumn_GetVisible,
+  TGridColumn_SetVisible,
+  TGridColumn_GetColor,
+  TGridColumn_SetColor,
+  TGridColumn_GetLayout,
+  TGridColumn_SetLayout,
+  TGridColumn_GetMinSize,
+  TGridColumn_SetMinSize,
+  TGridColumn_GetMaxSize,
+  TGridColumn_SetMaxSize,
+  TGridColumn_GetSizePriority,
+  TGridColumn_SetSizePriority,
+  TGridColumn_GetDropDownRows,
+  TGridColumn_SetDropDownRows,
+  TGridColumn_GetValueChecked,
+  TGridColumn_SetValueChecked,
+  TGridColumn_GetValueUnchecked,
+  TGridColumn_SetValueUnchecked,
+  TGridColumn_GetIndex,
+  TGridColumn_SetIndex,
+  TGridColumn_GetTitle,
+  TGridColumn_GetFont,
+  TGridColumn_SetFont,
+  TGridColumn_GetPickList,
+  TGridColumnTitle_GetCaption,
+  TGridColumnTitle_SetCaption,
+  TGridColumnTitle_GetAlignment,
+  TGridColumnTitle_SetAlignment,
+  TGridColumnTitle_GetLayout,
+  TGridColumnTitle_SetLayout,
+  TGridColumnTitle_GetColor,
+  TGridColumnTitle_SetColor,
+  TGridColumnTitle_GetMultiLine,
+  TGridColumnTitle_SetMultiLine,
+  TGridColumnTitle_GetFont,
+  TGridColumnTitle_SetFont,
+  TCustomDrawGrid_SetOnSelectEditor,
+  TCustomDrawGrid_SetOnButtonClick,
+  TCustomDrawGrid_SetOnPickListSelect,
+  TCustomDrawGrid_SetOnGetCheckboxState,
+  TCustomDrawGrid_SetOnSetCheckboxState,
+  TCustomDrawGrid_SetOnCheckboxToggled;
 
 begin
   RequireDerivedFormResource := False;

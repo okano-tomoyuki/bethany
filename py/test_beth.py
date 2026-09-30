@@ -2292,6 +2292,52 @@ def main():
     sg.OnGetEditText = lambda Sender, ACol, ARow, Value: pr(f"StringGrid1 OnGetEditText: ({ACol},{ARow}) {Value.value}")
     sg.OnValidateEntry = sg_validate
     pr(f"StringGrid1 Rows[1]->CommaText={sg.Rows[1].CommaText} Cols[0]->Count={sg.Cols[0].Count} (expected 4)")
+
+    # グリッドの Columns(docs/adr/0054)。PageControl1 の "Columns" ページに、列を持つグリッドを置く。Color の列は一覧から選び、
+    # Size の列は「…」のボタンで S → M → L と切り替え、Done の列はチェックボックス(クリックかスペース)。
+    columnSheet = TTabSheet(Form1)
+    columnSheet.PageControl = Form1.PageControl1
+    columnSheet.Caption = "Columns"
+    cg = TStringGrid(Form1)
+    cg.Parent = columnSheet
+    cg.Align = alClient
+    cg.RowCount = 4
+    cg.DefaultRowHeight = 20
+    cg.Options = cg.Options | goEditing  # 編集とチェックボックスの切り替えに要る
+    cg.AutoFillColumns = True
+    nameColumn = cg.Columns.Add()
+    nameColumn.Title.Caption = "Name"
+    colorColumn = cg.Columns.Add()
+    colorColumn.Title.Caption = "Color"
+    colorColumn.ButtonStyle = cbsPickList
+    for c in ("Red", "Green", "Blue"):
+        colorColumn.PickList.Add(c)
+    sizeColumn = cg.Columns.Add()
+    sizeColumn.Title.Caption = "Size"
+    sizeColumn.ButtonStyle = cbsEllipsis
+    doneColumn = cg.Columns.Add()
+    doneColumn.Title.Caption = "Done"
+    doneColumn.Title.Font.Style = fsBold
+    doneColumn.ButtonStyle = cbsCheckboxColumn
+    doneColumn.ValueChecked = "Y"
+    doneColumn.ValueUnchecked = "N"
+    doneColumn.Width = 40
+    for r, name in enumerate(("Apple", "Banana", "Cherry"), start=1):
+        cg.Cells[1][r] = name
+        cg.Cells[2][r] = "Red"
+        cg.Cells[3][r] = "M"
+        cg.Cells[4][r] = "N"
+
+    def cg_button(Sender, ACol, ARow):
+        v = cg.Cells[ACol][ARow]
+        cg.Cells[ACol][ARow] = {"S": "M", "M": "L"}.get(v, "S")
+        pr(f"Columns grid OnButtonClick: ({ACol},{ARow}) {v} -> {cg.Cells[ACol][ARow]}")
+
+    cg.OnButtonClick = cg_button
+    cg.OnPickListSelect = lambda Sender: pr(f"Columns grid OnPickListSelect: row {cg.Row}")
+    cg.OnCheckboxToggled = lambda Sender, ACol, ARow, AState: pr(f"Columns grid OnCheckboxToggled: ({ACol},{ARow}) state={int(AState)}")
+    pr(f"Columns grid Columns->Count={cg.Columns.Count} ColCount={cg.ColCount} (expected 4 5), "
+       f"Items[1] PickList Count={cg.Columns.Items[1].PickList.Count} (expected 3)")
     pr(f"AlignClientPanel BevelOuter/BevelInner={int(Form1.AlignClientPanel.BevelOuter)}/{int(Form1.AlignClientPanel.BevelInner)} "
        f"(expected 1/2), TreeView ScrollBars={int(Form1.TreeView1.ScrollBars)} (expected 3 = ssBoth)")
 

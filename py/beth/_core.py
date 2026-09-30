@@ -404,13 +404,30 @@ def _a_ref_enum(name):
     return _a_ref(lambda raw: _to_enum(name, raw), int)
 
 
+def _put_ref_comp(name):
+    def put(raws, ref):
+        original = raws[0][0]
+        if ref.value is not None:
+            raws[0][0] = ref.value._current()
+        elif _to_comp(name, original) is not None:
+            raws[0][0] = None  # ラッパーのあるコントロールから None に書き換えた
+        # ラッパーの無いもの(LCL の既定の編集欄)のまま None なら、書き換えない
+    return put
+
+
+def _a_ref_comp(name):
+    """書き換え可能なコンポーネント(グリッドの OnSelectEditor の Editor。docs/adr/0054)。ラッパーの無いものは None で渡す。"""
+    return _Arg(lambda raws: Ref(_to_comp(name, raws[0][0])), put=_put_ref_comp(name))
+
+
 # イベントの型(TKeyEvent 等)→ Sender 以外の引数の変換。beth/__init__.py が設定する。
 _event_types = {}
 
 
 # 有無で LCL の動きが変わるイベント(並べ替えの比較)。None を代入したら DLL のイベントも外し、LCL の既定の比較に戻す
 # (C++ の SetRemovableEvent と同じ。docs/adr/0053)。
-_REMOVABLE_EVENTS = {"TTreeView_SetOnCompare", "TListView_SetOnCompare", "TCustomDrawGrid_SetOnCompareCells"}
+_REMOVABLE_EVENTS = {"TTreeView_SetOnCompare", "TListView_SetOnCompare", "TCustomDrawGrid_SetOnCompareCells",
+                     "TCustomDrawGrid_SetOnGetCheckboxState", "TCustomDrawGrid_SetOnSetCheckboxState"}
 
 
 class _Event:

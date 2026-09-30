@@ -6,6 +6,14 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
 
 ## [Unreleased]
 
+### 追加
+
+- グリッドの列(`Columns`。`TGridColumns`・`TGridColumn`・`TGridColumnTitle`)。列ごとの見出し(`Title`)・`Width`・`Alignment`・`Color`・
+  `Font`・`ReadOnly`・`Visible` と、セルの編集欄の種類(`ButtonStyle`: 一覧から選ぶ `cbsPickList` と `PickList`、「…」のボタンの `cbsEllipsis`、
+  チェックボックスの `cbsCheckboxColumn` と `ValueChecked`・`ValueUnchecked` 等)、`SelectedColumn`。セルの編集の部品のイベント
+  (`OnSelectEditor`・`OnButtonClick`・`OnPickListSelect`)と、チェックボックスの列のイベント(`OnGetCheckboxState`・`OnSetCheckboxState`・
+  `OnCheckboxToggled`)([ADR 0054](docs/adr/0054-grid-columns.md))
+
 ## [0.3.0] - 2026-09-30
 
 ### 追加
