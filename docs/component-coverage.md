@@ -124,6 +124,7 @@ VCL アプリらしい UI に必須だが、TMenuItem がツリー構造の TCom
 `TClipboard` は「コントロール」ではないため今回の一覧から外しているが、
 実際の VCL アプリの移行では必要になることが多い。着手する場合は別途 ADR で設計を切る。
 単体の `TStringList` は、TStrings の派生として実装済み([ADR 0028](adr/0028-labelededit-and-stringlist.md))。
+`TThread` と、別のスレッドからメインスレッドへ処理を渡す `Synchronize`・`Queue` も実装済み([ADR 0064](adr/0064-tthread-and-main-thread-handoff.md))。
 
 ## 3. cross-cutting な既知の課題(特定のクラスではなく設計全体に関わるもの)
 

@@ -38,7 +38,9 @@ WIN32_AW_ALIASES = {"TextOutA", "TextOutW", "MessageBoxA", "MessageBoxW", "FindT
 NO_SENDER_EVENTS = {"TActionEvent"}
 CORE_CLASSES = {"TObject", "TPersistent", "TComponent"}
 HELPER_CLASSES = {"Property", "ReadOnlyProperty", "IndexedProperty", "ReadOnlyIndexedProperty", "IndexedProperty2",
-                  "ItemRegistry", "CanvasHolder", "Exception"}
+                  "ItemRegistry", "CanvasHolder", "Exception",
+                  # Python では _core の手書きの TThread(Synchronize・Queue だけ。スレッドは threading.Thread。docs/adr/0064)
+                  "TThread"}
 
 
 # ---------------- C++ の文の分割 ----------------
@@ -224,6 +226,8 @@ def parse_hpp():
             continue
         m = re.fullmatch(r"using (\w+) = std::function<void\((.*)\)>", t)
         if m:
+            if m.group(1) == "TThreadMethod":
+                continue  # メインスレッドで実行する処理(TThread::Synchronize の引数)。イベントではない(docs/adr/0064)
             params = split_params(m.group(2))
             # 先頭は Sender(DLL は常に先頭で渡し、Python のハンドラにも先頭で渡す)。ただし VCL・LCL と同じく Sender の無い
             # イベント(ActionList の TActionEvent。docs/adr/0063)は、C++ では先頭が Action になる。Python では従来どおり
@@ -470,7 +474,7 @@ class Gen:
         return "\n".join(out)
 
     def public_names(self):
-        names = ["BethError", "Ref", "TRect", "TPoint", "TObject", "TPersistent", "TComponent",
+        names = ["BethError", "Ref", "TRect", "TPoint", "TObject", "TPersistent", "TComponent", "TThread",
                  "ShortCut", "TextToShortCut", "ShortCutToText", "Application", "Screen", "Clipboard",
                  "CF_Text", "CF_Bitmap", "CF_Picture",
                  "ShowMessage", "MessageDlg", "InputBox", "PasswordBox", "InputQuery"]
@@ -827,7 +831,7 @@ C++ との違い(詳しくは beth/_core.py):
 import ctypes
 import enum
 
-from ._core import (BethError, Ref, TRect, TPoint, TObject, TPersistent, TComponent,
+from ._core import (BethError, Ref, TRect, TPoint, TObject, TPersistent, TComponent, TThread,
                    ShortCut, TextToShortCut, ShortCutToText, Clipboard, CF_Text, CF_Bitmap, CF_Picture,
                    ShowMessage, MessageDlg, InputBox, PasswordBox, InputQuery,
                    MB_OK, MB_OKCANCEL, MB_ABORTRETRYIGNORE, MB_YESNOCANCEL, MB_YESNO, MB_RETRYCANCEL,

@@ -7118,6 +7118,96 @@ protected:
     ~TReplaceDialog() override = default;
 };
 
+/* ---------------- スレッド(docs/adr/0064) ---------------- */
+
+// メインスレッドで実行する処理(VCL の TThreadMethod。メンバ関数もラムダも渡せる)。
+using TThreadMethod = std::function<void()>;
+
+// スレッド(VCL の TThread)。派生クラスで Execute を書き、別のスレッドで実行する。
+//
+//     class TWorker : public TThread
+//     {
+//     public:
+//         TWorker() : TThread(false) {}
+//     protected:
+//         void Execute() override
+//         {
+//             while (!Terminated) { /* 重い処理 */ Synchronize([this] { Form1->Label1->Caption = "..."; }); }
+//         }
+//     };
+//
+// 画面の部品(コントロール・フォーム等)はメインスレッドからしか触れない(VCL・LCL と同じ)。別のスレッドからは、Synchronize(終わるまで
+// 待つ)か Queue(待たない)でメインスレッドに渡す。渡した処理は、メインスレッドのメッセージループ(Application->Run・ProcessMessages・
+// モーダルのフォーム)と、メインスレッドの WaitFor の中で実行される。
+// スレッドは std::thread で作る(C++ の側だけで完結し、DLL は別のスレッドから呼ばれても安全なようにしてある)。
+class TThread : public TObject
+{
+public:
+    // CreateSuspended が false なら、構築が終わった後(メインスレッドのメッセージループか WaitFor)に始まる。VCL は構築の直後に始めるが、
+    // C++ には構築の後に呼ばれる仕組み(Delphi の AfterConstruction)が無く、基底のコンストラクタで始めると派生クラスの構築前に Execute が
+    // 呼ばれうるため。すぐに始めるには、CreateSuspended を true にして、構築の後で Start() を呼ぶ。
+    explicit TThread(bool CreateSuspended);
+    // 動いていれば Terminate して、終わるまで待つ(VCL と同じ)。この TThread が Queue した処理のうち、まだ実行されていないものは取り除く。
+    ~TThread() override;
+
+    TThread(const TThread&) = delete;
+    TThread& operator=(const TThread&) = delete;
+
+    // 始める(CreateSuspended が true のとき)。動いている・終わったスレッドでは例外(EThread)。
+    void Start();
+    // Terminated を true にする(Execute がそれを見て抜ける。スレッドを強制的には止めない)。
+    void Terminate();
+    // 終わるまで待ち、ReturnValue を返す。メインスレッドから呼ぶと、待つ間も Synchronize・Queue の処理を実行する
+    // (待っているスレッドの Synchronize で止まらないように)。FreeOnTerminate が true なら例外(EThread)。
+    int WaitFor();
+
+    // true なら、終わったとき(OnTerminate の後)に自分を delete する(そのスレッドの上で)。
+    Property<bool>         FreeOnTerminate;
+    // Execute が終わった後、メインスレッドで呼ばれる(Sender はこの TThread)。
+    Property<TNotifyEvent> OnTerminate;
+    // Execute と OnTerminate が終わったか。
+    ReadOnlyProperty<bool> Finished;
+    // Execute から送出されて捕まえた例外(無ければ空)。std::rethrow_exception で送出し直せる(VCL の FatalException)。
+    ReadOnlyProperty<std::exception_ptr> FatalException;
+
+    // AMethod をメインスレッドで実行し、終わるまで待つ。AMethod から送出された例外は、呼んだスレッドで送出し直す。
+    // メインスレッドから呼ぶと、その場で実行する。AThread は呼んだ TThread(無ければ nullptr。TThread::Synchronize(nullptr, [&] { ... }))。
+    static void Synchronize(TThread* AThread, const TThreadMethod& AMethod);
+    // AMethod をメインスレッドで実行するよう渡し、待たずに戻る。メインスレッドから呼ぶと、その場で実行する。
+    static void Queue(TThread* AThread, const TThreadMethod& AMethod);
+    // AThread が Queue した処理のうち、まだ実行されていないものを取り除く。
+    static void RemoveQueuedEvents(TThread* AThread);
+
+protected:
+    // 別のスレッドで実行する処理。Terminated を見て抜ける。送出した例外は FatalException に入る。
+    virtual void Execute() = 0;
+
+    // Execute の中から、自分を AThread にして呼ぶ(VCL の protected の Synchronize・Queue)。
+    void Synchronize(const TThreadMethod& AMethod) { Synchronize(this, AMethod); }
+    void Queue(const TThreadMethod& AMethod) { Queue(this, AMethod); }
+
+    // Terminate が呼ばれたか。
+    ReadOnlyProperty<bool> Terminated;
+    // WaitFor が返す値。
+    Property<int>          ReturnValue;
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> impl_;
+
+    void Run();
+
+    static bool               GetFreeOnTerminateImpl(TObject* owner);
+    static void               SetFreeOnTerminateImpl(TObject* owner, const bool& value);
+    static TNotifyEvent       GetOnTerminateImpl(TObject* owner);
+    static void               SetOnTerminateImpl(TObject* owner, const TNotifyEvent& value);
+    static bool               GetFinishedImpl(TObject* owner);
+    static std::exception_ptr GetFatalExceptionImpl(TObject* owner);
+    static bool               GetTerminatedImpl(TObject* owner);
+    static int                GetReturnValueImpl(TObject* owner);
+    static void               SetReturnValueImpl(TObject* owner, const int& value);
+};
+
 } // namespace beth
 
 #pragma pop_macro("TextOut")

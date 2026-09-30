@@ -1682,6 +1682,31 @@ void TMainForm::OpenSubButtonClick(TObject*)
     sub->Show();
 }
 
+// 別のスレッドで数えて、メインスレッドのラベルとプログレスバーに Synchronize で出すスレッド(docs/adr/0064)。
+class TCountThread : public TThread
+{
+public:
+    TCountThread(TLabel* label, TProgressBar* bar) : TThread(false), label_(label), bar_(bar) {}
+
+protected:
+    void Execute() override
+    {
+        for (int i = 1; i <= 100 && !Terminated; ++i)
+        {
+            Sleep(30);  // 重い処理の代わり
+            Synchronize([this, i] {
+                label_->Caption = "counting " + std::to_string(i) + " / 100";
+                bar_->Position = i;
+            });
+        }
+        ReturnValue = Terminated ? 1 : 0;
+    }
+
+private:
+    TLabel*       label_;
+    TProgressBar* bar_;
+};
+
 } // namespace
 
 int main()
@@ -2867,6 +2892,56 @@ int main()
         };
         std::printf("Columns grid Columns->Count=%d ColCount=%d (expected 4 5), Items[1] PickList Count=%d (expected 3)\n",
                     (int)cg->Columns->Count, (int)cg->ColCount, (int)cg->Columns->Items[1]->PickList->Count);
+    }
+
+    // スレッド(docs/adr/0064)。PageControl1 の "Thread" ページで、Start で TCountThread を始め(画面は固まらない)、Stop で Terminate する。
+    // 終わると OnTerminate(メインスレッド)で結果を出す。FreeOnTerminate で、終わったスレッドは自分を delete する。
+    {
+        TTabSheet* threadSheet = new TTabSheet(Form1);
+        threadSheet->PageControl = Form1->PageControl1;
+        threadSheet->Caption = "Thread";
+        TLabel* countLabel = new TLabel(Form1);
+        countLabel->Parent = threadSheet;
+        countLabel->SetBounds(8, 8, 200, 17);
+        countLabel->Caption = "not started";
+        TProgressBar* countBar = new TProgressBar(Form1);
+        countBar->Parent = threadSheet;
+        countBar->SetBounds(8, 30, 220, 18);
+        TButton* startButton = new TButton(Form1);
+        startButton->Parent = threadSheet;
+        startButton->SetBounds(8, 56, 75, 25);
+        startButton->Caption = "Start";
+        TButton* stopButton = new TButton(Form1);
+        stopButton->Parent = threadSheet;
+        stopButton->SetBounds(90, 56, 75, 25);
+        stopButton->Caption = "Stop";
+        stopButton->Enabled = false;
+        // 動いているスレッド(OnTerminate で nullptr に戻す)と、Stop を押したか
+        std::shared_ptr<TCountThread*> running = std::make_shared<TCountThread*>(nullptr);
+        std::shared_ptr<bool> stopped = std::make_shared<bool>(false);
+        startButton->OnClick = [=](TObject*) {
+            TCountThread* t = new TCountThread(countLabel, countBar);
+            t->FreeOnTerminate = true;
+            *stopped = false;
+            t->OnTerminate = [=](TObject*) {
+                countLabel->Caption = *stopped ? "stopped" : "done";
+                std::printf("Thread OnTerminate: %s\n", std::string(countLabel->Caption).c_str());
+                std::fflush(stdout);
+                *running = nullptr;
+                startButton->Enabled = true;
+                stopButton->Enabled = false;
+            };
+            *running = t;
+            startButton->Enabled = false;
+            stopButton->Enabled = true;
+        };
+        stopButton->OnClick = [=](TObject*) {
+            if (*running)
+            {
+                *stopped = true;
+                (*running)->Terminate();
+            }
+        };
     }
 
     // ステータスバーのパネル(docs/adr/0044)。StatusBar1 の上に、パネルを持つ 2 つ目のステータスバーを置く。

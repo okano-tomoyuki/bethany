@@ -5,6 +5,8 @@
 """
 import ctypes
 import os
+import threading
+import time
 
 from beth import *
 
@@ -2345,6 +2347,56 @@ def main():
        f"Items[1] PickList Count={cg.Columns.Items[1].PickList.Count} (expected 3)")
     pr(f"AlignClientPanel BevelOuter/BevelInner={int(Form1.AlignClientPanel.BevelOuter)}/{int(Form1.AlignClientPanel.BevelInner)} "
        f"(expected 1/2), TreeView ScrollBars={int(Form1.TreeView1.ScrollBars)} (expected 3 = ssBoth)")
+
+    # スレッド(docs/adr/0064)。PageControl1 の "Thread" ページで、Start で threading.Thread を始め(画面は固まらない)、
+    # 数えるたびに TThread.Synchronize でラベルとプログレスバーに出す。Stop で止める。終わったら TThread.Queue で結果を出す。
+    threadSheet = TTabSheet(Form1)
+    threadSheet.PageControl = Form1.PageControl1
+    threadSheet.Caption = "Thread"
+    countLabel = TLabel(Form1)
+    countLabel.Parent = threadSheet
+    countLabel.SetBounds(8, 8, 200, 17)
+    countLabel.Caption = "not started"
+    countBar = TProgressBar(Form1)
+    countBar.Parent = threadSheet
+    countBar.SetBounds(8, 30, 220, 18)
+    startButton = TButton(Form1)
+    startButton.Parent = threadSheet
+    startButton.SetBounds(8, 56, 75, 25)
+    startButton.Caption = "Start"
+    stopButton = TButton(Form1)
+    stopButton.Parent = threadSheet
+    stopButton.SetBounds(90, 56, 75, 25)
+    stopButton.Caption = "Stop"
+    stopButton.Enabled = False
+    stop_event = threading.Event()
+
+    def count_worker():
+        for i in range(1, 101):
+            if stop_event.is_set():
+                break
+            time.sleep(0.03)  # 重い処理の代わり
+
+            def show(i=i):
+                countLabel.Caption = f"counting {i} / 100"
+                countBar.Position = i
+            TThread.Synchronize(None, show)
+
+        def finished():
+            countLabel.Caption = "stopped" if stop_event.is_set() else "done"
+            pr(f"Thread finished: {countLabel.Caption}")
+            startButton.Enabled = True
+            stopButton.Enabled = False
+        TThread.Queue(None, finished)
+
+    def start_click(Sender):
+        stop_event.clear()
+        startButton.Enabled = False
+        stopButton.Enabled = True
+        threading.Thread(target=count_worker, daemon=True).start()
+
+    startButton.OnClick = start_click
+    stopButton.OnClick = lambda Sender: stop_event.set()
 
     # ステータスバーのパネル(docs/adr/0044)。StatusBar1 の上に、パネルを持つ 2 つ目のステータスバーを置く。
     panel_bar = TStatusBar(Form1)

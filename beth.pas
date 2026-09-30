@@ -18034,7 +18034,118 @@ begin
   end;
 end;
 
+{ ---- スレッド(docs/adr/0064) ---- }
+
+type
+  { メインスレッドで 1 度だけコールバックを呼び、自分を破棄する。TThread.Queue に渡すメソッドの持ち主。 }
+  TMainThreadCall = class
+  private
+    FCallback: TBethCallback;
+    FData: Pointer;
+  public
+    procedure Run;
+  end;
+
+procedure TMainThreadCall.Run;
+begin
+  try
+    if not GDetaching then
+    begin
+      FCallback(nil, FData);
+      CheckCallbackError;
+    end;
+  finally
+    Free;
+  end;
+end;
+
+{ Cb(nil, Data) をメインスレッドで呼ぶ。どのスレッドからでも呼べる。メインスレッドから呼ぶと、その場で呼ぶ。
+  別のスレッドからは、FPC の TThread.Queue でメインスレッドに渡し、メインスレッドを起こす(WakeMainThread)。
+  LCL のメッセージループ(Application.Run・ProcessMessages・モーダルのフォーム)が CheckSynchronize で実行する。 }
+procedure TThread_Queue(Cb: TBethCallback; Data: Pointer); BETH_CALL;
+var
+  C: TMainThreadCall;
+begin
+  try
+    C := TMainThreadCall.Create;
+    C.FCallback := Cb;
+    C.FData := Data;
+    TThread.Queue(nil, @C.Run);
+  except
+    ReportException;
+  end;
+end;
+
+{ 呼んだのがメインスレッド(DLL を読み込み、LCL を動かすスレッド)か。 }
+function TThread_IsMainThread: LongBool; BETH_CALL;
+begin
+  Result := GetCurrentThreadID = MainThreadID;
+end;
+
+{$ifdef LCLwin32}
+{ メインスレッドを起こす(docs/adr/0064)。LCL の Win32 の WakeMainThread は、アプリケーションのウィンドウ(AppHandle)に
+  WM_NULL を送るが、DLL(IsLibrary)ではそのウィンドウが作られない(AppHandle = 0)ため、何も送られず、メッセージを待っている
+  メインスレッドが起きなかった(TThread.Queue・Synchronize・Application.QueueAsyncCall が、別のメッセージが来るまで実行されない)。
+  VCL と同じく、メッセージを受けるだけの隠れたウィンドウを作り、WakeMainThread でそこにメッセージを送り、受けたら CheckSynchronize する。
+  スレッドへのメッセージ(PostThreadMessage)にしないのは、Windows のモーダルのループ(MessageBox・メニュー等)の間に捨てられるため。 }
+const
+  BETH_WM_WAKE = WM_USER + $B37;
+  { メッセージを受けるだけのウィンドウの親(FPC の Windows ユニットに無いため、Windows SDK の値を書く) }
+  BETH_HWND_MESSAGE = HWND(-3);
+
+var
+  GWakeWindow: HWND = 0;
+
+function WakeWindowProc(Wnd: HWND; Msg: UINT; WParam: WPARAM; LParam: LPARAM): LRESULT; stdcall;
+begin
+  if Msg = BETH_WM_WAKE then
+  begin
+    Result := 0;
+    if not GDetaching then
+      try
+        CheckSynchronize;
+      except
+        { Queue した処理の例外は、ほかのイベントと同じく LCL の例外の処理(Application.OnException 等)に渡す }
+        Application.HandleException(nil);
+      end;
+    Exit;
+  end;
+  Result := DefWindowProcW(Wnd, Msg, WParam, LParam);
+end;
+
+type
+  TMainThreadWaker = class
+  public
+    procedure Wake(Sender: TObject);
+  end;
+
+procedure TMainThreadWaker.Wake(Sender: TObject);
+begin
+  if GWakeWindow <> 0 then
+    PostMessageW(GWakeWindow, BETH_WM_WAKE, 0, 0);
+end;
+
+var
+  GMainThreadWaker: TMainThreadWaker = nil;
+
+procedure InstallMainThreadWaker;
+var
+  WC: TWndClassW;
+begin
+  FillChar(WC, SizeOf(WC), 0);
+  WC.lpfnWndProc := @WakeWindowProc;
+  WC.hInstance := HInstance;
+  WC.lpszClassName := 'BethanyMainThreadWaker';
+  Windows.RegisterClassW(WC);
+  GWakeWindow := CreateWindowExW(0, 'BethanyMainThreadWaker', '', 0, 0, 0, 0, 0, BETH_HWND_MESSAGE, 0, HInstance, nil);
+  GMainThreadWaker := TMainThreadWaker.Create;
+  WakeMainThread := @GMainThreadWaker.Wake;
+end;
+{$endif}
+
 exports
+  TThread_Queue,
+  TThread_IsMainThread,
   FreeNotify_SetCallback,
   Error_SetCallback,
   SetCallbackError,
@@ -19693,12 +19804,20 @@ exports
   TCustomDrawGrid_SetOnCheckboxToggled;
 
 begin
+  { 別のスレッド(C++ の std::thread・Python の threading 等、FPC が作っていないスレッド)からも DLL の関数を呼ぶ
+    (TThread_Queue 等。docs/adr/0064)。FPC は自分で BeginThread したときにしか IsMultiThread を立てないため、
+    ここで立てて、メモリ管理等をスレッドに対して安全にする。 }
+  IsMultiThread := True;
   RequireDerivedFormResource := False;
   Application.Initialize;
   { DLL(IsLibrary)ではアプリケーションのウィンドウ(AppHandle)が作られないため、タスクバーのボタンはメインフォームが持つ。
     MainFormOnTaskBar が False(既定)だと、LCL はメインフォームの最小化を AppHandle の最小化に置き換えてメインフォームを隠すため、
     AppHandle が 0 の DLL ではフォームが隠れたまま、タスクバーのボタンも消えていた(Application.Minimize・Restore も同じ)。 }
   Application.MainFormOnTaskBar := True;
+  {$ifdef LCLwin32}
+  { LCL の WakeMainThread は DLL では働かないため、Bethany のものに替える(docs/adr/0064)。Application.Initialize の後に置く。 }
+  InstallMainThreadWaker;
+  {$endif}
   GFreeNotifier := TFreeNotifier.Create(nil);
   { Dll_Process_Detach_Hook は Windows の DLL_PROCESS_DETACH 通知専用のフックで、
     Linux の共有ライブラリ(.so)には存在しない。 }

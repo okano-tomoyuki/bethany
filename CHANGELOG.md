@@ -17,6 +17,10 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
   `Rectangle(const TRect&)`・`Ellipse(const TRect&)`、TTreeNode の `Item[i]`、VCL の名前の別名(`TDrawCellEvent`・`TSelectCellEvent`・
   `TSectionNotifyEvent`・`gdHotTrack`・`gdPressed`・`gdRowSelected`)([ADR 0063](docs/adr/0063-vcl-event-signatures-and-handle.md))
 - OnKeyPress で日本語等の 1 バイトでない文字も受けられる(Key は 1 文字の UTF-8 の文字列)
+- スレッド: `TThread`(`Execute`・`Start`・`Terminate`・`Terminated`・`WaitFor`・`ReturnValue`・`FreeOnTerminate`・`OnTerminate`・`Finished`・
+  `FatalException`)と、別のスレッドからメインスレッドへ処理を渡す `TThread::Synchronize`・`TThread::Queue`・`TThread::RemoveQueuedEvents`
+  (`TThread::Synchronize(nullptr, [&] { Label1->Caption = "..."; })`)。Python では `TThread.Synchronize(None, func)` 等を `threading.Thread` から使う
+  ([ADR 0064](docs/adr/0064-tthread-and-main-thread-handoff.md))
 
 ### 変更
 
@@ -33,6 +37,13 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
   MousePos(TPoint)になり、`Handle` は `ObjHandle` に改めた([ADR 0063](docs/adr/0063-vcl-event-signatures-and-handle.md))
 - ヘッダの定数(色・カーソル・`mrOk`・ショートカットの修飾)を `const` から `constexpr` にした(値・型・使い方は変わらない)。
   C++ の版の下限は C++11 のまま保つ([ADR 0062](docs/adr/0062-cpp11-baseline-and-constexpr.md))
+
+### 修正
+
+- DLL の関数を別のスレッドから呼ぶと、メモリ管理がスレッドに対して安全でなかった(FPC の `IsMultiThread` を立てていなかった)。
+  また、DLL ではメインスレッドを起こせず(LCL の Win32 の `WakeMainThread` がアプリケーションのウィンドウを前提にしている)、
+  メッセージを待っている間は `Application.QueueAsyncCall` 等が別のメッセージが来るまで実行されなかった
+  ([ADR 0064](docs/adr/0064-tthread-and-main-thread-handoff.md))
 
 ## [0.4.0] - 2026-09-30
 

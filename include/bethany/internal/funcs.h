@@ -62,6 +62,8 @@
     X(void,          TCustomForm_SetOnDeactivate,           (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
     X(void,          TCustomForm_SetOnDestroy,              (obj_t o, callback_t cb, void* d),                             (o, cb, d)) \
     X(obj_t,         GetApplication,                        (void),                                                        ()) \
+    X(void,          TThread_Queue,                         (callback_t cb, void* d),                                      (cb, d)) \
+    X(bool_t,        TThread_IsMainThread,                  (void),                                                        ()) \
     X(obj_t,         TApplication_CreateForm,               (obj_t o),                                                     (o)) \
     X(obj_t,         TApplication_GetMainForm,              (obj_t o),                                                     (o)) \
     X(void,          TApplication_Run,                      (obj_t o),                                                     (o)) \

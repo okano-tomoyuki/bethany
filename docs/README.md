@@ -84,6 +84,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0061](adr/0061-property-ergonomics-and-sets.md) | プロパティに Get()・複合代入・文字列の比較と連結を加え、集合型をすべて Set<E> にそろえる | 承認 |
 | [0062](adr/0062-cpp11-baseline-and-constexpr.md) | C++11 を下限とし、ヘッダの定数を constexpr にする | 承認 |
 | [0063](adr/0063-vcl-event-signatures-and-handle.md) | イベントの引数・Handle を C++Builder にそろえ、VCL の名前の別名を加える | 承認 |
+| [0064](adr/0064-tthread-and-main-thread-handoff.md) | TThread と、メインスレッドへの受け渡し(Synchronize・Queue)を加える | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。

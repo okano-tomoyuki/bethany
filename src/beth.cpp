@@ -1,6 +1,12 @@
 #include <bethany/beth.hpp>
 
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
 #include <cstdlib>
+#include <deque>
+#include <mutex>
+#include <thread>
 
 namespace beth
 {
@@ -7060,6 +7066,379 @@ void BETH_CALL TCustomDrawGrid::CheckboxToggledTrampoline(ObjectHandle sender, i
         TToggledCheckboxEvent handler = self->onCheckboxToggled_;
         handler(self, col, row, static_cast<TCheckBoxState>(state));
     });
+}
+
+
+/* ---------------- スレッド(docs/adr/0064) ---------------- */
+
+namespace
+{
+
+// Synchronize で待っているスレッドと、メインスレッドの間で結果を受け渡す。
+struct SyncState
+{
+    std::mutex              mutex;
+    std::condition_variable done;
+    bool                    finished = false;
+    std::exception_ptr      error;
+};
+
+// メインスレッドで実行する処理の列の 1 つ。sync が空なら Queue、あれば Synchronize(呼んだスレッドが待っている)。
+struct QueuedCall
+{
+    TThread*                   owner;
+    TThreadMethod              method;
+    std::shared_ptr<SyncState> sync;
+};
+
+std::mutex& QueueMutex()
+{
+    static std::mutex m;
+    return m;
+}
+
+std::deque<QueuedCall>& QueuedCalls()
+{
+    static std::deque<QueuedCall> calls;
+    return calls;
+}
+
+// メインスレッドに列の実行を頼んだ(まだ実行していない)か。頼むのは列が空でなくなったときの 1 度だけにする。
+std::atomic<bool>& DrainRequested()
+{
+    static std::atomic<bool> requested(false);
+    return requested;
+}
+
+bool IsMainThread()
+{
+    return internal::TThread_IsMainThread() != 0;
+}
+
+void BETH_CALL DrainTrampoline(ObjectHandle, void*);
+
+void RequestDrain()
+{
+    if (!DrainRequested().exchange(true))
+        internal::TThread_Queue(&DrainTrampoline, nullptr);
+}
+
+void Post(QueuedCall call)
+{
+    {
+        std::lock_guard<std::mutex> lock(QueueMutex());
+        QueuedCalls().push_back(std::move(call));
+    }
+    RequestDrain();
+}
+
+// 列の処理を順に実行する(メインスレッドで)。Queue の処理から送出された例外は、残りを後で実行するよう頼み直してから送出する
+// (呼び出し元の DLL が LCL の例外の処理に渡す)。
+void DrainQueue()
+{
+    DrainRequested() = false;
+    for (;;)
+    {
+        QueuedCall call;
+        {
+            std::lock_guard<std::mutex> lock(QueueMutex());
+            if (QueuedCalls().empty())
+                return;
+            call = std::move(QueuedCalls().front());
+            QueuedCalls().pop_front();
+        }
+        if (call.sync)
+        {
+            try
+            {
+                call.method();
+            }
+            catch (...)
+            {
+                call.sync->error = std::current_exception();
+            }
+            {
+                std::lock_guard<std::mutex> lock(call.sync->mutex);
+                call.sync->finished = true;
+            }
+            call.sync->done.notify_all();
+        }
+        else
+        {
+            try
+            {
+                call.method();
+            }
+            catch (...)
+            {
+                bool rest;
+                {
+                    std::lock_guard<std::mutex> lock(QueueMutex());
+                    rest = !QueuedCalls().empty();
+                }
+                if (rest)
+                    RequestDrain();
+                throw;
+            }
+        }
+    }
+}
+
+void BETH_CALL DrainTrampoline(ObjectHandle, void*)
+{
+    GuardCallback([] { DrainQueue(); });
+}
+
+} // namespace
+
+struct TThread::Impl
+{
+    std::thread             thread;
+    std::mutex              mutex;
+    std::condition_variable changed;
+    std::atomic<bool>       terminated{false};
+    bool                    started = false;
+    bool                    startPending = false;
+    bool                    finished = false;
+    bool                    freeOnTerminate = false;
+    int                     returnValue = 0;
+    TNotifyEvent            onTerminate;
+    std::exception_ptr      fatalException;
+};
+
+TThread::TThread(bool CreateSuspended)
+    : TObject(nullptr)
+    , FreeOnTerminate(this, &TThread::GetFreeOnTerminateImpl, &TThread::SetFreeOnTerminateImpl)
+    , OnTerminate(this, &TThread::GetOnTerminateImpl, &TThread::SetOnTerminateImpl)
+    , Finished(this, &TThread::GetFinishedImpl)
+    , FatalException(this, &TThread::GetFatalExceptionImpl)
+    , Terminated(this, &TThread::GetTerminatedImpl)
+    , ReturnValue(this, &TThread::GetReturnValueImpl, &TThread::SetReturnValueImpl)
+    , impl_(new Impl)
+{
+    if (!CreateSuspended)
+    {
+        // 構築が終わった後に始める(メインスレッドの列に入れる。メインスレッドで構築しても、その場では実行しない)
+        impl_->startPending = true;
+        Post(QueuedCall{this, [this] {
+                            bool start;
+                            {
+                                std::lock_guard<std::mutex> lock(impl_->mutex);
+                                start = impl_->startPending && !impl_->started;
+                            }
+                            if (start)
+                                Start();
+                        },
+                        nullptr});
+    }
+}
+
+TThread::~TThread()
+{
+    RemoveQueuedEvents(this);
+    if (impl_->thread.joinable())
+    {
+        if (impl_->thread.get_id() == std::this_thread::get_id())
+        {
+            // FreeOnTerminate で、スレッドの上で自分を delete しているとき
+            impl_->thread.detach();
+        }
+        else
+        {
+            Terminate();
+            {
+                std::lock_guard<std::mutex> lock(impl_->mutex);
+                impl_->freeOnTerminate = false;
+            }
+            WaitFor();
+        }
+    }
+}
+
+void TThread::Start()
+{
+    std::lock_guard<std::mutex> lock(impl_->mutex);
+    if (impl_->started)
+        throw Exception("EThread", "Cannot call Start on a running or finished thread");
+    impl_->started = true;
+    impl_->startPending = false;
+    impl_->thread = std::thread([this] { Run(); });
+}
+
+void TThread::Terminate()
+{
+    impl_->terminated = true;
+}
+
+int TThread::WaitFor()
+{
+    {
+        std::lock_guard<std::mutex> lock(impl_->mutex);
+        if (impl_->freeOnTerminate)
+            throw Exception("EThread", "Cannot call WaitFor on a thread with FreeOnTerminate");
+        if (!impl_->started && !impl_->startPending)
+            return impl_->returnValue;
+    }
+    if (IsMainThread())
+    {
+        // 待つ間も列を実行する(このスレッドの Synchronize・OnTerminate・構築の後の開始で止まらないように)
+        for (;;)
+        {
+            DrainQueue();
+            std::unique_lock<std::mutex> lock(impl_->mutex);
+            if (impl_->finished)
+                break;
+            impl_->changed.wait_for(lock, std::chrono::milliseconds(10));
+        }
+    }
+    else
+    {
+        std::unique_lock<std::mutex> lock(impl_->mutex);
+        impl_->changed.wait(lock, [this] { return impl_->finished; });
+    }
+    if (impl_->thread.joinable() && impl_->thread.get_id() != std::this_thread::get_id())
+        impl_->thread.join();
+    return impl_->returnValue;
+}
+
+void TThread::Run()
+{
+    try
+    {
+        Execute();
+    }
+    catch (...)
+    {
+        impl_->fatalException = std::current_exception();
+    }
+
+    TNotifyEvent onTerminate;
+    {
+        std::lock_guard<std::mutex> lock(impl_->mutex);
+        onTerminate = impl_->onTerminate;
+    }
+    if (onTerminate)
+    {
+        try
+        {
+            Synchronize(this, [this, onTerminate] { onTerminate(this); });
+        }
+        catch (...)
+        {
+        }
+    }
+
+    bool freeIt;
+    {
+        std::lock_guard<std::mutex> lock(impl_->mutex);
+        impl_->finished = true;
+        freeIt = impl_->freeOnTerminate;
+    }
+    impl_->changed.notify_all();
+    if (freeIt)
+        delete this;
+}
+
+void TThread::Synchronize(TThread* AThread, const TThreadMethod& AMethod)
+{
+    if (!AMethod)
+        return;
+    if (IsMainThread())
+    {
+        AMethod();
+        return;
+    }
+    std::shared_ptr<SyncState> sync = std::make_shared<SyncState>();
+    Post(QueuedCall{AThread, AMethod, sync});
+    std::unique_lock<std::mutex> lock(sync->mutex);
+    sync->done.wait(lock, [&sync] { return sync->finished; });
+    if (sync->error)
+        std::rethrow_exception(sync->error);
+}
+
+void TThread::Queue(TThread* AThread, const TThreadMethod& AMethod)
+{
+    if (!AMethod)
+        return;
+    if (IsMainThread())
+    {
+        AMethod();
+        return;
+    }
+    Post(QueuedCall{AThread, AMethod, nullptr});
+}
+
+void TThread::RemoveQueuedEvents(TThread* AThread)
+{
+    std::lock_guard<std::mutex> lock(QueueMutex());
+    std::deque<QueuedCall>& calls = QueuedCalls();
+    for (std::deque<QueuedCall>::iterator it = calls.begin(); it != calls.end();)
+    {
+        // Synchronize の処理は、呼んだスレッドが待っているので取り除かない
+        if (it->owner == AThread && !it->sync)
+            it = calls.erase(it);
+        else
+            ++it;
+    }
+}
+
+bool TThread::GetFreeOnTerminateImpl(TObject* owner)
+{
+    TThread* self = static_cast<TThread*>(owner);
+    std::lock_guard<std::mutex> lock(self->impl_->mutex);
+    return self->impl_->freeOnTerminate;
+}
+
+void TThread::SetFreeOnTerminateImpl(TObject* owner, const bool& value)
+{
+    TThread* self = static_cast<TThread*>(owner);
+    std::lock_guard<std::mutex> lock(self->impl_->mutex);
+    self->impl_->freeOnTerminate = value;
+}
+
+TNotifyEvent TThread::GetOnTerminateImpl(TObject* owner)
+{
+    TThread* self = static_cast<TThread*>(owner);
+    std::lock_guard<std::mutex> lock(self->impl_->mutex);
+    return self->impl_->onTerminate;
+}
+
+void TThread::SetOnTerminateImpl(TObject* owner, const TNotifyEvent& value)
+{
+    TThread* self = static_cast<TThread*>(owner);
+    std::lock_guard<std::mutex> lock(self->impl_->mutex);
+    self->impl_->onTerminate = value;
+}
+
+bool TThread::GetFinishedImpl(TObject* owner)
+{
+    TThread* self = static_cast<TThread*>(owner);
+    std::lock_guard<std::mutex> lock(self->impl_->mutex);
+    return self->impl_->finished;
+}
+
+std::exception_ptr TThread::GetFatalExceptionImpl(TObject* owner)
+{
+    return static_cast<TThread*>(owner)->impl_->fatalException;
+}
+
+bool TThread::GetTerminatedImpl(TObject* owner)
+{
+    return static_cast<TThread*>(owner)->impl_->terminated;
+}
+
+int TThread::GetReturnValueImpl(TObject* owner)
+{
+    TThread* self = static_cast<TThread*>(owner);
+    std::lock_guard<std::mutex> lock(self->impl_->mutex);
+    return self->impl_->returnValue;
+}
+
+void TThread::SetReturnValueImpl(TObject* owner, const int& value)
+{
+    TThread* self = static_cast<TThread*>(owner);
+    std::lock_guard<std::mutex> lock(self->impl_->mutex);
+    self->impl_->returnValue = value;
 }
 
 } // namespace beth

@@ -11,13 +11,15 @@ C++ ラッパー(beth.hpp)との対応:
 - DLL の中で起きた例外は BethError(C++ の Exception。Message・ClassName())になる(docs/adr/0031)。
 """
 import atexit
+import collections
 import ctypes
 import enum
+import threading
 
 from . import _internal
 from ._internal import BethError, lib
 
-__all__ = ["BethError", "Ref", "TRect", "TPoint", "TObject", "TPersistent", "TComponent"]
+__all__ = ["BethError", "Ref", "TRect", "TPoint", "TObject", "TPersistent", "TComponent", "TThread"]
 
 
 # ---------------- 値 ----------------
@@ -1017,6 +1019,99 @@ def CF_Bitmap():
 def CF_Picture():
     """LCL が読み込める画像の形式のどれか(HasFormat(CF_Picture()) は HasPictureFormat() と同じ)。"""
     return lib.Clipboard_CF_Picture()
+
+
+# ---------------- スレッド(docs/adr/0064) ----------------
+
+class TThread:
+    """別のスレッドからメインスレッドに処理を渡す(C++ の TThread::Synchronize・Queue)。
+
+    画面の部品(コントロール・フォーム等)はメインスレッドからしか触れない。threading.Thread 等の別のスレッドからは、
+    TThread.Synchronize(None, func)(終わるまで待つ)か TThread.Queue(None, func)(待たない)でメインスレッドに渡す。
+    渡した処理は、メインスレッドのメッセージループ(Application.Run・ProcessMessages・モーダルのフォーム)で実行される。
+    スレッドそのものは threading.Thread を使う(C++ の TThread のような派生クラスは用意しない)。
+    AThread は渡した処理を区別する値(RemoveQueuedEvents で使う。threading.Thread 等。無ければ None)。
+    """
+
+    _lock = threading.Lock()
+    _calls = collections.deque()   # (AThread, func, sync)。sync は Synchronize の待ち合わせ([Event, 例外])、Queue なら None
+    _requested = False
+
+    def __init__(self, *args, **kwargs):
+        raise TypeError("TThread は生成しない。スレッドは threading.Thread を使う")
+
+    @staticmethod
+    def Synchronize(AThread, AMethod):
+        """AMethod() をメインスレッドで実行し、終わるまで待つ。送出された例外は、呼んだスレッドで送出し直す。
+        メインスレッドから呼ぶと、その場で実行する。"""
+        if AMethod is None:
+            return
+        if lib.TThread_IsMainThread():
+            AMethod()
+            return
+        sync = [threading.Event(), None]
+        TThread._post((AThread, AMethod, sync))
+        sync[0].wait()
+        if sync[1] is not None:
+            raise sync[1]
+
+    @staticmethod
+    def Queue(AThread, AMethod):
+        """AMethod() をメインスレッドで実行するよう渡し、待たずに戻る。メインスレッドから呼ぶと、その場で実行する。"""
+        if AMethod is None:
+            return
+        if lib.TThread_IsMainThread():
+            AMethod()
+            return
+        TThread._post((AThread, AMethod, None))
+
+    @staticmethod
+    def RemoveQueuedEvents(AThread):
+        """AThread が Queue した処理のうち、まだ実行されていないものを取り除く。"""
+        with TThread._lock:
+            TThread._calls = collections.deque(c for c in TThread._calls if c[0] is not AThread or c[2] is not None)
+
+    @staticmethod
+    def _post(call):
+        with TThread._lock:
+            TThread._calls.append(call)
+            request = not TThread._requested
+            TThread._requested = True
+        if request:
+            lib.TThread_Queue(_drain_callback, None)
+
+    @staticmethod
+    def _drain(sender, data):
+        """メインスレッドで、渡された処理を順に実行する(DLL の TThread_Queue から呼ばれる)。"""
+        with TThread._lock:
+            TThread._requested = False
+        while True:
+            with TThread._lock:
+                if not TThread._calls:
+                    return
+                _thread, func, sync = TThread._calls.popleft()
+            if sync is not None:
+                try:
+                    func()
+                except BaseException as e:
+                    sync[1] = e
+                sync[0].set()
+            else:
+                try:
+                    func()
+                except BaseException:
+                    # 残りは後で実行するよう頼み直し、例外は LCL の例外の処理に渡す(_guard が DLL へ知らせる)
+                    with TThread._lock:
+                        request = bool(TThread._calls) and not TThread._requested
+                        if request:
+                            TThread._requested = True
+                    if request:
+                        lib.TThread_Queue(_drain_callback, None)
+                    raise
+
+
+# DLL に渡すコールバックは 1 つを使い続ける(実行を待っている間に解放されないように)
+_drain_callback = _internal.callback_t(_internal._guard(TThread._drain))
 
 
 # 生成したクラスに混ぜる手書きのメンバ(クラス名 → クラス)。

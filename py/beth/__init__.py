@@ -29,7 +29,7 @@ C++ との違い(詳しくは beth/_core.py):
 import ctypes
 import enum
 
-from ._core import (BethError, Ref, TRect, TPoint, TObject, TPersistent, TComponent,
+from ._core import (BethError, Ref, TRect, TPoint, TObject, TPersistent, TComponent, TThread,
                    ShortCut, TextToShortCut, ShortCutToText, Clipboard, CF_Text, CF_Bitmap, CF_Picture,
                    ShowMessage, MessageDlg, InputBox, PasswordBox, InputQuery,
                    MB_OK, MB_OKCANCEL, MB_ABORTRETRYIGNORE, MB_YESNOCANCEL, MB_YESNO, MB_RETRYCANCEL,
@@ -3913,12 +3913,12 @@ Application = TApplication._global()
 Screen = TScreen._wrap_existing(lib.GetScreen())
 
 __all__ = [
-    "BethError", "Ref", "TRect", "TPoint", "TObject", "TPersistent", "TComponent", "ShortCut", "TextToShortCut",
-    "ShortCutToText", "Application", "Screen", "Clipboard", "CF_Text", "CF_Bitmap", "CF_Picture", "ShowMessage",
-    "MessageDlg", "InputBox", "PasswordBox", "InputQuery", "MB_OK", "MB_OKCANCEL", "MB_ABORTRETRYIGNORE",
-    "MB_YESNOCANCEL", "MB_YESNO", "MB_RETRYCANCEL", "MB_ICONERROR", "MB_ICONQUESTION", "MB_ICONWARNING",
-    "MB_ICONINFORMATION", "MB_DEFBUTTON1", "MB_DEFBUTTON2", "MB_DEFBUTTON3", "IDOK", "IDCANCEL", "IDABORT",
-    "IDRETRY", "IDIGNORE", "IDYES", "IDNO", "TCloseAction", "caNone", "caHide", "caFree", "caMinimize",
+    "BethError", "Ref", "TRect", "TPoint", "TObject", "TPersistent", "TComponent", "TThread", "ShortCut",
+    "TextToShortCut", "ShortCutToText", "Application", "Screen", "Clipboard", "CF_Text", "CF_Bitmap", "CF_Picture",
+    "ShowMessage", "MessageDlg", "InputBox", "PasswordBox", "InputQuery", "MB_OK", "MB_OKCANCEL",
+    "MB_ABORTRETRYIGNORE", "MB_YESNOCANCEL", "MB_YESNO", "MB_RETRYCANCEL", "MB_ICONERROR", "MB_ICONQUESTION",
+    "MB_ICONWARNING", "MB_ICONINFORMATION", "MB_DEFBUTTON1", "MB_DEFBUTTON2", "MB_DEFBUTTON3", "IDOK", "IDCANCEL",
+    "IDABORT", "IDRETRY", "IDIGNORE", "IDYES", "IDNO", "TCloseAction", "caNone", "caHide", "caFree", "caMinimize",
     "TMouseButton", "mbLeft", "mbRight", "mbMiddle", "mbExtra1", "mbExtra2", "TDuplicates", "dupIgnore",
     "dupAccept", "dupError", "TPenStyle", "psSolid", "psDash", "psDot", "psDashDot", "psDashDotDot",
     "psInsideFrame", "psPattern", "psClear", "TPenMode", "pmBlack", "pmWhite", "pmNop", "pmNot", "pmCopy",
