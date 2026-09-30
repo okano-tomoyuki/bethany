@@ -10,7 +10,9 @@ pip install bethany-lcl
 The distribution name is `bethany-lcl`, and the module name is `beth`.
 
 > **Preview.** Bethany is at version 0.x. The API may change between minor versions.
-> Only Windows x64 is supported for now.
+> Only Windows x64 is supported for now: the Python from python.org, and the Python of MSYS2 (MINGW64, UCRT64, ...).
+> In MSYS2, install it in a virtual environment (`python -m venv .venv`). pip builds it from the source distribution,
+> which contains the prebuilt `beth.dll`.
 
 ## Example
 
@@ -60,4 +62,4 @@ See `THIRD-PARTY-NOTICES.md` and the `licenses` folder in the package metadata, 
 ## 日本語
 
 Lazarus の LCL を、C++Builder に似た API で Python から使うためのパッケージです。`pip install bethany-lcl` で入れ、`from beth import *` で使います。
-今のところ Windows x64 だけに対応しています。C++ 版と、フォームを画面で設計する VS Code 拡張は [Bethany のリポジトリ](https://github.com/okano-tomoyuki/bethany)を参照してください。
+今のところ Windows x64 だけに対応しています(python.org の Python と、MSYS2 の Python。MSYS2 では venv に入れてください)。C++ 版と、フォームを画面で設計する VS Code 拡張は [Bethany のリポジトリ](https://github.com/okano-tomoyuki/bethany)を参照してください。

@@ -68,6 +68,14 @@ pip install bethany-lcl
 from beth import *
 ```
 
+MSYS2 の Python(MINGW64・UCRT64 等)でも、venv を作って同じく `pip install bethany-lcl` で入る。PyPI は MSYS2 向けの wheel を受け付けないため、
+pip が sdist(ビルド済みの `beth.dll` を含む)から wheel を作って入れる([ADR 0055](docs/adr/0055-python-sdist-for-msys2.md))。
+
+```sh
+python -m venv .venv
+.venv/bin/python -m pip install bethany-lcl
+```
+
 ## 名前
 
 Bethany(ベタニア)は、聖書でラザロ(Lazarus)が暮らした村の名前。Delphi・Lazarus と同じく神話や聖書の固有名詞にちなみ、

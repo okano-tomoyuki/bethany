@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Python の配布物(dist/bethany_lcl-<バージョン>-py3-none-win_amd64.whl)を作る(docs/adr/0039)。
+# Python の配布物(dist/bethany_lcl-<バージョン>-py3-none-win_amd64.whl と、MSYS2 の pip のための sdist
+# dist/bethany_lcl-<バージョン>.tar.gz)を作る(docs/adr/0039・docs/adr/0055)。
 # 先に build-windows.sh で beth.dll をビルドしておくこと。
 #
 # ビルドには python.org の Python を使う(既定は py ランチャー。環境変数 PYTHON で変えられる)。
@@ -37,12 +38,14 @@ if [ ! -f "$VENV/Scripts/python.exe" ]; then
 fi
 
 WHEEL="dist/bethany_lcl-$VERSION-py3-none-win_amd64.whl"
-rm -f "$WHEEL"
-"$VENV/Scripts/python.exe" -m build --wheel --outdir dist "$STAGE"
-"$VENV/Scripts/python.exe" -m twine check --strict "$WHEEL"
+SDIST="dist/bethany_lcl-$VERSION.tar.gz"
+rm -f "$WHEEL" "$SDIST"
+# sdist を作り、wheel はその sdist から作る(MSYS2 の pip と同じ道筋で、sdist に要るものが揃っているかを確かめる)。
+"$VENV/Scripts/python.exe" -m build --outdir dist "$STAGE"
+"$VENV/Scripts/python.exe" -m twine check --strict "$WHEEL" "$SDIST"
 rm -rf "$STAGE"
 
-echo "Package OK: $WHEEL"
+echo "Package OK: $WHEEL $SDIST"
 # twine の進捗表示は、日本語の Windows のコンソール(cp932)で表示できない文字を出して止まるため、切って UTF-8 で出力する。
 echo "アップロード(~/.pypirc のトークンを使う。先に testpypi で確かめる):"
-echo "  PYTHONIOENCODING=utf-8 $VENV/Scripts/python.exe -m twine upload --disable-progress-bar -r testpypi $WHEEL"
+echo "  PYTHONIOENCODING=utf-8 $VENV/Scripts/python.exe -m twine upload --disable-progress-bar -r testpypi $WHEEL $SDIST"

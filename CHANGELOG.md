@@ -13,6 +13,8 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
   チェックボックスの `cbsCheckboxColumn` と `ValueChecked`・`ValueUnchecked` 等)、`SelectedColumn`。セルの編集の部品のイベント
   (`OnSelectEditor`・`OnButtonClick`・`OnPickListSelect`)と、チェックボックスの列のイベント(`OnGetCheckboxState`・`OnSetCheckboxState`・
   `OnCheckboxToggled`)([ADR 0054](docs/adr/0054-grid-columns.md))
+- Python のパッケージを MSYS2 の Python(MINGW64・UCRT64 等)の pip でも入れられるように、`beth.dll` を含む sdist も PyPI に出す
+  ([ADR 0055](docs/adr/0055-python-sdist-for-msys2.md))
 
 ## [0.3.0] - 2026-09-30
 

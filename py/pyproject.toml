@@ -32,6 +32,12 @@ Repository = "https://github.com/okano-tomoyuki/bethany"
 Issues = "https://github.com/okano-tomoyuki/bethany/issues"
 Changelog = "https://github.com/okano-tomoyuki/bethany/blob/master/CHANGELOG.md"
 
+# sdist は MSYS2 の pip のため(PyPI は MSYS2 のタグの wheel を受け付けないので、pip が sdist から wheel を作る。docs/adr/0055)。
+# ビルド済みの beth.dll を含める(MSYS2 には Free Pascal が無く、利用者の手元ではビルドできないため)。
+[tool.hatch.build.targets.sdist]
+include = ["beth", "hatch_build.py", "README.md", "LICENSE", "THIRD-PARTY-NOTICES.md", "licenses"]
+artifacts = ["beth/beth.dll"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["beth"]
 # *.dll は .gitignore で除外されているため、明示して含める。
