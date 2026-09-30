@@ -30,63 +30,63 @@ using ObjectHandle = internal::obj_t;
 using TColor = std::int32_t;
 
 // 色の定数(LCL・VCL と同じ値)。標準の 16 色と、LCL の追加の 4 色(docs/adr/0050 で加えた)。
-const TColor clBlack                   = 0x000000;
-const TColor clMaroon                  = 0x000080;
-const TColor clGreen                   = 0x008000;
-const TColor clOlive                   = 0x008080;
-const TColor clNavy                    = 0x800000;
-const TColor clPurple                  = 0x800080;
-const TColor clTeal                    = 0x808000;
-const TColor clGray                    = 0x808080;
-const TColor clSilver                  = 0xC0C0C0;
-const TColor clRed                     = 0x0000FF;
-const TColor clLime                    = 0x00FF00;
-const TColor clYellow                  = 0x00FFFF;
-const TColor clBlue                    = 0xFF0000;
-const TColor clFuchsia                 = 0xFF00FF;
-const TColor clAqua                    = 0xFFFF00;
-const TColor clWhite                   = 0xFFFFFF;
-const TColor clMoneyGreen              = 0xC0DCC0;
-const TColor clSkyBlue                 = 0xF0CAA6;
-const TColor clCream                   = 0xF0FBFF;
-const TColor clMedGray                 = 0xA4A0A0;
+constexpr TColor clBlack                   = 0x000000;
+constexpr TColor clMaroon                  = 0x000080;
+constexpr TColor clGreen                   = 0x008000;
+constexpr TColor clOlive                   = 0x008080;
+constexpr TColor clNavy                    = 0x800000;
+constexpr TColor clPurple                  = 0x800080;
+constexpr TColor clTeal                    = 0x808000;
+constexpr TColor clGray                    = 0x808080;
+constexpr TColor clSilver                  = 0xC0C0C0;
+constexpr TColor clRed                     = 0x0000FF;
+constexpr TColor clLime                    = 0x00FF00;
+constexpr TColor clYellow                  = 0x00FFFF;
+constexpr TColor clBlue                    = 0xFF0000;
+constexpr TColor clFuchsia                 = 0xFF00FF;
+constexpr TColor clAqua                    = 0xFFFF00;
+constexpr TColor clWhite                   = 0xFFFFFF;
+constexpr TColor clMoneyGreen              = 0xC0DCC0;
+constexpr TColor clSkyBlue                 = 0xF0CAA6;
+constexpr TColor clCream                   = 0xF0FBFF;
+constexpr TColor clMedGray                 = 0xA4A0A0;
 // システムの色(docs/adr/0050)。Windows の設定の色(0x80000000 | Windows の COLOR_… の番号)。描くときに実際の色になる。
 // 選択された項目の地の色は clHighlight、文字は clHighlightText 等。TColor は符号付きのため、値は負の数で書く。
-const TColor clScrollBar               = -0x80000000;
-const TColor clBackground              = -0x7FFFFFFF;
-const TColor clActiveCaption           = -0x7FFFFFFE;
-const TColor clInactiveCaption         = -0x7FFFFFFD;
-const TColor clMenu                    = -0x7FFFFFFC;
-const TColor clWindow                  = -0x7FFFFFFB;
-const TColor clWindowFrame             = -0x7FFFFFFA;
-const TColor clMenuText                = -0x7FFFFFF9;
-const TColor clWindowText              = -0x7FFFFFF8;
-const TColor clCaptionText             = -0x7FFFFFF7;
-const TColor clActiveBorder            = -0x7FFFFFF6;
-const TColor clInactiveBorder          = -0x7FFFFFF5;
-const TColor clAppWorkspace            = -0x7FFFFFF4;
-const TColor clHighlight               = -0x7FFFFFF3;
-const TColor clHighlightText           = -0x7FFFFFF2;
-const TColor clBtnFace                 = -0x7FFFFFF1;
-const TColor clBtnShadow               = -0x7FFFFFF0;
-const TColor clGrayText                = -0x7FFFFFEF;
-const TColor clBtnText                 = -0x7FFFFFEE;
-const TColor clInactiveCaptionText     = -0x7FFFFFED;
-const TColor clBtnHighlight            = -0x7FFFFFEC;
-const TColor cl3DDkShadow              = -0x7FFFFFEB;
-const TColor cl3DLight                 = -0x7FFFFFEA;
-const TColor clInfoText                = -0x7FFFFFE9;
-const TColor clInfoBk                  = -0x7FFFFFE8;
-const TColor clHotLight                = -0x7FFFFFE6;
-const TColor clGradientActiveCaption   = -0x7FFFFFE5;
-const TColor clGradientInactiveCaption = -0x7FFFFFE4;
-const TColor clMenuHighlight           = -0x7FFFFFE3;
-const TColor clMenuBar                 = -0x7FFFFFE2;
-const TColor clForm                    = -0x7FFFFFE1;
+constexpr TColor clScrollBar               = -0x80000000;
+constexpr TColor clBackground              = -0x7FFFFFFF;
+constexpr TColor clActiveCaption           = -0x7FFFFFFE;
+constexpr TColor clInactiveCaption         = -0x7FFFFFFD;
+constexpr TColor clMenu                    = -0x7FFFFFFC;
+constexpr TColor clWindow                  = -0x7FFFFFFB;
+constexpr TColor clWindowFrame             = -0x7FFFFFFA;
+constexpr TColor clMenuText                = -0x7FFFFFF9;
+constexpr TColor clWindowText              = -0x7FFFFFF8;
+constexpr TColor clCaptionText             = -0x7FFFFFF7;
+constexpr TColor clActiveBorder            = -0x7FFFFFF6;
+constexpr TColor clInactiveBorder          = -0x7FFFFFF5;
+constexpr TColor clAppWorkspace            = -0x7FFFFFF4;
+constexpr TColor clHighlight               = -0x7FFFFFF3;
+constexpr TColor clHighlightText           = -0x7FFFFFF2;
+constexpr TColor clBtnFace                 = -0x7FFFFFF1;
+constexpr TColor clBtnShadow               = -0x7FFFFFF0;
+constexpr TColor clGrayText                = -0x7FFFFFEF;
+constexpr TColor clBtnText                 = -0x7FFFFFEE;
+constexpr TColor clInactiveCaptionText     = -0x7FFFFFED;
+constexpr TColor clBtnHighlight            = -0x7FFFFFEC;
+constexpr TColor cl3DDkShadow              = -0x7FFFFFEB;
+constexpr TColor cl3DLight                 = -0x7FFFFFEA;
+constexpr TColor clInfoText                = -0x7FFFFFE9;
+constexpr TColor clInfoBk                  = -0x7FFFFFE8;
+constexpr TColor clHotLight                = -0x7FFFFFE6;
+constexpr TColor clGradientActiveCaption   = -0x7FFFFFE5;
+constexpr TColor clGradientInactiveCaption = -0x7FFFFFE4;
+constexpr TColor clMenuHighlight           = -0x7FFFFFE3;
+constexpr TColor clMenuBar                 = -0x7FFFFFE2;
+constexpr TColor clForm                    = -0x7FFFFFE1;
 // 色を持たない(LCL の clNone)。
-const TColor clNone    = 0x1FFFFFFF;
+constexpr TColor clNone    = 0x1FFFFFFF;
 // 既定の色(LCL の clDefault)。コントロールの Color の既定値で、実際の色はウィジェットセットが決める。
-const TColor clDefault = 0x20000000;
+constexpr TColor clDefault = 0x20000000;
 
 // LCL が送出した例外(docs/adr/0031)。VCL の Exception と同じく、catch (Exception& E) で受けて E.Message を使う。
 // - Bethany の関数・プロパティの中で LCL が例外を送出すると(範囲外の添字・読み込めないファイル等)、その操作は中断し、
@@ -1299,9 +1299,9 @@ private:
 
 // ショートカットキー(VCL の TShortCut と同じく、仮想キーコードに修飾キーのビットを OR した値)。
 using TShortCut = unsigned short;
-const TShortCut scShift = 0x2000;
-const TShortCut scCtrl  = 0x4000;
-const TShortCut scAlt   = 0x8000;
+constexpr TShortCut scShift = 0x2000;
+constexpr TShortCut scCtrl  = 0x4000;
+constexpr TShortCut scAlt   = 0x8000;
 
 // VCL の Menus ユニットの同名の関数に対応する。Shift のうち ssShift/ssCtrl/ssAlt 以外は無視される。
 TShortCut   ShortCut(unsigned short Key, TShiftState Shift);
@@ -1632,37 +1632,37 @@ using TAnchors = Set<TAnchorKind>;
 
 // マウスカーソルの形(LCL の TCursor と同じ値)。
 using TCursor = std::int32_t;
-const TCursor crDefault   = 0;
-const TCursor crNone      = -1;
-const TCursor crArrow     = -2;
-const TCursor crCross     = -3;
-const TCursor crIBeam     = -4;
-const TCursor crSizeNESW  = -6;
-const TCursor crSizeNS    = -7;
-const TCursor crSizeNWSE  = -8;
-const TCursor crSizeWE    = -9;
-const TCursor crUpArrow   = -10;
-const TCursor crHourGlass = -11;
-const TCursor crDrag      = -12;
-const TCursor crNoDrop    = -13;
-const TCursor crHSplit    = -14;
-const TCursor crVSplit    = -15;
-const TCursor crMultiDrag = -16;
-const TCursor crSQLWait   = -17;
-const TCursor crNo        = -18;
-const TCursor crAppStart  = -19;
-const TCursor crHelp      = -20;
-const TCursor crHandPoint = -21;
-const TCursor crSizeAll   = -22;
-const TCursor crSize      = -22;
-const TCursor crSizeNW    = -23;
-const TCursor crSizeN     = -24;
-const TCursor crSizeNE    = -25;
-const TCursor crSizeW     = -26;
-const TCursor crSizeE     = -27;
-const TCursor crSizeSW    = -28;
-const TCursor crSizeS     = -29;
-const TCursor crSizeSE    = -30;
+constexpr TCursor crDefault   = 0;
+constexpr TCursor crNone      = -1;
+constexpr TCursor crArrow     = -2;
+constexpr TCursor crCross     = -3;
+constexpr TCursor crIBeam     = -4;
+constexpr TCursor crSizeNESW  = -6;
+constexpr TCursor crSizeNS    = -7;
+constexpr TCursor crSizeNWSE  = -8;
+constexpr TCursor crSizeWE    = -9;
+constexpr TCursor crUpArrow   = -10;
+constexpr TCursor crHourGlass = -11;
+constexpr TCursor crDrag      = -12;
+constexpr TCursor crNoDrop    = -13;
+constexpr TCursor crHSplit    = -14;
+constexpr TCursor crVSplit    = -15;
+constexpr TCursor crMultiDrag = -16;
+constexpr TCursor crSQLWait   = -17;
+constexpr TCursor crNo        = -18;
+constexpr TCursor crAppStart  = -19;
+constexpr TCursor crHelp      = -20;
+constexpr TCursor crHandPoint = -21;
+constexpr TCursor crSizeAll   = -22;
+constexpr TCursor crSize      = -22;
+constexpr TCursor crSizeNW    = -23;
+constexpr TCursor crSizeN     = -24;
+constexpr TCursor crSizeNE    = -25;
+constexpr TCursor crSizeW     = -26;
+constexpr TCursor crSizeE     = -27;
+constexpr TCursor crSizeSW    = -28;
+constexpr TCursor crSizeS     = -29;
+constexpr TCursor crSizeSE    = -30;
 
 // コントロールの大きさの制限(LCL の TSizeConstraints)。コントロールが所有するものへの非所有のラッパー(docs/adr/0034)。
 // 0 は制限なし。Button1->Constraints->MinWidth = 80; のように使う。
@@ -2430,18 +2430,18 @@ protected:
 // モーダルの結果(LCL・VCL と同じ値)。ボタンの ModalResult を設定すると、押したときにフォームが閉じて ShowModal() がその値を返す。
 // VCL と同じく、利用者が独自の値(mrOk + 100 等)も使えるよう、列挙型ではなく整数にする。
 using TModalResult = std::int32_t;
-const TModalResult mrNone     = 0;
-const TModalResult mrOk       = 1;
-const TModalResult mrCancel   = 2;
-const TModalResult mrAbort    = 3;
-const TModalResult mrRetry    = 4;
-const TModalResult mrIgnore   = 5;
-const TModalResult mrYes      = 6;
-const TModalResult mrNo       = 7;
-const TModalResult mrAll      = 8;
-const TModalResult mrNoToAll  = 9;
-const TModalResult mrYesToAll = 10;
-const TModalResult mrClose    = 11;
+constexpr TModalResult mrNone     = 0;
+constexpr TModalResult mrOk       = 1;
+constexpr TModalResult mrCancel   = 2;
+constexpr TModalResult mrAbort    = 3;
+constexpr TModalResult mrRetry    = 4;
+constexpr TModalResult mrIgnore   = 5;
+constexpr TModalResult mrYes      = 6;
+constexpr TModalResult mrNo       = 7;
+constexpr TModalResult mrAll      = 8;
+constexpr TModalResult mrNoToAll  = 9;
+constexpr TModalResult mrYesToAll = 10;
+constexpr TModalResult mrClose    = 11;
 
 // 最初に表示する位置(poDesigned は Left・Top のまま。poMainFormCenter はメインフォームの中央)。
 enum TPosition

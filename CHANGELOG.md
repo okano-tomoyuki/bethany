@@ -20,6 +20,8 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
   `TOpenOptions`・`TColorDialogOptions`・`TFontDialogOptions`・`TFindOptions`。`Shift & ssShift` は `Shift.Contains(ssShift)`、
   `fsBold | fsItalic` は `TFontStyles() << fsBold << fsItalic`、`ShortCut('N', ssCtrl)` は `ShortCut('N', TShiftState() << ssCtrl)` に書き換える。
   Python の書き方(`fsBold | fsItalic`・`Shift & ssShift`)は変わらない([ADR 0061](docs/adr/0061-property-ergonomics-and-sets.md))
+- ヘッダの定数(色・カーソル・`mrOk`・ショートカットの修飾)を `const` から `constexpr` にした(値・型・使い方は変わらない)。
+  C++ の版の下限は C++11 のまま保つ([ADR 0062](docs/adr/0062-cpp11-baseline-and-constexpr.md))
 
 ## [0.4.0] - 2026-09-30
 

@@ -243,7 +243,7 @@ def parse_hpp():
         if m:
             model.int_aliases[m.group(1)] = []
             continue
-        m = re.fullmatch(r"const (\w+) (\w+) = (.+)", t)
+        m = re.fullmatch(r"(?:constexpr|const) (\w+) (\w+) = (.+)", t)
         if m:
             target = model.flags.get(m.group(1), model.int_aliases.get(m.group(1)))
             target.append((m.group(2), cxx_value(m.group(3)), st.comments))
