@@ -78,6 +78,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0055](adr/0055-python-sdist-for-msys2.md) | MSYS2 の Python の pip で入るよう、beth.dll を含む sdist も PyPI に出す | 承認 |
 | [0056](adr/0056-release-by-github-actions.md) | C++ のライブラリと Python のパッケージを GitHub Actions でリリースする | 承認 |
 | [0057](adr/0057-canvas-pen-brush-as-pointers.md) | Canvas・Pen・Brush・Font を C++Builder と同じくポインタのプロパティにする | 承認 |
+| [0058](adr/0058-designer-shape-pen-brush.md) | デザイナーで TShape の Pen・Brush を設定し、キャンバスに形を描く | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。

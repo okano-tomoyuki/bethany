@@ -16,6 +16,7 @@ class TMainForm(TForm):
         self.OptionStatus: TStatusBar
         self.RadioGroup1: TRadioGroup
         self.ScrollBar1: TScrollBar
+        self.Shape1: TShape
         self.MemoSheet: TTabSheet
         self.Memo1: TMemo
         self.ListSheet: TTabSheet
@@ -39,7 +40,7 @@ class TMainForm(TForm):
         self.Timer1: TTimer
         self.ActionList1: TActionList
         self.FileSaveAction: TAction
-        # <bethany-designer:end id="declarations" hash="9cf275d5">
+        # <bethany-designer:end id="declarations" hash="7c6700f6">
         self.beth_CreateComponents()
 
     # <bethany-designer:begin id="beth_CreateComponents">
@@ -54,6 +55,7 @@ class TMainForm(TForm):
         self.OptionStatus = TStatusBar(self)
         self.RadioGroup1 = TRadioGroup(self)
         self.ScrollBar1 = TScrollBar(self)
+        self.Shape1 = TShape(self)
         self.MemoSheet = TTabSheet(self)
         self.Memo1 = TMemo(self)
         self.ListSheet = TTabSheet(self)
@@ -173,6 +175,18 @@ class TMainForm(TForm):
         self.ScrollBar1.LargeChange = 10
         self.ScrollBar1.SmallChange = 2
         self.ScrollBar1.OnScroll = self.ScrollBar1Scroll
+
+        self.Shape1.Parent = self.OptionSheet
+        self.Shape1.Left = 228
+        self.Shape1.Top = 32
+        self.Shape1.Width = 120
+        self.Shape1.Height = 30
+        self.Shape1.Pen.Color = clRed
+        self.Shape1.Pen.Width = 2
+        self.Shape1.Pen.Style = psDash
+        self.Shape1.Brush.Color = clYellow
+        self.Shape1.Brush.Style = bsDiagCross
+        self.Shape1.Shape = stRoundRect
 
         self.MemoSheet.PageControl = self.PageControl1
         self.MemoSheet.Caption = "Memo"
@@ -333,7 +347,7 @@ class TMainForm(TForm):
         self.FileSaveAction.OnExecute = self.FileSaveActionExecute
 
         self.FileSaveItem.Action = self.FileSaveAction
-    # <bethany-designer:end id="beth_CreateComponents" hash="57043a05">
+    # <bethany-designer:end id="beth_CreateComponents" hash="967a8ff4">
 
     # <bethany-designer:handler-stubs>
 

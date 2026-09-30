@@ -131,6 +131,19 @@
                   "SmallChange": 2
                 },
                 "events": { "OnScroll": "ScrollBar1Scroll" }
+              },
+              {
+                "name": "Shape1",
+                "class": "TShape",
+                "properties": {
+                  "Left": 228,
+                  "Top": 32,
+                  "Width": 120,
+                  "Height": 30,
+                  "Pen": { "Color": "clRed", "Width": 2, "Style": "psDash" },
+                  "Brush": { "Color": "clYellow", "Style": "bsDiagCross" },
+                  "Shape": "stRoundRect"
+                }
               }
             ]
           },

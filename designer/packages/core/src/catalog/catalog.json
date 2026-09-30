@@ -13062,6 +13062,32 @@
           "declaredIn": "TControl",
           "default": "crDefault"
         },
+        "Pen": {
+          "type": {
+            "kind": "object",
+            "class": "TPen"
+          },
+          "declaredIn": "TCustomShape",
+          "default": {
+            "Color": "clBlack",
+            "Width": 1,
+            "Style": "psSolid",
+            "Mode": "pmCopy"
+          },
+          "doc": "縁の線(C++Builder と同じくポインタ。Shape1->Pen->Color = clRed;。docs/adr/0057)。代入は内容のコピー。"
+        },
+        "Brush": {
+          "type": {
+            "kind": "object",
+            "class": "TBrush"
+          },
+          "declaredIn": "TCustomShape",
+          "default": {
+            "Color": "clWhite",
+            "Style": "bsSolid"
+          },
+          "doc": "中の塗りつぶし(Shape1->Brush->Color = clYellow;。bsClear なら塗りつぶさない)。代入は内容のコピー。"
+        },
         "Shape": {
           "type": {
             "kind": "enum",
@@ -17755,6 +17781,55 @@
           },
           "declaredIn": "TGridColumnTitle",
           "doc": "見出しの文字のフォント(既定はグリッドの TitleFont)。代入は内容のコピー。"
+        }
+      }
+    },
+    "TPen": {
+      "properties": {
+        "Color": {
+          "type": {
+            "kind": "alias",
+            "alias": "TColor"
+          },
+          "declaredIn": "TPen"
+        },
+        "Width": {
+          "type": {
+            "kind": "int"
+          },
+          "declaredIn": "TPen"
+        },
+        "Style": {
+          "type": {
+            "kind": "enum",
+            "enum": "TPenStyle"
+          },
+          "declaredIn": "TPen"
+        },
+        "Mode": {
+          "type": {
+            "kind": "enum",
+            "enum": "TPenMode"
+          },
+          "declaredIn": "TPen"
+        }
+      }
+    },
+    "TBrush": {
+      "properties": {
+        "Color": {
+          "type": {
+            "kind": "alias",
+            "alias": "TColor"
+          },
+          "declaredIn": "TBrush"
+        },
+        "Style": {
+          "type": {
+            "kind": "enum",
+            "enum": "TBrushStyle"
+          },
+          "declaredIn": "TBrush"
         }
       }
     },

@@ -17,6 +17,7 @@ import {
 import { useDocumentStore } from '../store/stores.ts';
 import { createContext, useContext, type CSSProperties, type ReactNode } from 'react';
 import { boundsOf } from '../editing.ts';
+import { Shape } from './Shape.tsx';
 import {
   colorToCss,
   flag,
@@ -123,7 +124,7 @@ function ControlView({
 
   return (
     <div className={classes.join(' ')} style={style} data-node={node.name}>
-      <Body location={location} look={look} />
+      <Body location={location} look={look} size={bounds} />
       {accepts && (
         <div
           className="ctl-client"
@@ -165,9 +166,12 @@ export function Caption({
 function Body({
   location,
   look,
+  size,
 }: {
   readonly location: NodeLocation & { readonly kind: 'control' };
   readonly look: Inherited;
+  /** 表示している大きさ(ドラッグ中の見た目を含む) */
+  readonly size: { readonly width: number; readonly height: number };
 }): ReactNode {
   const { node } = location;
   const background = { background: look.color };
@@ -431,11 +435,7 @@ function Body({
     case 'TDrawGrid':
       return <Grid location={location} background={look.color} />;
     case 'TShape':
-      return (
-        <div
-          className={`look-shape ${/Circle|Ellipse/.test(text(location, 'Shape')) ? 'round' : ''}`}
-        />
-      );
+      return <Shape location={location} width={size.width} height={size.height} />;
     case 'TBevel':
       return <div className="look-bevel" />;
     case 'TSplitter':

@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- `Pen` and `Brush` of shapes (`TShape`) in the Object Inspector: the color, width and style of the line, and the color and style of the
+  fill. The canvas draws each `Shape` (rectangles, rounded rectangles, ellipses, diamonds, triangles and stars) with them
+
 ## [0.5.2] - 2026-09-30
 
 - **Fixed**: the canvas drew controls without a window (`TLabel`, `TImage`, `TShape`, ...) over overlapping controls with a window

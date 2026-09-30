@@ -188,6 +188,7 @@ AutoSize のコントロール(dsl-spec.md §5)の大きさは、キャンバス
   TWinControl(TMemo・TPanel 等)の窓は常にその上に重なるため、窓の無いものを先に、窓のあるものを後に描く
   (それぞれの中では `controls` の順で、後のものが上)。窓付きのコントロールに重なった TLabel は、実行時と同じくキャンバスでも隠れる
   (選ぶのは構造の木から)。
+- TShape は、`Shape` の形を `Pen`(線の色・幅・種類)と `Brush`(塗りつぶしの色・種類)で SVG に描く([ADR 0058](../adr/0058-designer-shape-pen-brush.md))。
 - 色は `Color`・`Font.Color`(と `ParentColor`・`ParentFont` による親からの継承)を反映する。`clDefault` はクラスごとの既定の色。
   フォントは `Font.Name`・`Size`・`Style` を反映し、`default` は §5.4。
 - 非ビジュアルコンポーネントは、フォームの上の `design` の位置に、クラスのアイコンと名前を描く(C++Builder・Lazarus と同じ)。

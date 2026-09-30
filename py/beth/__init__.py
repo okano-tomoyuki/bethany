@@ -3097,8 +3097,9 @@ class TStatusBar(TWinControl):
 
 
 class TCustomShape(TGraphicControl):
-    # 縁の線と中の塗りつぶし(C++Builder と同じくポインタ。Shape1->Pen->Color = clRed;。docs/adr/0057)。代入は内容のコピー。
+    # 縁の線(C++Builder と同じくポインタ。Shape1->Pen->Color = clRed;。docs/adr/0057)。代入は内容のコピー。
     Pen = _Prop("TCustomShape_GetPen", "TCustomShape_SetPen", _obj("TPen"))
+    # 中の塗りつぶし(Shape1->Brush->Color = clYellow;。bsClear なら塗りつぶさない)。代入は内容のコピー。
     Brush = _Prop("TCustomShape_GetBrush", "TCustomShape_SetBrush", _obj("TBrush"))
     Shape = _Prop("TCustomShape_GetShape", "TCustomShape_SetShape", _enum("TShapeType"))
 

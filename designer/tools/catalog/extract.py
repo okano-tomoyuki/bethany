@@ -26,7 +26,7 @@ sys.path.insert(0, str(PY_DIR))
 import gen_api  # noqa: E402
 
 # 所有者が持つオブジェクトのビューで、中のプロパティを入れ子で書けるもの(DSL の「入れ子のオブジェクト」)。
-OBJECT_CLASSES = ["TFont", "TSizeConstraints", "TControlBorderSpacing", "TControlScrollBar", "TGridColumnTitle"]
+OBJECT_CLASSES = ["TFont", "TSizeConstraints", "TControlBorderSpacing", "TControlScrollBar", "TGridColumnTitle", "TPen", "TBrush"]
 # 項目の一覧(TCollection)のビューで、項目を DSL の配列で書けるもの(DSL の「コレクション」。docs/adr/0044)。
 # 一覧のクラス → 項目のクラス。項目のプロパティは objects に載せる(Index は配列の並びで決まるので載せない)。
 COLLECTION_CLASSES = {"TStatusPanels": "TStatusPanel", "TGridColumns": "TGridColumn"}

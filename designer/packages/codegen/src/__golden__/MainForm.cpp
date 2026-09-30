@@ -27,6 +27,7 @@ void TMainForm::beth_CreateComponents()
     OptionStatus = new TStatusBar(this);
     RadioGroup1 = new TRadioGroup(this);
     ScrollBar1 = new TScrollBar(this);
+    Shape1 = new TShape(this);
     MemoSheet = new TTabSheet(this);
     Memo1 = new TMemo(this);
     ListSheet = new TTabSheet(this);
@@ -152,6 +153,18 @@ void TMainForm::beth_CreateComponents()
     ScrollBar1->LargeChange = 10;
     ScrollBar1->SmallChange = 2;
     ScrollBar1->OnScroll = [this](TObject* Sender, TScrollCode ScrollCode, int& ScrollPos) { ScrollBar1Scroll(Sender, ScrollCode, ScrollPos); };
+
+    Shape1->Parent = OptionSheet;
+    Shape1->Left = 228;
+    Shape1->Top = 32;
+    Shape1->Width = 120;
+    Shape1->Height = 30;
+    Shape1->Pen->Color = clRed;
+    Shape1->Pen->Width = 2;
+    Shape1->Pen->Style = psDash;
+    Shape1->Brush->Color = clYellow;
+    Shape1->Brush->Style = bsDiagCross;
+    Shape1->Shape = stRoundRect;
 
     MemoSheet->PageControl = PageControl1;
     MemoSheet->Caption = "Memo";
@@ -319,7 +332,7 @@ void TMainForm::beth_CreateComponents()
 
     FileSaveItem->Action = FileSaveAction;
 }
-// <bethany-designer:end id="beth_CreateComponents" hash="0d69c0ef">
+// <bethany-designer:end id="beth_CreateComponents" hash="ff1e3fb2">
 
 // <bethany-designer:handler-stubs>
 

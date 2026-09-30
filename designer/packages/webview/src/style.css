@@ -1087,12 +1087,14 @@ input[aria-invalid='true'] {
 }
 
 .look-shape {
-  border: 1px solid #000;
-  background: #fff;
+  display: block;
+  overflow: visible;
 }
 
-.look-shape.round {
-  border-radius: 50%;
+/* stPolygon(頂点はデザイナーで設定しない)は、場所が分かるように点線の枠だけを描く */
+.look-shape.empty {
+  outline: 1px dashed #a0a0a0;
+  outline-offset: -1px;
 }
 
 .look-bevel {

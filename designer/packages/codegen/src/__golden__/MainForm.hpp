@@ -22,6 +22,7 @@ public:
     beth::TStatusBar* OptionStatus;
     beth::TRadioGroup* RadioGroup1;
     beth::TScrollBar* ScrollBar1;
+    beth::TShape* Shape1;
     beth::TTabSheet* MemoSheet;
     beth::TMemo* Memo1;
     beth::TTabSheet* ListSheet;
@@ -69,7 +70,7 @@ public:
     void ClearItemClick(beth::TObject* Sender);
     void Timer1Timer(beth::TObject* Sender);
     void FileSaveActionExecute(beth::TObject* Sender);
-    // <bethany-designer:end id="declarations" hash="60570227">
+    // <bethany-designer:end id="declarations" hash="d7df6e7e">
 
     explicit TMainForm(beth::TComponent* AOwner);
 

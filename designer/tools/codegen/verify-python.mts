@@ -109,6 +109,7 @@ checks["treeView"] = f"{int(f.Tree1.SortType)}/{f.Tree1.Indent}/{int(f.Tree1.Mul
 checks["listView"] = f"{int(f.List1.ViewStyle)}/{int(f.List1.ShowColumnHeaders)}/{int(f.List1.AutoSort)}/{int(f.List1.OwnerData)}"
 checks["grid"] = f"{int(f.Grid1.AlternateColor)}/{int(f.Grid1.GridLineColor)}/{int(bool(f.Grid1.TitleFont.Style & fsBold))}/{int(f.Grid1.AutoFillColumns)}/{int(f.Grid1.ColumnClickSorts)}"
 checks["gridColumns"] = f"{f.Grid1.Columns.Count}/{f.Grid1.ColCount}/{f.Grid1.Columns.Items[0].Title.Caption}/{f.Grid1.Columns.Items[1].PickList.Count}/{int(f.Grid1.Columns.Items[2].ButtonStyle)}/{f.Grid1.Columns.Items[2].ValueChecked}"
+checks["shape"] = f"{int(f.Shape1.Shape)}/{int(f.Shape1.Pen.Color)}/{f.Shape1.Pen.Width}/{int(f.Shape1.Pen.Style)}/{int(f.Shape1.Brush.Color)}/{int(f.Shape1.Brush.Style)}"
 checks["memoBorder"] = f"{int(f.Memo1.BorderStyle)}/{int(f.Memo1.ScrollBars)}"
 checks["timer"] = f"{int(f.Timer1.Enabled)}/{f.Timer1.Interval}"
 checks["caption"] = f.Caption

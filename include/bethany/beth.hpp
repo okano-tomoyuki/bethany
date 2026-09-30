@@ -4968,8 +4968,9 @@ enum TShapeType
 class TCustomShape : public TGraphicControl
 {
 public:
-    // 縁の線と中の塗りつぶし(C++Builder と同じくポインタ。Shape1->Pen->Color = clRed;。docs/adr/0057)。代入は内容のコピー。
+    // 縁の線(C++Builder と同じくポインタ。Shape1->Pen->Color = clRed;。docs/adr/0057)。代入は内容のコピー。
     Property<TPen*>   Pen;
+    // 中の塗りつぶし(Shape1->Brush->Color = clYellow;。bsClear なら塗りつぶさない)。代入は内容のコピー。
     Property<TBrush*> Brush;
     Property<TShapeType> Shape;
 
