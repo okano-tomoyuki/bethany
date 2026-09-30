@@ -122,6 +122,9 @@ export const EXPECTED_CHECKS: Readonly<Record<string, string>> = {
   anchors: '404/380/500',
 };
 
+/** 高さを Windows が決めるクラス(配置の照合で Left・Width だけを比べる) */
+const OS_SIZED_CLASSES: ReadonlySet<string> = new Set(['TStatusBar']);
+
 /** 実行結果を期待と照合して表示し、不一致があれば process.exitCode を 1 にする */
 export function checkReport(doc: BfmDocument, report: Report): void {
   let failures = 0;
@@ -135,10 +138,17 @@ export function checkReport(doc: BfmDocument, report: Report): void {
     // AutoSize のコントロールの大きさは LCL が内容(文字列・フォント)から決める。デザイナーが書くのは見積もりなので比べない
     const autoSize =
       properties.AutoSize ?? findClass(location.node.class)?.properties.AutoSize?.default;
-    const keys = autoSize === true ? KEYS.slice(0, 2) : KEYS;
-    const mismatched = keys.filter((key, i) => {
+    // TStatusBar の高さは Windows がシステムのフォントから決める(日本語の Windows の Yu Gothic UI では 24、英語の Windows の
+    // Segoe UI では 23)。alBottom で置くと Top もそれに連れて変わるため、Left・Width だけを比べる(CI のランナーは英語の Windows)
+    const osSized = OS_SIZED_CLASSES.has(location.node.class);
+    const keys = osSized
+      ? (['Left', 'Width'] as const)
+      : autoSize === true
+        ? KEYS.slice(0, 2)
+        : KEYS;
+    const mismatched = keys.filter((key) => {
       const expected = properties[key];
-      return typeof expected === 'number' && actual?.[i] !== expected;
+      return typeof expected === 'number' && actual?.[KEYS.indexOf(key)] !== expected;
     });
     if (mismatched.length > 0) {
       failures++;
