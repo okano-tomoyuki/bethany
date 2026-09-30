@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <exception>
 #include <functional>
+#include <iosfwd>
 #include <map>
 #include <memory>
 #include <string>
@@ -138,6 +139,8 @@ template<typename T>
 class Property
 {
 public:
+    // プロパティの値の型(文字列・集合のプロパティの演算子の選択に使う。docs/adr/0061)。
+    using PropertyValue = T;
     using Getter = T    (*)(TObject*);
     using Setter = void (*)(TObject*, const T&);
 
@@ -168,6 +171,25 @@ public:
         return getter_(owner_);
     }
 
+    // 値を取り出す(docs/adr/0061)。暗黙の変換が効かない場面(auto で受ける・テンプレートや std::max に渡す・
+    // 文字列のメソッドを呼ぶ Edit1->Text.Get().c_str() 等)で使う。
+    T Get() const
+    {
+        return getter_(owner_);
+    }
+
+    // 複合代入(Button1->Left += 10; Label1->Caption += "!"; docs/adr/0061)。読み出した値に演算して書き戻す。
+    // 演算できない型(列挙型等)で使うとコンパイルエラーになる。
+    template<typename U> Property& operator+=(const U& value) { T v = Get(); v += value; setter_(owner_, v); return *this; }
+    template<typename U> Property& operator-=(const U& value) { T v = Get(); v -= value; setter_(owner_, v); return *this; }
+    template<typename U> Property& operator*=(const U& value) { T v = Get(); v *= value; setter_(owner_, v); return *this; }
+    template<typename U> Property& operator/=(const U& value) { T v = Get(); v /= value; setter_(owner_, v); return *this; }
+    // ++・--(Tag++;)。後置は変える前の値を返す。
+    Property& operator++() { T v = Get(); ++v; setter_(owner_, v); return *this; }
+    Property& operator--() { T v = Get(); --v; setter_(owner_, v); return *this; }
+    T operator++(int) { T old = Get(); T v = old; ++v; setter_(owner_, v); return old; }
+    T operator--(int) { T old = Get(); T v = old; --v; setter_(owner_, v); return old; }
+
     // ポインタ型のプロパティ(Parent 等)で、Button1->Parent->Caption のようにメンバへ直接たどれるようにする。
     // ポインタ以外の型では使うとコンパイルエラーになる。
     T operator->() const
@@ -186,6 +208,7 @@ template<typename T>
 class ReadOnlyProperty
 {
 public:
+    using PropertyValue = T;
     using Getter = T (*)(TObject*);
 
     ReadOnlyProperty(TObject* owner, Getter getter)
@@ -197,6 +220,12 @@ public:
     ReadOnlyProperty& operator=(const ReadOnlyProperty&) = delete;
 
     operator T() const
+    {
+        return getter_(owner_);
+    }
+
+    // 値を取り出す(Property::Get と同じ。docs/adr/0061)。
+    T Get() const
     {
         return getter_(owner_);
     }
@@ -226,6 +255,8 @@ public:
     class Reference
     {
     public:
+        using PropertyValue = T;
+
         Reference(TObject* owner, I index, Getter getter, Setter setter)
             : owner_(owner), index_(index), getter_(getter), setter_(setter)
         {}
@@ -250,6 +281,25 @@ public:
         {
             return getter_(owner_, index_);
         }
+
+        // 値を取り出す(docs/adr/0061)。暗黙の変換が効かない場面(auto で受ける・テンプレートや std::max に渡す・
+        // 文字列のメソッドを呼ぶ Edit1->Text.Get().c_str() 等)で使う。
+        T Get() const
+        {
+            return getter_(owner_, index_);
+        }
+
+        // 複合代入(Button1->Left += 10; Label1->Caption += "!"; docs/adr/0061)。読み出した値に演算して書き戻す。
+        // 演算できない型(列挙型等)で使うとコンパイルエラーになる。
+        template<typename U> Reference& operator+=(const U& value) { T v = Get(); v += value; setter_(owner_, index_, v); return *this; }
+        template<typename U> Reference& operator-=(const U& value) { T v = Get(); v -= value; setter_(owner_, index_, v); return *this; }
+        template<typename U> Reference& operator*=(const U& value) { T v = Get(); v *= value; setter_(owner_, index_, v); return *this; }
+        template<typename U> Reference& operator/=(const U& value) { T v = Get(); v /= value; setter_(owner_, index_, v); return *this; }
+        // ++・--(Tag++;)。後置は変える前の値を返す。
+        Reference& operator++() { T v = Get(); ++v; setter_(owner_, index_, v); return *this; }
+        Reference& operator--() { T v = Get(); --v; setter_(owner_, index_, v); return *this; }
+        T operator++(int) { T old = Get(); T v = old; ++v; setter_(owner_, index_, v); return old; }
+        T operator--(int) { T old = Get(); T v = old; --v; setter_(owner_, index_, v); return old; }
 
         T operator->() const
         {
@@ -322,6 +372,8 @@ public:
     class Reference
     {
     public:
+        using PropertyValue = T;
+
         Reference(TObject* owner, int index1, int index2, Getter getter, Setter setter)
             : owner_(owner), index1_(index1), index2_(index2), getter_(getter), setter_(setter)
         {}
@@ -344,6 +396,25 @@ public:
         {
             return getter_(owner_, index1_, index2_);
         }
+
+        // 値を取り出す(docs/adr/0061)。暗黙の変換が効かない場面(auto で受ける・テンプレートや std::max に渡す・
+        // 文字列のメソッドを呼ぶ Edit1->Text.Get().c_str() 等)で使う。
+        T Get() const
+        {
+            return getter_(owner_, index1_, index2_);
+        }
+
+        // 複合代入(Button1->Left += 10; Label1->Caption += "!"; docs/adr/0061)。読み出した値に演算して書き戻す。
+        // 演算できない型(列挙型等)で使うとコンパイルエラーになる。
+        template<typename U> Reference& operator+=(const U& value) { T v = Get(); v += value; setter_(owner_, index1_, index2_, v); return *this; }
+        template<typename U> Reference& operator-=(const U& value) { T v = Get(); v -= value; setter_(owner_, index1_, index2_, v); return *this; }
+        template<typename U> Reference& operator*=(const U& value) { T v = Get(); v *= value; setter_(owner_, index1_, index2_, v); return *this; }
+        template<typename U> Reference& operator/=(const U& value) { T v = Get(); v /= value; setter_(owner_, index1_, index2_, v); return *this; }
+        // ++・--(Tag++;)。後置は変える前の値を返す。
+        Reference& operator++() { T v = Get(); ++v; setter_(owner_, index1_, index2_, v); return *this; }
+        Reference& operator--() { T v = Get(); --v; setter_(owner_, index1_, index2_, v); return *this; }
+        T operator++(int) { T old = Get(); T v = old; ++v; setter_(owner_, index1_, index2_, v); return old; }
+        T operator--(int) { T old = Get(); T v = old; --v; setter_(owner_, index1_, index2_, v); return old; }
 
         T operator->() const
         {
@@ -398,6 +469,51 @@ private:
     Setter   setter_;
 };
 
+// ---- 文字列のプロパティの比較・連結(docs/adr/0061) ----
+// Edit1->Text == "abc"・Label1->Caption = Edit1->Text + "!"・std::cout << Edit1->Text のように、std::string と同じく書けるようにする
+// (std::string の演算子はテンプレートのため、プロパティから暗黙に変換されない)。対象は値の型が std::string のプロパティ・要素だけ。
+namespace detail
+{
+template<typename P, typename = void>
+struct IsStringProperty : std::false_type {};
+template<typename P>
+struct IsStringProperty<P, typename std::enable_if<std::is_same<typename P::PropertyValue, std::string>::value>::type>
+    : std::true_type {};
+
+template<typename P, typename R = void>
+using IfStringProperty = typename std::enable_if<IsStringProperty<P>::value, R>::type;
+template<typename P, typename Q, typename R = void>
+using IfStringProperties = typename std::enable_if<IsStringProperty<P>::value && IsStringProperty<Q>::value, R>::type;
+} // namespace detail
+
+#define BETH_STRING_PROPERTY_OPS(OP, R)                                                                                        \
+    template<typename P> detail::IfStringProperty<P, R> operator OP(const P& a, const std::string& b) { return a.Get() OP b; }  \
+    template<typename P> detail::IfStringProperty<P, R> operator OP(const std::string& a, const P& b) { return a OP b.Get(); }  \
+    template<typename P> detail::IfStringProperty<P, R> operator OP(const P& a, const char* b) { return a.Get() OP b; }         \
+    template<typename P> detail::IfStringProperty<P, R> operator OP(const char* a, const P& b) { return a OP b.Get(); }         \
+    template<typename P, typename Q> detail::IfStringProperties<P, Q, R> operator OP(const P& a, const Q& b)                   \
+    {                                                                                                                           \
+        return a.Get() OP b.Get();                                                                                              \
+    }
+BETH_STRING_PROPERTY_OPS(+, std::string)
+BETH_STRING_PROPERTY_OPS(==, bool)
+BETH_STRING_PROPERTY_OPS(!=, bool)
+BETH_STRING_PROPERTY_OPS(<, bool)
+BETH_STRING_PROPERTY_OPS(>, bool)
+BETH_STRING_PROPERTY_OPS(<=, bool)
+BETH_STRING_PROPERTY_OPS(>=, bool)
+#undef BETH_STRING_PROPERTY_OPS
+
+template<typename P> detail::IfStringProperty<P, std::string> operator+(const P& a, char b) { return a.Get() + b; }
+template<typename P> detail::IfStringProperty<P, std::string> operator+(char a, const P& b) { return a + b.Get(); }
+
+// std::cout << Edit1->Text;
+template<typename P>
+detail::IfStringProperty<P, std::ostream&> operator<<(std::ostream& os, const P& p)
+{
+    return os << p.Get();
+}
+
 // イベントハンドラの型。C++Builder の TNotifyEvent に合わせ、イベントを発生させたオブジェクトを
 // Sender として受け取る(static_cast / dynamic_cast で具体的な型に戻して使う)。
 // 本家の __closure は標準 C++ に無いため、メンバ関数は [this](TObject* Sender) { Button1Click(Sender); }
@@ -419,26 +535,91 @@ using TCloseEvent = std::function<void(TObject* Sender, TCloseAction& Action)>;
 // OnCloseQuery の型。CanClose には true が入っており、false にすると閉じるのを取りやめる(OnClose より前に呼ばれる)。
 using TCloseQueryEvent = std::function<void(TObject* Sender, bool& CanClose)>;
 
-// 修飾キー・マウスボタンの状態を表すビット集合(LCL の TShiftState に対応)。複数のビットを OR して使う。
-using TShiftState = unsigned int;
-const TShiftState ssShift  = 0x0001;
-const TShiftState ssAlt    = 0x0002;
-const TShiftState ssCtrl   = 0x0004;
-const TShiftState ssLeft   = 0x0008;  // マウスの左ボタンが押されている
-const TShiftState ssRight  = 0x0010;
-const TShiftState ssMiddle = 0x0020;
-const TShiftState ssDouble = 0x0040;  // ダブルクリックの一部として発生した
-const TShiftState ssMeta   = 0x0080;
-const TShiftState ssSuper  = 0x0100;
-const TShiftState ssHyper  = 0x0200;
-const TShiftState ssAltGr  = 0x0400;
-const TShiftState ssCaps   = 0x0800;
-const TShiftState ssNum    = 0x1000;
-const TShiftState ssScroll = 0x2000;
-const TShiftState ssTriple = 0x4000;
-const TShiftState ssQuad   = 0x8000;
-const TShiftState ssExtra1 = 0x10000;
-const TShiftState ssExtra2 = 0x20000;
+// Pascal の集合型(set of 列挙型)に対応する値型(C++Builder の Set<T, minEl, maxEl> に倣う。docs/adr/0034)。
+// 要素は << で加え、>> で除き、Contains で確かめる(Button1->Anchors = TAnchors() << akLeft << akRight;)。
+// プロパティからは Button1->Anchors->Contains(akRight) のように -> で読める。
+template<typename E>
+class Set
+{
+public:
+    using Element = E;
+
+    Set() : bits_(0) {}
+
+    Set& operator<<(E e) { bits_ |= Bit(e); return *this; }
+    Set& operator>>(E e) { bits_ &= ~Bit(e); return *this; }
+    bool Contains(E e) const { return (bits_ & Bit(e)) != 0; }
+    bool Empty() const { return bits_ == 0; }
+    Set& Clear() { bits_ = 0; return *this; }
+
+    // 和・差・積(Pascal の +・-・*)。
+    Set operator+(const Set& other) const { return FromInt(bits_ | other.bits_); }
+    Set operator-(const Set& other) const { return FromInt(bits_ & ~other.bits_); }
+    Set operator*(const Set& other) const { return FromInt(bits_ & other.bits_); }
+    bool operator==(const Set& other) const { return bits_ == other.bits_; }
+    bool operator!=(const Set& other) const { return bits_ != other.bits_; }
+
+    // Property<Set<E>> の operator-> から、メンバをたどれるようにする。
+    const Set* operator->() const { return this; }
+
+    // 要素の序数をビットの位置とした整数(DLL との受け渡しに使う)。
+    unsigned int ToInt() const { return bits_; }
+    static Set FromInt(unsigned int bits) { Set s; s.bits_ = bits; return s; }
+
+private:
+    static unsigned int Bit(E e) { return 1u << static_cast<unsigned int>(e); }
+    unsigned int bits_;
+};
+
+// ---- 集合のプロパティの演算子(docs/adr/0061) ----
+// Grid1->Options = Grid1->Options << goEditing; のように、プロパティの値に要素を加えた(除いた)新しい集合を作る
+// (C++Builder と同じ書き方。プロパティそのものは変わらないので、代入で書き戻す)。
+namespace detail
+{
+template<typename P, typename = void>
+struct SetOfProperty {};
+template<typename P>
+struct SetOfProperty<P, typename std::enable_if<std::is_same<typename P::PropertyValue,
+                                                             Set<typename P::PropertyValue::Element>>::value>::type>
+{
+    using type = typename P::PropertyValue;
+};
+} // namespace detail
+
+template<typename P, typename S = typename detail::SetOfProperty<P>::type>
+S operator<<(const P& p, typename S::Element e) { S s = p.Get(); return s << e; }
+template<typename P, typename S = typename detail::SetOfProperty<P>::type>
+S operator>>(const P& p, typename S::Element e) { S s = p.Get(); return s >> e; }
+template<typename P, typename S = typename detail::SetOfProperty<P>::type>
+S operator+(const P& p, const typename detail::SetOfProperty<P>::type& other) { return p.Get() + other; }
+template<typename P, typename S = typename detail::SetOfProperty<P>::type>
+S operator-(const P& p, const typename detail::SetOfProperty<P>::type& other) { return p.Get() - other; }
+template<typename P, typename S = typename detail::SetOfProperty<P>::type>
+S operator*(const P& p, const typename detail::SetOfProperty<P>::type& other) { return p.Get() * other; }
+
+// 修飾キー・マウスボタンの状態(LCL の TShiftState。C++Builder と同じく Set。Shift.Contains(ssShift) で調べる。docs/adr/0061)。
+enum TShiftStateEnum
+{
+    ssShift,
+    ssAlt,
+    ssCtrl,
+    ssLeft,    // マウスの左ボタンが押されている
+    ssRight,
+    ssMiddle,
+    ssDouble,  // ダブルクリックの一部として発生した
+    ssMeta,
+    ssSuper,
+    ssHyper,
+    ssAltGr,
+    ssCaps,
+    ssNum,
+    ssScroll,
+    ssTriple,
+    ssQuad,
+    ssExtra1,
+    ssExtra2
+};
+using TShiftState = Set<TShiftStateEnum>;
 
 // マウスボタン(OnMouseDown / OnMouseUp の Button)。
 enum TMouseButton
@@ -710,12 +891,15 @@ private:
     static void        SetStyleImpl(TObject* owner, const TBrushStyle& value);
 };
 
-// フォントの修飾(LCL の TFontStyles)。TShiftState と同じく、ビットを OR した集合として扱う。
-using TFontStyles = unsigned int;
-const TFontStyles fsBold      = 1u << 0;
-const TFontStyles fsItalic    = 1u << 1;
-const TFontStyles fsUnderline = 1u << 2;
-const TFontStyles fsStrikeOut = 1u << 3;
+// フォントの修飾(LCL の TFontStyles)。Font->Style = TFontStyles() << fsBold << fsItalic; のように書く(docs/adr/0061)。
+enum TFontStyle
+{
+    fsBold,
+    fsItalic,
+    fsUnderline,
+    fsStrikeOut
+};
+using TFontStyles = Set<TFontStyle>;
 
 // Canvas・コントロール・TFontDialog が持つフォントへの非所有のラッパー(Style・Assign は docs/adr/0033)。
 class TFont : public TPersistent
@@ -1211,22 +1395,25 @@ class TWinControl;
 
 // リストボックスの描き方(lbOwnerDrawFixed・lbOwnerDrawVariable なら OnDrawItem で描く。lbVirtual は対象外)。
 enum TListBoxStyle { lbStandard, lbOwnerDrawFixed, lbOwnerDrawVariable, lbVirtual };
-// 描く項目の状態(LCL の TOwnerDrawState)。ビットの集合(State & odSelected で調べる)。
-using TOwnerDrawState = unsigned int;
-const TOwnerDrawState odSelected          = 1u << 0;
-const TOwnerDrawState odGrayed            = 1u << 1;
-const TOwnerDrawState odDisabled          = 1u << 2;
-const TOwnerDrawState odChecked           = 1u << 3;
-const TOwnerDrawState odFocused           = 1u << 4;
-const TOwnerDrawState odDefault           = 1u << 5;
-const TOwnerDrawState odHotLight          = 1u << 6;
-const TOwnerDrawState odInactive          = 1u << 7;
-const TOwnerDrawState odNoAccel           = 1u << 8;
-const TOwnerDrawState odNoFocusRect       = 1u << 9;
-const TOwnerDrawState odReserved1         = 1u << 10;
-const TOwnerDrawState odReserved2         = 1u << 11;
-const TOwnerDrawState odComboBoxEdit      = 1u << 12;
-const TOwnerDrawState odBackgroundPainted = 1u << 13;
+// 描く項目の状態(LCL の TOwnerDrawState)。Set(State.Contains(odSelected) で調べる。docs/adr/0061)。
+enum TOwnerDrawStateType
+{
+    odSelected,
+    odGrayed,
+    odDisabled,
+    odChecked,
+    odFocused,
+    odDefault,
+    odHotLight,
+    odInactive,
+    odNoAccel,
+    odNoFocusRect,
+    odReserved1,
+    odReserved2,
+    odComboBoxEdit,
+    odBackgroundPainted
+};
+using TOwnerDrawState = Set<TOwnerDrawStateType>;
 
 // リストボックス・コンボボックスの項目を描くとき。Control の Canvas の ARect に描く。
 using TDrawItemEvent = std::function<void(TWinControl* Control, int Index, TRect ARect, TOwnerDrawState State)>;
@@ -1437,39 +1624,6 @@ class TWinControl;
 // 親のクライアント領域への寄せ方(LCL / VCL の TAlign と同じ値)。寄せた方向の位置・大きさは LCL が決める
 // (alTop なら Left/Top/Width が親に合わせられ、Height だけが保たれる。alClient は残りの領域をすべて埋める)。
 enum TAlign { alNone, alTop, alBottom, alLeft, alRight, alClient, alCustom };
-
-// Pascal の集合型(set of 列挙型)に対応する値型(C++Builder の Set<T, minEl, maxEl> に倣う。docs/adr/0034)。
-// 要素は << で加え、>> で除き、Contains で確かめる(Button1->Anchors = TAnchors() << akLeft << akRight;)。
-// プロパティからは Button1->Anchors->Contains(akRight) のように -> で読める。
-template<typename E>
-class Set
-{
-public:
-    Set() : bits_(0) {}
-
-    Set& operator<<(E e) { bits_ |= Bit(e); return *this; }
-    Set& operator>>(E e) { bits_ &= ~Bit(e); return *this; }
-    bool Contains(E e) const { return (bits_ & Bit(e)) != 0; }
-    bool Empty() const { return bits_ == 0; }
-
-    // 和・差・積(Pascal の +・-・*)。
-    Set operator+(const Set& other) const { return FromInt(bits_ | other.bits_); }
-    Set operator-(const Set& other) const { return FromInt(bits_ & ~other.bits_); }
-    Set operator*(const Set& other) const { return FromInt(bits_ & other.bits_); }
-    bool operator==(const Set& other) const { return bits_ == other.bits_; }
-    bool operator!=(const Set& other) const { return bits_ != other.bits_; }
-
-    // Property<Set<E>> の operator-> から、メンバをたどれるようにする。
-    const Set* operator->() const { return this; }
-
-    // 要素の序数をビットの位置とした整数(DLL との受け渡しに使う)。
-    unsigned int ToInt() const { return bits_; }
-    static Set FromInt(unsigned int bits) { Set s; s.bits_ = bits; return s; }
-
-private:
-    static unsigned int Bit(E e) { return 1u << static_cast<unsigned int>(e); }
-    unsigned int bits_;
-};
 
 // コントロールの辺(LCL の TAnchorKind と同じ値。VCL の TAnchorKind とは並びが違う)。
 enum TAnchorKind { akTop, akLeft, akRight, akBottom };
@@ -3738,42 +3892,51 @@ using TTVCollapsingEvent = std::function<void(TObject* Sender, TTreeNode* Node, 
 // 並べ替えの基準(TTreeView・TListView。stText は Text(Caption)の順、stData・stBoth は OnCompare で決める。stNone は並べ替えない)。
 enum TSortType { stNone, stData, stText, stBoth };
 // 複数選択のしかた(MultiSelect が true のとき。既定は msControlSelect)。
-using TMultiSelectStyle = unsigned int;
-const TMultiSelectStyle msControlSelect = 1u << 0;  // Ctrl を押しながらクリック
-const TMultiSelectStyle msShiftSelect   = 1u << 1;  // Shift を押しながらクリック(範囲)
-const TMultiSelectStyle msVisibleOnly   = 1u << 2;
-const TMultiSelectStyle msSiblingOnly   = 1u << 3;
+enum TMultiSelectStyles
+{
+    msControlSelect,  // Ctrl を押しながらクリック
+    msShiftSelect,    // Shift を押しながらクリック(範囲)
+    msVisibleOnly,
+    msSiblingOnly
+};
+using TMultiSelectStyle = Set<TMultiSelectStyles>;
 // ツリービューの動作・表示の設定(LCL の TTreeViewOptions)。MultiSelect・ReadOnly 等のプロパティと連動する。
-using TTreeViewOptions = unsigned int;
-const TTreeViewOptions tvoAllowMultiselect    = 1u << 0;
-const TTreeViewOptions tvoAutoExpand          = 1u << 1;
-const TTreeViewOptions tvoAutoInsertMark      = 1u << 2;
-const TTreeViewOptions tvoAutoItemHeight      = 1u << 3;
-const TTreeViewOptions tvoHideSelection       = 1u << 4;
-const TTreeViewOptions tvoHotTrack            = 1u << 5;
-const TTreeViewOptions tvoKeepCollapsedNodes  = 1u << 6;
-const TTreeViewOptions tvoReadOnly            = 1u << 7;
-const TTreeViewOptions tvoRightClickSelect    = 1u << 8;
-const TTreeViewOptions tvoRowSelect           = 1u << 9;
-const TTreeViewOptions tvoShowButtons         = 1u << 10;
-const TTreeViewOptions tvoShowLines           = 1u << 11;
-const TTreeViewOptions tvoShowRoot            = 1u << 12;
-const TTreeViewOptions tvoShowSeparators      = 1u << 13;
-const TTreeViewOptions tvoToolTips            = 1u << 14;
-const TTreeViewOptions tvoNoDoubleClickExpand = 1u << 15;
-const TTreeViewOptions tvoThemedDraw          = 1u << 16;
-const TTreeViewOptions tvoEmptySpaceUnselect  = 1u << 17;
+enum TTreeViewOption
+{
+    tvoAllowMultiselect,
+    tvoAutoExpand,
+    tvoAutoInsertMark,
+    tvoAutoItemHeight,
+    tvoHideSelection,
+    tvoHotTrack,
+    tvoKeepCollapsedNodes,
+    tvoReadOnly,
+    tvoRightClickSelect,
+    tvoRowSelect,
+    tvoShowButtons,
+    tvoShowLines,
+    tvoShowRoot,
+    tvoShowSeparators,
+    tvoToolTips,
+    tvoNoDoubleClickExpand,
+    tvoThemedDraw,
+    tvoEmptySpaceUnselect
+};
+using TTreeViewOptions = Set<TTreeViewOption>;
 // OnCustomDrawItem の State(LCL の TCustomDrawState)。
-using TCustomDrawState = unsigned int;
-const TCustomDrawState cdsSelected      = 1u << 0;
-const TCustomDrawState cdsGrayed        = 1u << 1;
-const TCustomDrawState cdsDisabled      = 1u << 2;
-const TCustomDrawState cdsChecked       = 1u << 3;
-const TCustomDrawState cdsFocused       = 1u << 4;
-const TCustomDrawState cdsDefault       = 1u << 5;
-const TCustomDrawState cdsHot           = 1u << 6;
-const TCustomDrawState cdsMarked        = 1u << 7;
-const TCustomDrawState cdsIndeterminate = 1u << 8;
+enum TCustomDrawStateFlag
+{
+    cdsSelected,
+    cdsGrayed,
+    cdsDisabled,
+    cdsChecked,
+    cdsFocused,
+    cdsDefault,
+    cdsHot,
+    cdsMarked,
+    cdsIndeterminate
+};
+using TCustomDrawState = Set<TCustomDrawStateFlag>;
 
 // 並べ替えで 2 つのノードを比べる(Node1 が前なら負、後ろなら正、同じなら 0 を Compare に入れる)。nullptr に戻すと既定の比較に戻る。
 using TTVCompareEvent = std::function<void(TObject* Sender, TTreeNode* Node1, TTreeNode* Node2, int& Compare)>;
@@ -3810,7 +3973,7 @@ public:
     // X, Y はクライアント座標。そこにノードが無ければ nullptr。
     TTreeNode* GetNodeAt(int X, int Y) const;
 
-    // 動作・表示の設定(tvo… のビットの集合。docs/adr/0051)。
+    // 動作・表示の設定(tvo… の Set。docs/adr/0051)。
     Property<TTreeViewOptions>  Options;
     Property<TMultiSelectStyle> MultiSelectStyle;
     // 選択されているノード(MultiSelect のとき。Selections[0] … Selections[SelectionCount - 1])。
@@ -5155,49 +5318,55 @@ protected:
 // グリッドの選択範囲(Left/Right が列、Top/Bottom が行)。
 using TGridRect = TRect;
 
-// グリッドの Options(LCL の TGridOptions)。TShiftState と同じく、ビットを OR した集合として扱う。
-using TGridOptions = unsigned int;
-const TGridOptions goFixedVertLine               = 1u << 0;
-const TGridOptions goFixedHorzLine               = 1u << 1;
-const TGridOptions goVertLine                    = 1u << 2;
-const TGridOptions goHorzLine                    = 1u << 3;
-const TGridOptions goRangeSelect                 = 1u << 4;
-const TGridOptions goDrawFocusSelected           = 1u << 5;
-const TGridOptions goRowSizing                   = 1u << 6;
-const TGridOptions goColSizing                   = 1u << 7;
-const TGridOptions goRowMoving                   = 1u << 8;
-const TGridOptions goColMoving                   = 1u << 9;
-const TGridOptions goEditing                     = 1u << 10;
-const TGridOptions goAutoAddRows                 = 1u << 11;
-const TGridOptions goTabs                        = 1u << 12;
-const TGridOptions goRowSelect                   = 1u << 13;
-const TGridOptions goAlwaysShowEditor            = 1u << 14;
-const TGridOptions goThumbTracking               = 1u << 15;
-const TGridOptions goColSpanning                 = 1u << 16;
-const TGridOptions goRelaxedRowSelect            = 1u << 17;
-const TGridOptions goDblClickAutoSize            = 1u << 18;
-const TGridOptions goSmoothScroll                = 1u << 19;
-const TGridOptions goFixedRowNumbering           = 1u << 20;
-const TGridOptions goScrollKeepVisible           = 1u << 21;
-const TGridOptions goHeaderHotTracking           = 1u << 22;
-const TGridOptions goHeaderPushedLook            = 1u << 23;
-const TGridOptions goSelectionActive             = 1u << 24;
-const TGridOptions goFixedColSizing              = 1u << 25;
-const TGridOptions goDontScrollPartCell          = 1u << 26;
-const TGridOptions goCellHints                   = 1u << 27;
-const TGridOptions goTruncCellHints              = 1u << 28;
-const TGridOptions goCellEllipsis                = 1u << 29;
-const TGridOptions goAutoAddRowsSkipContentCheck = 1u << 30;
-const TGridOptions goRowHighlight                = 1u << 31;
+// グリッドの Options(LCL の TGridOptions)。Grid1->Options = Grid1->Options << goEditing; のように書く(docs/adr/0061)。
+enum TGridOption
+{
+    goFixedVertLine,
+    goFixedHorzLine,
+    goVertLine,
+    goHorzLine,
+    goRangeSelect,
+    goDrawFocusSelected,
+    goRowSizing,
+    goColSizing,
+    goRowMoving,
+    goColMoving,
+    goEditing,
+    goAutoAddRows,
+    goTabs,
+    goRowSelect,
+    goAlwaysShowEditor,
+    goThumbTracking,
+    goColSpanning,
+    goRelaxedRowSelect,
+    goDblClickAutoSize,
+    goSmoothScroll,
+    goFixedRowNumbering,
+    goScrollKeepVisible,
+    goHeaderHotTracking,
+    goHeaderPushedLook,
+    goSelectionActive,
+    goFixedColSizing,
+    goDontScrollPartCell,
+    goCellHints,
+    goTruncCellHints,
+    goCellEllipsis,
+    goAutoAddRowsSkipContentCheck,
+    goRowHighlight
+};
+using TGridOptions = Set<TGridOption>;
 
 // OnDrawCell の AState(LCL の TGridDrawState)。
-using TGridDrawState = unsigned int;
-const TGridDrawState gdSelected     = 0x01;
-const TGridDrawState gdFocused      = 0x02;
-const TGridDrawState gdFixed        = 0x04;
-const TGridDrawState gdHot          = 0x08;
-const TGridDrawState gdPushed       = 0x10;
-const TGridDrawState gdRowHighlight = 0x20;
+enum TGridDrawStateItem
+{
+    gdSelected,
+    gdFocused,
+    gdFixed,
+    gdHot,
+    gdPushed,
+    gdRowHighlight
+};
+using TGridDrawState = Set<TGridDrawStateItem>;
 
 // セルを描画するとき(ARect はセルのクライアント座標での矩形。描画は TCustomDrawGrid::Canvas に行う)。
 using TOnDrawCell        = std::function<void(TObject* Sender, int ACol, int ARow, TRect ARect, TGridDrawState AState)>;
@@ -5933,12 +6102,15 @@ protected:
 
 /* ---------------- ToolBar ---------------- */
 
-// 縁を描く辺のビット集合(LCL の TEdgeBorders に対応)。
-using TEdgeBorders = unsigned int;
-const TEdgeBorders ebLeft   = 0x01;
-const TEdgeBorders ebTop    = 0x02;
-const TEdgeBorders ebRight  = 0x04;
-const TEdgeBorders ebBottom = 0x08;
+// 縁を描く辺の集合(LCL の TEdgeBorders に対応)。
+enum TEdgeBorder
+{
+    ebLeft,
+    ebTop,
+    ebRight,
+    ebBottom
+};
+using TEdgeBorders = Set<TEdgeBorder>;
 
 // 縁の描き方(LCL の TEdgeStyle と同じ値)。
 enum TEdgeStyle
@@ -6616,34 +6788,37 @@ private:
     static TStrings*   GetFilesImpl(TObject* owner);
 };
 
-// TOpenDialog の Options(LCL の TOpenOptions)。TShiftState と同じく、ビットを OR した集合として扱う。
-// 既定は ofEnableSizing | ofViewDetail。Windows だけのもの・古い形式のダイアログだけのものがある(LCL の dialogs.pp を参照)。
-using TOpenOptions = unsigned int;
-const TOpenOptions ofReadOnly            = 1u << 0;
-const TOpenOptions ofOverwritePrompt     = 1u << 1;   // TSaveDialog: 既存のファイルなら上書きを確かめる
-const TOpenOptions ofHideReadOnly        = 1u << 2;
-const TOpenOptions ofNoChangeDir         = 1u << 3;
-const TOpenOptions ofShowHelp            = 1u << 4;
-const TOpenOptions ofNoValidate          = 1u << 5;
-const TOpenOptions ofAllowMultiSelect    = 1u << 6;   // 複数のファイルを選べる(Files で受け取る)
-const TOpenOptions ofExtensionDifferent  = 1u << 7;
-const TOpenOptions ofPathMustExist       = 1u << 8;
-const TOpenOptions ofFileMustExist       = 1u << 9;
-const TOpenOptions ofCreatePrompt        = 1u << 10;
-const TOpenOptions ofShareAware          = 1u << 11;
-const TOpenOptions ofNoReadOnlyReturn    = 1u << 12;
-const TOpenOptions ofNoTestFileCreate    = 1u << 13;
-const TOpenOptions ofNoNetworkButton     = 1u << 14;
-const TOpenOptions ofNoLongNames         = 1u << 15;
-const TOpenOptions ofOldStyleDialog      = 1u << 16;
-const TOpenOptions ofNoDereferenceLinks  = 1u << 17;
-const TOpenOptions ofNoResolveLinks      = 1u << 18;
-const TOpenOptions ofEnableIncludeNotify = 1u << 19;
-const TOpenOptions ofEnableSizing        = 1u << 20;
-const TOpenOptions ofDontAddToRecent     = 1u << 21;
-const TOpenOptions ofForceShowHidden     = 1u << 22;
-const TOpenOptions ofViewDetail          = 1u << 23;
-const TOpenOptions ofAutoPreview         = 1u << 24;
+// TOpenDialog の Options(LCL の TOpenOptions)。TShiftState と同じく Set(docs/adr/0061)。
+// 既定は ofEnableSizing・ofViewDetail。Windows だけのもの・古い形式のダイアログだけのものがある(LCL の dialogs.pp を参照)。
+enum TOpenOption
+{
+    ofReadOnly,
+    ofOverwritePrompt,      // TSaveDialog: 既存のファイルなら上書きを確かめる
+    ofHideReadOnly,
+    ofNoChangeDir,
+    ofShowHelp,
+    ofNoValidate,
+    ofAllowMultiSelect,     // 複数のファイルを選べる(Files で受け取る)
+    ofExtensionDifferent,
+    ofPathMustExist,
+    ofFileMustExist,
+    ofCreatePrompt,
+    ofShareAware,
+    ofNoReadOnlyReturn,
+    ofNoTestFileCreate,
+    ofNoNetworkButton,
+    ofNoLongNames,
+    ofOldStyleDialog,
+    ofNoDereferenceLinks,
+    ofNoResolveLinks,
+    ofEnableIncludeNotify,
+    ofEnableSizing,
+    ofDontAddToRecent,
+    ofForceShowHidden,
+    ofViewDetail,
+    ofAutoPreview
+};
+using TOpenOptions = Set<TOpenOption>;
 
 // ファイルを開くダイアログ。
 class TOpenDialog : public TFileDialog
@@ -6683,12 +6858,15 @@ protected:
 };
 
 // TColorDialog の Options(LCL の TColorDialogOptions)。既定は cdFullOpen(VCL は空)。
-using TColorDialogOptions = unsigned int;
-const TColorDialogOptions cdFullOpen        = 1u << 0;   // 色の作成の部分を最初から開く
-const TColorDialogOptions cdPreventFullOpen = 1u << 1;   // 色の作成のボタンを無効にする
-const TColorDialogOptions cdShowHelp        = 1u << 2;
-const TColorDialogOptions cdSolidColor      = 1u << 3;
-const TColorDialogOptions cdAnyColor        = 1u << 4;
+enum TColorDialogOption
+{
+    cdFullOpen,         // 色の作成の部分を最初から開く
+    cdPreventFullOpen,  // 色の作成のボタンを無効にする
+    cdShowHelp,
+    cdSolidColor,
+    cdAnyColor
+};
+using TColorDialogOptions = Set<TColorDialogOption>;
 
 // 色を選ぶダイアログ。
 class TColorDialog : public TCommonDialog
@@ -6716,23 +6894,26 @@ private:
 };
 
 // TFontDialog の Options(LCL の TFontDialogOptions)。既定は fdEffects(下線・取り消し線・色を選べる)。
-using TFontDialogOptions = unsigned int;
-const TFontDialogOptions fdAnsiOnly       = 1u << 0;
-const TFontDialogOptions fdTrueTypeOnly   = 1u << 1;
-const TFontDialogOptions fdEffects        = 1u << 2;
-const TFontDialogOptions fdFixedPitchOnly = 1u << 3;
-const TFontDialogOptions fdForceFontExist = 1u << 4;
-const TFontDialogOptions fdNoFaceSel      = 1u << 5;
-const TFontDialogOptions fdNoOEMFonts     = 1u << 6;
-const TFontDialogOptions fdNoSimulations  = 1u << 7;
-const TFontDialogOptions fdNoSizeSel      = 1u << 8;
-const TFontDialogOptions fdNoStyleSel     = 1u << 9;
-const TFontDialogOptions fdNoVectorFonts  = 1u << 10;
-const TFontDialogOptions fdShowHelp       = 1u << 11;
-const TFontDialogOptions fdWysiwyg        = 1u << 12;
-const TFontDialogOptions fdLimitSize      = 1u << 13;  // MinFontSize・MaxFontSize で大きさを制限する
-const TFontDialogOptions fdScalableOnly   = 1u << 14;
-const TFontDialogOptions fdApplyButton    = 1u << 15;
+enum TFontDialogOption
+{
+    fdAnsiOnly,
+    fdTrueTypeOnly,
+    fdEffects,
+    fdFixedPitchOnly,
+    fdForceFontExist,
+    fdNoFaceSel,
+    fdNoOEMFonts,
+    fdNoSimulations,
+    fdNoSizeSel,
+    fdNoStyleSel,
+    fdNoVectorFonts,
+    fdShowHelp,
+    fdWysiwyg,
+    fdLimitSize,       // MinFontSize・MaxFontSize で大きさを制限する
+    fdScalableOnly,
+    fdApplyButton
+};
+using TFontDialogOptions = Set<TFontDialogOption>;
 
 // フォントを選ぶダイアログ。
 class TFontDialog : public TCommonDialog
@@ -6766,25 +6947,28 @@ private:
 
 // TFindDialog・TReplaceDialog の Options(LCL の TFindOptions)。ダイアログでの選択(検索の方向・大文字と小文字の区別等)も
 // ここに入る。既定は frDown。frFindNext・frReplace・frReplaceAll は、押されたボタンを LCL が OnFind・OnReplace の前に設定する。
-using TFindOptions = unsigned int;
-const TFindOptions frDown                = 1u << 0;   // 下へ検索する
-const TFindOptions frFindNext            = 1u << 1;
-const TFindOptions frHideMatchCase       = 1u << 2;
-const TFindOptions frHideWholeWord       = 1u << 3;
-const TFindOptions frHideUpDown          = 1u << 4;
-const TFindOptions frMatchCase           = 1u << 5;   // 大文字と小文字を区別する
-const TFindOptions frDisableMatchCase    = 1u << 6;
-const TFindOptions frDisableUpDown       = 1u << 7;
-const TFindOptions frDisableWholeWord    = 1u << 8;
-const TFindOptions frReplace             = 1u << 9;
-const TFindOptions frReplaceAll          = 1u << 10;
-const TFindOptions frWholeWord           = 1u << 11;  // 単語単位で探す
-const TFindOptions frShowHelp            = 1u << 12;
-const TFindOptions frEntireScope         = 1u << 13;
-const TFindOptions frHideEntireScope     = 1u << 14;
-const TFindOptions frPromptOnReplace     = 1u << 15;
-const TFindOptions frHidePromptOnReplace = 1u << 16;
-const TFindOptions frButtonsAtBottom     = 1u << 17;
+enum TFindOption
+{
+    frDown,                 // 下へ検索する
+    frFindNext,
+    frHideMatchCase,
+    frHideWholeWord,
+    frHideUpDown,
+    frMatchCase,            // 大文字と小文字を区別する
+    frDisableMatchCase,
+    frDisableUpDown,
+    frDisableWholeWord,
+    frReplace,
+    frReplaceAll,
+    frWholeWord,            // 単語単位で探す
+    frShowHelp,
+    frEntireScope,
+    frHideEntireScope,
+    frPromptOnReplace,
+    frHidePromptOnReplace,
+    frButtonsAtBottom
+};
+using TFindOptions = Set<TFindOption>;
 
 // 検索のダイアログ。VCL と同じくモードレスで、Execute() は表示してすぐ戻り、利用者が「次を検索」を押すたびに OnFind が呼ばれる
 // (検索そのものは OnFind で FindText・Options を見て行う)。閉じるのは利用者か CloseDialog()。

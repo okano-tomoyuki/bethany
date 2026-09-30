@@ -136,12 +136,12 @@ ${controls
     check(first, "activePage", std::to_string(f->PageControl1->ActivePageIndex));
     check(first, "popupMenu", f->Memo1->PopupMenu == f->PopupMenu1 ? "1" : "0");
     check(first, "memoLines", std::string(f->Memo1->Lines->Strings[0]) + "|" + std::string(f->Memo1->Lines->Strings[1]));
-    check(first, "okFontBold", (f->OkButton->Font->Style & fsBold) ? "1" : "0");
+    check(first, "okFontBold", f->OkButton->Font->Style->Contains(fsBold) ? "1" : "0");
     check(first, "statusFont", std::to_string(f->StatusLabel->Font->Size) + "/" + std::to_string(f->StatusLabel->Font->Color));
     check(first, "panelColor", std::to_string(f->BottomPanel->Color));
     check(first, "shortCut", ShortCutToText(f->FileOpenItem->ShortCut));
     check(first, "menuCounts", std::to_string(f->MainMenu1->Items->Count) + "/" + std::to_string(f->FileMenu->Count) + "/" + std::to_string(f->PopupMenu1->Items->Count));
-    check(first, "dialogOptions", std::to_string(f->OpenDialog1->Options));
+    check(first, "dialogOptions", std::to_string(f->OpenDialog1->Options.Get().ToInt()));
     check(first, "actionLink", std::string(f->FileSaveItem->Caption) + "/" + ShortCutToText(f->FileSaveItem->ShortCut) + "/" + std::to_string(f->ActionList1->ActionCount));
     check(first, "allowDropFiles", std::to_string((int)f->AllowDropFiles));
     check(first, "panelBevel", std::to_string((int)(TPanelBevel)f->BottomPanel->BevelOuter) + "/" + std::to_string((int)(TPanelBevel)f->BottomPanel->BevelInner) + "/" + std::to_string(f->BottomPanel->BevelWidth) + "/" + std::to_string(f->BottomPanel->BorderWidth));
@@ -150,7 +150,7 @@ ${controls
     check(first, "ownerDraw", std::to_string((int)(TListBoxStyle)f->ColorList->Style) + "/" + std::to_string(f->ColorList->ItemHeight));
     check(first, "treeView", std::to_string((int)(TSortType)f->Tree1->SortType) + "/" + std::to_string(f->Tree1->Indent) + "/" + std::to_string((int)f->Tree1->MultiSelect));
     check(first, "listView", std::to_string((int)(TViewStyle)f->List1->ViewStyle) + "/" + std::to_string((int)f->List1->ShowColumnHeaders) + "/" + std::to_string((int)f->List1->AutoSort) + "/" + std::to_string((int)f->List1->OwnerData));
-    check(first, "grid", std::to_string(f->Grid1->AlternateColor) + "/" + std::to_string(f->Grid1->GridLineColor) + "/" + std::to_string((int)((f->Grid1->TitleFont->Style & fsBold) != 0)) + "/" + std::to_string((int)f->Grid1->AutoFillColumns) + "/" + std::to_string((int)f->Grid1->ColumnClickSorts));
+    check(first, "grid", std::to_string(f->Grid1->AlternateColor) + "/" + std::to_string(f->Grid1->GridLineColor) + "/" + std::to_string((int)f->Grid1->TitleFont->Style->Contains(fsBold)) + "/" + std::to_string((int)f->Grid1->AutoFillColumns) + "/" + std::to_string((int)f->Grid1->ColumnClickSorts));
     check(first, "gridColumns", std::to_string(f->Grid1->Columns->Count) + "/" + std::to_string(f->Grid1->ColCount) + "/" + std::string(f->Grid1->Columns->Items[0]->Title->Caption) + "/" + std::to_string(f->Grid1->Columns->Items[1]->PickList->Count) + "/" + std::to_string((int)(TColumnButtonStyle)f->Grid1->Columns->Items[2]->ButtonStyle) + "/" + std::string(f->Grid1->Columns->Items[2]->ValueChecked));
     check(first, "shape", std::to_string((int)(TShapeType)f->Shape1->Shape) + "/" + std::to_string(f->Shape1->Pen->Color) + "/" + std::to_string(f->Shape1->Pen->Width) + "/" + std::to_string((int)(TPenStyle)f->Shape1->Pen->Style) + "/" + std::to_string(f->Shape1->Brush->Color) + "/" + std::to_string((int)(TBrushStyle)f->Shape1->Brush->Style));
     check(first, "memoBorder", std::to_string((int)(TBorderStyle)f->Memo1->BorderStyle) + "/" + std::to_string((int)(TScrollStyle)f->Memo1->ScrollBars));
@@ -185,7 +185,7 @@ ${controls
     check(first, "treeEdited", edited);
     TTVCustomDrawItemEvent onCustomDraw = f->Tree1->OnCustomDrawItem;
     bool defaultDraw = true;
-    if (onCustomDraw) onCustomDraw(f->Tree1, nullptr, cdsSelected, defaultDraw);
+    if (onCustomDraw) onCustomDraw(f->Tree1, nullptr, TCustomDrawState() << cdsSelected, defaultDraw);
     // OwnerData のリストビューは、項目を求めると LCL が OnData を呼ぶ
     f->List1->Items->Count = 3;
     check(first, "listCount", std::to_string(f->List1->Items->Count));
@@ -204,7 +204,7 @@ ${controls
     if (onValidate) { onValidate(f->Grid1, 1, 1, "old", gridValue); gridValue += "!"; }
     check(first, "gridValidated", gridValue);
     TOnPrepareCanvasEvent onPrepare = f->Grid1->OnPrepareCanvas;
-    if (onPrepare) onPrepare(f->Grid1, 1, 1, gdSelected);
+    if (onPrepare) onPrepare(f->Grid1, 1, 1, TGridDrawState() << gdSelected);
     TToggledCheckboxEvent onToggled = f->Grid1->OnCheckboxToggled;
     if (onToggled) onToggled(f->Grid1, 3, 1, cbChecked);
     TDropFilesEvent onDropFiles = f->OnDropFiles;

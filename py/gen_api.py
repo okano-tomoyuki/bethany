@@ -27,6 +27,11 @@ MESSAGE_BOX_CONSTANTS = [
 ]
 
 # 手書き(beth/_core.py)のクラスと、C++ の実装のための補助クラス(生成しない)。
+# C++ では要素の列挙型 + Set<E> だが、Python では従来どおり enum.IntFlag(fsBold | fsItalic、Shift & ssShift)にする集合
+# (docs/adr/0061)。要素は 1 << 序数 の値になる。TAnchors 等のほかの Set<E> は frozenset のまま。
+PY_INTFLAG_SETS = {"TShiftState", "TFontStyles", "TOwnerDrawState", "TMultiSelectStyle", "TTreeViewOptions", "TCustomDrawState",
+                   "TGridOptions", "TGridDrawState", "TEdgeBorders", "TOpenOptions", "TColorDialogOptions", "TFontDialogOptions",
+                   "TFindOptions"}
 CORE_CLASSES = {"TObject", "TPersistent", "TComponent"}
 HELPER_CLASSES = {"Property", "ReadOnlyProperty", "IndexedProperty", "ReadOnlyIndexedProperty", "IndexedProperty2",
                   "ItemRegistry", "CanvasHolder", "Exception"}
@@ -221,6 +226,12 @@ def parse_hpp():
             model.enum_aliases[m.group(1)] = m.group(2)
             continue
         m = re.fullmatch(r"using (\w+) = Set<(\w+)>", t)
+        if m and m.group(1) in PY_INTFLAG_SETS:
+            # 要素の列挙型を IntFlag の要素にする(列挙型そのものは Python に出さない)
+            items = model.enums.pop(m.group(2))
+            model.enum_comments.pop(m.group(2), None)
+            model.flags[m.group(1)] = [(name, f"1 << {value}", comments) for name, value, comments in items]
+            continue
         if m:
             model.sets[m.group(1)] = m.group(2)
             continue

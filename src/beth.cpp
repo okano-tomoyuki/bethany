@@ -614,7 +614,7 @@ void BETH_CALL TControl::MouseDownTrampoline(ObjectHandle sender, internal::int_
         if (!self || !self->onMouseDown_)
             return;
         TMouseEvent handler = self->onMouseDown_;
-        handler(self, static_cast<TMouseButton>(button), static_cast<TShiftState>(shift), x, y);
+        handler(self, static_cast<TMouseButton>(button), TShiftState::FromInt(shift), x, y);
     });
 }
 
@@ -625,7 +625,7 @@ void BETH_CALL TControl::MouseUpTrampoline(ObjectHandle sender, internal::int_t 
         if (!self || !self->onMouseUp_)
             return;
         TMouseEvent handler = self->onMouseUp_;
-        handler(self, static_cast<TMouseButton>(button), static_cast<TShiftState>(shift), x, y);
+        handler(self, static_cast<TMouseButton>(button), TShiftState::FromInt(shift), x, y);
     });
 }
 
@@ -636,7 +636,7 @@ void BETH_CALL TControl::MouseMoveTrampoline(ObjectHandle sender, internal::int_
         if (!self || !self->onMouseMove_)
             return;
         TMouseMoveEvent handler = self->onMouseMove_;
-        handler(self, static_cast<TShiftState>(shift), x, y);
+        handler(self, TShiftState::FromInt(shift), x, y);
     });
 }
 
@@ -648,7 +648,7 @@ void BETH_CALL TControl::MouseWheelTrampoline(ObjectHandle sender, internal::int
             return;
         TMouseWheelEvent handler = self->onMouseWheel_;
         bool handledValue = *handled != 0;
-        handler(self, static_cast<TShiftState>(shift), wheelDelta, x, y, handledValue);
+        handler(self, TShiftState::FromInt(shift), wheelDelta, x, y, handledValue);
         *handled = handledValue ? 1 : 0;
     });
 }
@@ -776,7 +776,7 @@ void BETH_CALL TWinControl::KeyDownTrampoline(ObjectHandle sender, internal::int
             return;
         TKeyEvent handler = self->onKeyDown_;
         int keyValue = *key;
-        handler(self, keyValue, static_cast<TShiftState>(shift));
+        handler(self, keyValue, TShiftState::FromInt(shift));
         *key = keyValue;
     });
 }
@@ -789,7 +789,7 @@ void BETH_CALL TWinControl::KeyUpTrampoline(ObjectHandle sender, internal::int_t
             return;
         TKeyEvent handler = self->onKeyUp_;
         int keyValue = *key;
-        handler(self, keyValue, static_cast<TShiftState>(shift));
+        handler(self, keyValue, TShiftState::FromInt(shift));
         *key = keyValue;
     });
 }
@@ -3895,8 +3895,8 @@ int    TFont::GetSizeImpl(TObject* owner)                      { return internal
 void   TFont::SetSizeImpl(TObject* owner, const int& value)    { internal::TFont_SetSize(owner->Handle(), value); }
 TColor TFont::GetColorImpl(TObject* owner)                     { return static_cast<TColor>(internal::TFont_GetColor(owner->Handle())); }
 void   TFont::SetColorImpl(TObject* owner, const TColor& value){ internal::TFont_SetColor(owner->Handle(), value); }
-TFontStyles TFont::GetStyleImpl(TObject* owner)                         { return internal::TFont_GetStyle(owner->Handle()); }
-void        TFont::SetStyleImpl(TObject* owner, const TFontStyles& value) { internal::TFont_SetStyle(owner->Handle(), value); }
+TFontStyles TFont::GetStyleImpl(TObject* owner)                         { return TFontStyles::FromInt(internal::TFont_GetStyle(owner->Handle())); }
+void        TFont::SetStyleImpl(TObject* owner, const TFontStyles& value) { internal::TFont_SetStyle(owner->Handle(), value.ToInt()); }
 
 void TFont::Assign(const TFont* Source)
 {
@@ -4666,7 +4666,7 @@ TImageList::TImageList(TComponent* AOwner)
 
 TShortCut ShortCut(unsigned short Key, TShiftState Shift)
 {
-    return static_cast<TShortCut>(internal::ShortCut_Make(Key, static_cast<internal::int_t>(Shift)));
+    return static_cast<TShortCut>(internal::ShortCut_Make(Key, static_cast<internal::int_t>(Shift.ToInt())));
 }
 
 TShortCut TextToShortCut(const std::string& Text)
@@ -4935,8 +4935,8 @@ int  TCustomDrawGrid::GetDefaultColWidthImpl(TObject* owner)                 { r
 void TCustomDrawGrid::SetDefaultColWidthImpl(TObject* owner, const int& value) { internal::TCustomDrawGrid_SetDefaultColWidth(owner->Handle(), value); }
 int  TCustomDrawGrid::GetDefaultRowHeightImpl(TObject* owner)                { return internal::TCustomDrawGrid_GetDefaultRowHeight(owner->Handle()); }
 void TCustomDrawGrid::SetDefaultRowHeightImpl(TObject* owner, const int& value) { internal::TCustomDrawGrid_SetDefaultRowHeight(owner->Handle(), value); }
-TGridOptions TCustomDrawGrid::GetOptionsImpl(TObject* owner)                  { return internal::TCustomDrawGrid_GetOptions(owner->Handle()); }
-void TCustomDrawGrid::SetOptionsImpl(TObject* owner, const TGridOptions& value) { internal::TCustomDrawGrid_SetOptions(owner->Handle(), value); }
+TGridOptions TCustomDrawGrid::GetOptionsImpl(TObject* owner)                  { return TGridOptions::FromInt(internal::TCustomDrawGrid_GetOptions(owner->Handle())); }
+void TCustomDrawGrid::SetOptionsImpl(TObject* owner, const TGridOptions& value) { internal::TCustomDrawGrid_SetOptions(owner->Handle(), value.ToInt()); }
 int  TCustomDrawGrid::GetLeftColImpl(TObject* owner)                         { return internal::TCustomDrawGrid_GetLeftCol(owner->Handle()); }
 void TCustomDrawGrid::SetLeftColImpl(TObject* owner, const int& value)        { internal::TCustomDrawGrid_SetLeftCol(owner->Handle(), value); }
 int  TCustomDrawGrid::GetTopRowImpl(TObject* owner)                          { return internal::TCustomDrawGrid_GetTopRow(owner->Handle()); }
@@ -4969,7 +4969,7 @@ void BETH_CALL TCustomDrawGrid::DrawCellTrampoline(ObjectHandle sender, internal
         if (!self || !self->onDrawCell_)
             return;
         TOnDrawCell handler = self->onDrawCell_;
-        handler(self, col, row, TRect{left, top, right, bottom}, state);
+        handler(self, col, row, TRect{left, top, right, bottom}, TGridDrawState::FromInt(state));
     });
 }
 
@@ -5283,8 +5283,8 @@ TToolWindow::TToolWindow(ObjectHandle handle)
 
 void TToolWindow::BeginUpdate() { internal::TToolWindow_BeginUpdate(handle_); }
 void TToolWindow::EndUpdate()   { internal::TToolWindow_EndUpdate(handle_); }
-TEdgeBorders TToolWindow::GetEdgeBordersImpl(TObject* owner) { return internal::TToolWindow_GetEdgeBorders(owner->Handle()); }
-void TToolWindow::SetEdgeBordersImpl(TObject* owner, const TEdgeBorders& value) { internal::TToolWindow_SetEdgeBorders(owner->Handle(), value); }
+TEdgeBorders TToolWindow::GetEdgeBordersImpl(TObject* owner) { return TEdgeBorders::FromInt(internal::TToolWindow_GetEdgeBorders(owner->Handle())); }
+void TToolWindow::SetEdgeBordersImpl(TObject* owner, const TEdgeBorders& value) { internal::TToolWindow_SetEdgeBorders(owner->Handle(), value.ToInt()); }
 TEdgeStyle TToolWindow::GetEdgeInnerImpl(TObject* owner) { return static_cast<TEdgeStyle>(internal::TToolWindow_GetEdgeInner(owner->Handle())); }
 void TToolWindow::SetEdgeInnerImpl(TObject* owner, const TEdgeStyle& value) { internal::TToolWindow_SetEdgeInner(owner->Handle(), value); }
 TEdgeStyle TToolWindow::GetEdgeOuterImpl(TObject* owner) { return static_cast<TEdgeStyle>(internal::TToolWindow_GetEdgeOuter(owner->Handle())); }
@@ -5756,8 +5756,8 @@ TOpenDialog::TOpenDialog(ObjectHandle handle, DerivedTag)
     , Options(this, &TOpenDialog::GetOptionsImpl, &TOpenDialog::SetOptionsImpl)
 {}
 
-TOpenOptions TOpenDialog::GetOptionsImpl(TObject* owner)                         { return internal::TOpenDialog_GetOptions(owner->Handle()); }
-void         TOpenDialog::SetOptionsImpl(TObject* owner, const TOpenOptions& value) { internal::TOpenDialog_SetOptions(owner->Handle(), value); }
+TOpenOptions TOpenDialog::GetOptionsImpl(TObject* owner)                         { return TOpenOptions::FromInt(internal::TOpenDialog_GetOptions(owner->Handle())); }
+void         TOpenDialog::SetOptionsImpl(TObject* owner, const TOpenOptions& value) { internal::TOpenDialog_SetOptions(owner->Handle(), value.ToInt()); }
 
 TSaveDialog::TSaveDialog(TComponent* AOwner)
     : TOpenDialog(internal::TSaveDialog_Create(HandleOf(AOwner)), DerivedTag())
@@ -5778,8 +5778,8 @@ TColorDialog::TColorDialog(TComponent* AOwner)
 TColor              TColorDialog::GetColorImpl(TObject* owner)                                { return static_cast<TColor>(internal::TColorDialog_GetColor(owner->Handle())); }
 void                TColorDialog::SetColorImpl(TObject* owner, const TColor& value)           { internal::TColorDialog_SetColor(owner->Handle(), value); }
 TStrings*           TColorDialog::GetCustomColorsImpl(TObject* owner)                         { return &static_cast<TColorDialog*>(owner)->customColors_; }
-TColorDialogOptions TColorDialog::GetOptionsImpl(TObject* owner)                              { return internal::TColorDialog_GetOptions(owner->Handle()); }
-void                TColorDialog::SetOptionsImpl(TObject* owner, const TColorDialogOptions& value) { internal::TColorDialog_SetOptions(owner->Handle(), value); }
+TColorDialogOptions TColorDialog::GetOptionsImpl(TObject* owner)                              { return TColorDialogOptions::FromInt(internal::TColorDialog_GetOptions(owner->Handle())); }
+void                TColorDialog::SetOptionsImpl(TObject* owner, const TColorDialogOptions& value) { internal::TColorDialog_SetOptions(owner->Handle(), value.ToInt()); }
 
 TFontDialog::TFontDialog(TComponent* AOwner)
     : TCommonDialog(internal::TFontDialog_Create(HandleOf(AOwner)))
@@ -5796,8 +5796,8 @@ int                TFontDialog::GetMinFontSizeImpl(TObject* owner)              
 void               TFontDialog::SetMinFontSizeImpl(TObject* owner, const int& value)         { internal::TFontDialog_SetMinFontSize(owner->Handle(), value); }
 int                TFontDialog::GetMaxFontSizeImpl(TObject* owner)                           { return internal::TFontDialog_GetMaxFontSize(owner->Handle()); }
 void               TFontDialog::SetMaxFontSizeImpl(TObject* owner, const int& value)         { internal::TFontDialog_SetMaxFontSize(owner->Handle(), value); }
-TFontDialogOptions TFontDialog::GetOptionsImpl(TObject* owner)                               { return internal::TFontDialog_GetOptions(owner->Handle()); }
-void               TFontDialog::SetOptionsImpl(TObject* owner, const TFontDialogOptions& value) { internal::TFontDialog_SetOptions(owner->Handle(), value); }
+TFontDialogOptions TFontDialog::GetOptionsImpl(TObject* owner)                               { return TFontDialogOptions::FromInt(internal::TFontDialog_GetOptions(owner->Handle())); }
+void               TFontDialog::SetOptionsImpl(TObject* owner, const TFontDialogOptions& value) { internal::TFontDialog_SetOptions(owner->Handle(), value.ToInt()); }
 
 TFindDialog::TFindDialog(TComponent* AOwner)
     : TFindDialog(internal::TFindDialog_Create(HandleOf(AOwner)), DerivedTag())
@@ -5820,8 +5820,8 @@ std::string  TFindDialog::GetFindTextImpl(TObject* owner)                       
 void         TFindDialog::SetFindTextImpl(TObject* owner, const std::string& value)    { internal::TFindDialog_SetFindText(owner->Handle(), value.c_str()); }
 std::string  TFindDialog::GetReplaceTextImpl(TObject* owner)                            { return std::string(internal::TFindDialog_GetReplaceText(owner->Handle())); }
 void         TFindDialog::SetReplaceTextImpl(TObject* owner, const std::string& value) { internal::TFindDialog_SetReplaceText(owner->Handle(), value.c_str()); }
-TFindOptions TFindDialog::GetOptionsImpl(TObject* owner)                                { return internal::TFindDialog_GetOptions(owner->Handle()); }
-void         TFindDialog::SetOptionsImpl(TObject* owner, const TFindOptions& value)    { internal::TFindDialog_SetOptions(owner->Handle(), value); }
+TFindOptions TFindDialog::GetOptionsImpl(TObject* owner)                                { return TFindOptions::FromInt(internal::TFindDialog_GetOptions(owner->Handle())); }
+void         TFindDialog::SetOptionsImpl(TObject* owner, const TFindOptions& value)    { internal::TFindDialog_SetOptions(owner->Handle(), value.ToInt()); }
 int          TFindDialog::GetLeftImpl(TObject* owner)                                   { return internal::TFindDialog_GetLeft(owner->Handle()); }
 void         TFindDialog::SetLeftImpl(TObject* owner, const int& value)                { internal::TFindDialog_SetLeft(owner->Handle(), value); }
 int          TFindDialog::GetTopImpl(TObject* owner)                                    { return internal::TFindDialog_GetTop(owner->Handle()); }
@@ -6152,7 +6152,7 @@ void BETH_CALL TCustomListBox::DrawItemTrampoline(ObjectHandle sender, internal:
         if (!self || !self->onDrawItem_)
             return;
         TDrawItemEvent handler = self->onDrawItem_;
-        handler(self, index, TRect{left, top, right, bottom}, state);
+        handler(self, index, TRect{left, top, right, bottom}, TOwnerDrawState::FromInt(state));
     });
 }
 void BETH_CALL TCustomListBox::MeasureItemTrampoline(ObjectHandle sender, internal::int_t index, internal::int_t* height, void*)
@@ -6192,7 +6192,7 @@ void BETH_CALL TCustomComboBox::DrawItemTrampoline(ObjectHandle sender, internal
         if (!self || !self->onDrawItem_)
             return;
         TDrawItemEvent handler = self->onDrawItem_;
-        handler(self, index, TRect{left, top, right, bottom}, state);
+        handler(self, index, TRect{left, top, right, bottom}, TOwnerDrawState::FromInt(state));
     });
 }
 void BETH_CALL TCustomComboBox::MeasureItemTrampoline(ObjectHandle sender, internal::int_t index, internal::int_t* height, void*)
@@ -6231,7 +6231,7 @@ void BETH_CALL TMenuItem::DrawItemTrampoline(ObjectHandle sender, ObjectHandle c
             return;
         TMenuDrawItemEvent handler = self->onDrawItem_;
         TCanvas wrapper(canvas);
-        handler(self, &wrapper, TRect{left, top, right, bottom}, state);
+        handler(self, &wrapper, TRect{left, top, right, bottom}, TOwnerDrawState::FromInt(state));
     });
 }
 void BETH_CALL TMenuItem::MeasureItemTrampoline(ObjectHandle sender, ObjectHandle canvas, internal::int_t* width,
@@ -6253,18 +6253,18 @@ void BETH_CALL TMenuItem::MeasureItemTrampoline(ObjectHandle sender, ObjectHandl
 
 /* ---------------- TTreeView の細部(docs/adr/0051) ---------------- */
 
-TTreeViewOptions TCustomTreeView::GetOptionsImpl(TObject* owner) { return internal::TCustomTreeView_GetOptions(owner->Handle()); }
+TTreeViewOptions TCustomTreeView::GetOptionsImpl(TObject* owner) { return TTreeViewOptions::FromInt(internal::TCustomTreeView_GetOptions(owner->Handle())); }
 void TCustomTreeView::SetOptionsImpl(TObject* owner, const TTreeViewOptions& value)
 {
-    internal::TCustomTreeView_SetOptions(owner->Handle(), value);
+    internal::TCustomTreeView_SetOptions(owner->Handle(), value.ToInt());
 }
 TMultiSelectStyle TCustomTreeView::GetMultiSelectStyleImpl(TObject* owner)
 {
-    return internal::TCustomTreeView_GetMultiSelectStyle(owner->Handle());
+    return TMultiSelectStyle::FromInt(internal::TCustomTreeView_GetMultiSelectStyle(owner->Handle()));
 }
 void TCustomTreeView::SetMultiSelectStyleImpl(TObject* owner, const TMultiSelectStyle& value)
 {
-    internal::TCustomTreeView_SetMultiSelectStyle(owner->Handle(), value);
+    internal::TCustomTreeView_SetMultiSelectStyle(owner->Handle(), value.ToInt());
 }
 int TCustomTreeView::GetSelectionCountImpl(TObject* owner) { return internal::TCustomTreeView_GetSelectionCount(owner->Handle()); }
 TTreeNode* TCustomTreeView::GetSelectionsImpl(TObject* owner, int Index)
@@ -6372,7 +6372,7 @@ void BETH_CALL TTreeView::CustomDrawItemTrampoline(ObjectHandle sender, ObjectHa
             return;
         TTVCustomDrawItemEvent handler = self->onCustomDrawItem_;
         bool value = *defaultDraw != 0;
-        handler(self, TTreeNode::Wrap(node), state, value);
+        handler(self, TTreeNode::Wrap(node), TCustomDrawState::FromInt(state), value);
         *defaultDraw = value ? 1 : 0;
     });
 }
@@ -6525,7 +6525,7 @@ void BETH_CALL TListView::CustomDrawItemTrampoline(ObjectHandle sender, ObjectHa
             return;
         TLVCustomDrawItemEvent handler = self->onCustomDrawItem_;
         bool value = *defaultDraw != 0;
-        handler(self, TListItem::Wrap(item), state, value);
+        handler(self, TListItem::Wrap(item), TCustomDrawState::FromInt(state), value);
         *defaultDraw = value ? 1 : 0;
     });
 }
@@ -6539,7 +6539,7 @@ void BETH_CALL TListView::CustomDrawSubItemTrampoline(ObjectHandle sender, Objec
             return;
         TLVCustomDrawSubItemEvent handler = self->onCustomDrawSubItem_;
         bool value = *defaultDraw != 0;
-        handler(self, TListItem::Wrap(item), subItem, state, value);
+        handler(self, TListItem::Wrap(item), subItem, TCustomDrawState::FromInt(state), value);
         *defaultDraw = value ? 1 : 0;
     });
 }
@@ -6552,7 +6552,7 @@ void BETH_CALL TListView::DrawItemTrampoline(ObjectHandle sender, ObjectHandle i
         if (!self || !self->onDrawItem_)
             return;
         TLVDrawItemEvent handler = self->onDrawItem_;
-        handler(self, TListItem::Wrap(item), TRect{left, top, right, bottom}, state);
+        handler(self, TListItem::Wrap(item), TRect{left, top, right, bottom}, TOwnerDrawState::FromInt(state));
     });
 }
 
@@ -6701,7 +6701,7 @@ void BETH_CALL TCustomDrawGrid::PrepareCanvasTrampoline(ObjectHandle sender, int
         if (!self || !self->onPrepareCanvas_)
             return;
         TOnPrepareCanvasEvent handler = self->onPrepareCanvas_;
-        handler(self, col, row, state);
+        handler(self, col, row, TGridDrawState::FromInt(state));
     });
 }
 

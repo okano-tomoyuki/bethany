@@ -636,7 +636,7 @@ public:
 
         FileNewItem = new TMenuItem(this);
         FileNewItem->Caption = "&New";
-        FileNewItem->ShortCut = ShortCut('N', ssCtrl);
+        FileNewItem->ShortCut = ShortCut('N', TShiftState() << ssCtrl);
         FileNewItem->OnClick = [this](TObject* Sender) { FileNewItemClick(Sender); };
         FileMenu->Add(FileNewItem);
 
@@ -691,7 +691,7 @@ public:
         OpenDialog1 = new TOpenDialog(this);
         OpenDialog1->Title = "Open a text file";
         OpenDialog1->Filter = "Text files (*.txt;*.md)|*.txt;*.md|All files (*.*)|*.*";
-        OpenDialog1->Options = OpenDialog1->Options | ofFileMustExist;
+        OpenDialog1->Options = OpenDialog1->Options << ofFileMustExist;
         OpenDialog1->OnShow = [this](TObject* Sender) {
             std::printf("OpenDialog1 OnShow: Sender is OpenDialog1: %s\n", Sender == OpenDialog1 ? "yes" : "no");
             std::fflush(stdout);
@@ -705,7 +705,7 @@ public:
         SaveDialog1 = new TSaveDialog(this);
         SaveDialog1->Filter = OpenDialog1->Filter;
         SaveDialog1->DefaultExt = "txt";
-        SaveDialog1->Options = SaveDialog1->Options | ofOverwritePrompt;
+        SaveDialog1->Options = SaveDialog1->Options << ofOverwritePrompt;
         SelectDirectoryDialog1 = new TSelectDirectoryDialog(this);
         ColorDialog1 = new TColorDialog(this);
         FontDialog1 = new TFontDialog(this);
@@ -746,7 +746,7 @@ public:
                 Memo1->Font = FontDialog1->Font;
                 std::printf("FontDialog1: Name=%s Size=%d Style=0x%x Color=%06X\n",
                             std::string(Memo1->Font->Name).c_str(), (int)Memo1->Font->Size,
-                            (unsigned)(TFontStyles)Memo1->Font->Style, (unsigned)(TColor)Memo1->Font->Color);
+                            Memo1->Font->Style.Get().ToInt(), (unsigned)(TColor)Memo1->Font->Color);
             }
             else
                 std::printf("FontDialog1: cancelled\n");
@@ -893,7 +893,7 @@ public:
         StringGrid1->RowCount = 4;
         StringGrid1->FixedCols = 0;
         StringGrid1->DefaultRowHeight = 18;
-        StringGrid1->Options = (TGridOptions)StringGrid1->Options | goEditing;
+        StringGrid1->Options = StringGrid1->Options << goEditing;
         StringGrid1->Cells[0][0] = "Name";
         StringGrid1->Cells[1][0] = "Qty";
         StringGrid1->Cells[2][0] = "Locked";
@@ -939,7 +939,7 @@ public:
         DrawGrid1->DefaultRowHeight = 18;
         DrawGrid1->OnDrawCell = [this](TObject*, int ACol, int ARow, TRect ARect, TGridDrawState AState) {
             ++drawnCells_;
-            if (AState & gdFixed)
+            if (AState.Contains(gdFixed))
                 return;  // 見出しは既定の描画のまま
             TCanvas* canvas = DrawGrid1->Canvas;
             canvas->Brush->Color = ((ACol + ARow) % 2) ? clYellow : clWhite;
@@ -1408,13 +1408,13 @@ private:
 
     void Button1MouseDown(TObject*, TMouseButton Button, TShiftState Shift, int X, int Y)
     {
-        std::printf("Button1MouseDown: button=%d shift=0x%x pos=(%d,%d)\n", (int)Button, Shift, X, Y);
+        std::printf("Button1MouseDown: button=%d shift=0x%x pos=(%d,%d)\n", (int)Button, Shift.ToInt(), X, Y);
         std::fflush(stdout);
     }
 
     void Button1MouseUp(TObject*, TMouseButton Button, TShiftState Shift, int X, int Y)
     {
-        std::printf("Button1MouseUp: button=%d shift=0x%x pos=(%d,%d)\n", (int)Button, Shift, X, Y);
+        std::printf("Button1MouseUp: button=%d shift=0x%x pos=(%d,%d)\n", (int)Button, Shift.ToInt(), X, Y);
         std::fflush(stdout);
     }
 
@@ -1432,7 +1432,7 @@ private:
 
     void Edit1KeyDown(TObject*, int& Key, TShiftState Shift)
     {
-        std::printf("Edit1KeyDown: key=%d shift=0x%x\n", Key, Shift);
+        std::printf("Edit1KeyDown: key=%d shift=0x%x\n", Key, Shift.ToInt());
         std::fflush(stdout);
     }
 
@@ -1531,7 +1531,7 @@ private:
         TFindDialog* dialog = static_cast<TFindDialog*>(Sender);
         std::string text = Memo1->Text;
         std::string what = dialog->FindText;
-        if (!((TFindOptions)dialog->Options & frMatchCase))
+        if (!dialog->Options->Contains(frMatchCase))
         {
             for (char& c : text) c = (char)std::tolower((unsigned char)c);
             for (char& c : what) c = (char)std::tolower((unsigned char)c);
@@ -1539,7 +1539,7 @@ private:
         std::string::size_type pos = what.empty() ? std::string::npos : text.find(what);
         std::printf("%s OnFind: FindText=%s, Options=0x%x, found at %d\n",
                     Sender == FindDialog1 ? "FindDialog1" : "ReplaceDialog1", std::string(dialog->FindText).c_str(),
-                    (unsigned)(TFindOptions)dialog->Options, pos == std::string::npos ? -1 : (int)pos);
+                    dialog->Options.Get().ToInt(), pos == std::string::npos ? -1 : (int)pos);
         std::fflush(stdout);
     }
 
@@ -1549,7 +1549,7 @@ private:
         std::string text = Memo1->Text;
         std::string what = ReplaceDialog1->FindText;
         std::string with = ReplaceDialog1->ReplaceText;
-        bool all = ((TFindOptions)ReplaceDialog1->Options & frReplaceAll) != 0;
+        bool all = ReplaceDialog1->Options->Contains(frReplaceAll);
         int count = 0;
         std::string::size_type pos = 0;
         while (!what.empty() && (pos = text.find(what, pos)) != std::string::npos)
@@ -1913,7 +1913,7 @@ int main()
         std::printf("StringGrid1 ColCount/RowCount=%d/%d (expected 3/4), FixedCols/FixedRows=%d/%d (expected 0/1), "
                     "Cells[0][1]=%s, goEditing in Options: %s\n",
                     (int)sg->ColCount, (int)sg->RowCount, (int)sg->FixedCols, (int)sg->FixedRows,
-                    std::string(sg->Cells[0][1]).c_str(), ((TGridOptions)sg->Options & goEditing) ? "yes" : "no");
+                    std::string(sg->Cells[0][1]).c_str(), sg->Options->Contains(goEditing) ? "yes" : "no");
 
         // ColWidths / RowHeights: 添字で読み書きする。要素同士の代入は値のコピー。
         sg->ColWidths[0] = 80;
@@ -2016,7 +2016,7 @@ int main()
         std::printf("ToolBar1 ButtonCount=%d (expected 6), Buttons[2] is BoldToolButton: %s, DropToolButton->Index=%d (expected 5), "
                     "Align=%d (expected alTop=%d), EdgeBorders=0x%x (expected ebTop=0x%x), ButtonWidth/Height=%d/%d (expected 30/22)\n",
                     (int)tb->ButtonCount, tb->Buttons[2] == f->BoldToolButton ? "yes" : "no", (int)f->DropToolButton->Index,
-                    (int)(TAlign)tb->Align, (int)alTop, (unsigned)(TEdgeBorders)tb->EdgeBorders, (unsigned)ebTop,
+                    (int)(TAlign)tb->Align, (int)alTop, tb->EdgeBorders.Get().ToInt(), (TEdgeBorders() << ebTop).ToInt(),
                     (int)tb->ButtonWidth, (int)tb->ButtonHeight);
 
         // Click は OnClick を呼ぶだけで、tbsCheck の Down は変えない(Down の切り替えはマウスを離したときに LCL が行う)。
@@ -2372,15 +2372,15 @@ int main()
     {
         TOpenDialog* open = Form1->OpenDialog1;
         std::printf("OpenDialog1 Options has ofEnableSizing|ofViewDetail|ofFileMustExist: %s, FilterIndex=%d (expected 1), Title=%s\n",
-                    (TOpenOptions)open->Options == (ofEnableSizing | ofViewDetail | ofFileMustExist) ? "yes" : "no",
+                    open->Options.Get() == (TOpenOptions() << ofEnableSizing << ofViewDetail << ofFileMustExist) ? "yes" : "no",
                     (int)open->FilterIndex, std::string(open->Title).c_str());
         std::printf("SaveDialog1 DefaultExt=%s (expected .txt: LCL adds the dot), Options has ofOverwritePrompt: %s, Files->Count=%d (expected 0)\n",
                     std::string(Form1->SaveDialog1->DefaultExt).c_str(),
-                    ((TOpenOptions)Form1->SaveDialog1->Options & ofOverwritePrompt) ? "yes" : "no", (int)Form1->SaveDialog1->Files->Count);
+                    Form1->SaveDialog1->Options->Contains(ofOverwritePrompt) ? "yes" : "no", (int)Form1->SaveDialog1->Files->Count);
 
         TColorDialog* color = Form1->ColorDialog1;
         std::printf("ColorDialog1 Options=%u (expected cdFullOpen=%u), CustomColors->Count=%d (expected 20), Values[\"ColorB\"]=%s (expected 000080)\n",
-                    (unsigned)(TColorDialogOptions)color->Options, (unsigned)cdFullOpen, (int)color->CustomColors->Count,
+                    color->Options.Get().ToInt(), (TColorDialogOptions() << cdFullOpen).ToInt(), (int)color->CustomColors->Count,
                     std::string(color->CustomColors->Values["ColorB"]).c_str());
         color->Color = clBlue;
         std::printf("ColorDialog1 Color=%06X (expected FF0000)\n", (unsigned)(TColor)color->Color);
@@ -2390,19 +2390,19 @@ int main()
         TFontDialog* font = Form1->FontDialog1;
         font->Font->Name = "Arial";
         font->Font->Size = 13;
-        font->Font->Style = fsBold | fsItalic;
+        font->Font->Style = TFontStyles() << fsBold << fsItalic;
         TFont* before = font->Font;
         Form1->Label1->Font = font->Font;
         std::printf("FontDialog1 Options=%u (expected fdEffects=%u), same Font wrapper: %s; Label1 Font after assignment: %s %d Style=0x%x (expected Arial 13 0x3)\n",
-                    (unsigned)(TFontDialogOptions)font->Options, (unsigned)fdEffects, before == font->Font ? "yes" : "no",
+                    font->Options.Get().ToInt(), (TFontDialogOptions() << fdEffects).ToInt(), before == font->Font ? "yes" : "no",
                     std::string(Form1->Label1->Font->Name).c_str(), (int)Form1->Label1->Font->Size,
-                    (unsigned)(TFontStyles)Form1->Label1->Font->Style);
+                    Form1->Label1->Font->Style.Get().ToInt());
         // 代入(Assign)は内容のコピーなので、後から元を変えても写した先は変わらない。
         font->Font->Size = 20;
-        Form1->Label1->Font->Style = fsUnderline;
+        Form1->Label1->Font->Style = TFontStyles() << fsUnderline;
         std::printf("After changing the source: Label1 Font Size=%d (expected 13), Style=0x%x (expected 0x4), FontDialog1 Font Style=0x%x (expected 0x3)\n",
-                    (int)Form1->Label1->Font->Size, (unsigned)(TFontStyles)Form1->Label1->Font->Style,
-                    (unsigned)(TFontStyles)font->Font->Style);
+                    (int)Form1->Label1->Font->Size, Form1->Label1->Font->Style.Get().ToInt(),
+                    font->Font->Style.Get().ToInt());
         font->Font->Assign(Form1->Label1->Font);
         std::printf("FontDialog1 Font->Assign(Label1->Font): Size=%d (expected 13)\n", (int)font->Font->Size);
 
@@ -2412,8 +2412,8 @@ int main()
         replace->ReplaceText = "orange";
         std::printf("FindDialog1 Options=0x%x (expected frDown=0x1), ReplaceDialog1 Options has frReplace|frReplaceAll: %s, "
                     "FindText=%s, ReplaceText=%s\n",
-                    (unsigned)(TFindOptions)Form1->FindDialog1->Options,
-                    ((TFindOptions)replace->Options & (frReplace | frReplaceAll)) == (frReplace | frReplaceAll) ? "yes" : "no",
+                    Form1->FindDialog1->Options.Get().ToInt(),
+                    replace->Options->Contains(frReplace) && replace->Options->Contains(frReplaceAll) ? "yes" : "no",
                     std::string(replace->FindText).c_str(), std::string(replace->ReplaceText).c_str());
         bool shown = Form1->FindDialog1->Execute();
         std::printf("FindDialog1 Execute (modeless) returned: %d (expected 1)\n", shown);
@@ -2638,12 +2638,12 @@ int main()
         list->OnDrawItem = [list](TWinControl*, int Index, TRect ARect, TOwnerDrawState State) {
             const TColor swatches[] = {clRed, clGreen, clBlue};
             TCanvas* c = list->Canvas;
-            c->Brush->Color = (State & odSelected) ? clHighlight : clWindow;
+            c->Brush->Color = State.Contains(odSelected) ? clHighlight : clWindow;
             c->FillRect(ARect);
             c->Brush->Color = swatches[Index % 3];
             c->Rectangle(ARect.Left + 3, ARect.Top + 3, ARect.Left + 19, ARect.Bottom - 3);
             c->Brush->Style = bsClear;
-            c->Font->Color = (State & odSelected) ? clHighlightText : clWindowText;
+            c->Font->Color = State.Contains(odSelected) ? clHighlightText : clWindowText;
             c->TextOut(ARect.Left + 24, ARect.Top + 3, std::string(list->Items->Strings[Index]));
             c->Brush->Style = bsSolid;
         };
@@ -2653,7 +2653,7 @@ int main()
             AHeight = 26;
         };
         Form1->PopupHelloItem->OnDrawItem = [](TObject*, TCanvas* ACanvas, TRect ARect, TOwnerDrawState AState) {
-            ACanvas->Brush->Color = (AState & odSelected) ? clHighlight : clYellow;
+            ACanvas->Brush->Color = AState.Contains(odSelected) ? clHighlight : clYellow;
             ACanvas->FillRect(ARect);
             ACanvas->Brush->Style = bsClear;
             ACanvas->TextOut(ARect.Left + 12, ARect.Top + 5, "Say hello (owner draw)");
@@ -2666,9 +2666,9 @@ int main()
     {
         TTreeView* tree = Form1->TreeView1;
         tree->MultiSelect = true;
-        tree->MultiSelectStyle = msControlSelect | msShiftSelect;
+        tree->MultiSelectStyle = TMultiSelectStyle() << msControlSelect << msShiftSelect;
         // テーマで描く(既定)と、文字はテーマの色になり、OnCustomDrawItem で設定した Canvas の Font の色が使われない
-        tree->Options = tree->Options & ~tvoThemedDraw;
+        tree->Options = tree->Options >> tvoThemedDraw;
         tree->OnEditing = [](TObject*, TTreeNode* Node, bool& AllowEdit) {
             std::printf("TreeView1 OnEditing: %s\n", std::string(Node->Text).c_str());
             AllowEdit = Node->Level > 0 || std::string(Node->Text) != "Root 2";  // Root 2 は編集させない
@@ -2679,7 +2679,7 @@ int main()
                 S = Node->Text;  // 空にはさせない
         };
         tree->OnCustomDrawItem = [](TCustomTreeView* Sender, TTreeNode* Node, TCustomDrawState State, bool&) {
-            Sender->Canvas->Font->Color = (Node->Level == 0 && !(State & cdsSelected)) ? clBlue : clWindowText;
+            Sender->Canvas->Font->Color = (Node->Level == 0 && !State.Contains(cdsSelected)) ? clBlue : clWindowText;
         };
     }
 
@@ -2744,7 +2744,7 @@ int main()
         vlist->OwnerDraw = true;
         vlist->OnDrawItem = [](TCustomListView* Sender, TListItem* Item, TRect ARect, TOwnerDrawState State) {
             TCanvas* c = Sender->Canvas;
-            bool selected = (State & odSelected) != 0;
+            bool selected = State.Contains(odSelected);
             c->Brush->Color = selected ? clHighlight : (Item->Index % 2 ? clWindow : clYellow);
             c->FillRect(ARect);
             c->Brush->Style = bsClear;
@@ -2765,7 +2765,7 @@ int main()
         sg->AlternateColor = clInfoBk;
         sg->GridLineColor = clGray;
         sg->FocusColor = clBlue;
-        sg->TitleFont->Style = fsBold;
+        sg->TitleFont->Style = TFontStyles() << fsBold;
         sg->AutoEdit = false;  // 文字を打っただけでは編集を始めない
         sg->ColumnClickSorts = true;
         sg->OnHeaderClick = [](TObject*, bool IsColumn, int Index) {
@@ -2809,7 +2809,7 @@ int main()
         cg->Align = alClient;
         cg->RowCount = 4;
         cg->DefaultRowHeight = 20;
-        cg->Options = cg->Options | goEditing;  // 編集とチェックボックスの切り替えに要る
+        cg->Options = cg->Options << goEditing;  // 編集とチェックボックスの切り替えに要る
         cg->AutoFillColumns = true;
         TGridColumn* nameColumn = cg->Columns->Add();
         nameColumn->Title->Caption = "Name";
@@ -2824,7 +2824,7 @@ int main()
         sizeColumn->ButtonStyle = cbsEllipsis;
         TGridColumn* doneColumn = cg->Columns->Add();
         doneColumn->Title->Caption = "Done";
-        doneColumn->Title->Font->Style = fsBold;
+        doneColumn->Title->Font->Style = TFontStyles() << fsBold;
         doneColumn->ButtonStyle = cbsCheckboxColumn;
         doneColumn->ValueChecked = "Y";
         doneColumn->ValueUnchecked = "N";

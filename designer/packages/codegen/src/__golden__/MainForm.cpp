@@ -77,7 +77,7 @@ void TMainForm::beth_CreateComponents()
     OkButton->Width = 75;
     OkButton->Height = 25;
     OkButton->Caption = "&OK";
-    OkButton->Font->Style = fsBold;
+    OkButton->Font->Style = TFontStyles() << fsBold;
     OkButton->Anchors = TAnchors() << akTop << akRight;
     OkButton->OnClick = [this](TObject* Sender) { OkButtonClick(Sender); };
 
@@ -210,7 +210,7 @@ void TMainForm::beth_CreateComponents()
     Grid1->RowCount = 4;
     Grid1->AlternateColor = clInfoBk;
     Grid1->GridLineColor = clGray;
-    Grid1->TitleFont->Style = fsBold;
+    Grid1->TitleFont->Style = TFontStyles() << fsBold;
     Grid1->AutoFillColumns = true;
     Grid1->ColumnClickSorts = true;
     {
@@ -318,7 +318,7 @@ void TMainForm::beth_CreateComponents()
     PopupMenu1->Items->Add(ClearItem);
 
     OpenDialog1->Filter = "Text files|*.txt|All files|*.*";
-    OpenDialog1->Options = ofEnableSizing | ofViewDetail | ofFileMustExist;
+    OpenDialog1->Options = TOpenOptions() << ofEnableSizing << ofViewDetail << ofFileMustExist;
 
     Timer1->Interval = 500;
     Timer1->Enabled = false;
@@ -332,7 +332,7 @@ void TMainForm::beth_CreateComponents()
 
     FileSaveItem->Action = FileSaveAction;
 }
-// <bethany-designer:end id="beth_CreateComponents" hash="ff1e3fb2">
+// <bethany-designer:end id="beth_CreateComponents" hash="81776f19">
 
 // <bethany-designer:handler-stubs>
 

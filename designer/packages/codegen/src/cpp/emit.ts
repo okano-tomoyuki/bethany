@@ -295,8 +295,8 @@ function value(v: Value): string {
     case 'name':
     case 'ref':
       return v.name;
+    // ビットの集合(TFontStyles 等)も、C++ では Set(TFontStyles() << fsBold。docs/adr/0061)
     case 'flags':
-      return v.names.length === 0 ? '0' : v.names.join(' | ');
     case 'set':
       return [`${v.type}()`, ...v.names].join(' << ');
     case 'rgb':

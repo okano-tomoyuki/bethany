@@ -73,7 +73,7 @@ describe('generateCpp', () => {
       'Cursor = crHandPoint;',
       '',
       'Edit1->Parent = this;',
-      'Edit1->Font->Style = 0;',
+      'Edit1->Font->Style = TFontStyles();',
       'Edit1->Value = 2.0;',
       'Edit1->Increment = 0.5;',
       'Edit1->Anchors = TAnchors();',

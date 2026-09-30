@@ -732,24 +732,24 @@ TBorderStyle = TFormBorderStyle
 # ---------------- 集合・定数 ----------------
 
 class TShiftState(enum.IntFlag):
-    ssShift = 0x0001
-    ssAlt = 0x0002
-    ssCtrl = 0x0004
-    ssLeft = 0x0008  # マウスの左ボタンが押されている
-    ssRight = 0x0010
-    ssMiddle = 0x0020
-    ssDouble = 0x0040  # ダブルクリックの一部として発生した
-    ssMeta = 0x0080
-    ssSuper = 0x0100
-    ssHyper = 0x0200
-    ssAltGr = 0x0400
-    ssCaps = 0x0800
-    ssNum = 0x1000
-    ssScroll = 0x2000
-    ssTriple = 0x4000
-    ssQuad = 0x8000
-    ssExtra1 = 0x10000
-    ssExtra2 = 0x20000
+    ssShift = 1 << 0
+    ssAlt = 1 << 1
+    ssCtrl = 1 << 2
+    ssLeft = 1 << 3  # マウスの左ボタンが押されている
+    ssRight = 1 << 4
+    ssMiddle = 1 << 5
+    ssDouble = 1 << 6  # ダブルクリックの一部として発生した
+    ssMeta = 1 << 7
+    ssSuper = 1 << 8
+    ssHyper = 1 << 9
+    ssAltGr = 1 << 10
+    ssCaps = 1 << 11
+    ssNum = 1 << 12
+    ssScroll = 1 << 13
+    ssTriple = 1 << 14
+    ssQuad = 1 << 15
+    ssExtra1 = 1 << 16
+    ssExtra2 = 1 << 17
 
 
 ssShift = TShiftState.ssShift
@@ -965,12 +965,12 @@ goRowHighlight = TGridOptions.goRowHighlight
 
 
 class TGridDrawState(enum.IntFlag):
-    gdSelected = 0x01
-    gdFocused = 0x02
-    gdFixed = 0x04
-    gdHot = 0x08
-    gdPushed = 0x10
-    gdRowHighlight = 0x20
+    gdSelected = 1 << 0
+    gdFocused = 1 << 1
+    gdFixed = 1 << 2
+    gdHot = 1 << 3
+    gdPushed = 1 << 4
+    gdRowHighlight = 1 << 5
 
 
 gdSelected = TGridDrawState.gdSelected
@@ -982,10 +982,10 @@ gdRowHighlight = TGridDrawState.gdRowHighlight
 
 
 class TEdgeBorders(enum.IntFlag):
-    ebLeft = 0x01
-    ebTop = 0x02
-    ebRight = 0x04
-    ebBottom = 0x08
+    ebLeft = 1 << 0
+    ebTop = 1 << 1
+    ebRight = 1 << 2
+    ebBottom = 1 << 3
 
 
 ebLeft = TEdgeBorders.ebLeft
@@ -2617,7 +2617,7 @@ class TCustomTreeView(TCustomControl):
     def GetNodeAt(self, X, Y):
         _r = lib.TCustomTreeView_GetNodeAt(self._current(), int(X), int(Y))
         return _to_item("TTreeNode", _r)
-    # 動作・表示の設定(tvo… のビットの集合。docs/adr/0051)。
+    # 動作・表示の設定(tvo… の Set。docs/adr/0051)。
     Options = _Prop("TCustomTreeView_GetOptions", "TCustomTreeView_SetOptions", _enum("TTreeViewOptions"))
     MultiSelectStyle = _Prop("TCustomTreeView_GetMultiSelectStyle", "TCustomTreeView_SetMultiSelectStyle", _enum("TMultiSelectStyle"))
     # 選択されているノード(MultiSelect のとき。Selections[0] … Selections[SelectionCount - 1])。

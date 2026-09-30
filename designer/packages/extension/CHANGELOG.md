@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- **Changed**: the generated C++ code writes sets such as `Font.Style` and the `Options` of grids and dialogs with `Set`, as in C++Builder
+  (`TFontStyles() << fsBold`). This code requires the Bethany C++ library 0.5.0 or later. The generated Python code does not change
+
 ## [0.6.0] - 2026-09-30
 
 This version requires the Bethany C++ library and Python package 0.4.0 or later (the generated C++ code sets `Pen` and `Brush` of

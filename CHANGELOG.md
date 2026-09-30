@@ -6,6 +6,21 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
 
 ## [Unreleased]
 
+### 追加
+
+- プロパティの `Get()`(値を取り出す。`Edit1->Text.Get().c_str()`・`auto w = Grid1->ColWidths[0].Get();`)と、複合代入
+  (`Button1->Left += 10;`・`Tag++;`・`Label1->Caption += "!";`)。文字列のプロパティの比較・連結(`Edit1->Text == "abc"`・
+  `Label1->Caption = Edit1->Text + "!"`)と `std::ostream` への出力。集合のプロパティの演算子(`Grid1->Options = Grid1->Options << goEditing;`)と
+  `Set::Clear()`([ADR 0061](docs/adr/0061-property-ergonomics-and-sets.md))
+
+### 変更
+
+- **互換が無い変更(C++)**: ビットを OR する整数だった集合型を、C++Builder と同じく `Set` にした。対象は `TShiftState`・`TFontStyles`・
+  `TOwnerDrawState`・`TMultiSelectStyle`・`TTreeViewOptions`・`TCustomDrawState`・`TGridOptions`・`TGridDrawState`・`TEdgeBorders`・
+  `TOpenOptions`・`TColorDialogOptions`・`TFontDialogOptions`・`TFindOptions`。`Shift & ssShift` は `Shift.Contains(ssShift)`、
+  `fsBold | fsItalic` は `TFontStyles() << fsBold << fsItalic`、`ShortCut('N', ssCtrl)` は `ShortCut('N', TShiftState() << ssCtrl)` に書き換える。
+  Python の書き方(`fsBold | fsItalic`・`Shift & ssShift`)は変わらない([ADR 0061](docs/adr/0061-property-ergonomics-and-sets.md))
+
 ## [0.4.0] - 2026-09-30
 
 ### 追加
