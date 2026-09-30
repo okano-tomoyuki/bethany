@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-30
+
+This version requires the Bethany C++ library and Python package 0.3.0 or later (the generated code uses the new properties,
+for example `ScrollBars` of memos is now a `TScrollStyle`).
+
 - New properties from the Bethany library 0.3.0: `BorderStyle`, `Position`, `WindowState`, `BorderIcons`, `FormStyle`, `KeyPreview`
   and `ActiveControl` of forms, and `ModalResult`, `Default` and `Cancel` of buttons. The canvas draws the default button with an accent border
 - New properties from the Bethany library 0.3.0: `PasswordChar`, `EchoMode`, `CharCase`, `Alignment`, `TextHint`, `NumbersOnly`,

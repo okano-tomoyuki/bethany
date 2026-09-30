@@ -6,6 +6,8 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-30
+
 ### 追加
 
 - `ModalResult`(`TCustomForm`・`TCustomButton`)と `TModalResult`・`mrOk` 等の定数。ボタンの `ModalResult` で、押したときにモーダルのフォームが閉じ、
@@ -115,6 +117,8 @@ C++ の部分に変更は無い。
   `beth.dll` を exe の隣へ写す `beth_deploy()` を提供する
 - MinGW のランタイム(libgcc・libstdc++・winpthread)を exe に静的にリンクする(`BETH_STATIC_RUNTIME`、既定で ON)
 
-[Unreleased]: https://github.com/okano-tomoyuki/bethany/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/okano-tomoyuki/bethany/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/okano-tomoyuki/bethany/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/okano-tomoyuki/bethany/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/okano-tomoyuki/bethany/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/okano-tomoyuki/bethany/releases/tag/v0.1.0
