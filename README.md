@@ -23,7 +23,7 @@ project(app CXX)
 
 include(FetchContent)
 FetchContent_Declare(beth
-    URL https://github.com/okano-tomoyuki/bethany/releases/download/v0.3.0/bethany-0.3.0-win64.zip
+    URL https://github.com/okano-tomoyuki/bethany/releases/download/v0.3.1/bethany-0.3.1-win64.zip
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
 FetchContent_MakeAvailable(beth)
 

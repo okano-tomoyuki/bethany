@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 # バージョンは C++ の配布物(package-windows.sh の zip)と CHANGELOG.md に合わせる(docs/adr/0038)。
-project(beth VERSION 0.3.0 LANGUAGES CXX)
+project(beth VERSION 0.3.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

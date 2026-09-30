@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-09-30
+
+The `Columns` of grids require the Bethany C++ library and Python package 0.3.1 or later.
+
 - Grid columns from the Bethany library 0.3.1: the `Columns` property of grids lists its columns in the Object Inspector, where you can
   add, delete and reorder columns and set their `Title` (caption, font, ...), `Width`, `ButtonStyle`, `PickList`, `ValueChecked` and
   more. Items of collections can now have nested objects and string lists. The canvas draws the column widths and titles, and the bold
