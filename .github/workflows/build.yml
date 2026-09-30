@@ -75,7 +75,7 @@ jobs:
       - name: ビルド(beth.dll と C++ のテスト)
         env:
           FPC_HOME: 'C:\lazarus\fpc\${{ env.FPC_VERSION }}'
-        run: ./build-windows.sh
+        run: .github/run-and-annotate.sh build ./build-windows.sh
 
       - name: デザイナーの依存を入れる
         working-directory: designer
@@ -83,31 +83,31 @@ jobs:
 
       - name: デザイナーの検査(型・lint・書式・カタログ・スキーマ・翻訳・テスト)
         working-directory: designer
-        run: pnpm check
+        run: ../.github/run-and-annotate.sh check pnpm check
 
       - name: 生成したコードを C++ で実行して照合する
         working-directory: designer
-        run: pnpm codegen:verify-cpp
+        run: ../.github/run-and-annotate.sh verify-cpp pnpm codegen:verify-cpp
 
       - name: 生成したコードを Python で実行して照合する
         working-directory: designer
-        run: pnpm codegen:verify-python
+        run: ../.github/run-and-annotate.sh verify-python pnpm codegen:verify-python
 
       - name: 配置の記録と LCL の結果を照合する
         working-directory: designer
-        run: pnpm layout:check
+        run: ../.github/run-and-annotate.sh layout pnpm layout:check
 
       - name: C++ の zip を作る
-        run: ./package-windows.sh
+        run: .github/run-and-annotate.sh package-cpp ./package-windows.sh
 
       - name: Python の wheel・sdist を作る
-        run: ./package-python.sh
+        run: .github/run-and-annotate.sh package-python ./package-python.sh
 
       - name: python.org の Python に wheel を入れて動かす
-        run: ./check-python-install.sh python
+        run: .github/run-and-annotate.sh install-wheel ./check-python-install.sh python
 
       - name: MSYS2(UCRT64)の Python に sdist を入れて動かす
-        run: ./check-python-install.sh /ucrt64/bin/python.exe
+        run: .github/run-and-annotate.sh install-sdist ./check-python-install.sh /ucrt64/bin/python.exe
 
       - uses: actions/upload-artifact@v7
         with:
