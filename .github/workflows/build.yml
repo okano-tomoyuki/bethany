@@ -1,0 +1,114 @@
+# ビルドと検証と配布物の作成(docs/adr/0056)。ci.yml(push・PR)と release.yml(タグ)から呼ぶ。
+# 手元の手順(build-windows.sh・package-windows.sh・package-python.sh と、デザイナーの検証)を Windows のランナーで行い、
+# C++ の zip と Python の wheel・sdist を成果物(artifact の dist)として残す。デザイナーの vsix は作らない(手で出す)。
+name: build
+
+on:
+  workflow_call:
+
+env:
+  # 手元と同じ版にする(README の「ビルド」)。変えるときはキャッシュのキーも変わる。
+  LAZARUS_VERSION: "4.8"
+  FPC_VERSION: "3.2.2"
+  LAZARUS_HOME: 'C:\lazarus'
+  PYTHON: python
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        # build-windows.sh 等は bash で、MSYS2 の MinGW-w64 の gcc・cmake・ninja を使う。
+        # path-type: inherit で、setup-node・setup-python の node・python も使えるようにする。
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Lazarus のキャッシュ
+        id: lazarus-cache
+        uses: actions/cache@v6
+        with:
+          path: C:\lazarus
+          key: lazarus-${{ env.LAZARUS_VERSION }}-fpc-${{ env.FPC_VERSION }}-win64
+
+      - name: Lazarus を入れる
+        if: steps.lazarus-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $name = "lazarus-$env:LAZARUS_VERSION-fpc-$env:FPC_VERSION-win64.exe"
+          $url = "https://sourceforge.net/projects/lazarus/files/Lazarus%20Windows%2064%20bits/Lazarus%20$env:LAZARUS_VERSION/$name/download"
+          curl.exe -fsSL --retry 3 -o $name $url
+          Start-Process -FilePath ".\$name" -ArgumentList '/VERYSILENT', '/SP-', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=$env:LAZARUS_HOME" -Wait
+          if (-not (Test-Path "$env:LAZARUS_HOME\fpc\$env:FPC_VERSION\bin\x86_64-win64\fpc.exe")) { throw "Lazarus の導入に失敗しました" }
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          path-type: inherit
+          update: false
+          # UCRT64 の Python は、MSYS2 の pip で sdist から入るかを確かめるため(docs/adr/0055)。
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-ucrt-x86_64-python
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: designer/package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: designer/pnpm-lock.yaml
+
+      - name: ビルド(beth.dll と C++ のテスト)
+        env:
+          FPC_HOME: 'C:\lazarus\fpc\${{ env.FPC_VERSION }}'
+        run: ./build-windows.sh
+
+      - name: デザイナーの依存を入れる
+        working-directory: designer
+        run: pnpm install --frozen-lockfile
+
+      - name: デザイナーの検査(型・lint・書式・カタログ・スキーマ・翻訳・テスト)
+        working-directory: designer
+        run: pnpm check
+
+      - name: 生成したコードを C++ で実行して照合する
+        working-directory: designer
+        run: pnpm codegen:verify-cpp
+
+      - name: 生成したコードを Python で実行して照合する
+        working-directory: designer
+        run: pnpm codegen:verify-python
+
+      - name: 配置の記録と LCL の結果を照合する
+        working-directory: designer
+        run: pnpm layout:check
+
+      - name: C++ の zip を作る
+        run: ./package-windows.sh
+
+      - name: Python の wheel・sdist を作る
+        run: ./package-python.sh
+
+      - name: python.org の Python に wheel を入れて動かす
+        run: ./check-python-install.sh python
+
+      - name: MSYS2(UCRT64)の Python に sdist を入れて動かす
+        run: ./check-python-install.sh /ucrt64/bin/python.exe
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: |
+            dist/*.zip
+            dist/*.whl
+            dist/*.tar.gz
+          if-no-files-found: error

@@ -75,6 +75,8 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0052](adr/0052-listview-details.md) | TListView の細部(Tier B の B13) | 承認 |
 | [0053](adr/0053-grid-details.md) | グリッドの細部(Tier B の B14 の前半) | 承認 |
 | [0054](adr/0054-grid-columns.md) | グリッドの列(Tier B の B14 の後半) | 承認 |
+| [0055](adr/0055-python-sdist-for-msys2.md) | MSYS2 の Python の pip で入るよう、beth.dll を含む sdist も PyPI に出す | 承認 |
+| [0056](adr/0056-release-by-github-actions.md) | C++ のライブラリと Python のパッケージを GitHub Actions でリリースする | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。
