@@ -7,6 +7,7 @@ import {
   collectionItems,
   findClass,
   hasOwnBounds,
+  isSubclassOf,
   propertyValue,
   type ControlNode,
   type FormNode,
@@ -47,7 +48,11 @@ export const CanvasContext = createContext<CanvasState>({
   dropTarget: undefined,
 });
 
-/** parent の子のコントロールを描く */
+/**
+ * parent の子のコントロールを描く。LCL(と VCL)では、TGraphicControl(TLabel・TImage・TShape 等)は窓を持たず親の面に描かれ、
+ * TWinControl(TMemo・TPanel 等)の窓は常にその上に重なる。そのため、窓の無いものを先に、窓のあるものを後に描く
+ * (それぞれの中では controls の順。後のものが上)。
+ */
 export function Children({
   parent,
   path,
@@ -59,15 +64,24 @@ export function Children({
 }) {
   return (
     <>
-      {(parent.controls ?? []).map((node, i) => (
+      {paintOrder(parent.controls ?? []).map(({ node, index }) => (
         <ControlView
           key={node.name}
-          location={{ kind: 'control', node, parent, path: [...path, 'controls', i] }}
+          location={{ kind: 'control', node, parent, path: [...path, 'controls', index] }}
           inherited={inherited}
         />
       ))}
     </>
   );
+}
+
+/** 描く順(窓の無いコントロールが先)と、controls の中の位置 */
+function paintOrder(
+  controls: readonly ControlNode[],
+): readonly { readonly node: ControlNode; readonly index: number }[] {
+  const indexed = controls.map((node, index) => ({ node, index }));
+  const windowed = (node: ControlNode) => isSubclassOf(node.class, 'TWinControl');
+  return [...indexed.filter((c) => !windowed(c.node)), ...indexed.filter((c) => windowed(c.node))];
 }
 
 function ControlView({

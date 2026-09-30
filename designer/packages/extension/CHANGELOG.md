@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- **Fixed**: the canvas drew controls without a window (`TLabel`, `TImage`, `TShape`, ...) over overlapping controls with a window
+  (`TMemo`, `TPanel`, ...) when they came later in the form. As in the LCL and the VCL, controls with a window are now always drawn
+  on top, so a label under a memo is hidden on the canvas as it is when the application runs
+
 ## [0.5.1] - 2026-09-30
 
 The `Columns` of grids require the Bethany C++ library and Python package 0.3.1 or later.

@@ -184,6 +184,10 @@ AutoSize のコントロール(dsl-spec.md §5)の大きさは、キャンバス
 - コントロールはクラスごとの React の部品で描く(`webview/src/canvas/controls/`)。位置は親のクライアント領域からの
   絶対配置。見た目は Windows 11 のテーマに近づける(ボタンの枠・チェックの枠・編集欄の下線・タブ等)。
   専用の部品が無いクラスは、枠とクラス名・名前だけを描く。
+- 同じ親の子の重なりは LCL(と VCL)に合わせる。TGraphicControl(TLabel・TImage・TShape 等)は窓を持たず親の面に描かれ、
+  TWinControl(TMemo・TPanel 等)の窓は常にその上に重なるため、窓の無いものを先に、窓のあるものを後に描く
+  (それぞれの中では `controls` の順で、後のものが上)。窓付きのコントロールに重なった TLabel は、実行時と同じくキャンバスでも隠れる
+  (選ぶのは構造の木から)。
 - 色は `Color`・`Font.Color`(と `ParentColor`・`ParentFont` による親からの継承)を反映する。`clDefault` はクラスごとの既定の色。
   フォントは `Font.Name`・`Size`・`Style` を反映し、`default` は §5.4。
 - 非ビジュアルコンポーネントは、フォームの上の `design` の位置に、クラスのアイコンと名前を描く(C++Builder・Lazarus と同じ)。
