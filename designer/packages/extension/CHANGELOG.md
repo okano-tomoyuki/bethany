@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-30
+
+This version requires the Bethany C++ library and Python package 0.4.0 or later (the generated C++ code sets `Pen` and `Brush` of
+shapes through pointers, `Shape1->Pen->Color`).
+
 - `Pen` and `Brush` of shapes (`TShape`) in the Object Inspector: the color, width and style of the line, and the color and style of the
   fill. The canvas draws each `Shape` (rectangles, rounded rectangles, ellipses, diamonds, triangles and stars) with them
 

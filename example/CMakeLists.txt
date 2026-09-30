@@ -20,7 +20,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.25)
     set(BETH_FETCH_SYSTEM SYSTEM)
 endif()
 FetchContent_Declare(beth
-    URL https://github.com/okano-tomoyuki/bethany/releases/download/v0.3.1/bethany-0.3.1-win64.zip
+    URL https://github.com/okano-tomoyuki/bethany/releases/download/v0.4.0/bethany-0.4.0-win64.zip
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     ${BETH_FETCH_SYSTEM})
 FetchContent_MakeAvailable(beth)

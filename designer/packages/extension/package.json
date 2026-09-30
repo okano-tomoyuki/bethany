@@ -2,7 +2,7 @@
   "name": "bethany-designer",
   "displayName": "%displayName%",
   "description": "%description%",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "private": true,
   "publisher": "okano-tomoyuki",
   "license": "MIT",
