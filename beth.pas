@@ -1654,6 +1654,40 @@ begin
   end;
 end;
 
+{ Canvas の Pen・Brush・Font への代入(docs/adr/0057) }
+{ Pen の内容を Value の内容にする(LCL の TCanvas.Pen への代入と同じく Assign。Value は代入した側の持ち物のまま)。nil なら何もしない。 }
+procedure TCanvas_SetPen(Obj: Pointer; Value: Pointer); BETH_CALL;
+begin
+  try
+    if Value <> nil then
+      TCanvas(Obj).Pen := TPen(Value);
+  except
+    ReportException;
+  end;
+end;
+
+{ Brush の内容を Value の内容にする(LCL の TCanvas.Brush への代入と同じく Assign。Value は代入した側の持ち物のまま)。nil なら何もしない。 }
+procedure TCanvas_SetBrush(Obj: Pointer; Value: Pointer); BETH_CALL;
+begin
+  try
+    if Value <> nil then
+      TCanvas(Obj).Brush := TBrush(Value);
+  except
+    ReportException;
+  end;
+end;
+
+{ Font の内容を Value の内容にする(LCL の TCanvas.Font への代入と同じく Assign。Value は代入した側の持ち物のまま)。nil なら何もしない。 }
+procedure TCanvas_SetFont(Obj: Pointer; Value: Pointer); BETH_CALL;
+begin
+  try
+    if Value <> nil then
+      TCanvas(Obj).Font := TFont(Value);
+  except
+    ReportException;
+  end;
+end;
+
 { グラフィック(TGraphic の派生のハンドル)を描く(docs/adr/0029)。Graphic が nil なら何もしない。 }
 procedure TCanvas_Draw(Obj: Pointer; X, Y: Integer; Graphic: Pointer); BETH_CALL;
 begin
@@ -1949,6 +1983,29 @@ begin
     Result := Pointer(TCustomShape(Obj).Brush);
   except
     Result := nil;
+    ReportException;
+  end;
+end;
+
+{ 図形の Pen・Brush への代入(docs/adr/0057) }
+{ Pen の内容を Value の内容にする(LCL の TCustomShape.Pen への代入と同じく Assign。Value は代入した側の持ち物のまま)。nil なら何もしない。 }
+procedure TCustomShape_SetPen(Obj: Pointer; Value: Pointer); BETH_CALL;
+begin
+  try
+    if Value <> nil then
+      TCustomShape(Obj).Pen := TPen(Value);
+  except
+    ReportException;
+  end;
+end;
+
+{ Brush の内容を Value の内容にする(LCL の TCustomShape.Brush への代入と同じく Assign。Value は代入した側の持ち物のまま)。nil なら何もしない。 }
+procedure TCustomShape_SetBrush(Obj: Pointer; Value: Pointer); BETH_CALL;
+begin
+  try
+    if Value <> nil then
+      TCustomShape(Obj).Brush := TBrush(Value);
+  except
     ReportException;
   end;
 end;
@@ -10317,6 +10374,28 @@ begin
   end;
 end;
 
+{ Source の内容を写す(docs/adr/0057)。nil なら何もしない。 }
+procedure TPen_Assign(Obj: Pointer; Source: Pointer); BETH_CALL;
+begin
+  try
+    if Source <> nil then
+      TPen(Obj).Assign(TPen(Source));
+  except
+    ReportException;
+  end;
+end;
+
+{ Source の内容を写す(docs/adr/0057)。nil なら何もしない。 }
+procedure TBrush_Assign(Obj: Pointer; Source: Pointer); BETH_CALL;
+begin
+  try
+    if Source <> nil then
+      TBrush(Obj).Assign(TBrush(Source));
+  except
+    ReportException;
+  end;
+end;
+
 { TCommonDialog(docs/adr/0033) }
 
 { ダイアログを表示する。TFindDialog・TReplaceDialog 以外は閉じるまで戻らず、OK で閉じたら True を返す。 }
@@ -17988,6 +18067,9 @@ exports
   TCanvas_GetPen,
   TCanvas_GetBrush,
   TCanvas_GetFont,
+  TCanvas_SetPen,
+  TCanvas_SetBrush,
+  TCanvas_SetFont,
 
   TPen_GetColor,
   TPen_SetColor,
@@ -18016,6 +18098,8 @@ exports
   TCustomShape_SetShape,
   TCustomShape_GetPen,
   TCustomShape_GetBrush,
+  TCustomShape_SetPen,
+  TCustomShape_SetBrush,
 
   TStaticText_Create,
   TCustomStaticText_GetBorderStyle,
@@ -18845,6 +18929,8 @@ exports
   TFont_GetStyle,
   TFont_SetStyle,
   TFont_Assign,
+  TPen_Assign,
+  TBrush_Assign,
   TCommonDialog_Execute,
   TCommonDialog_GetTitle,
   TCommonDialog_SetTitle,

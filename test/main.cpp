@@ -280,19 +280,19 @@ public:
 
         // パネルへの描画(TCustomControl::Canvas・OnPaint。docs/adr/0045)。ボタンの右の空きに図形を描く
         Panel1->OnPaint = [this](TObject*) {
-            TCanvas& c = Panel1->Canvas;
-            c.Pen.Color = clBlack;
-            c.Brush.Color = clYellow;
-            c.Polygon({{100, 50}, {125, 8}, {150, 50}});
-            c.Pen.Style = psDot;
-            c.Brush.Style = bsClear;
-            c.RoundRect(95, 4, 176, 56, 12, 12);
-            c.Pen.Style = psSolid;
-            c.Brush.Style = bsSolid;
-            c.Font.Orientation = 900;
-            c.Font.Color = clBlue;
-            c.TextOut(158, 50, "Paint");
-            c.Font.Orientation = 0;
+            TCanvas* c = Panel1->Canvas;
+            c->Pen->Color = clBlack;
+            c->Brush->Color = clYellow;
+            c->Polygon({{100, 50}, {125, 8}, {150, 50}});
+            c->Pen->Style = psDot;
+            c->Brush->Style = bsClear;
+            c->RoundRect(95, 4, 176, 56, 12, 12);
+            c->Pen->Style = psSolid;
+            c->Brush->Style = bsSolid;
+            c->Font->Orientation = 900;
+            c->Font->Color = clBlue;
+            c->TextOut(158, 50, "Paint");
+            c->Font->Orientation = 0;
         };
 
         GroupBox1 = new TGroupBox(this);
@@ -402,8 +402,8 @@ public:
         Shape1->Width = 60;
         Shape1->Height = 50;
         Shape1->Shape = stEllipse;
-        Shape1->Brush.Color = clYellow;
-        Shape1->Pen.Color = clBlue;
+        Shape1->Brush->Color = clYellow;
+        Shape1->Pen->Color = clBlue;
 
         StaticText1 = new TStaticText(this);
         StaticText1->Parent = this;
@@ -941,11 +941,11 @@ public:
             ++drawnCells_;
             if (AState & gdFixed)
                 return;  // 見出しは既定の描画のまま
-            TCanvas& canvas = DrawGrid1->Canvas;
-            canvas.Brush.Color = ((ACol + ARow) % 2) ? clYellow : clWhite;
-            canvas.Pen.Color = clBlack;
-            canvas.Rectangle(ARect.Left, ARect.Top, ARect.Right, ARect.Bottom);
-            canvas.TextOut(ARect.Left + 3, ARect.Top + 2, std::to_string(ACol) + "," + std::to_string(ARow));
+            TCanvas* canvas = DrawGrid1->Canvas;
+            canvas->Brush->Color = ((ACol + ARow) % 2) ? clYellow : clWhite;
+            canvas->Pen->Color = clBlack;
+            canvas->Rectangle(ARect.Left, ARect.Top, ARect.Right, ARect.Bottom);
+            canvas->TextOut(ARect.Left + 3, ARect.Top + 2, std::to_string(ACol) + "," + std::to_string(ARow));
         };
         GridSheet->OnShow = [this](TObject*) {
             TRect r = DrawGrid1->CellRect(1, 1);
@@ -1114,9 +1114,9 @@ public:
         Image1->OnPictureChanged = [this](TObject*) { ++pictureChanges_; };
         // Picture->Bitmap は、Picture の中身をビットマップとして扱うビュー(空なら LCL が空のビットマップを作る)。
         Image1->Picture->Bitmap->SetSize(60, 40);
-        Image1->Picture->Bitmap->Canvas->Brush.Color = clYellow;
+        Image1->Picture->Bitmap->Canvas->Brush->Color = clYellow;
         Image1->Picture->Bitmap->Canvas->FillRect(TRect{0, 0, 60, 40});
-        Image1->Picture->Bitmap->Canvas->Pen.Color = clBlue;
+        Image1->Picture->Bitmap->Canvas->Pen->Color = clBlue;
         Image1->Picture->Bitmap->Canvas->Ellipse(0, 0, 60, 40);
         std::printf("Image1 Picture %dx%d (expected 60x40), OnPictureChanged called: %s, HasGraphic=%d (expected 1)\n",
                     (int)Image1->Picture->Width, (int)Image1->Picture->Height, pictureChanges_ > 0 ? "yes" : "no",
@@ -1132,7 +1132,7 @@ public:
         Image2->Stretch = true;
         std::printf("Image2 before Canvas: Graphic is null: %s, HasGraphic=%d (expected 0)\n",
                     (TGraphic*)Image2->Picture->Graphic == nullptr ? "yes" : "no", (bool)Image2->HasGraphic);
-        Image2->Canvas->Brush.Color = clRed;
+        Image2->Canvas->Brush->Color = clRed;
         Image2->Canvas->FillRect(TRect{0, 0, 50, 30});
         std::printf("Image2 after Canvas: Picture %dx%d (expected 50x30), Pixels[5][5]=%06X (expected 0000FF), Stretch=%d\n",
                     (int)Image2->Picture->Width, (int)Image2->Picture->Height,
@@ -1148,7 +1148,7 @@ public:
         {
             TBitmap* glyph = new TBitmap;
             glyph->SetSize(16, 16);
-            glyph->Canvas->Brush.Color = clGreen;
+            glyph->Canvas->Brush->Color = clGreen;
             glyph->Canvas->FillRect(TRect{0, 0, 16, 16});
             // LCL では、Glyph を設定すると Kind が bkCustom に戻る(Caption はそのまま)。
             BitBtn2->Glyph = glyph;
@@ -1177,14 +1177,14 @@ public:
             // 横に 2 つ並んだ画像を、AddSliced で 2 つの画像として加える(LCL の Add は分けずに 16x16 に縮める)。
             TBitmap* strip = new TBitmap;
             strip->SetSize(32, 16);
-            strip->Canvas->Brush.Color = clRed;
+            strip->Canvas->Brush->Color = clRed;
             strip->Canvas->FillRect(TRect{0, 0, 16, 16});
-            strip->Canvas->Brush.Color = clBlue;
+            strip->Canvas->Brush->Color = clBlue;
             strip->Canvas->FillRect(TRect{16, 0, 32, 16});
             int first = ImageList1->AddSliced(strip, 2, 1);
             TBitmap* green = new TBitmap;
             green->SetSize(16, 16);
-            green->Canvas->Brush.Color = clGreen;
+            green->Canvas->Brush->Color = clGreen;
             green->Canvas->FillRect(TRect{0, 0, 16, 16});
             int masked = ImageList1->AddMasked(green, clWhite);
             std::printf("ImageList1 AddSliced(32x16, 2, 1): first=%d (expected 0), Count=%d (expected 3), AddMasked=%d (expected 2), "
@@ -1207,7 +1207,7 @@ public:
             std::printf("ImageList1 GetBitmap(1): %dx%d (expected 16x16), Pixels[8][8]=%06X (expected FF0000)\n",
                         (int)out->Width, (int)out->Height, (unsigned)(TColor)out->Canvas->Pixels[8][8]);
             out->SetSize(20, 20);
-            out->Canvas->Brush.Color = clWhite;
+            out->Canvas->Brush->Color = clWhite;
             out->Canvas->FillRect(TRect{0, 0, 20, 20});
             ImageList1->Draw(out->Canvas, 2, 2, 2);
             std::printf("ImageList1 Draw(2) at (2,2): Pixels[10][10]=%06X (expected 008000), Pixels[0][0]=%06X (expected FFFFFF)\n",
@@ -1646,23 +1646,23 @@ private:
 
     void PaintBox1Paint(TObject* Sender)
     {
-        TCanvas& canvas = static_cast<TPaintBox*>(Sender)->Canvas;
-        canvas.Pen.Color = clRed;
-        canvas.Pen.Width = 2;
-        canvas.Brush.Color = clYellow;
-        canvas.Rectangle(10, 10, 110, 70);
+        TCanvas* canvas = static_cast<TPaintBox*>(Sender)->Canvas;
+        canvas->Pen->Color = clRed;
+        canvas->Pen->Width = 2;
+        canvas->Brush->Color = clYellow;
+        canvas->Rectangle(10, 10, 110, 70);
 
-        canvas.Pen.Color = clBlue;
-        canvas.Brush.Color = clWhite;
-        canvas.Ellipse(120, 10, 200, 70);
+        canvas->Pen->Color = clBlue;
+        canvas->Brush->Color = clWhite;
+        canvas->Ellipse(120, 10, 200, 70);
 
-        canvas.Pen.Color = clBlack;
-        canvas.MoveTo(10, 90);
-        canvas.LineTo(200, 90);
+        canvas->Pen->Color = clBlack;
+        canvas->MoveTo(10, 90);
+        canvas->LineTo(200, 90);
 
-        canvas.Font.Color = clGreen;
-        canvas.Font.Size = 14;
-        canvas.TextOut(10, 100, "Canvas drawing test");
+        canvas->Font->Color = clGreen;
+        canvas->Font->Size = 14;
+        canvas->TextOut(10, 100, "Canvas drawing test");
     }
 };
 
@@ -1688,7 +1688,7 @@ int main()
     std::printf("ScrolledButton->Parent is ScrollBox1: %s\n", Form1->ScrolledButton->Parent == Form1->ScrollBox1 ? "yes" : "no");
     std::printf("Bevel1 Shape/Style: %d/%d (expected bsFrame=1/bsRaised=1)\n", (int)Form1->Bevel1->Shape, (int)Form1->Bevel1->Style);
     std::printf("Shape1 Shape/Brush.Color/Pen.Color: %d/%06x/%06x\n",
-                (int)Form1->Shape1->Shape, (unsigned)(int)Form1->Shape1->Brush.Color, (unsigned)(int)Form1->Shape1->Pen.Color);
+                (int)Form1->Shape1->Shape, (unsigned)(int)Form1->Shape1->Brush->Color, (unsigned)(int)Form1->Shape1->Pen->Color);
     std::printf("StaticText1 BorderStyle: %d (expected sbsSunken=2)\n", (int)Form1->StaticText1->BorderStyle);
     std::printf("ScrollBar1 Position: %d (expected 30)\n", (int)Form1->ScrollBar1->Position);
     std::printf("TrackBar1 Position: %d (expected 5)\n", (int)Form1->TrackBar1->Position);
@@ -2271,7 +2271,7 @@ int main()
         TBitmap* bmp = new TBitmap;
         std::printf("New TBitmap: Empty=%d (expected 1)\n", (bool)bmp->Empty);
         bmp->SetSize(32, 16);
-        bmp->Canvas->Brush.Color = clRed;
+        bmp->Canvas->Brush->Color = clRed;
         bmp->Canvas->FillRect(TRect{0, 0, 32, 16});
         bmp->Canvas->Pixels[1][2] = clBlue;
         TCanvas* canvas1 = bmp->Canvas;
@@ -2581,9 +2581,9 @@ int main()
         // 青い丸のアイコンを描いて、アプリケーションのアイコンにする(タイトルバーとタスクバーに出る)
         TBitmap* bmp = new TBitmap;
         bmp->SetSize(32, 32);
-        bmp->Canvas->Brush.Color = clWhite;
+        bmp->Canvas->Brush->Color = clWhite;
         bmp->Canvas->FillRect(TRect{0, 0, 32, 32});
-        bmp->Canvas->Brush.Color = clBlue;
+        bmp->Canvas->Brush->Color = clBlue;
         bmp->Canvas->Ellipse(2, 2, 30, 30);
         TIcon* icon = new TIcon;
         icon->Assign(bmp);
@@ -2637,15 +2637,15 @@ int main()
         list->ItemHeight = 22;
         list->OnDrawItem = [list](TWinControl*, int Index, TRect ARect, TOwnerDrawState State) {
             const TColor swatches[] = {clRed, clGreen, clBlue};
-            TCanvas& c = list->Canvas;
-            c.Brush.Color = (State & odSelected) ? clHighlight : clWindow;
-            c.FillRect(ARect);
-            c.Brush.Color = swatches[Index % 3];
-            c.Rectangle(ARect.Left + 3, ARect.Top + 3, ARect.Left + 19, ARect.Bottom - 3);
-            c.Brush.Style = bsClear;
-            c.Font.Color = (State & odSelected) ? clHighlightText : clWindowText;
-            c.TextOut(ARect.Left + 24, ARect.Top + 3, std::string(list->Items->Strings[Index]));
-            c.Brush.Style = bsSolid;
+            TCanvas* c = list->Canvas;
+            c->Brush->Color = (State & odSelected) ? clHighlight : clWindow;
+            c->FillRect(ARect);
+            c->Brush->Color = swatches[Index % 3];
+            c->Rectangle(ARect.Left + 3, ARect.Top + 3, ARect.Left + 19, ARect.Bottom - 3);
+            c->Brush->Style = bsClear;
+            c->Font->Color = (State & odSelected) ? clHighlightText : clWindowText;
+            c->TextOut(ARect.Left + 24, ARect.Top + 3, std::string(list->Items->Strings[Index]));
+            c->Brush->Style = bsSolid;
         };
         Form1->PopupMenu1->OwnerDraw = true;
         Form1->PopupHelloItem->OnMeasureItem = [](TObject*, TCanvas* ACanvas, int& AWidth, int& AHeight) {
@@ -2653,11 +2653,11 @@ int main()
             AHeight = 26;
         };
         Form1->PopupHelloItem->OnDrawItem = [](TObject*, TCanvas* ACanvas, TRect ARect, TOwnerDrawState AState) {
-            ACanvas->Brush.Color = (AState & odSelected) ? clHighlight : clYellow;
+            ACanvas->Brush->Color = (AState & odSelected) ? clHighlight : clYellow;
             ACanvas->FillRect(ARect);
-            ACanvas->Brush.Style = bsClear;
+            ACanvas->Brush->Style = bsClear;
             ACanvas->TextOut(ARect.Left + 12, ARect.Top + 5, "Say hello (owner draw)");
-            ACanvas->Brush.Style = bsSolid;
+            ACanvas->Brush->Style = bsSolid;
         };
     }
 
@@ -2679,7 +2679,7 @@ int main()
                 S = Node->Text;  // 空にはさせない
         };
         tree->OnCustomDrawItem = [](TCustomTreeView* Sender, TTreeNode* Node, TCustomDrawState State, bool&) {
-            Sender->Canvas.Font.Color = (Node->Level == 0 && !(State & cdsSelected)) ? clBlue : clWindowText;
+            Sender->Canvas->Font->Color = (Node->Level == 0 && !(State & cdsSelected)) ? clBlue : clWindowText;
         };
     }
 
@@ -2698,10 +2698,10 @@ int main()
                 AValue = Item->Caption;  // 空にはさせない
         };
         lv->OnCustomDrawItem = [](TCustomListView* Sender, TListItem* Item, TCustomDrawState, bool&) {
-            Sender->Canvas.Font.Color = std::string(Item->Caption) == "Beta" ? clBlue : clWindowText;
+            Sender->Canvas->Font->Color = std::string(Item->Caption) == "Beta" ? clBlue : clWindowText;
         };
         lv->OnCustomDrawSubItem = [](TCustomListView* Sender, TListItem*, int SubItem, TCustomDrawState, bool&) {
-            Sender->Canvas.Font.Color = SubItem == 1 ? clGreen : clWindowText;
+            Sender->Canvas->Font->Color = SubItem == 1 ? clGreen : clWindowText;
         };
         lv->OnCompare = [lv](TObject*, TListItem* Item1, TListItem* Item2, int, int& Compare) {
             if (lv->SortColumn == 1)
@@ -2743,15 +2743,15 @@ int main()
         vlist->Items->Count = 10000;
         vlist->OwnerDraw = true;
         vlist->OnDrawItem = [](TCustomListView* Sender, TListItem* Item, TRect ARect, TOwnerDrawState State) {
-            TCanvas& c = Sender->Canvas;
+            TCanvas* c = Sender->Canvas;
             bool selected = (State & odSelected) != 0;
-            c.Brush.Color = selected ? clHighlight : (Item->Index % 2 ? clWindow : clYellow);
-            c.FillRect(ARect);
-            c.Brush.Style = bsClear;
-            c.Font.Color = selected ? clHighlightText : clWindowText;
-            c.TextOut(ARect.Left + 4, ARect.Top + 1, std::string(Item->Caption));
-            c.TextOut(ARect.Left + 104, ARect.Top + 1, std::string(Item->SubItems->Strings[0]));
-            c.Brush.Style = bsSolid;
+            c->Brush->Color = selected ? clHighlight : (Item->Index % 2 ? clWindow : clYellow);
+            c->FillRect(ARect);
+            c->Brush->Style = bsClear;
+            c->Font->Color = selected ? clHighlightText : clWindowText;
+            c->TextOut(ARect.Left + 4, ARect.Top + 1, std::string(Item->Caption));
+            c->TextOut(ARect.Left + 104, ARect.Top + 1, std::string(Item->SubItems->Strings[0]));
+            c->Brush->Style = bsSolid;
         };
         std::printf("Virtual list OwnerData=%d Items->Count=%d (expected 1 10000), Item[1234]=%s\n", (bool)vlist->OwnerData,
                     (int)vlist->Items->Count, std::string(vlist->Items->Item[1234]->Caption).c_str());
@@ -2780,7 +2780,7 @@ int main()
         };
         sg->OnPrepareCanvas = [sg](TObject*, int ACol, int ARow, TGridDrawState) {
             if (ACol == 1 && ARow > 0 && std::atoi(std::string(sg->Cells[ACol][ARow]).c_str()) >= 3)
-                sg->Canvas.Font.Color = clRed;
+                sg->Canvas->Font->Color = clRed;
         };
         sg->OnGetEditText = [](TObject*, int ACol, int ARow, std::string& Value) {
             std::printf("StringGrid1 OnGetEditText: (%d,%d) %s\n", ACol, ARow, Value.c_str());
@@ -2876,10 +2876,10 @@ int main()
         TStatusPanel* tailPanel = panelBar->Panels->Add();
         tailPanel->Text = "Click a panel";
         panelBar->OnDrawPanel = [](TStatusBar* StatusBar, TStatusPanel* Panel, const TRect& Rect) {
-            StatusBar->Canvas.Brush.Color = clBlue;
-            StatusBar->Canvas.FillRect(Rect);
-            StatusBar->Canvas.Font.Color = clWhite;
-            StatusBar->Canvas.TextOut(Rect.Left + 4, Rect.Top + 1, "owner " + std::to_string((int)Panel->Index));
+            StatusBar->Canvas->Brush->Color = clBlue;
+            StatusBar->Canvas->FillRect(Rect);
+            StatusBar->Canvas->Font->Color = clWhite;
+            StatusBar->Canvas->TextOut(Rect.Left + 4, Rect.Top + 1, "owner " + std::to_string((int)Panel->Index));
         };
         // AutoHint: ヒントのあるコントロールにマウスを載せると、OnHint(無ければ最初のパネル)に届く
         panelBar->OnHint = [panelBar](TObject*) {

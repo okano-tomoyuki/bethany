@@ -921,9 +921,17 @@ TProgressBar::TProgressBar(TComponent* AOwner)
 
 TCustomControl::TCustomControl(ObjectHandle handle)
     : TWinControl(handle)
-    , Canvas(internal::TCustomControl_GetCanvas(handle))
+    , Canvas(this, &TCustomControl::GetCanvasImpl)
     , OnPaint(this, &TCustomControl::GetOnPaintImpl, &TCustomControl::SetOnPaintImpl)
 {}
+
+TCanvas* TCustomControl::GetCanvasImpl(TObject* owner)
+{
+    TCustomControl* self = static_cast<TCustomControl*>(owner);
+    if (!self->canvas_)
+        self->canvas_.reset(new TCanvas(internal::TCustomControl_GetCanvas(self->Handle())));
+    return self->canvas_.get();
+}
 
 TNotifyEvent TCustomControl::GetOnPaintImpl(TObject* owner)
 {
@@ -1860,10 +1868,17 @@ void TBevel::SetStyleImpl(TObject* owner, const TBevelStyle& value) { internal::
 
 TCustomShape::TCustomShape(ObjectHandle handle)
     : TGraphicControl(handle)
-    , Pen(internal::TCustomShape_GetPen(handle))
-    , Brush(internal::TCustomShape_GetBrush(handle))
+    , Pen(this, &TCustomShape::GetPenImpl, &TCustomShape::SetPenImpl)
+    , Brush(this, &TCustomShape::GetBrushImpl, &TCustomShape::SetBrushImpl)
     , Shape(this, &TCustomShape::GetShapeImpl, &TCustomShape::SetShapeImpl)
+    , pen_(internal::TCustomShape_GetPen(handle))
+    , brush_(internal::TCustomShape_GetBrush(handle))
 {}
+
+TPen*   TCustomShape::GetPenImpl(TObject* owner)                         { return &static_cast<TCustomShape*>(owner)->pen_; }
+void    TCustomShape::SetPenImpl(TObject* owner, TPen* const& value)     { internal::TCustomShape_SetPen(owner->Handle(), value ? value->Handle() : nullptr); }
+TBrush* TCustomShape::GetBrushImpl(TObject* owner)                       { return &static_cast<TCustomShape*>(owner)->brush_; }
+void    TCustomShape::SetBrushImpl(TObject* owner, TBrush* const& value) { internal::TCustomShape_SetBrush(owner->Handle(), value ? value->Handle() : nullptr); }
 
 TShapeType TCustomShape::GetShapeImpl(TObject* owner) { return static_cast<TShapeType>(internal::TCustomShape_GetShape(owner->Handle())); }
 void TCustomShape::SetShapeImpl(TObject* owner, const TShapeType& value) { internal::TCustomShape_SetShape(owner->Handle(), value); }
@@ -2981,11 +2996,19 @@ TCustomListView::TCustomListView(ObjectHandle handle)
     , MultiSelect(this, &TCustomListView::GetMultiSelectImpl, &TCustomListView::SetMultiSelectImpl)
     , ReadOnly(this, &TCustomListView::GetReadOnlyImpl, &TCustomListView::SetReadOnlyImpl)
     , RowSelect(this, &TCustomListView::GetRowSelectImpl, &TCustomListView::SetRowSelectImpl)
-    , Canvas(internal::TCustomListView_GetCanvas(handle))
+    , Canvas(this, &TCustomListView::GetCanvasImpl)
     , OwnerData(this, &TCustomListView::GetOwnerDataImpl, &TCustomListView::SetOwnerDataImpl)
     , HotTrack(this, &TCustomListView::GetHotTrackImpl, &TCustomListView::SetHotTrackImpl)
     , items_(internal::TCustomListView_GetItems(handle))
 {}
+
+TCanvas* TCustomListView::GetCanvasImpl(TObject* owner)
+{
+    TCustomListView* self = static_cast<TCustomListView*>(owner);
+    if (!self->canvas_)
+        self->canvas_.reset(new TCanvas(internal::TCustomListView_GetCanvas(self->Handle())));
+    return self->canvas_.get();
+}
 
 void TCustomListView::Clear()          { internal::TCustomListView_Clear(handle_); }
 void TCustomListView::BeginUpdate()    { internal::TCustomListView_BeginUpdate(handle_); }
@@ -3277,11 +3300,19 @@ TCustomComboBox::TCustomComboBox(ObjectHandle handle)
     , ItemIndex(this, &TCustomComboBox::GetItemIndexImpl, &TCustomComboBox::SetItemIndexImpl)
     , Items(this, &TCustomComboBox::GetItemsImpl)
     , ItemHeight(this, &TCustomComboBox::GetItemHeightImpl, &TCustomComboBox::SetItemHeightImpl)
-    , Canvas(internal::TCustomComboBox_GetCanvas(handle))
+    , Canvas(this, &TCustomComboBox::GetCanvasImpl)
     , OnDrawItem(this, &TCustomComboBox::GetOnDrawItemImpl, &TCustomComboBox::SetOnDrawItemImpl)
     , OnMeasureItem(this, &TCustomComboBox::GetOnMeasureItemImpl, &TCustomComboBox::SetOnMeasureItemImpl)
     , items_(this, &internal::TCustomComboBox_GetItems)
 {}
+
+TCanvas* TCustomComboBox::GetCanvasImpl(TObject* owner)
+{
+    TCustomComboBox* self = static_cast<TCustomComboBox*>(owner);
+    if (!self->canvas_)
+        self->canvas_.reset(new TCanvas(internal::TCustomComboBox_GetCanvas(self->Handle())));
+    return self->canvas_.get();
+}
 
 // ---- docs/adr/0043 ----
 
@@ -3473,11 +3504,19 @@ TCustomListBox::TCustomListBox(ObjectHandle handle)
     , Items(this, &TCustomListBox::GetItemsImpl)
     , Style(this, &TCustomListBox::GetStyleImpl, &TCustomListBox::SetStyleImpl)
     , ItemHeight(this, &TCustomListBox::GetItemHeightImpl, &TCustomListBox::SetItemHeightImpl)
-    , Canvas(internal::TCustomListBox_GetCanvas(handle))
+    , Canvas(this, &TCustomListBox::GetCanvasImpl)
     , OnDrawItem(this, &TCustomListBox::GetOnDrawItemImpl, &TCustomListBox::SetOnDrawItemImpl)
     , OnMeasureItem(this, &TCustomListBox::GetOnMeasureItemImpl, &TCustomListBox::SetOnMeasureItemImpl)
     , items_(this, &internal::TCustomListBox_GetItems)
 {}
+
+TCanvas* TCustomListBox::GetCanvasImpl(TObject* owner)
+{
+    TCustomListBox* self = static_cast<TCustomListBox*>(owner);
+    if (!self->canvas_)
+        self->canvas_.reset(new TCanvas(internal::TCustomListBox_GetCanvas(self->Handle())));
+    return self->canvas_.get();
+}
 
 // ---- docs/adr/0043 ----
 
@@ -3674,11 +3713,19 @@ TStatusBar::TStatusBar(TComponent* AOwner)
     , Panels(this, &TStatusBar::GetPanelsImpl)
     , SizeGrip(this, &TStatusBar::GetSizeGripImpl, &TStatusBar::SetSizeGripImpl)
     , AutoHint(this, &TStatusBar::GetAutoHintImpl, &TStatusBar::SetAutoHintImpl)
-    , Canvas(internal::TStatusBar_GetCanvas(handle_))
+    , Canvas(this, &TStatusBar::GetCanvasImpl)
     , OnDrawPanel(this, &TStatusBar::GetOnDrawPanelImpl, &TStatusBar::SetOnDrawPanelImpl)
     , OnHint(this, &TStatusBar::GetOnHintImpl, &TStatusBar::SetOnHintImpl)
     , panels_(internal::TStatusBar_GetPanels(handle_))
 {}
+
+TCanvas* TStatusBar::GetCanvasImpl(TObject* owner)
+{
+    TStatusBar* self = static_cast<TStatusBar*>(owner);
+    if (!self->canvas_)
+        self->canvas_.reset(new TCanvas(internal::TStatusBar_GetCanvas(self->Handle())));
+    return self->canvas_.get();
+}
 
 int  TStatusBar::GetPanelIndexAt(int X, int Y) const { return internal::TStatusBar_GetPanelIndexAt(handle_, X, Y); }
 void TStatusBar::BeginUpdate()                        { internal::TStatusBar_BeginUpdate(handle_); }
@@ -3856,13 +3903,33 @@ void TFont::Assign(const TFont* Source)
     internal::TFont_Assign(handle_, Source ? Source->Handle() : nullptr);
 }
 
+void TPen::Assign(const TPen* Source)
+{
+    internal::TPen_Assign(handle_, Source ? Source->Handle() : nullptr);
+}
+
+void TBrush::Assign(const TBrush* Source)
+{
+    internal::TBrush_Assign(handle_, Source ? Source->Handle() : nullptr);
+}
+
 TCanvas::TCanvas(ObjectHandle handle)
     : TPersistent(handle)
-    , Pen(internal::TCanvas_GetPen(handle))
-    , Brush(internal::TCanvas_GetBrush(handle))
-    , Font(internal::TCanvas_GetFont(handle))
+    , Pen(this, &TCanvas::GetPenImpl, &TCanvas::SetPenImpl)
+    , Brush(this, &TCanvas::GetBrushImpl, &TCanvas::SetBrushImpl)
+    , Font(this, &TCanvas::GetFontImpl, &TCanvas::SetFontImpl)
     , Pixels(this, &TCanvas::GetPixelsImpl, &TCanvas::SetPixelsImpl)
+    , pen_(internal::TCanvas_GetPen(handle))
+    , brush_(internal::TCanvas_GetBrush(handle))
+    , font_(internal::TCanvas_GetFont(handle))
 {}
+
+TPen*   TCanvas::GetPenImpl(TObject* owner)                       { return &static_cast<TCanvas*>(owner)->pen_; }
+void    TCanvas::SetPenImpl(TObject* owner, TPen* const& value)   { internal::TCanvas_SetPen(owner->Handle(), value ? value->Handle() : nullptr); }
+TBrush* TCanvas::GetBrushImpl(TObject* owner)                     { return &static_cast<TCanvas*>(owner)->brush_; }
+void    TCanvas::SetBrushImpl(TObject* owner, TBrush* const& value) { internal::TCanvas_SetBrush(owner->Handle(), value ? value->Handle() : nullptr); }
+TFont*  TCanvas::GetFontImpl(TObject* owner)                      { return &static_cast<TCanvas*>(owner)->font_; }
+void    TCanvas::SetFontImpl(TObject* owner, TFont* const& value)  { internal::TCanvas_SetFont(owner->Handle(), value ? value->Handle() : nullptr); }
 
 void TCanvas::MoveTo(int x, int y)                        { internal::TCanvas_MoveTo(handle_, x, y); }
 void TCanvas::LineTo(int x, int y)                        { internal::TCanvas_LineTo(handle_, x, y); }
@@ -3965,9 +4032,9 @@ TCanvas* CanvasHolder::Get(ObjectHandle canvas)
         return nullptr;
     // 同じアドレスに別の Canvas が作られることもあるため、Pen・Brush・Font のハンドルも確かめる。
     if (!canvas_ || canvas_->Handle() != canvas
-        || canvas_->Pen.Handle() != internal::TCanvas_GetPen(canvas)
-        || canvas_->Brush.Handle() != internal::TCanvas_GetBrush(canvas)
-        || canvas_->Font.Handle() != internal::TCanvas_GetFont(canvas))
+        || canvas_->Pen->Handle() != internal::TCanvas_GetPen(canvas)
+        || canvas_->Brush->Handle() != internal::TCanvas_GetBrush(canvas)
+        || canvas_->Font->Handle() != internal::TCanvas_GetFont(canvas))
         canvas_.reset(new TCanvas(canvas));
     return canvas_.get();
 }
@@ -4162,9 +4229,17 @@ int TPicture::GetHeightImpl(TObject* owner) { return internal::TPicture_GetHeigh
 
 TPaintBox::TPaintBox(TComponent* AOwner)
     : TGraphicControl(internal::TPaintBox_Create(HandleOf(AOwner)))
-    , Canvas(internal::TPaintBox_GetCanvas(handle_))
+    , Canvas(this, &TPaintBox::GetCanvasImpl)
     , OnPaint(this, &TPaintBox::GetOnPaintImpl, &TPaintBox::SetOnPaintImpl)
 {}
+
+TCanvas* TPaintBox::GetCanvasImpl(TObject* owner)
+{
+    TPaintBox* self = static_cast<TPaintBox*>(owner);
+    if (!self->canvas_)
+        self->canvas_.reset(new TCanvas(internal::TPaintBox_GetCanvas(self->Handle())));
+    return self->canvas_.get();
+}
 
 TNotifyEvent TPaintBox::GetOnPaintImpl(TObject* owner)
 {

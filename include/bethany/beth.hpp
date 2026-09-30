@@ -647,7 +647,8 @@ struct TPoint
 // TPen/TBrush/TFont/TCanvas は LCL でも TComponent ではなく TPersistent の派生であり、
 // Canvas を持つコントロールが内部で保持するオブジェクトへの非所有(non-owning)ラッパー。
 // 自前で Create/Destroy は行わない(取得元のコントロールが破棄されれば一緒に破棄される)。
-// TPaintBox::Canvas のように値メンバとして持つため、これらのデストラクタは public にしている。
+// 所有者のクラスの中に実体(値メンバ)を置き、C++Builder と同じくポインタのプロパティで返す(Canvas->Pen->Color。docs/adr/0057)。
+// そのため、これらのデストラクタは public にしている。
 
 // 線の種類(LCL の TPenStyle と同じ値。docs/adr/0045)。psClear は線を描かない。
 enum TPenStyle { psSolid, psDash, psDot, psDashDot, psDashDotDot, psInsideFrame, psPattern, psClear };
@@ -676,6 +677,9 @@ public:
     explicit TPen(ObjectHandle handle);
     ~TPen() override = default;
 
+    // Source の内容を写す(VCL の Pen->Assign。docs/adr/0057)。nullptr なら何もしない。
+    void Assign(const TPen* Source);
+
 private:
     static TColor    GetColorImpl(TObject* owner);
     static void      SetColorImpl(TObject* owner, const TColor& value);
@@ -695,6 +699,9 @@ public:
 
     explicit TBrush(ObjectHandle handle);
     ~TBrush() override = default;
+
+    // Source の内容を写す(VCL の Brush->Assign。docs/adr/0057)。nullptr なら何もしない。
+    void Assign(const TBrush* Source);
 
 private:
     static TColor      GetColorImpl(TObject* owner);
@@ -753,9 +760,11 @@ class TClipboard;
 class TCanvas : public TPersistent
 {
 public:
-    TPen   Pen;
-    TBrush Brush;
-    TFont  Font;
+    // 線・塗りつぶし・文字(C++Builder と同じくポインタ。Canvas->Pen->Color = clRed;。docs/adr/0057)。
+    // Canvas が所有するものへの非所有のラッパーで、代入(Canvas->Pen = OtherPen;)は内容のコピー(VCL・LCL の Assign)。
+    Property<TPen*>   Pen;
+    Property<TBrush*> Brush;
+    Property<TFont*>  Font;
     // 1 画素の色(Canvas->Pixels[X][Y]。VCL の Pixels[X, Y])。
     IndexedProperty2<TColor> Pixels;
 
@@ -796,6 +805,15 @@ public:
     void CopyRect(const TRect& Dest, const TCanvas* Canvas, const TRect& Source);
 
 private:
+    TPen   pen_;
+    TBrush brush_;
+    TFont  font_;
+    static TPen*   GetPenImpl(TObject* owner);
+    static void    SetPenImpl(TObject* owner, TPen* const& value);
+    static TBrush* GetBrushImpl(TObject* owner);
+    static void    SetBrushImpl(TObject* owner, TBrush* const& value);
+    static TFont*  GetFontImpl(TObject* owner);
+    static void    SetFontImpl(TObject* owner, TFont* const& value);
     static TColor GetPixelsImpl(TObject* owner, int X, int Y);
     static void   SetPixelsImpl(TObject* owner, int X, int Y, const TColor& value);
 };
@@ -2138,7 +2156,7 @@ public:
 
     // 描く先(docs/adr/0045)。OnPaint(グリッドは OnDrawCell)の中で描く。コントロールが所有する実体への非所有のビュー
     // (TPaintBox::Canvas と同じ)。OnPaint の外で描いたものは、次の再描画で消える。
-    TCanvas Canvas;
+    ReadOnlyProperty<TCanvas*> Canvas;
 
 protected:
     explicit TCustomControl(ObjectHandle handle);
@@ -2149,6 +2167,9 @@ protected:
     Property<TNotifyEvent> OnPaint;
 
 private:
+    // Canvas の実体への非所有のラッパー(最初に読んだときに作る。LCL の Canvas はコントロールの破棄まで同じもの)。
+    std::unique_ptr<TCanvas> canvas_;
+    static TCanvas* GetCanvasImpl(TObject* owner);
     TNotifyEvent onPaint_;
     bool         onPaintHooked_ = false;
     static void BETH_CALL PaintTrampoline(ObjectHandle sender, void* data);
@@ -4204,7 +4225,7 @@ public:
 
     // ---- docs/adr/0052 ----
     // OnCustomDrawItem・OnDrawItem で使う描画先。
-    TCanvas Canvas;
+    ReadOnlyProperty<TCanvas*> Canvas;
     // 仮想モード。true にすると項目を持たず、Items->Count の数の項目を、表示のたびに OnData で求める。
     // Items->Item[i] は、その位置の内容を入れた 1 つの共有の項目を返す(次に別の位置を求めると内容が変わる)。
     // 切り替えると、それまでの項目はすべて削除される。
@@ -4223,6 +4244,9 @@ protected:
     ~TCustomListView() override = default;
 
 private:
+    // Canvas の実体への非所有のラッパー(最初に読んだときに作る。LCL の Canvas はコントロールの破棄まで同じもの)。
+    std::unique_ptr<TCanvas> canvas_;
+    static TCanvas* GetCanvasImpl(TObject* owner);
     friend class TListItem;  // TListItem::ListView の Getter から FromHandle を使うため
 
     TListItems items_;
@@ -4545,7 +4569,7 @@ public:
     // 項目の高さ(lbOwnerDrawFixed 等で使う)。
     Property<int> ItemHeight;
     // OnDrawItem の中で描く先。コントロールが所有する実体への非所有のビュー。
-    TCanvas Canvas;
+    ReadOnlyProperty<TCanvas*> Canvas;
     Property<TDrawItemEvent> OnDrawItem;
     Property<TMeasureItemEvent> OnMeasureItem;
 
@@ -4554,6 +4578,9 @@ protected:
     ~TCustomComboBox() override = default;
 
 private:
+    // Canvas の実体への非所有のラッパー(最初に読んだときに作る。LCL の Canvas はコントロールの破棄まで同じもの)。
+    std::unique_ptr<TCanvas> canvas_;
+    static TCanvas* GetCanvasImpl(TObject* owner);
     TStrings items_;
     static TStrings* GetItemsImpl(TObject* owner);
     static int  GetItemIndexImpl(TObject* owner);
@@ -4661,7 +4688,7 @@ public:
     // 項目の高さ(lbOwnerDrawFixed 等で使う)。
     Property<int> ItemHeight;
     // OnDrawItem の中で描く先。コントロールが所有する実体への非所有のビュー。
-    TCanvas Canvas;
+    ReadOnlyProperty<TCanvas*> Canvas;
     Property<TDrawItemEvent> OnDrawItem;
     Property<TMeasureItemEvent> OnMeasureItem;
 
@@ -4670,6 +4697,9 @@ protected:
     ~TCustomListBox() override = default;
 
 private:
+    // Canvas の実体への非所有のラッパー(最初に読んだときに作る。LCL の Canvas はコントロールの破棄まで同じもの)。
+    std::unique_ptr<TCanvas> canvas_;
+    static TCanvas* GetCanvasImpl(TObject* owner);
     TStrings items_;
     static TStrings* GetItemsImpl(TObject* owner);
     static int  GetItemIndexImpl(TObject* owner);
@@ -4879,7 +4909,7 @@ public:
     // LCL は ShowHint が true のコントロール(か親)にだけ Application のヒントを設定する(VCL は ShowHint によらない)。
     Property<bool>         AutoHint;
     // OnDrawPanel の中で描画する先。ステータスバーが所有する実体への非所有のビュー(TPaintBox::Canvas と同じ)。
-    TCanvas                Canvas;
+    ReadOnlyProperty<TCanvas*> Canvas;
 
     Property<TDrawPanelEvent> OnDrawPanel;
     // AutoHint のとき、ヒントを表示する代わりに呼ばれる(ヒントは Application->Hint)。
@@ -4895,6 +4925,9 @@ protected:
     ~TStatusBar() override = default;
 
 private:
+    // Canvas の実体への非所有のラッパー(最初に読んだときに作る。LCL の Canvas はコントロールの破棄まで同じもの)。
+    std::unique_ptr<TCanvas> canvas_;
+    static TCanvas* GetCanvasImpl(TObject* owner);
     TStatusPanels   panels_;
     TDrawPanelEvent onDrawPanel_;
     TNotifyEvent    onHint_;
@@ -4935,8 +4968,9 @@ enum TShapeType
 class TCustomShape : public TGraphicControl
 {
 public:
-    TPen   Pen;
-    TBrush Brush;
+    // 縁の線と中の塗りつぶし(C++Builder と同じくポインタ。Shape1->Pen->Color = clRed;。docs/adr/0057)。代入は内容のコピー。
+    Property<TPen*>   Pen;
+    Property<TBrush*> Brush;
     Property<TShapeType> Shape;
 
 protected:
@@ -4944,6 +4978,12 @@ protected:
     ~TCustomShape() override = default;
 
 private:
+    TPen   pen_;
+    TBrush brush_;
+    static TPen*   GetPenImpl(TObject* owner);
+    static void    SetPenImpl(TObject* owner, TPen* const& value);
+    static TBrush* GetBrushImpl(TObject* owner);
+    static void    SetBrushImpl(TObject* owner, TBrush* const& value);
     static TShapeType GetShapeImpl(TObject* owner);
     static void        SetShapeImpl(TObject* owner, const TShapeType& value);
 };
@@ -5021,7 +5061,7 @@ protected:
 class TPaintBox : public TGraphicControl
 {
 public:
-    TCanvas                Canvas;
+    ReadOnlyProperty<TCanvas*> Canvas;
     Property<TNotifyEvent> OnPaint;
 
     explicit TPaintBox(TComponent* AOwner);
@@ -5030,6 +5070,9 @@ protected:
     ~TPaintBox() override = default;
 
 private:
+    // Canvas の実体への非所有のラッパー(最初に読んだときに作る。LCL の Canvas はコントロールの破棄まで同じもの)。
+    std::unique_ptr<TCanvas> canvas_;
+    static TCanvas* GetCanvasImpl(TObject* owner);
     TNotifyEvent onPaint_;
     bool         onPaintHooked_ = false;
     static void BETH_CALL PaintTrampoline(ObjectHandle sender, void* data);

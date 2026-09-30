@@ -6,6 +6,19 @@ Bethany の C++ ライブラリ(`beth.hpp`・`beth.dll`)と Python のパッケ�
 
 ## [Unreleased]
 
+### 追加
+
+- `TPen::Assign`・`TBrush::Assign` と、Canvas の `Pen`・`Brush`・`Font`、TShape の `Pen`・`Brush` への代入(内容のコピー)
+  ([ADR 0057](docs/adr/0057-canvas-pen-brush-as-pointers.md))
+
+### 変更
+
+- **互換が無い変更(C++)**: `Canvas` と、Canvas の `Pen`・`Brush`・`Font`、TShape の `Pen`・`Brush` を、C++Builder と同じくポインタの
+  プロパティにした。`PaintBox1->Canvas.Pen.Color = clRed;` は `PaintBox1->Canvas->Pen->Color = clRed;` に書き換える
+  (`TCanvas& c = X->Canvas;` は `TCanvas* c = X->Canvas;` に)。対象の Canvas は、TCustomControl(TDrawGrid・TStringGrid・TForm・TPanel 等)・
+  TListView・TComboBox・TListBox・TStatusBar・TPaintBox のもの。Python の書き方は変わらない
+  ([ADR 0057](docs/adr/0057-canvas-pen-brush-as-pointers.md))
+
 ## [0.3.1] - 2026-09-30
 
 ### 追加

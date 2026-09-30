@@ -116,6 +116,9 @@
     X(obj_t,         TCanvas_GetPen,                        (obj_t o),                                                     (o)) \
     X(obj_t,         TCanvas_GetBrush,                      (obj_t o),                                                     (o)) \
     X(obj_t,         TCanvas_GetFont,                       (obj_t o),                                                     (o)) \
+    X(void,          TCanvas_SetPen,                        (obj_t o, obj_t v),                                            (o, v)) \
+    X(void,          TCanvas_SetBrush,                      (obj_t o, obj_t v),                                            (o, v)) \
+    X(void,          TCanvas_SetFont,                       (obj_t o, obj_t v),                                            (o, v)) \
     X(void,          TCanvas_Draw,                          (obj_t o, int_t x, int_t y, obj_t graphic),                    (o, x, y, graphic)) \
     X(void,          TCanvas_StretchDraw,                   (obj_t o, int_t x1, int_t y1, int_t x2, int_t y2, obj_t graphic), (o, x1, y1, x2, y2, graphic)) \
     X(void,          TCanvas_FillRect,                      (obj_t o, int_t x1, int_t y1, int_t x2, int_t y2),             (o, x1, y1, x2, y2)) \
@@ -145,6 +148,8 @@
     X(void,          TCustomShape_SetShape,                 (obj_t o, int_t v),                                            (o, v)) \
     X(obj_t,         TCustomShape_GetPen,                   (obj_t o),                                                     (o)) \
     X(obj_t,         TCustomShape_GetBrush,                 (obj_t o),                                                     (o)) \
+    X(void,          TCustomShape_SetPen,                   (obj_t o, obj_t v),                                            (o, v)) \
+    X(void,          TCustomShape_SetBrush,                 (obj_t o, obj_t v),                                            (o, v)) \
     X(obj_t,         TStaticText_Create,                    (obj_t owner),                                                 (owner)) \
     X(int_t,         TCustomStaticText_GetBorderStyle,      (obj_t o),                                                     (o)) \
     X(void,          TCustomStaticText_SetBorderStyle,      (obj_t o, int_t v),                                            (o, v)) \
@@ -933,6 +938,8 @@
     X(uint_t,        TFont_GetStyle,                        (obj_t o),                                                     (o)) \
     X(void,          TFont_SetStyle,                        (obj_t o, uint_t v),                                           (o, v)) \
     X(void,          TFont_Assign,                          (obj_t o, obj_t s),                                            (o, s)) \
+    X(void,          TPen_Assign,                           (obj_t o, obj_t s),                                            (o, s)) \
+    X(void,          TBrush_Assign,                         (obj_t o, obj_t s),                                            (o, s)) \
     X(bool_t,        TCommonDialog_Execute,                 (obj_t o),                                                     (o)) \
     X(str_t,         TCommonDialog_GetTitle,                (obj_t o),                                                     (o)) \
     X(void,          TCommonDialog_SetTitle,                (obj_t o, str_t v),                                            (o, v)) \

@@ -80,7 +80,7 @@ Picture・Graphic・Glyph への代入:
     TCustomImage の Picture は差し替わらないため、TPicture 自身はハンドルを覚える。中身の `Graphic`・`Bitmap`・`PNG`・`Jpeg` はビュー。
   - `Picture->Graphic` は、空なら nullptr(VCL と同じ)、それ以外はクラスを問わない TGraphic のビューを返す。
     C++ の型は常に TGraphic なので `dynamic_cast<TBitmap*>` はできない。クラスごとの操作は `Bitmap`・`PNG`・`Jpeg` を使う。
-  - Canvas は選択肢B(`CanvasHolder`)。`ReadOnlyProperty<TCanvas*>` で返し、`Bitmap->Canvas->Pen.Color = clRed;` のように書く
+  - Canvas は選択肢B(`CanvasHolder`)。`ReadOnlyProperty<TCanvas*>` で返し、`Bitmap->Canvas->Pen.Color = clRed;` のように書く(Pen は [ADR 0057](0057-canvas-pen-brush-as-pointers.md) でポインタになり、今は `Bitmap->Canvas->Pen->Color`)
     (Pen 等は既存の TCanvas と同じく値メンバ)。
   - 代入は選択肢B。`Picture`・`Graphic`・`Bitmap`・`PNG`・`Jpeg`・`Glyph` は `Property<T*>` で、代入は内容のコピー、nullptr は空にする。
     TStrings の Items(読み取り専用)は、この ADR では変えない。

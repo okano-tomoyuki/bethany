@@ -1351,11 +1351,17 @@ class TPen(TPersistent):
     Width = _Prop("TPen_GetWidth", "TPen_SetWidth", _int)
     Style = _Prop("TPen_GetStyle", "TPen_SetStyle", _enum("TPenStyle"))
     Mode = _Prop("TPen_GetMode", "TPen_SetMode", _enum("TPenMode"))
+    # Source の内容を写す(VCL の Pen->Assign。docs/adr/0057)。nullptr なら何もしない。
+    def Assign(self, Source):
+        lib.TPen_Assign(self._current(), _h(Source))
 
 
 class TBrush(TPersistent):
     Color = _Prop("TBrush_GetColor", "TBrush_SetColor", _int)
     Style = _Prop("TBrush_GetStyle", "TBrush_SetStyle", _enum("TBrushStyle"))
+    # Source の内容を写す(VCL の Brush->Assign。docs/adr/0057)。nullptr なら何もしない。
+    def Assign(self, Source):
+        lib.TBrush_Assign(self._current(), _h(Source))
 
 
 class TFont(TPersistent):
@@ -1375,9 +1381,11 @@ class TFont(TPersistent):
 
 
 class TCanvas(_mixins["TCanvas"], TPersistent):
-    Pen = _Prop("TCanvas_GetPen", None, _obj("TPen"))
-    Brush = _Prop("TCanvas_GetBrush", None, _obj("TBrush"))
-    Font = _Prop("TCanvas_GetFont", None, _obj("TFont"))
+    # 線・塗りつぶし・文字(C++Builder と同じくポインタ。Canvas->Pen->Color = clRed;。docs/adr/0057)。
+    # Canvas が所有するものへの非所有のラッパーで、代入(Canvas->Pen = OtherPen;)は内容のコピー(VCL・LCL の Assign)。
+    Pen = _Prop("TCanvas_GetPen", "TCanvas_SetPen", _obj("TPen"))
+    Brush = _Prop("TCanvas_GetBrush", "TCanvas_SetBrush", _obj("TBrush"))
+    Font = _Prop("TCanvas_GetFont", "TCanvas_SetFont", _obj("TFont"))
     # 1 画素の色(Canvas->Pixels[X][Y]。VCL の Pixels[X, Y])。
     Pixels = _Indexed("TCanvas_GetPixels", "TCanvas_SetPixels", _int, dims=2)
     def MoveTo(self, x, y):
@@ -3089,8 +3097,9 @@ class TStatusBar(TWinControl):
 
 
 class TCustomShape(TGraphicControl):
-    Pen = _Prop("TCustomShape_GetPen", None, _obj("TPen"))
-    Brush = _Prop("TCustomShape_GetBrush", None, _obj("TBrush"))
+    # 縁の線と中の塗りつぶし(C++Builder と同じくポインタ。Shape1->Pen->Color = clRed;。docs/adr/0057)。代入は内容のコピー。
+    Pen = _Prop("TCustomShape_GetPen", "TCustomShape_SetPen", _obj("TPen"))
+    Brush = _Prop("TCustomShape_GetBrush", "TCustomShape_SetBrush", _obj("TBrush"))
     Shape = _Prop("TCustomShape_GetShape", "TCustomShape_SetShape", _enum("TShapeType"))
 
 

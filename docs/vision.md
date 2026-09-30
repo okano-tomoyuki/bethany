@@ -34,7 +34,7 @@ RAD Studio 本体が持つビジュアルデザイナー(フォームデザイ�
 
 ## 提供価値
 
-1. **C++Builder ライクなプロパティ API**(`form.Caption = "...";` / `canvas.Pen.Color = clRed;` 等)。
+1. **C++Builder ライクなプロパティ API**(`form.Caption = "...";` / `Canvas->Pen->Color = clRed;` 等)。
    `Property<T>` による軽量プロキシで実現し、`std::function` ベースのイベントハンドラ登録も備える。
 2. **VCL の代替としての C++ ラッパー(`beth.hpp`)**。
    当初は低レベル C API(`beth_c.h`)との二層公開構成だったが、C API の公開は終了し、DLL の呼び出し層は
