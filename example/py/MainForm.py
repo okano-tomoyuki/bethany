@@ -88,7 +88,7 @@ class TMainForm(TForm):
         self.Memo1.Width = 640
         self.Memo1.Height = 457
         self.Memo1.Align = alClient
-        self.Memo1.ScrollBars = 3
+        self.Memo1.ScrollBars = ssBoth
         self.Memo1.OnChange = self.Memo1Change
 
         self.StatusBar1.Parent = self
@@ -189,7 +189,7 @@ class TMainForm(TForm):
 
         self.FindDialog1.Options = frDown | frHideWholeWord | frHideUpDown
         self.FindDialog1.OnFind = self.FindDialog1Find
-    # <bethany-designer:end id="beth_CreateComponents" hash="d9d8d843">
+    # <bethany-designer:end id="beth_CreateComponents" hash="51ea1107">
 
     # <bethany-designer:handler-stubs>
 

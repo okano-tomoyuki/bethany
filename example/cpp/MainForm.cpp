@@ -65,7 +65,7 @@ void TMainForm::beth_CreateComponents()
     Memo1->Width = 640;
     Memo1->Height = 457;
     Memo1->Align = alClient;
-    Memo1->ScrollBars = 3;
+    Memo1->ScrollBars = ssBoth;
     Memo1->OnChange = [this](TObject* Sender) { Memo1Change(Sender); };
 
     StatusBar1->Parent = this;
@@ -167,7 +167,7 @@ void TMainForm::beth_CreateComponents()
     FindDialog1->Options = frDown | frHideWholeWord | frHideUpDown;
     FindDialog1->OnFind = [this](TObject* Sender) { FindDialog1Find(Sender); };
 }
-// <bethany-designer:end id="beth_CreateComponents" hash="48596058">
+// <bethany-designer:end id="beth_CreateComponents" hash="c96b13ce">
 
 // <bethany-designer:handler-stubs>
 
