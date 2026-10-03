@@ -2,6 +2,7 @@
  * コード生成(tk-designer ADR 0010。docs/designer/editor-design.md §7)。コマンド「コードを生成」と、デザイナーの画面から呼ばれる。
  * 生成する言語とコメントの言語は、フォームが属するプロジェクトの codegen から決める(どのプロジェクトにも属さないフォームは生成しない)。
  * プロジェクトファイル(*.bfproj.json)なら起動部分を生成する(docs/designer/project-spec.md §5)。
+ * フォーム・プロジェクトファイルを保存したときにも生成する(プロジェクトの codegen.generateOnSave。ADR 0066)。
  */
 import {
   formCodegenSettings,
@@ -17,6 +18,7 @@ import {
 import {
   autoCreateForms,
   dirname,
+  FORM_EXTENSION,
   hasErrors,
   parseDocument,
   parseProject,
@@ -27,6 +29,47 @@ import * as vscode from 'vscode';
 import { findProjects, samePath, type ProjectInfo } from './projects.ts';
 
 const output = { channel: undefined as vscode.OutputChannel | undefined };
+
+/** 生成の仕方 */
+export interface GenerateOptions {
+  /** 成功の通知(「生成しました」「最新です」)を出さない(ハンドラへの移動・保存したときの生成) */
+  readonly quiet: boolean;
+  /**
+   * 保存したときの生成。プロジェクトへの追加の案内・検証エラーの通知・上書きの確認のダイアログを出さず、
+   * 手で編集された区間があれば上書きせずに知らせる
+   */
+  readonly onSave?: boolean;
+  /** 手で編集された区間を確かめずに上書きする(保存したときの生成の知らせの「上書き」から) */
+  readonly overwrite?: boolean;
+}
+
+/**
+ * フォーム・プロジェクトファイルを保存したら、そのコードを生成する(ADR 0066)。
+ * フォームならそのフォームのコード、プロジェクトファイルなら起動部分だけ(プロジェクト全体は生成しない)。
+ */
+export function registerGenerateOnSave(): vscode.Disposable {
+  // 同じファイルの保存が続いたとき(自動保存など)に、生成が重ならないように順に行う
+  const running = new Map<string, Promise<unknown>>();
+  return vscode.workspace.onDidSaveTextDocument((document) => {
+    const { path } = document.uri;
+    const isProject = path.endsWith(PROJECT_EXTENSION);
+    if (!isProject && !path.endsWith(FORM_EXTENSION)) return;
+    const key = document.uri.toString();
+    const options = { quiet: true, onSave: true };
+    const run = (running.get(key) ?? Promise.resolve())
+      .then(async () => {
+        if (isProject) await generateProjectCode(document, options);
+        else await generateFormCode(document, options);
+      })
+      .catch((error: unknown) => {
+        void vscode.window.showErrorMessage(String(error));
+      });
+    running.set(key, run);
+    void run.finally(() => {
+      if (running.get(key) === run) running.delete(key);
+    });
+  });
+}
 
 export async function generateCode(document: vscode.TextDocument): Promise<void> {
   if (document.uri.path.endsWith(PROJECT_EXTENSION)) {
@@ -104,10 +147,12 @@ export interface FormCodeResult {
  */
 export async function generateFormCode(
   document: vscode.TextDocument,
-  { quiet }: { readonly quiet: boolean },
+  options: GenerateOptions,
 ): Promise<FormCodeResult | undefined> {
   const parsed = parseDocument(document.getText());
   if (!parsed.document || hasErrors(parsed.diagnostics)) {
+    // 保存したときは知らせない(問題パネルに出ている)
+    if (options.onSave) return undefined;
     void vscode.window.showErrorMessage(
       vscode.l10n.t(
         'Cannot generate code because the form has validation errors. See the Problems panel.',
@@ -118,8 +163,14 @@ export async function generateFormCode(
 
   const fileName = document.uri.path.split('/').pop() ?? 'Form.bfm.json';
   const directory = vscode.Uri.joinPath(document.uri, '..');
-  const projects = await projectsContaining(document.uri);
+  // 保存したときは、どのプロジェクトにも属さないフォームを生成しない(プロジェクトへの追加を案内しない)
+  const projects = options.onSave
+    ? (await findProjects()).filter((p) => p.forms.some((form) => samePath(form, document.uri)))
+    : await projectsContaining(document.uri);
   if (projects.length === 0) return undefined;
+  // フォームを含むどれかのプロジェクトで保存したときの生成を無効にしていれば、生成しない
+  if (options.onSave && projects.some((p) => p.doc?.codegen?.generateOnSave === false))
+    return undefined;
   // 各プロジェクトの forms に書かれた、このフォームのパス(headerDir・sourceDir の下の置き場所を決める)
   const settings = formCodegenSettings(
     projects.flatMap((p) => {
@@ -138,7 +189,8 @@ export async function generateFormCode(
     directory,
     generateAll(parsed.document, fileName, settings, (path) => existing.get(path)),
     existing,
-    quiet,
+    options,
+    () => generateFormCode(document, { quiet: true, overwrite: true }),
   );
   return written ? { directory, targets } : undefined;
 }
@@ -168,10 +220,11 @@ async function projectsContaining(uri: vscode.Uri): Promise<ProjectInfo[]> {
 /** プロジェクトの起動部分(Project1.cpp・Project1.py)を生成する。生成できなかった・取りやめたときは false */
 async function generateProjectCode(
   document: vscode.TextDocument,
-  { quiet }: { readonly quiet: boolean },
+  options: GenerateOptions,
 ): Promise<boolean> {
   const { project, diagnostics } = parseProject(document.getText());
   if (!project || hasErrors(diagnostics)) {
+    if (options.onSave) return false;
     void vscode.window.showErrorMessage(
       vscode.l10n.t(
         'Cannot generate code because the project has validation errors. See the Problems panel.',
@@ -179,6 +232,7 @@ async function generateProjectCode(
     );
     return false;
   }
+  if (options.onSave && project.codegen?.generateOnSave === false) return false;
   const fileName = document.uri.path.split('/').pop() ?? `Project${PROJECT_EXTENSION}`;
   const directory = vscode.Uri.joinPath(document.uri, '..');
 
@@ -189,6 +243,7 @@ async function generateProjectCode(
     const text = await readText(uri);
     const parsed = text === undefined ? undefined : parseDocument(text);
     if (!parsed?.document || hasErrors(parsed.diagnostics)) {
+      if (options.onSave) return false;
       void vscode.window.showErrorMessage(
         text === undefined
           ? vscode.l10n.t('"{0}" not found', path)
@@ -205,7 +260,8 @@ async function generateProjectCode(
     directory,
     generateProject(project, fileName, forms, (path) => existing.get(path)),
     existing,
-    quiet,
+    options,
+    () => generateProjectCode(document, { quiet: true, overwrite: true }),
   );
 }
 
@@ -224,12 +280,14 @@ async function readAll(
 /**
  * 生成した結果を確かめて書き込む(手で編集された区間があれば上書きしてよいか聞く)。
  * 書き込んだ(変更が無かったときを含む)なら true、エラー・取りやめなら false。
+ * @param regenerate 保存したときの生成で、手で編集された区間を上書きすると答えたときに生成し直す
  */
 async function writeGenerated(
   directory: vscode.Uri,
   generated: GenerateAllResult | { readonly error: string },
   existing: ReadonlyMap<string, string | undefined>,
-  quiet = false,
+  { quiet, onSave = false, overwrite = false }: GenerateOptions,
+  regenerate: () => Promise<unknown>,
 ): Promise<boolean> {
   if ('error' in generated) {
     void vscode.window.showErrorMessage(generated.error);
@@ -243,13 +301,12 @@ async function writeGenerated(
   if (generated.warnings.length > 0) {
     const channel = (output.channel ??= vscode.window.createOutputChannel('Bethany Designer'));
     for (const warning of generated.warnings) channel.appendLine(warning);
+    const message = vscode.l10n.t('Code generation reported warnings. See the output for details.');
     const show = vscode.l10n.t('Show Details');
-    void vscode.window
-      .showWarningMessage(
-        vscode.l10n.t('Code generation reported warnings. See the output for details.'),
-        show,
-      )
-      .then((answer) => {
+    // 保存したときは、保存のたびに知らせないようステータスバーに出すだけにする
+    if (onSave) vscode.window.setStatusBarMessage(message, 5000);
+    else
+      void vscode.window.showWarningMessage(message, show).then((answer) => {
         if (answer === show) channel.show();
       });
   }
@@ -258,17 +315,32 @@ async function writeGenerated(
     (f): f is OutputFile & { result: { ok: true } } => f.result.ok,
   );
   const modified = files.filter((f) => f.result.modifiedRegions.length > 0);
-  if (modified.length > 0) {
-    const overwrite = vscode.l10n.t('Overwrite');
+  if (modified.length > 0 && !overwrite) {
+    const overwriteLabel = vscode.l10n.t('Overwrite');
     const list = modified
       .map((f) => `${f.path} (${f.result.modifiedRegions.join(', ')})`)
       .join(', ');
+    if (onSave) {
+      // 保存のたびにダイアログを出さないよう、上書きせずに知らせる(答えを待たない)
+      void vscode.window
+        .showWarningMessage(
+          vscode.l10n.t(
+            'Code was not generated on save because generated regions have been edited by hand: {0}',
+            list,
+          ),
+          overwriteLabel,
+        )
+        .then((answer) => {
+          if (answer === overwriteLabel) void regenerate();
+        });
+      return false;
+    }
     const answer = await vscode.window.showWarningMessage(
       vscode.l10n.t('Generated regions have been edited by hand: {0}. Overwrite them?', list),
       { modal: true },
-      overwrite,
+      overwriteLabel,
     );
-    if (answer !== overwrite) return false;
+    if (answer !== overwriteLabel) return false;
   }
 
   const changed = files.filter((f) => existing.get(f.path) !== f.result.text);

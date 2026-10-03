@@ -252,6 +252,9 @@
   "Choose a folder in the workspace": "ワークスペースの中のフォルダを選んでください",
   "A form with the same name exists in this folder. The startup code would overwrite its code": "このフォルダに同じ名前のフォームがあります。起動部分のコードがフォームのコードを上書きしてしまいます",
   "Enter a name": "名前を入力してください",
+  "Code was not generated on save because generated regions have been edited by hand: {0}": "生成する区間が手で編集されているため、保存したときのコード生成をしませんでした: {0}",
+  "Generate on save": "保存時に生成",
+  "Generate the code when a form or this project file is saved": "フォームかこのプロジェクトファイルを保存したときにコードを生成する",
   "A file name cannot contain a backslash or any of / : * ? \" < > |": "ファイル名には円記号(バックスラッシュ)と / : * ? \" < > | は使えません",
   "A file name cannot end with a period or a space": "ファイル名の末尾にピリオド・空白は使えません",
   "\"{0}\" is reserved by Windows and cannot be used as a file name": "「{0}」は Windows で予約されているため、ファイル名に使えません"

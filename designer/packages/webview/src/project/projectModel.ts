@@ -48,6 +48,13 @@ export function setCommentLocale(
   return withCodegen(doc, (codegen) => compact({ ...codegen, commentLocale: locale }));
 }
 
+/** 保存したときにコードを生成するか。既定(true)なら書かない */
+export function setGenerateOnSave(doc: BfprojDocument, on: boolean): BfprojDocument {
+  return withCodegen(doc, (codegen) =>
+    compact({ ...codegen, generateOnSave: on ? undefined : false }),
+  );
+}
+
 export function setCppField<K extends keyof ProjectCppSettings>(
   doc: BfprojDocument,
   key: K,

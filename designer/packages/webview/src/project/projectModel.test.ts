@@ -8,6 +8,7 @@ import {
   removeOverride,
   setCommentLocale,
   setCppField,
+  setGenerateOnSave,
   setLanguage,
   setOverrideField,
   setOverrideForms,
@@ -30,6 +31,12 @@ describe('プロジェクトの設定画面の操作', () => {
     expect(setLanguage(off, 'cpp', true).codegen?.cpp).toEqual({});
     // 付いているものはそのまま
     expect(setLanguage(PROJECT, 'cpp', true).codegen?.cpp).toEqual({ namespace: 'app' });
+  });
+
+  it('保存したときの生成(既定の有効なら書かず、無効なら false を書く)', () => {
+    const off = setGenerateOnSave(PROJECT, false);
+    expect(off.codegen?.generateOnSave).toBe(false);
+    expect(setGenerateOnSave(off, true).codegen).toEqual(PROJECT.codegen);
   });
 
   it('空の値は書かない(既定値)', () => {

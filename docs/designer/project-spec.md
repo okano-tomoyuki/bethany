@@ -93,6 +93,7 @@ C++Builder の `.dfm` と `.cbproj` の分け方と同じ)。
 | キー | 内容 | 既定値(`Project1.bfproj.json` の場合) |
 |---|---|---|
 | `commentLocale` | 生成するコードのコメントの言語(`en`・`ja`) | `en` |
+| `generateOnSave` | フォーム・プロジェクトファイルを保存したときにコードを生成するか([editor-design.md](editor-design.md) §7。[ADR 0066](../adr/0066-generate-code-on-save.md)) | `true` |
 | `cpp` | 書けば C++ を生成する。中のキーは下の表 | |
 | `python` | 書けば Python を生成する。`python.main` は起動部分の出力先、`python.moduleDir` はフォームのモジュール(.py)を置くフォルダ | `Project1.py`・フォームと同じフォルダ |
 
@@ -308,7 +309,7 @@ C++Builder でほかのフォームの OnCreate からまだ作られていな�
 | 区分 | 内容 |
 |---|---|
 | フォーム | メインフォームの選択。「起動時に作成するフォーム」(作る順。↑↓ で並べ替え)と「作成しないフォーム」の 2 つの一覧の間で移す(`autoCreate`) |
-| コード生成 | 生成する言語(C++・Python)、コメントの言語 |
+| コード生成 | 生成する言語(C++・Python)、コメントの言語、保存時に生成(`generateOnSave`。有効なら書かない) |
 | C++ | `cpp` の各キー(§5)。空欄・「既定」は書かない |
 | 一部のフォームの C++ の設定 | `cpp.overrides` の要素を 1 つずつの枠で並べる。パターン(カンマ区切り)、当てはまるフォーム、上書きする値(空欄・「継承」は書かない)。追加・削除・並べ替え |
 | Python | `python.main`・`python.moduleDir` |

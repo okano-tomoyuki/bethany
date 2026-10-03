@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { DesignerEditorProvider } from './designerEditorProvider.ts';
 import { registerDiagnostics } from './diagnostics.ts';
 import { registerFormsView, type ViewNode } from './formsView.ts';
-import { generateCode, generateWholeProject } from './generateCode.ts';
+import { generateCode, generateWholeProject, registerGenerateOnSave } from './generateCode.ts';
 import { registerProjectCommands } from './projectCommands.ts';
 import { ProjectEditorProvider } from './projectEditorProvider.ts';
 import { registerProjectTracking } from './projects.ts';
@@ -18,6 +18,7 @@ export function activate(context: vscode.ExtensionContext): void {
     registerFormsView(),
     registerProjectCommands(),
     registerProjectTracking(),
+    registerGenerateOnSave(),
     vscode.commands.registerCommand(
       'bethanyDesigner.generateCode',
       async (target?: vscode.Uri | ViewNode) => {

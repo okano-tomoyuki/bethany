@@ -27,6 +27,7 @@ import {
   removeOverride,
   setCommentLocale,
   setCppField,
+  setGenerateOnSave,
   setLanguage,
   setOverrideField,
   setOverrideForms,
@@ -317,6 +318,21 @@ function GeneralSection({ project }: { readonly project: BfprojDocument }) {
           );
         }}
       />
+      <div className="field-row">
+        <span className="field-label">{l10n.t('Generate on save')}</span>
+        <div className="field-control">
+          <label className="prop-check">
+            <input
+              type="checkbox"
+              checked={codegen.generateOnSave !== false}
+              onChange={(e) => {
+                commitProject(setGenerateOnSave(project, e.target.checked));
+              }}
+            />
+            {l10n.t('Generate the code when a form or this project file is saved')}
+          </label>
+        </div>
+      </div>
     </Section>
   );
 }

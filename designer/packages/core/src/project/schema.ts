@@ -53,6 +53,8 @@ export type ProjectCppSettings = z.infer<typeof ProjectCppSettings>;
  */
 export const ProjectCodegenSettings = z.strictObject({
   commentLocale: CommentLocale.optional(),
+  /** フォーム・プロジェクトファイルを保存したときにコードを生成するか(既定は true。ADR 0066) */
+  generateOnSave: z.boolean().optional(),
   cpp: ProjectCppSettings.optional(),
   python: z
     .strictObject({

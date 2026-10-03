@@ -6,6 +6,10 @@
   Create New Form, because forms are managed in a project
 - **Changed**: New Project asks for the name and the folder of the project, as New Form does (the default name is Project1, Project2
   and so on). Previously the project was created in the first workspace folder without asking
+- **Changed**: saving a form generates its code, and saving a project file generates its startup code, as C++Builder updates the
+  unit when a form is saved. Turn this off with Generate on save in the project settings (`codegen.generateOnSave: false`).
+  Generation on save shows no dialogs: if generated regions have been edited by hand, the code is not overwritten and a notification
+  offers Overwrite
 - The Bethany Designer view shows the generated code under each form of a project (the C++ header and source, and the Python module)
   and the startup code under each project. Click a file to open it without switching to the Explorer. Files that have not been
   generated yet are shown as "Not generated yet"

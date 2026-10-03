@@ -19,6 +19,9 @@
             "ja"
           ]
         },
+        "generateOnSave": {
+          "type": "boolean"
+        },
         "cpp": {
           "type": "object",
           "properties": {
