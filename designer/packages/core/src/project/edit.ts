@@ -4,6 +4,7 @@
  */
 import * as z from 'zod';
 import type { CommentLocale } from '../dsl/schema.ts';
+import { l10n } from '../l10n.ts';
 import { normalizePath, sameFormPath } from './paths.ts';
 import {
   BfprojDocument,
@@ -27,6 +28,24 @@ export function createProject(
     },
     forms.map(normalizePath),
   );
+}
+
+/** Windows でファイル名に使えない名前(拡張子を付けても使えない) */
+const RESERVED_FILE_NAMES = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
+
+/**
+ * プロジェクトの名前として使えなければ、その理由。名前はプロジェクトファイル(<名前>.bfproj.json)と
+ * 起動部分(<名前>.cpp・<名前>.py)のファイル名になるので、Windows のファイル名に使えるものに限る。
+ */
+export function projectNameProblem(name: string): string | null {
+  if (name === '') return l10n.t('Enter a name');
+  // eslint-disable-next-line no-control-regex
+  if (/[\\/:*?"<>|\u0000-\u001f]/.test(name))
+    return l10n.t('A file name cannot contain a backslash or any of / : * ? " < > |');
+  if (/[. ]$/.test(name)) return l10n.t('A file name cannot end with a period or a space');
+  if (RESERVED_FILE_NAMES.test(name))
+    return l10n.t('"{0}" is reserved by Windows and cannot be used as a file name', name);
+  return null;
 }
 
 export function containsForm(doc: BfprojDocument, form: string): boolean {

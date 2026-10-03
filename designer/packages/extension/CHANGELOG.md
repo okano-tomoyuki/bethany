@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+- **Changed**: when the workspace has no projects and no forms, the Bethany Designer view offers Create New Project instead of
+  Create New Form, because forms are managed in a project
+- **Changed**: New Project asks for the name and the folder of the project, as New Form does (the default name is Project1, Project2
+  and so on). Previously the project was created in the first workspace folder without asking
+- The Bethany Designer view shows the generated code under each form of a project (the C++ header and source, and the Python module)
+  and the startup code under each project. Click a file to open it without switching to the Explorer. Files that have not been
+  generated yet are shown as "Not generated yet"
+
 ## [0.7.0] - 2026-09-30
 
 This version requires the Bethany C++ library and Python package 0.5.0 or later. Generate the code of existing forms again after

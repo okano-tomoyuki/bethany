@@ -4,6 +4,7 @@
  */
 import {
   autoCreateForms,
+  FORM_EXTENSION,
   createProject,
   dirname,
   isJapanese,
@@ -12,12 +13,14 @@ import {
   minimalTextEdit,
   parseProject,
   PROJECT_EXTENSION,
+  projectNameProblem,
   relativePath,
   resolvePath,
   serializeProject,
   type BfprojDocument,
 } from '@bethany-designer/core';
 import * as vscode from 'vscode';
+import { askName } from './nameInput.ts';
 import { baseName, exists, findWorkspaceFiles, readText } from './workspaceFiles.ts';
 
 export const PROJECT_PATTERN = `**/*${PROJECT_EXTENSION}`;
@@ -109,8 +112,9 @@ export async function editProject(
 }
 
 /**
- * 新しいプロジェクトファイルを、ワークスペースの先頭のフォルダの直下に Project1・Project2…の空いている名前で作る。
- * forms の先頭がメインフォームになる。
+ * 新しいプロジェクトファイルを作る。名前(初期値は Project1・Project2…の空いているもの)と作成先のフォルダ
+ * (初期値はワークスペースの先頭のフォルダ)を入力してもらう。forms の先頭がメインフォームになる。
+ * @returns 作ったプロジェクトファイル。取り消したら undefined
  */
 export async function createProjectFile(
   forms: readonly vscode.Uri[],
@@ -120,11 +124,35 @@ export async function createProjectFile(
     void vscode.window.showErrorMessage(vscode.l10n.t('Open a folder to create a project.'));
     return undefined;
   }
-  let uri = folder;
-  for (let n = 1; ; n++) {
-    uri = vscode.Uri.joinPath(folder, `Project${String(n)}${PROJECT_EXTENSION}`);
-    if (!(await exists(uri))) break;
-  }
+  const answer = await askName({
+    title: vscode.l10n.t('New Project: Name'),
+    folder,
+    value: await defaultProjectName(folder),
+    folderDialogTitle: vscode.l10n.t('Folder for the New Project'),
+    prompt: (path) =>
+      vscode.l10n.t(
+        'Creates <name>{0} in {1}. The startup code is generated as <name>.cpp and <name>.py',
+        PROJECT_EXTENSION,
+        path,
+      ),
+    problem: async (name, at) => {
+      const problem = projectNameProblem(name);
+      if (problem) return problem;
+      // ワークスペースの外のプロジェクトは、フォームのビューに出ない
+      if (!vscode.workspace.getWorkspaceFolder(at))
+        return vscode.l10n.t('Choose a folder in the workspace');
+      if (await exists(projectUri(at, name)))
+        return vscode.l10n.t('A file with the same name already exists');
+      // 同じフォルダの同じ名前のフォームとは、起動部分とフォームのコードのファイル名(<name>.cpp・<name>.py)が重なる
+      if (await exists(vscode.Uri.joinPath(at, `${name}${FORM_EXTENSION}`)))
+        return vscode.l10n.t(
+          'A form with the same name exists in this folder. The startup code would overwrite its code',
+        );
+      return undefined;
+    },
+  });
+  if (!answer) return undefined;
+  const uri = projectUri(answer.folder, answer.name);
   // 生成するコードのコメントの言語は、作成した人の表示言語を初期値にする(新しいフォームと同じ)
   const doc = createProject(
     forms.map((form) => formPathIn(uri, form)),
@@ -132,6 +160,18 @@ export async function createProjectFile(
   );
   await vscode.workspace.fs.writeFile(uri, new TextEncoder().encode(serializeProject(doc)));
   return uri;
+}
+
+/** 名前の初期値。C++Builder と同じく Project1・Project2…から空いているもの */
+async function defaultProjectName(folder: vscode.Uri): Promise<string> {
+  for (let n = 1; ; n++) {
+    const name = `Project${String(n)}`;
+    if (!(await exists(projectUri(folder, name)))) return name;
+  }
+}
+
+function projectUri(folder: vscode.Uri, name: string): vscode.Uri {
+  return vscode.Uri.joinPath(folder, `${name}${PROJECT_EXTENSION}`);
 }
 
 /** VS Code の中でのフォーム(とフォルダ)の名前の変更・移動・削除を、プロジェクトファイルに反映する */

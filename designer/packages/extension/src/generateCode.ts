@@ -286,6 +286,9 @@ async function writeGenerated(
       file.result.text,
     );
   }
+  // フォームのビューの生成先の「未生成」を消す
+  if (changed.some((f) => existing.get(f.path) === undefined))
+    void vscode.commands.executeCommand('bethanyDesigner.refreshForms');
 
   const stubs = [...new Set(changed.flatMap((f) => f.result.addedStubs))];
   const details =

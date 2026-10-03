@@ -85,6 +85,7 @@ FPC/LCL を薄い C++ ラッパー経由で使えるようにする、C++Builder
 | [0062](adr/0062-cpp11-baseline-and-constexpr.md) | C++11 を下限とし、ヘッダの定数を constexpr にする | 承認 |
 | [0063](adr/0063-vcl-event-signatures-and-handle.md) | イベントの引数・Handle を C++Builder にそろえ、VCL の名前の別名を加える | 承認 |
 | [0064](adr/0064-tthread-and-main-thread-handoff.md) | TThread と、メインスレッドへの受け渡し(Synchronize・Queue)を加える | 承認 |
+| [0065](adr/0065-designer-view-project-first-and-generated-files.md) | デザイナーのビューを、プロジェクトの作成から始めて生成先のコードも出すものにする | 承認 |
 
 新しい ADR は [adr/template.md](adr/template.md) をコピーして作成する
 ([tk-designer](https://github.com/okano-tomoyuki/tk-designer) と同じ形式)。

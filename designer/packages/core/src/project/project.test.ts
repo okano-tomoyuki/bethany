@@ -5,6 +5,7 @@ import {
   createProject,
   isAutoCreated,
   mapFormPaths,
+  projectNameProblem,
   removeForm,
   serializeProject,
   setAutoCreate,
@@ -179,5 +180,25 @@ describe('編集', () => {
   ]
 }
 `);
+  });
+});
+
+describe('projectNameProblem', () => {
+  it('accepts names usable as file names', () => {
+    expect(projectNameProblem('Project1')).toBeNull();
+    expect(projectNameProblem('My App')).toBeNull();
+    expect(projectNameProblem('ツール')).toBeNull();
+  });
+
+  it('rejects names unusable as file names on Windows', () => {
+    expect(projectNameProblem('')).not.toBeNull();
+    expect(projectNameProblem('a/b')).not.toBeNull();
+    expect(projectNameProblem('a\\b')).not.toBeNull();
+    expect(projectNameProblem('a:b')).not.toBeNull();
+    expect(projectNameProblem('a?')).not.toBeNull();
+    expect(projectNameProblem('App.')).not.toBeNull();
+    expect(projectNameProblem('App ')).not.toBeNull();
+    expect(projectNameProblem('con')).not.toBeNull();
+    expect(projectNameProblem('LPT1')).not.toBeNull();
   });
 });

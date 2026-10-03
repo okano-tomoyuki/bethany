@@ -114,6 +114,7 @@ export {
   isMainForm,
   mapFormPaths,
   projectJsonSchema,
+  projectNameProblem,
   removeForm,
   serializeProject,
   setAutoCreate,

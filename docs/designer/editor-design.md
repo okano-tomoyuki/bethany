@@ -312,7 +312,7 @@ C++Builder のダブルクリックと同じく、デザイナーからイベン
   ワークスペースの先頭のフォルダ。名前の入力欄のボタンでほかのフォルダを選べる。名前の初期値は MainForm(既にあれば Form2・Form3…)。
 - **フォームのビュー**: アクティビティバーの Bethany Designer(アイコンは拡張のアイコンの בּ を単色にしたもの)に、ワークスペースの
   `*.bfm.json` の一覧を出す。検索の除外(`search.exclude`・`files.exclude`)に従い、ファイルの作成・削除で更新する。クリックでデザイナーで開き、
-  項目のボタンと右クリックでコードを生成できる。フォームが無いときは、説明と「新しいフォームを作成」のボタンを出す(`viewsWelcome`)。
+  項目のボタンと右クリックでコードを生成できる。プロジェクトもフォームも無いときは、説明と「新しいプロジェクトを作成」のボタンを出す(`viewsWelcome`。フォームはプロジェクトに加えて管理するため。[ADR 0065](../adr/0065-designer-view-project-first-and-generated-files.md))。
   プロジェクトファイル(`*.bfproj.json`)があれば、プロジェクトごとに並べてメインフォームに ★ を付ける([project-spec.md](project-spec.md) §4)。
 - **診断**: TextDocument が変わるたびに検証し、`DiagnosticCollection` に出す。JSON 上の位置は `core/src/dsl/locate.ts`
   (JSON のテキストを走査して、パスの値の範囲を求める)で範囲にする。

@@ -2,13 +2,26 @@
  * アクティビティバーの Bethany Designer のビューに、ワークスペースのフォーム(*.bfm.json)を出す
  * (docs/designer/editor-design.md §8・project-spec.md §4)。
  * プロジェクトファイル(*.bfproj.json)があればプロジェクトごとに並べ、メインフォームに ★ を付ける。無ければ平らに並べる。
- * フォームが無いときは package.json の viewsWelcome の案内を出す。
+ * プロジェクトに属するフォームの下には生成先のコード(C++ のヘッダ・ソース、Python のモジュール)を、プロジェクトの下には
+ * 起動部分のコードを出し、エクスプローラーに切り替えずに開けるようにする。
+ * プロジェクトもフォームも無いときは package.json の viewsWelcome の案内(新しいプロジェクト)を出す。
  */
-import { FORM_EXTENSION } from '@bethany-designer/core';
+import {
+  formCodegenSettings,
+  resolveProjectTargets,
+  resolveTargets,
+} from '@bethany-designer/codegen';
+import { FORM_EXTENSION, hasErrors, parseDocument } from '@bethany-designer/core';
 import * as vscode from 'vscode';
 import { DesignerEditorProvider } from './designerEditorProvider.ts';
 import { findProjects, PROJECT_PATTERN, samePath, type ProjectInfo } from './projects.ts';
-import { baseName, exists, findWorkspaceFiles, workspaceRelativePath } from './workspaceFiles.ts';
+import {
+  baseName,
+  exists,
+  findWorkspaceFiles,
+  readText,
+  workspaceRelativePath,
+} from './workspaceFiles.ts';
 
 export const FORMS_VIEW_ID = 'bethanyDesigner.forms';
 const FORM_PATTERN = `**/*${FORM_EXTENSION}`;
@@ -27,7 +40,9 @@ export type ViewNode =
       /** 起動時に作らない(プロジェクトの autoCreate に無い) */
       readonly manual?: boolean;
     }
-  | { readonly kind: 'unassigned'; readonly forms: readonly vscode.Uri[] };
+  | { readonly kind: 'unassigned'; readonly forms: readonly vscode.Uri[] }
+  /** 生成先のコードのファイル(まだ生成していなければ missing) */
+  | { readonly kind: 'generated'; readonly uri: vscode.Uri; readonly missing: boolean };
 
 export type FormNode = Extract<ViewNode, { kind: 'form' }>;
 export type ProjectNode = Extract<ViewNode, { kind: 'project' }>;
@@ -81,7 +96,7 @@ class FormsProvider implements vscode.TreeDataProvider<ViewNode>, vscode.Disposa
     if (node.kind === 'unassigned') return node.forms.map((uri) => ({ kind: 'form', uri }));
     if (node.kind === 'project') {
       const { project } = node;
-      return Promise.all(
+      const forms = await Promise.all(
         project.forms.map(async (uri) => ({
           kind: 'form' as const,
           uri,
@@ -91,7 +106,10 @@ class FormsProvider implements vscode.TreeDataProvider<ViewNode>, vscode.Disposa
           manual: !project.autoCreate.some((f) => samePath(f, uri)),
         })),
       );
+      return [...(await generatedNodes(projectOutputs(project))), ...forms];
     }
+    if (node.kind === 'form' && node.project && !node.missing)
+      return generatedNodes(await formOutputs(node.uri));
     return [];
   }
 
@@ -125,6 +143,8 @@ class FormsProvider implements vscode.TreeDataProvider<ViewNode>, vscode.Disposa
       }
       case 'form':
         return formItem(node);
+      case 'generated':
+        return generatedItem(node);
     }
   }
 
@@ -177,6 +197,9 @@ function formItem(node: FormNode): vscode.TreeItem {
       .filter(Boolean)
       .join(' · ');
   }
+  // プロジェクトに属するフォームは、生成先のコードを子に持つ(属さないフォームはコードを生成しない)
+  if (node.project?.doc?.codegen?.cpp || node.project?.doc?.codegen?.python)
+    item.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
   item.contextValue = !node.project
     ? 'form'
     : node.main
@@ -190,6 +213,62 @@ function formItem(node: FormNode): vscode.TreeItem {
     arguments: [node.uri, DesignerEditorProvider.viewType],
   };
   return item;
+}
+
+function generatedItem(node: Extract<ViewNode, { kind: 'generated' }>): vscode.TreeItem {
+  const item = new vscode.TreeItem(baseName(node.uri));
+  // resourceUri と ThemeIcon.File で、ファイルアイコンのテーマの拡張子ごとのアイコンにする
+  item.resourceUri = node.uri;
+  item.iconPath = vscode.ThemeIcon.File;
+  item.tooltip = workspaceRelativePath(node.uri);
+  item.contextValue = node.missing ? 'generatedMissing' : 'generated';
+  if (node.missing) {
+    item.description = vscode.l10n.t('Not generated yet');
+    return item;
+  }
+  item.description = folderOf(node.uri);
+  item.command = { title: '', command: 'vscode.open', arguments: [node.uri] };
+  return item;
+}
+
+/** プロジェクトの起動部分(Project1.cpp・Project1.py)の出力先 */
+function projectOutputs(project: ProjectInfo): vscode.Uri[] {
+  if (!project.doc) return [];
+  const directory = vscode.Uri.joinPath(project.uri, '..');
+  const targets = resolveProjectTargets(project.doc, baseName(project.uri));
+  return [targets.cpp?.main, targets.python?.main]
+    .filter((path) => path !== undefined)
+    .map((path) => vscode.Uri.joinPath(directory, path));
+}
+
+/**
+ * フォームの生成先(C++ のヘッダ・ソース、Python のモジュール)。コード生成と同じく、フォームを含むすべてのプロジェクトの
+ * codegen から決める(generateCode.ts の generateFormCode)。フォームが読めなければ空
+ */
+async function formOutputs(form: vscode.Uri): Promise<vscode.Uri[]> {
+  const [text, projects] = await Promise.all([
+    readText(form).catch(() => undefined),
+    findProjects(),
+  ]);
+  const parsed = text === undefined ? undefined : parseDocument(text);
+  if (!parsed?.document || hasErrors(parsed.diagnostics)) return [];
+  const settings = formCodegenSettings(
+    projects.flatMap((p) => {
+      const formPath = p.doc?.forms?.[p.forms.findIndex((f) => samePath(f, form))];
+      return p.doc && formPath !== undefined ? [{ doc: p.doc, formPath }] : [];
+    }),
+  );
+  const { cpp, python } = resolveTargets(parsed.document, baseName(form), settings);
+  const directory = vscode.Uri.joinPath(form, '..');
+  return [cpp?.header, cpp?.source, python?.file]
+    .filter((path) => path !== undefined)
+    .map((path) => vscode.Uri.joinPath(directory, path));
+}
+
+async function generatedNodes(uris: readonly vscode.Uri[]): Promise<ViewNode[]> {
+  return Promise.all(
+    uris.map(async (uri) => ({ kind: 'generated' as const, uri, missing: !(await exists(uri)) })),
+  );
 }
 
 /** ワークスペースからのフォルダ(直下なら空) */

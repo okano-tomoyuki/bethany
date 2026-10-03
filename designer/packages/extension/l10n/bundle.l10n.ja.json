@@ -90,6 +90,7 @@
   "Expected {0}": "{0} を指定してください",
   "Failed to apply the change to the file": "ファイルへの反映に失敗しました",
   "File not found": "ファイルがありません",
+  "Not generated yet": "未生成",
   "Folder for the New Form": "新しいフォームのフォルダ",
   "Folders are relative to the project file. With a header folder, add it to the include path of your build.": "フォルダはプロジェクトファイルからの相対パスです。ヘッダのフォルダを設定したときは、ビルドの include パスに加えてください。",
   "Form": "フォーム",
@@ -244,5 +245,14 @@
   "{0}: generated regions ({1}) have been edited by hand. Specify --force to overwrite them": "{0}: 生成した区間({1})が手で編集されています。上書きするには --force を指定してください",
   "{0}: not up to date (run beth generate)": "{0}: 最新ではありません(beth generate を実行してください)",
   "{0}: up to date": "{0}: 最新です",
-  "{0}: updated{1}": "{0}: 更新しました{1}"
+  "{0}: updated{1}": "{0}: 更新しました{1}",
+  "New Project: Name": "新しいプロジェクト: 名前",
+  "Folder for the New Project": "新しいプロジェクトのフォルダ",
+  "Creates <name>{0} in {1}. The startup code is generated as <name>.cpp and <name>.py": "{1} に <名前>{0} を作ります。起動部分のコードは <名前>.cpp・<名前>.py に生成します",
+  "Choose a folder in the workspace": "ワークスペースの中のフォルダを選んでください",
+  "A form with the same name exists in this folder. The startup code would overwrite its code": "このフォルダに同じ名前のフォームがあります。起動部分のコードがフォームのコードを上書きしてしまいます",
+  "Enter a name": "名前を入力してください",
+  "A file name cannot contain a backslash or any of / : * ? \" < > |": "ファイル名には円記号(バックスラッシュ)と / : * ? \" < > | は使えません",
+  "A file name cannot end with a period or a space": "ファイル名の末尾にピリオド・空白は使えません",
+  "\"{0}\" is reserved by Windows and cannot be used as a file name": "「{0}」は Windows で予約されているため、ファイル名に使えません"
 }
