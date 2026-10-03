@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-## [0.7.1] - 2026-10-03
+## [0.8.0] - 2026-10-03
 
 - **Changed**: when the workspace has no projects and no forms, the Bethany Designer view offers Create New Project instead of
   Create New Form, because forms are managed in a project
